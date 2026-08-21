@@ -7,7 +7,6 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getLocale, strings } from "../i18n";
 import type { Task } from "../jmap";
 import { addMonths, monthGridDays, sameDay, startOfDay, startOfMonth } from "../agenda/dates";
-import styles from "./TasksModule.module.css";
 
 const MAX = 3;
 
@@ -18,11 +17,11 @@ interface Props {
 }
 
 function prioClass(t: Task): string {
-  if (t.status === "done") return styles.tcDotDone ?? "";
-  if (t.priority === "high") return styles.tcDotHigh ?? "";
-  if (t.priority === "medium") return styles.tcDotMedium ?? "";
-  if (t.priority === "low") return styles.tcDotLow ?? "";
-  return "";
+  if (t.status === "done") return "bg-tertiary";
+  if (t.priority === "high") return "bg-danger";
+  if (t.priority === "medium") return "bg-warning";
+  if (t.priority === "low") return "bg-success";
+  return "bg-accent";
 }
 
 export function CalendarView({ tasks, onOpen, onAdd }: Props) {
@@ -38,29 +37,29 @@ export function CalendarView({ tasks, onOpen, onAdd }: Props) {
   const undated = tasks.filter((t) => t.dueAt === null).length;
 
   return (
-    <div className={styles.tcal}>
-      <div className={styles.tcalBar}>
-        <button type="button" className={styles.tcalToday} onClick={() => setAnchor(today)}>
+    <div className="flex min-h-full flex-col">
+      <div className="flex items-center gap-2 px-6 py-3">
+        <button type="button" className="rounded-lg border border-default px-3.5 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" onClick={() => setAnchor(today)}>
           {strings.agendaToday}
         </button>
-        <button type="button" className={styles.tcalNav} onClick={() => setAnchor((a) => addMonths(a, -1))} aria-label={strings.agendaPrev}>
+        <button type="button" className="rounded-lg p-1.5 text-secondary transition-colors hover:bg-raised hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" onClick={() => setAnchor((a) => addMonths(a, -1))} aria-label={strings.agendaPrev}>
           <ChevronLeft size={18} />
         </button>
-        <button type="button" className={styles.tcalNav} onClick={() => setAnchor((a) => addMonths(a, 1))} aria-label={strings.agendaNext}>
+        <button type="button" className="rounded-lg p-1.5 text-secondary transition-colors hover:bg-raised hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" onClick={() => setAnchor((a) => addMonths(a, 1))} aria-label={strings.agendaNext}>
           <ChevronRight size={18} />
         </button>
-        <h2 className={styles.tcalLabel}>{label}</h2>
-        {undated > 0 && <span className={styles.tcalUndated}>{strings.taskUnscheduled}: {undated}</span>}
+        <h2 className="mx-2 text-lg font-semibold capitalize text-primary">{label}</h2>
+        {undated > 0 && <span className="ml-auto rounded-full bg-muted px-2.5 py-1 text-sm text-tertiary">{strings.taskUnscheduled}: {undated}</span>}
       </div>
 
-      <div className={styles.tcalHead}>
+      <div className="grid grid-cols-7 border-b border-subtle px-6">
         {header.map((w) => (
-          <div key={w} className={styles.tcalWeekday}>
+          <div key={w} className="px-2.5 py-1.5 text-right text-[0.72rem] font-semibold uppercase tracking-[0.03em] text-tertiary">
             {w}
           </div>
         ))}
       </div>
-      <div className={styles.tcalGrid}>
+      <div className="mx-6 mb-6 grid min-h-[720px] flex-1 grid-cols-7 grid-rows-6 overflow-hidden rounded-xl border-l border-t border-subtle">
         {days.map((day) => {
           const dayTasks = tasks.filter((t) => t.dueAt !== null && sameDay(new Date(t.dueAt as string), day));
           const isToday = sameDay(day, today);
@@ -68,7 +67,7 @@ export function CalendarView({ tasks, onOpen, onAdd }: Props) {
           return (
             <div
               key={day.toISOString()}
-              className={`${styles.tcalCell} ${otherMonth ? styles.tcalOther : ""}`}
+              className={`flex cursor-pointer flex-col gap-1 overflow-hidden border-b border-r border-subtle p-1.5 transition-colors hover:bg-raised focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent ${otherMonth ? "bg-app" : "bg-surface"}`}
               role="button"
               tabIndex={0}
               aria-label={strings.taskCreateOnDate(day.toLocaleDateString(locale))}
@@ -80,26 +79,26 @@ export function CalendarView({ tasks, onOpen, onAdd }: Props) {
                 onAdd(day);
               }}
             >
-              <div className={styles.tcalNumRow}>
-                <span className={`${styles.tcalNum} ${isToday ? styles.tcalTodayNum : ""}`}>{day.getDate()}</span>
+              <div className="flex justify-end">
+                <span className={`flex size-6 items-center justify-center rounded-full text-sm tabular-nums ${isToday ? "bg-accent font-semibold text-on-accent" : "text-secondary"}`}>{day.getDate()}</span>
               </div>
-              <div className={styles.tcalTasks}>
+              <div className="flex min-w-0 flex-col gap-0.5">
                 {dayTasks.slice(0, MAX).map((t) => (
                   <button
                     key={t.id}
                     type="button"
-                    className={`${styles.tcalTask} ${t.status === "done" ? styles.tcalTaskDone : ""}`}
+                    className="flex w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-[0.72rem] text-primary transition-colors hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
                     onClick={(event) => {
                       event.stopPropagation();
                       onOpen(t.id);
                     }}
                     title={t.title}
                   >
-                    <span className={`${styles.tcalDot} ${prioClass(t)}`} aria-hidden />
-                    <span className={styles.tcalTaskTitle}>{t.title}</span>
+                    <span className={`size-[7px] shrink-0 rounded-full ${prioClass(t)}`} aria-hidden />
+                    <span className={`truncate ${t.status === "done" ? "text-tertiary line-through" : ""}`}>{t.title}</span>
                   </button>
                 ))}
-                {dayTasks.length > MAX && <span className={styles.tcalMore}>+{dayTasks.length - MAX}</span>}
+                {dayTasks.length > MAX && <span className="pl-1 text-[0.68rem] text-tertiary">+{dayTasks.length - MAX}</span>}
               </div>
             </div>
           );
