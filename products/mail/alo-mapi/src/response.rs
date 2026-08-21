@@ -109,6 +109,7 @@ pub struct MapiResponse {
     code: ResponseCode,
     body: Vec<u8>,
     cookies: Vec<String>,
+    extra: Vec<(&'static str, String)>,
 }
 
 impl MapiResponse {
@@ -125,7 +126,20 @@ impl MapiResponse {
             code,
             body: Vec::new(),
             cookies: Vec::new(),
+            extra: Vec::new(),
         }
+    }
+
+    /// Adds one of the protocol's own headers — `X-PendingPeriod`,
+    /// `X-ExpirationInfo` and the like.
+    ///
+    /// The name is `&'static str` on purpose: these are protocol constants, and
+    /// taking an owned name here would open a path for a caller to write a
+    /// header name out of a client-supplied string.
+    #[must_use]
+    pub fn with_header(mut self, name: &'static str, value: String) -> Self {
+        self.extra.push((name, value));
+        self
     }
 
     /// Echoes the client's `X-ClientInfo` back, as the specification's examples
@@ -186,6 +200,9 @@ impl IntoResponse for MapiResponse {
             .header("X-ServerApplication", SERVER_APPLICATION);
         if let Some(info) = &self.client_info {
             response = response.header("X-ClientInfo", header_value(info));
+        }
+        for (name, value) in &self.extra {
+            response = response.header(*name, header_value(value));
         }
         let mut response = match response.body(axum::body::Body::from(payload)) {
             Ok(response) => response,

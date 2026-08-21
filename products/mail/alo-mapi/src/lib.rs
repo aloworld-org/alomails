@@ -19,10 +19,12 @@
 
 pub mod connect;
 pub mod response;
+pub mod router;
 pub mod session;
 
 pub use connect::{ConnectError, ConnectRequest};
 pub use response::{MapiResponse, ResponseCode};
+pub use router::{MapiState, router};
 pub use session::{SessionContext, SessionStore};
 
 /// The request types this protocol defines on the mailbox endpoint
