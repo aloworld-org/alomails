@@ -20,11 +20,10 @@
 //! simply XORed with `0xA5`. Confidentiality on this protocol comes from TLS
 //! and from nowhere else.
 //!
-//! **`Compressed` is not implemented yet** and is refused rather than guessed
-//! at. It uses the Direct2 variant of LZ77 ([MS-OXCRPC] §3.1.4.1.1.2), and a
-//! wrong decompressor does not fail — it yields bytes that parse as some other
-//! ROP entirely. A stated refusal is worth more than a silent misreading, and
-//! this is the next thing stage 3 needs.
+//! **`Compressed` payloads are LZ77 + DIRECT2** ([`crate::direct2`]). A segment
+//! may be both compressed and obfuscated, and the order is not interchangeable:
+//! the client obfuscates the *compressed* bytes, so the XOR is undone first and
+//! the result is what gets decompressed.
 
 /// The fixed size of an `RPC_HEADER_EXT`.
 pub const HEADER_LEN: usize = 8;
@@ -60,12 +59,9 @@ pub enum RpcError {
         /// What the client sent.
         found: u16,
     },
-    /// The payload is compressed, which this stage cannot read.
-    #[error("compressed ROP payloads are not implemented")]
-    Compressed,
-    /// `Size` and `SizeActual` disagree on an uncompressed payload, which the
-    /// specification forbids.
-    #[error("uncompressed segment declares size {size} but actual {actual}")]
+    /// A segment's declared lengths contradict each other, or a compressed
+    /// payload did not expand to the length it promised.
+    #[error("segment declares size {size} but actual {actual}")]
     SizeMismatch {
         /// The declared payload length.
         size: u16,
@@ -162,19 +158,24 @@ pub fn deobfuscate(payload: &mut [u8]) {
 /// Reads a chained extended buffer and returns the assembled ROP payload.
 ///
 /// # Errors
-/// [`RpcError`] if a segment is truncated, declares an impossible size, is
-/// compressed, or the chain never carries `Last`.
+/// [`RpcError`] if a segment is truncated, declares an impossible size, fails
+/// to decompress to its promised length, or the chain never carries `Last`.
 pub fn read_extended_buffer(mut input: &[u8]) -> Result<Vec<u8>, RpcError> {
     let mut out: Vec<u8> = Vec::new();
     loop {
         let header = RpcHeaderExt::parse(input)?;
-        if header.is_compressed() {
-            return Err(RpcError::Compressed);
-        }
-        // The specification requires the two lengths to agree when the payload
-        // is not compressed. A client that disagrees with itself is not one we
-        // guess for.
-        if header.size != header.size_actual {
+        // An **uncompressed** segment whose two lengths disagree contradicts the
+        // specification outright, and is refused rather than reconciled by
+        // picking one.
+        //
+        // A compressed one is checked by decompressing it, not by comparing its
+        // header to itself. The specification does say `Size` MUST be the
+        // smaller, but enforcing that here would reject a client whose
+        // compressor expanded a tiny payload — and gain nothing, because
+        // `SizeActual` is a `u16` and the ceiling below already bounds what we
+        // will allocate. The decompressor insists on producing exactly the
+        // promised length, which is the check that actually matters.
+        if !header.is_compressed() && header.size != header.size_actual {
             return Err(RpcError::SizeMismatch {
                 size: header.size,
                 actual: header.size_actual,
@@ -189,12 +190,22 @@ pub fn read_extended_buffer(mut input: &[u8]) -> Result<Vec<u8>, RpcError> {
             .get(body_start..body_end)
             .ok_or(RpcError::Truncated { part: "payload" })?;
 
-        if out.len().saturating_add(segment.len()) > MAX_ROP_BUFFER {
+        // Checked against the **uncompressed** length: a compressed segment's
+        // own size says nothing about what it expands to, and a ceiling that
+        // only looked at the bytes on the wire is no ceiling at all.
+        if out.len().saturating_add(usize::from(header.size_actual)) > MAX_ROP_BUFFER {
             return Err(RpcError::TooLarge);
         }
+
+        // Order matters and is not interchangeable: the obfuscation is applied
+        // by the client to the *compressed* bytes, so it is undone first and
+        // the result is what gets decompressed.
         let mut decoded = segment.to_vec();
         if header.is_obfuscated() {
             deobfuscate(&mut decoded);
+        }
+        if header.is_compressed() {
+            decoded = crate::direct2::decompress(&decoded, usize::from(header.size_actual))?;
         }
         out.extend_from_slice(&decoded);
 
@@ -300,12 +311,54 @@ mod tests {
         assert_eq!(read_extended_buffer(&buffer), Err(RpcError::Unterminated));
     }
 
-    /// Compression is refused rather than guessed at. A wrong decompressor does
-    /// not fail — it produces bytes that parse as some other ROP entirely.
+    /// A compressed segment is decompressed through to its payload.
+    ///
+    /// The stream here is hand-built rather than produced by a compressor we
+    /// also wrote: a round trip through our own encoder would agree with itself
+    /// even if both halves misread the specification. These are the bytes a
+    /// client sends — a bitmask of all zeroes, then literals.
     #[test]
-    fn a_compressed_segment_is_refused_not_guessed() {
-        let buffer = segment(b"payload", FLAG_LAST | FLAG_COMPRESSED);
-        assert_eq!(read_extended_buffer(&buffer), Err(RpcError::Compressed));
+    fn a_compressed_segment_is_decompressed() {
+        let payload = b"payload";
+        let mut stream = Vec::new();
+        // Seven literal bits (all zero), then the end-of-stream bit at bit 7.
+        stream.extend_from_slice(&(1u32 << 7).to_le_bytes());
+        stream.extend_from_slice(payload);
+
+        let header = RpcHeaderExt {
+            flags: FLAG_LAST | FLAG_COMPRESSED,
+            size: u16::try_from(stream.len()).unwrap(),
+            size_actual: u16::try_from(payload.len()).unwrap(),
+        };
+        let mut buffer = header.to_bytes().to_vec();
+        buffer.extend_from_slice(&stream);
+
+        assert_eq!(read_extended_buffer(&buffer).unwrap(), payload);
+    }
+
+    /// Compressed **and** obfuscated together, which is legal and is the case
+    /// where the order matters: the client XORs the compressed bytes, so the
+    /// XOR must be undone before decompression. Doing it the other way round
+    /// produces rubbish rather than an error.
+    #[test]
+    fn a_segment_that_is_both_obfuscated_and_compressed_is_read_in_the_right_order() {
+        let payload = b"payload";
+        let mut stream = Vec::new();
+        stream.extend_from_slice(&(1u32 << 7).to_le_bytes());
+        stream.extend_from_slice(payload);
+
+        let header = RpcHeaderExt {
+            flags: FLAG_LAST | FLAG_COMPRESSED | FLAG_XOR_MAGIC,
+            size: u16::try_from(stream.len()).unwrap(),
+            size_actual: u16::try_from(payload.len()).unwrap(),
+        };
+        let mut buffer = header.to_bytes().to_vec();
+        // The obfuscation is applied to the compressed bytes, as a client does.
+        let mut obscured = stream.clone();
+        deobfuscate(&mut obscured);
+        buffer.extend_from_slice(&obscured);
+
+        assert_eq!(read_extended_buffer(&buffer).unwrap(), payload);
     }
 
     #[test]

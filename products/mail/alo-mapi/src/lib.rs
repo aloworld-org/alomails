@@ -18,6 +18,7 @@
 //! a second source of truth is how this becomes unmaintainable.
 
 pub mod connect;
+pub mod direct2;
 pub mod execute;
 pub mod response;
 pub mod router;
