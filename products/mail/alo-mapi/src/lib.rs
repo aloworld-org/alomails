@@ -21,6 +21,7 @@ pub mod connect;
 pub mod direct2;
 pub mod execute;
 pub mod response;
+pub mod rop;
 pub mod router;
 pub mod rpc;
 pub mod session;
