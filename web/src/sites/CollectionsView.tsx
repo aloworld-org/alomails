@@ -2,7 +2,15 @@
 // Contentful's familiar source → field mapping → card preview flow, while the
 // source of truth stays an alo Base the caller already has permission to read.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Database, ExternalLink, Link2, Plus, Rows3, Unplug } from "lucide-react";
+import {
+  ArrowLeft,
+  Database,
+  ExternalLink,
+  Link2,
+  Plus,
+  Rows3,
+  Unplug,
+} from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { Button, Spinner } from "../ds";
@@ -18,7 +26,56 @@ import type {
   SiteCollectionSourceField,
   SiteCollectionSourceTable,
 } from "./types";
-import styles from "./SitesModule.module.css";
+
+const styles = {
+  page: "mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8",
+  header: "flex flex-wrap items-start gap-4 border-b border-subtle pb-5",
+  backLink:
+    "inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-secondary no-underline transition hover:bg-muted hover:text-primary",
+  title: "text-2xl font-semibold tracking-tight text-primary",
+  collectionPageHint: "mt-1 max-w-2xl text-sm leading-6 text-secondary",
+  collectionLoading:
+    "flex min-h-64 items-center justify-center gap-3 rounded-2xl border border-subtle bg-surface text-sm text-secondary shadow-sm",
+  collectionWorkspace:
+    "grid min-h-[40rem] gap-5 lg:grid-cols-[18rem_minmax(0,1fr)]",
+  collectionList:
+    "flex min-w-0 flex-col gap-2 rounded-2xl border border-subtle bg-surface p-3 shadow-sm",
+  collectionListEmpty:
+    "flex flex-col items-center gap-2 px-4 py-10 text-center text-sm text-secondary [&_svg]:size-8 [&_svg]:text-tertiary [&_strong]:text-primary",
+  collectionListItem:
+    "flex min-h-16 w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-left text-primary transition hover:bg-muted [&>svg]:size-5 [&>svg]:shrink-0 [&>svg]:text-secondary [&_span]:min-w-0 [&_strong]:block [&_strong]:truncate [&_small]:mt-0.5 [&_small]:block [&_small]:truncate [&_small]:text-xs [&_small]:text-secondary",
+  collectionListItemActive:
+    "!border-accent/20 !bg-accent-soft shadow-sm [&>svg]:!text-accent",
+  collectionEditor: "flex min-w-0 flex-col gap-5",
+  collectionSetup:
+    "flex flex-col gap-5 rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6",
+  collectionPanelHead:
+    "flex flex-wrap items-start justify-between gap-4 border-b border-subtle pb-4 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-primary [&_p]:mt-1 [&_p]:text-sm [&_p]:leading-6 [&_p]:text-secondary",
+  collectionSourceFields:
+    "grid gap-4 md:grid-cols-3 [&_label]:flex [&_label]:flex-col [&_label]:gap-2 [&_label>span]:text-xs [&_label>span]:font-semibold [&_label>span]:uppercase [&_label>span]:tracking-wide [&_label>span]:text-secondary",
+  input:
+    "min-h-11 w-full rounded-xl border border-default bg-surface px-3.5 py-2.5 text-primary outline-none transition placeholder:text-tertiary focus:border-accent focus:ring-2 focus:ring-accent/15 disabled:bg-muted",
+  collectionMappingHead:
+    "flex items-start gap-3 rounded-xl bg-muted px-4 py-3.5 [&>svg]:mt-0.5 [&>svg]:size-5 [&>svg]:shrink-0 [&>svg]:text-accent [&_h3]:font-semibold [&_h3]:text-primary [&_p]:mt-1 [&_p]:text-sm [&_p]:leading-5 [&_p]:text-secondary",
+  collectionMappingGrid: "grid gap-4 sm:grid-cols-2 xl:grid-cols-3",
+  collectionMappingField:
+    "flex min-w-0 flex-col gap-2 [&>span]:flex [&>span]:items-center [&>span]:justify-between [&>span]:gap-2 [&>span]:text-xs [&>span]:font-semibold [&>span]:uppercase [&>span]:tracking-wide [&>span]:text-secondary [&_small]:text-[0.65rem] [&_small]:font-medium [&_small]:normal-case [&_small]:tracking-normal [&_small]:text-tertiary",
+  collectionActions:
+    "flex flex-wrap items-center justify-between gap-3 border-t border-subtle pt-4",
+  collectionDisconnectGroup:
+    "flex flex-wrap items-center gap-3 text-xs text-danger",
+  collectionPreview:
+    "flex flex-col gap-5 rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6",
+  collectionPreviewSkeleton:
+    "grid gap-3 sm:grid-cols-2 xl:grid-cols-3 [&_span]:h-36 [&_span]:animate-pulse [&_span]:rounded-xl [&_span]:bg-muted",
+  collectionPreviewEmpty:
+    "flex min-h-52 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-default bg-muted/30 px-6 text-center text-sm text-secondary [&>svg]:size-8 [&>svg]:text-tertiary [&_strong]:text-base [&_strong]:text-primary",
+  collectionPreviewGrid: "grid gap-4 sm:grid-cols-2 xl:grid-cols-3",
+  collectionPreviewCard:
+    "min-w-0 overflow-hidden rounded-xl border border-subtle bg-surface shadow-sm [&>div:last-child]:p-4 [&_time]:text-xs [&_time]:font-medium [&_time]:text-secondary [&_h3]:mt-1 [&_h3]:truncate [&_h3]:font-semibold [&_h3]:text-primary [&_p]:mt-2 [&_p]:line-clamp-3 [&_p]:text-sm [&_p]:leading-5 [&_p]:text-secondary [&_span]:mt-3 [&_span]:inline-flex [&_span]:rounded-full [&_span]:bg-muted [&_span]:px-2.5 [&_span]:py-1 [&_span]:text-xs [&_span]:font-semibold [&_span]:text-secondary",
+  collectionPreviewImage:
+    "aspect-[16/9] bg-gradient-to-br from-accent-soft to-muted",
+};
 
 const emptyMapping = (): SiteCollectionFieldMapping => ({
   title: "",
@@ -46,14 +103,18 @@ function draftFrom(collection: SiteCollection): SiteCollectionDraft {
   };
 }
 
-function mappingFor(table: SiteCollectionSourceTable): SiteCollectionFieldMapping {
+function mappingFor(
+  table: SiteCollectionSourceTable,
+): SiteCollectionFieldMapping {
   return {
     ...emptyMapping(),
     title: table.fields.find((field) => field.type === "text")?.id ?? "",
   };
 }
 
-function draftForFirstSource(sources: SiteCollectionSource[]): SiteCollectionDraft {
+function draftForFirstSource(
+  sources: SiteCollectionSource[],
+): SiteCollectionDraft {
   const source = sources[0];
   const table = source?.tables[0];
   if (source === undefined || table === undefined) return emptyDraft();
@@ -73,7 +134,13 @@ interface MappingFieldProps {
   onChange: (value: string | null) => void;
 }
 
-function MappingField({ label, value, fields, required = false, onChange }: MappingFieldProps) {
+function MappingField({
+  label,
+  value,
+  fields,
+  required = false,
+  onChange,
+}: MappingFieldProps) {
   return (
     <label className={styles.collectionMappingField}>
       <span>
@@ -83,9 +150,13 @@ function MappingField({ label, value, fields, required = false, onChange }: Mapp
       <select
         className={styles.input}
         value={value ?? ""}
-        onChange={(event) => onChange(event.target.value === "" ? null : event.target.value)}
+        onChange={(event) =>
+          onChange(event.target.value === "" ? null : event.target.value)
+        }
       >
-        {!required && <option value="">{strings.sitesCollectionNotMapped}</option>}
+        {!required && (
+          <option value="">{strings.sitesCollectionNotMapped}</option>
+        )}
         {required && fields.length === 0 && (
           <option value="">{strings.sitesCollectionNoCompatibleField}</option>
         )}
@@ -127,7 +198,11 @@ export function CollectionsView() {
       setSources(available);
       const selected = connected[0];
       setSelectedId(selected?.id ?? null);
-      setDraft(selected === undefined ? draftForFirstSource(available) : draftFrom(selected));
+      setDraft(
+        selected === undefined
+          ? draftForFirstSource(available)
+          : draftFrom(selected),
+      );
     } catch (reason) {
       setError(sitesMessage(reason, strings.sitesCollectionsLoadFailed));
     } finally {
@@ -146,37 +221,52 @@ export function CollectionsView() {
     if (selectedId === null) return;
     let cancelled = false;
     setPreviewBusy(true);
-    void api.collectionPreview(siteId, selectedId).then(
-      (result) => {
-        if (!cancelled) setPreview(result);
-      },
-      (reason: unknown) => {
-        if (!cancelled) {
-          setPreviewError(sitesMessage(reason, strings.sitesCollectionPreviewFailed));
-        }
-      },
-    ).finally(() => {
-      if (!cancelled) setPreviewBusy(false);
-    });
+    void api
+      .collectionPreview(siteId, selectedId)
+      .then(
+        (result) => {
+          if (!cancelled) setPreview(result);
+        },
+        (reason: unknown) => {
+          if (!cancelled) {
+            setPreviewError(
+              sitesMessage(reason, strings.sitesCollectionPreviewFailed),
+            );
+          }
+        },
+      )
+      .finally(() => {
+        if (!cancelled) setPreviewBusy(false);
+      });
     return () => {
       cancelled = true;
     };
   }, [api, selectedId, siteId]);
 
-  const source = sources.find((candidate) => candidate.nodeId === draft.baseNodeId);
-  const table = source?.tables.find((candidate) => candidate.id === draft.baseTableId);
-  const textFields = table?.fields.filter((field) => field.type === "text") ?? [];
-  const imageFields = table?.fields.filter((field) => field.type === "attachment") ?? [];
-  const dateFields = table?.fields.filter((field) => field.type === "date") ?? [];
+  const source = sources.find(
+    (candidate) => candidate.nodeId === draft.baseNodeId,
+  );
+  const table = source?.tables.find(
+    (candidate) => candidate.id === draft.baseTableId,
+  );
+  const textFields =
+    table?.fields.filter((field) => field.type === "text") ?? [];
+  const imageFields =
+    table?.fields.filter((field) => field.type === "attachment") ?? [];
+  const dateFields =
+    table?.fields.filter((field) => field.type === "date") ?? [];
   const canSave =
     draft.name.trim() !== "" &&
     draft.baseNodeId !== "" &&
     draft.baseTableId !== "" &&
     draft.mapping.title !== "";
-  const selectedCollection = collections.find((collection) => collection.id === selectedId);
+  const selectedCollection = collections.find(
+    (collection) => collection.id === selectedId,
+  );
 
   const sourceLabel = useMemo(() => {
-    if (source === undefined || table === undefined) return strings.sitesCollectionSourceUnavailable;
+    if (source === undefined || table === undefined)
+      return strings.sitesCollectionSourceUnavailable;
     return strings.sitesCollectionConnectedTo(source.name, table.name);
   }, [source, table]);
 
@@ -210,7 +300,9 @@ export function CollectionsView() {
   }
 
   function chooseTable(tableId: string) {
-    const nextTable = source?.tables.find((candidate) => candidate.id === tableId);
+    const nextTable = source?.tables.find(
+      (candidate) => candidate.id === tableId,
+    );
     if (nextTable === undefined) return;
     setDraft((current) => ({
       ...current,
@@ -220,10 +312,16 @@ export function CollectionsView() {
     }));
   }
 
-  function mapField(key: keyof SiteCollectionFieldMapping, value: string | null) {
+  function mapField(
+    key: keyof SiteCollectionFieldMapping,
+    value: string | null,
+  ) {
     setDraft((current) => ({
       ...current,
-      mapping: { ...current.mapping, [key]: value ?? (key === "title" ? "" : null) },
+      mapping: {
+        ...current.mapping,
+        [key]: value ?? (key === "title" ? "" : null),
+      },
     }));
   }
 
@@ -232,12 +330,16 @@ export function CollectionsView() {
     setBusy(true);
     setError(null);
     try {
-      const stored = selectedId === null
-        ? await api.createCollection(siteId, draft)
-        : await api.updateCollection(siteId, selectedId, draft);
-      const next = selectedId === null
-        ? [...collections, stored]
-        : collections.map((collection) => collection.id === stored.id ? stored : collection);
+      const stored =
+        selectedId === null
+          ? await api.createCollection(siteId, draft)
+          : await api.updateCollection(siteId, selectedId, draft);
+      const next =
+        selectedId === null
+          ? [...collections, stored]
+          : collections.map((collection) =>
+              collection.id === stored.id ? stored : collection,
+            );
       setCollections(next);
       setSelectedId(stored.id);
       setDraft(draftFrom(stored));
@@ -258,11 +360,15 @@ export function CollectionsView() {
     setError(null);
     try {
       await api.disconnectCollection(siteId, selectedId);
-      const remaining = collections.filter((collection) => collection.id !== selectedId);
+      const remaining = collections.filter(
+        (collection) => collection.id !== selectedId,
+      );
       setCollections(remaining);
       const next = remaining[0];
       setSelectedId(next?.id ?? null);
-      setDraft(next === undefined ? draftForFirstSource(sources) : draftFrom(next));
+      setDraft(
+        next === undefined ? draftForFirstSource(sources) : draftFrom(next),
+      );
       setPreview(null);
       setDisconnectArmed(false);
     } catch (reason) {
@@ -279,12 +385,17 @@ export function CollectionsView() {
           <ArrowLeft size="var(--icon-size-inline)" aria-hidden="true" />
           {strings.sitesBack}
         </Link>
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className={styles.title}>{strings.sitesCollections}</h1>
-          <p className={styles.collectionPageHint}>{strings.sitesCollectionsHint}</p>
+          <p className={styles.collectionPageHint}>
+            {strings.sitesCollectionsHint}
+          </p>
         </div>
         {!loading && sources.length > 0 && (
-          <Button icon={<Plus size="var(--icon-size-inline)" />} onClick={startConnection}>
+          <Button
+            icon={<Plus size="var(--icon-size-inline)" />}
+            onClick={startConnection}
+          >
             {strings.sitesConnectTable}
           </Button>
         )}
@@ -306,7 +417,10 @@ export function CollectionsView() {
         />
       ) : (
         <div className={styles.collectionWorkspace}>
-          <aside className={styles.collectionList} aria-label={strings.sitesCollections}>
+          <aside
+            className={styles.collectionList}
+            aria-label={strings.sitesCollections}
+          >
             {collections.length === 0 && (
               <div className={styles.collectionListEmpty}>
                 <Database aria-hidden="true" />
@@ -321,31 +435,40 @@ export function CollectionsView() {
               const connectedTable = connectedSource?.tables.find(
                 (candidate) => candidate.id === collection.baseTableId,
               );
-              const binding = connectedSource === undefined || connectedTable === undefined
-                ? strings.sitesCollectionSourceUnavailable
-                : strings.sitesCollectionConnectedTo(connectedSource.name, connectedTable.name);
+              const binding =
+                connectedSource === undefined || connectedTable === undefined
+                  ? strings.sitesCollectionSourceUnavailable
+                  : strings.sitesCollectionConnectedTo(
+                      connectedSource.name,
+                      connectedTable.name,
+                    );
               return (
-              <button
-                key={collection.id}
-                type="button"
-                className={`${styles.collectionListItem} ${
-                  collection.id === selectedId ? styles.collectionListItemActive : ""
-                }`}
-                aria-pressed={collection.id === selectedId}
-                onClick={() => selectCollection(collection)}
-              >
-                <Rows3 aria-hidden="true" />
-                <span>
-                  <strong>{collection.name}</strong>
-                  <small>{binding}</small>
-                </span>
-              </button>
+                <button
+                  key={collection.id}
+                  type="button"
+                  className={`${styles.collectionListItem} ${
+                    collection.id === selectedId
+                      ? styles.collectionListItemActive
+                      : ""
+                  }`}
+                  aria-pressed={collection.id === selectedId}
+                  onClick={() => selectCollection(collection)}
+                >
+                  <Rows3 aria-hidden="true" />
+                  <span>
+                    <strong>{collection.name}</strong>
+                    <small>{binding}</small>
+                  </span>
+                </button>
               );
             })}
           </aside>
 
           <div className={styles.collectionEditor}>
-            <section className={styles.collectionSetup} aria-labelledby="collection-setup-title">
+            <section
+              className={styles.collectionSetup}
+              aria-labelledby="collection-setup-title"
+            >
               <div className={styles.collectionPanelHead}>
                 <div>
                   <h2 id="collection-setup-title">
@@ -370,7 +493,12 @@ export function CollectionsView() {
                   <input
                     className={styles.input}
                     value={draft.name}
-                    onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
+                    onChange={(event) =>
+                      setDraft((current) => ({
+                        ...current,
+                        name: event.target.value,
+                      }))
+                    }
                   />
                 </label>
                 <label>
@@ -380,9 +508,13 @@ export function CollectionsView() {
                     value={draft.baseNodeId}
                     onChange={(event) => chooseSource(event.target.value)}
                   >
-                    <option value="">{strings.sitesCollectionChooseBase}</option>
+                    <option value="">
+                      {strings.sitesCollectionChooseBase}
+                    </option>
                     {sources.map((candidate) => (
-                      <option key={candidate.nodeId} value={candidate.nodeId}>{candidate.name}</option>
+                      <option key={candidate.nodeId} value={candidate.nodeId}>
+                        {candidate.name}
+                      </option>
                     ))}
                   </select>
                 </label>
@@ -393,10 +525,13 @@ export function CollectionsView() {
                     value={draft.baseTableId}
                     onChange={(event) => chooseTable(event.target.value)}
                   >
-                    <option value="">{strings.sitesCollectionChooseTable}</option>
+                    <option value="">
+                      {strings.sitesCollectionChooseTable}
+                    </option>
                     {(source?.tables ?? []).map((candidate) => (
                       <option key={candidate.id} value={candidate.id}>
-                        {candidate.name} · {strings.sitesCollectionRows(candidate.recordCount)}
+                        {candidate.name} ·{" "}
+                        {strings.sitesCollectionRows(candidate.recordCount)}
                       </option>
                     ))}
                   </select>
@@ -418,12 +553,42 @@ export function CollectionsView() {
                   required
                   onChange={(value) => mapField("title", value)}
                 />
-                <MappingField label={strings.sitesCollectionSlugField} value={draft.mapping.slug} fields={textFields} onChange={(value) => mapField("slug", value)} />
-                <MappingField label={strings.sitesCollectionSummaryField} value={draft.mapping.summary} fields={textFields} onChange={(value) => mapField("summary", value)} />
-                <MappingField label={strings.sitesCollectionBodyField} value={draft.mapping.body} fields={textFields} onChange={(value) => mapField("body", value)} />
-                <MappingField label={strings.sitesCollectionImageField} value={draft.mapping.image} fields={imageFields} onChange={(value) => mapField("image", value)} />
-                <MappingField label={strings.sitesCollectionLinkField} value={draft.mapping.link} fields={textFields} onChange={(value) => mapField("link", value)} />
-                <MappingField label={strings.sitesCollectionDateField} value={draft.mapping.publishedAt} fields={dateFields} onChange={(value) => mapField("publishedAt", value)} />
+                <MappingField
+                  label={strings.sitesCollectionSlugField}
+                  value={draft.mapping.slug}
+                  fields={textFields}
+                  onChange={(value) => mapField("slug", value)}
+                />
+                <MappingField
+                  label={strings.sitesCollectionSummaryField}
+                  value={draft.mapping.summary}
+                  fields={textFields}
+                  onChange={(value) => mapField("summary", value)}
+                />
+                <MappingField
+                  label={strings.sitesCollectionBodyField}
+                  value={draft.mapping.body}
+                  fields={textFields}
+                  onChange={(value) => mapField("body", value)}
+                />
+                <MappingField
+                  label={strings.sitesCollectionImageField}
+                  value={draft.mapping.image}
+                  fields={imageFields}
+                  onChange={(value) => mapField("image", value)}
+                />
+                <MappingField
+                  label={strings.sitesCollectionLinkField}
+                  value={draft.mapping.link}
+                  fields={textFields}
+                  onChange={(value) => mapField("link", value)}
+                />
+                <MappingField
+                  label={strings.sitesCollectionDateField}
+                  value={draft.mapping.publishedAt}
+                  fields={dateFields}
+                  onChange={(value) => mapField("publishedAt", value)}
+                />
               </div>
 
               <div className={styles.collectionActions}>
@@ -439,25 +604,38 @@ export function CollectionsView() {
                         ? strings.sitesCollectionDisconnectConfirm
                         : strings.sitesCollectionDisconnect}
                     </Button>
-                    {disconnectArmed && <span>{strings.sitesCollectionDisconnectHint}</span>}
+                    {disconnectArmed && (
+                      <span>{strings.sitesCollectionDisconnectHint}</span>
+                    )}
                   </div>
                 )}
                 <Button disabled={busy || !canSave} onClick={() => void save()}>
-                  {busy ? strings.sitesCollectionSaving : strings.sitesCollectionSave}
+                  {busy
+                    ? strings.sitesCollectionSaving
+                    : strings.sitesCollectionSave}
                 </Button>
               </div>
             </section>
 
-            <section className={styles.collectionPreview} aria-labelledby="collection-preview-title">
+            <section
+              className={styles.collectionPreview}
+              aria-labelledby="collection-preview-title"
+            >
               <div className={styles.collectionPanelHead}>
                 <div>
-                  <h2 id="collection-preview-title">{strings.sitesCollectionPreview}</h2>
+                  <h2 id="collection-preview-title">
+                    {strings.sitesCollectionPreview}
+                  </h2>
                   <p>{strings.sitesCollectionPreviewHint}</p>
                 </div>
               </div>
               {previewError !== null && <ErrorBanner message={previewError} />}
               {previewBusy ? (
-                <div className={styles.collectionPreviewSkeleton} role="status" aria-label={strings.sitesCollectionPreviewLoading}>
+                <div
+                  className={styles.collectionPreviewSkeleton}
+                  role="status"
+                  aria-label={strings.sitesCollectionPreviewLoading}
+                >
                   <span />
                   <span />
                   <span />
@@ -480,13 +658,25 @@ export function CollectionsView() {
               ) : (
                 <div className={styles.collectionPreviewGrid}>
                   {preview.items.map((item, index) => (
-                    <article className={styles.collectionPreviewCard} key={`${item.slug ?? item.title}-${index}`}>
-                      {item.imageBlobId !== null && <div className={styles.collectionPreviewImage} aria-hidden="true" />}
+                    <article
+                      className={styles.collectionPreviewCard}
+                      key={`${item.slug ?? item.title}-${index}`}
+                    >
+                      {item.imageBlobId !== null && (
+                        <div
+                          className={styles.collectionPreviewImage}
+                          aria-hidden="true"
+                        />
+                      )}
                       <div>
-                        {item.publishedAt !== null && <time>{item.publishedAt}</time>}
+                        {item.publishedAt !== null && (
+                          <time>{item.publishedAt}</time>
+                        )}
                         <h3>{item.title}</h3>
                         {item.summary !== null && <p>{item.summary}</p>}
-                        {item.link !== null && <span>{strings.sitesCollectionPreviewLinked}</span>}
+                        {item.link !== null && (
+                          <span>{strings.sitesCollectionPreviewLinked}</span>
+                        )}
                       </div>
                     </article>
                   ))}
