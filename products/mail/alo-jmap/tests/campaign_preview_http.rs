@@ -146,7 +146,7 @@ async fn a_preview_answers_the_html_the_text_and_the_fields_with_their_fallback_
     let (status, answer) = get(
         &h.app,
         &h.token,
-        &format!("/campaigns/campaigns/{id}/preview"),
+        &format!("/campaigns/campaigns/{id}/preview?unsubscribeText=Uitschrijven"),
     )
     .await;
     assert_eq!(status, StatusCode::OK, "{answer}");
@@ -183,7 +183,7 @@ async fn a_preview_answers_the_html_the_text_and_the_fields_with_their_fallback_
     let (status, answer) = get(
         &h.app,
         &h.token,
-        &format!("/campaigns/campaigns/{id}/preview?as=fallbacks"),
+        &format!("/campaigns/campaigns/{id}/preview?unsubscribeText=Uitschrijven&as=fallbacks"),
     )
     .await;
     assert_eq!(status, StatusCode::OK, "{answer}");
@@ -206,7 +206,7 @@ async fn a_preview_answers_the_html_the_text_and_the_fields_with_their_fallback_
     let (status, _) = get(
         &h.app,
         &h.token,
-        &format!("/campaigns/campaigns/{id}/preview?as=everyone"),
+        &format!("/campaigns/campaigns/{id}/preview?unsubscribeText=Uitschrijven&as=everyone"),
     )
     .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
@@ -218,7 +218,12 @@ async fn a_seed_test_writes_a_draft_to_the_caller_and_sends_nothing() {
     reachable(&h, "Jean Dupont", "jean@cprev.test").await;
     let id = campaign(&h).await;
 
-    let (status, answer) = post(&h.app, &h.token, &format!("/campaigns/campaigns/{id}/test")).await;
+    let (status, answer) = post(
+        &h.app,
+        &h.token,
+        &format!("/campaigns/campaigns/{id}/test?unsubscribeText=Uitschrijven"),
+    )
+    .await;
     assert_eq!(status, StatusCode::OK, "{answer}");
     assert_eq!(
         answer["draft"]["to"].as_str(),
@@ -265,7 +270,12 @@ async fn a_seed_test_writes_a_draft_to_the_caller_and_sends_nothing() {
 
     // Asking twice writes two drafts and changes no campaign — the behaviour of
     // somebody who closed the compose window without sending.
-    let (status, _) = post(&h.app, &h.token, &format!("/campaigns/campaigns/{id}/test")).await;
+    let (status, _) = post(
+        &h.app,
+        &h.token,
+        &format!("/campaigns/campaigns/{id}/test?unsubscribeText=Uitschrijven"),
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(h.acc.mailbox(&drafts).await.unwrap().total_messages, 2);
 
@@ -288,8 +298,10 @@ async fn neither_a_neighbours_letter_nor_a_neighbours_recipient_is_reachable() {
     // Their token, our campaign: a `404` from an id that is a perfectly good
     // campaign one tenant over.
     for uri in [
-        format!("/campaigns/campaigns/{ours_id}/preview"),
-        format!("/campaigns/campaigns/{ours_id}/preview?as=ann@cprev.test"),
+        format!("/campaigns/campaigns/{ours_id}/preview?unsubscribeText=Uitschrijven"),
+        format!(
+            "/campaigns/campaigns/{ours_id}/preview?unsubscribeText=Uitschrijven&as=ann@cprev.test"
+        ),
     ] {
         let (status, _) = get(&theirs.app, &theirs.token, &uri).await;
         assert_eq!(status, StatusCode::NOT_FOUND, "{uri}");
@@ -297,7 +309,7 @@ async fn neither_a_neighbours_letter_nor_a_neighbours_recipient_is_reachable() {
     let (status, _) = post(
         &theirs.app,
         &theirs.token,
-        &format!("/campaigns/campaigns/{ours_id}/test"),
+        &format!("/campaigns/campaigns/{ours_id}/test?unsubscribeText=Uitschrijven"),
     )
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
@@ -307,7 +319,9 @@ async fn neither_a_neighbours_letter_nor_a_neighbours_recipient_is_reachable() {
     let (status, _) = get(
         &ours.app,
         &ours.token,
-        &format!("/campaigns/campaigns/{ours_id}/preview?as=bea@cprev.test"),
+        &format!(
+            "/campaigns/campaigns/{ours_id}/preview?unsubscribeText=Uitschrijven&as=bea@cprev.test"
+        ),
     )
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
@@ -326,7 +340,9 @@ async fn neither_a_neighbours_letter_nor_a_neighbours_recipient_is_reachable() {
     let (status, _) = get(
         &ours.app,
         &ours.token,
-        &format!("/campaigns/campaigns/{ours_id}/preview?as=ann@cprev.test"),
+        &format!(
+            "/campaigns/campaigns/{ours_id}/preview?unsubscribeText=Uitschrijven&as=ann@cprev.test"
+        ),
     )
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
@@ -336,12 +352,37 @@ async fn neither_a_neighbours_letter_nor_a_neighbours_recipient_is_reachable() {
     let (status, answer) = get(
         &ours.app,
         &ours.token,
-        &format!("/campaigns/campaigns/{ours_id}/preview"),
+        &format!("/campaigns/campaigns/{ours_id}/preview?unsubscribeText=Uitschrijven"),
     )
     .await;
     assert_eq!(status, StatusCode::OK, "{answer}");
     assert_eq!(
         answer["preview"]["against"],
         json!({ "kind": "fallbacks", "reason": "nobody_to_mail_yet" })
+    );
+}
+
+#[tokio::test]
+async fn a_preview_without_the_footers_words_is_refused_rather_than_guessed() {
+    // C2.5 made the unsubscribe footer part of every letter, and its words are
+    // the reader's language. The server holds no translations, so a preview
+    // that guessed them in English would be a preview of a letter nobody
+    // receives — in the one place a recipient looks when they want the mail to
+    // stop. Refused by name, with the parameter in the sentence.
+    let h = harness("cprevwords").await;
+    let id = campaign(&h).await;
+
+    let (status, body) = get(
+        &h.app,
+        &h.token,
+        &format!("/campaigns/campaigns/{id}/preview"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+    assert!(
+        body["detail"]
+            .as_str()
+            .is_some_and(|d| d.contains("unsubscribeText")),
+        "the refusal names the parameter: {body}"
     );
 }

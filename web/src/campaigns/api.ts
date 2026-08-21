@@ -240,11 +240,15 @@ export class CampaignsApi {
     id: string,
     against?: string,
   ): Promise<{ draft: CampaignTestDraft; against: PreviewAgainst }> {
-    const query =
-      against === undefined || against === "" ? "" : `?as=${encodeURIComponent(against)}`;
+    // The seed test renders the same letter a recipient would receive, so it
+    // needs the same footer words the preview does — see `preview` above. A
+    // draft written without them would be a rehearsal of a different message,
+    // in the one place a recipient looks when they want the mail to stop.
+    const params = new URLSearchParams({ unsubscribeText: strings.campaignUnsubscribeLinkText });
+    if (against !== undefined && against !== "") params.set("as", against);
     return this.#write<{ draft: CampaignTestDraft; against: PreviewAgainst }>(
       "POST",
-      `/campaigns/campaigns/${encodeURIComponent(id)}/test${query}`,
+      `/campaigns/campaigns/${encodeURIComponent(id)}/test?${params.toString()}`,
       {},
     );
   }

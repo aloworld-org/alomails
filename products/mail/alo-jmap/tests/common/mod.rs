@@ -86,10 +86,16 @@ pub async fn harness_on(store: Arc<Store>, tag: &str) -> Harness {
         .0
         .reveal()
         .to_owned();
+    // **https**, and not cosmetic. Campaign mail builds its unsubscribe URLs
+    // from this origin, and RFC 8058 §3.1 ties one-click to HTTPS — a header
+    // emitted beside any other scheme is one every client ignores. A harness on
+    // `http://` exercises a deployment that cannot lawfully send bulk mail, and
+    // would hide that refusal rather than prove it. Nothing here opens a
+    // socket, so the scheme costs nothing.
     let app = alo_jmap::app(alo_jmap::app_state(
         Arc::clone(&store),
         identity.clone(),
-        "http://test",
+        "https://test",
     ));
     Harness {
         app,
