@@ -53,12 +53,23 @@ const URL_MAX: usize = 998;
 /// render is for, and therefore which token to name.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnsubscribeInvitation {
-    /// This recipient's own one-click URL.
+    /// Where a mail client's own button POSTs (RFC 8058 §3.2) — **the API**.
     ///
     /// HTTPS, and carrying the unguessable token
     /// [`campaign_unsubscribe`](crate::campaign_unsubscribe) minted — RFC 8058
     /// §7 is explicit that a guessable URI lets anybody unsubscribe anybody.
-    pub url: String,
+    pub one_click_url: String,
+    /// Where a **person** who clicks the footer lands — the page.
+    ///
+    /// A separate URL from [`one_click_url`](Self::one_click_url), and the
+    /// separation is load-bearing rather than tidy. The one-click endpoint
+    /// answers JSON and exists to be POSTed by software; the page is the SPA
+    /// route that offers this kind of mail or all of it (ADR 0044 §3). Point
+    /// the footer at the API and a human who clicks it reads a JSON object;
+    /// point the header at the page and the client's POST lands on the SPA and
+    /// silently does nothing — the button appears to work and the recipient
+    /// keeps receiving mail, which is the worse of the two.
+    pub page_url: String,
     /// The kind of mail this is, when the campaign named one.
     ///
     /// `None` means the page can only offer all-or-nothing. That is the choice
@@ -82,6 +93,43 @@ pub struct UnsubscribeInvitation {
     pub link_text: String,
 }
 
+/// One address, held to what a letter can carry.
+///
+/// `what` names the address in the refusal, because "an unsubscribe address is
+/// not https" is unactionable when a letter carries two of them.
+fn checked_url(raw: &str, what: &str) -> Result<()> {
+    // Checked on the RAW string, before any trimming. `trim` would strip a
+    // trailing CR or LF and quietly accept a URL that arrived with one — safe
+    // in that instance, but it hides the fact that whatever produced the URL is
+    // emitting line breaks into it, which is the thing worth knowing.
+    if raw.contains('\r') || raw.contains('\n') {
+        return Err(StoreError::Validation(format!(
+            "{what}: an unsubscribe address cannot contain a line break"
+        )));
+    }
+    let url = raw.trim();
+    if url.is_empty() {
+        return Err(StoreError::Validation(format!(
+            "{what}: a campaign carries a way to leave it, and this names no address"
+        )));
+    }
+    if url.len() > URL_MAX {
+        return Err(StoreError::Validation(format!(
+            "{what}: an unsubscribe address is at most {URL_MAX} characters"
+        )));
+    }
+    // RFC 8058 §3.1 ties one-click to HTTPS. Emitting the POST header beside
+    // any other scheme produces a header the client ignores, which reads as
+    // "we offer one-click" while offering nothing — and a plaintext page for
+    // somebody exercising a privacy right is its own answer.
+    if !url.starts_with("https://") {
+        return Err(StoreError::Validation(format!(
+            "{what}: an unsubscribe address must be https — RFC 8058 one-click applies to no              other scheme, and a header the client ignores is worse than none"
+        )));
+    }
+    Ok(())
+}
+
 impl UnsubscribeInvitation {
     /// Checks the invitation, or says why it cannot be put in a message.
     ///
@@ -89,38 +137,13 @@ impl UnsubscribeInvitation {
     /// [`StoreError::Validation`] when the URL is blank, over-long, not HTTPS,
     /// or carries a CR or LF; or when the topic is present but blank.
     pub fn validated(&self) -> Result<()> {
-        // Checked on the RAW string, before any trimming. `trim` would strip a
-        // trailing CR or LF and quietly accept a URL that arrived with one —
-        // safe in that instance, but it hides the fact that whatever produced
-        // the URL is emitting line breaks into it, which is the thing worth
-        // knowing. A URL that contained a newline was not the URL anybody
-        // meant, wherever in it the newline sat.
-        if self.url.contains('\r') || self.url.contains('\n') {
-            return Err(StoreError::Validation(
-                "an unsubscribe address cannot contain a line break".to_owned(),
-            ));
-        }
-        let url = self.url.trim();
-        if url.is_empty() {
-            return Err(StoreError::Validation(
-                "a campaign carries a way to leave it, and this one names no address".to_owned(),
-            ));
-        }
-        if url.len() > URL_MAX {
-            return Err(StoreError::Validation(format!(
-                "an unsubscribe address is at most {URL_MAX} characters"
-            )));
-        }
-        // RFC 8058 §3.1 ties one-click to HTTPS. Emitting the POST header
-        // beside any other scheme produces a header the client ignores, which
-        // reads as "we offer one-click" while offering nothing.
-        if !url.starts_with("https://") {
-            return Err(StoreError::Validation(
-                "an unsubscribe address must be https — RFC 8058 one-click applies to no other \
-                 scheme, and a header the client ignores is worse than none"
-                    .to_owned(),
-            ));
-        }
+        // Both addresses, held to the same rule. The header URL and the page
+        // URL are different endpoints doing different jobs, and either one
+        // being wrong breaks the way out in a way the recipient discovers and
+        // we do not.
+        checked_url(&self.one_click_url, "the mail client's Unsubscribe button")?;
+        checked_url(&self.page_url, "the link in the letter")?;
+
         if self.topic.as_deref().is_some_and(|t| t.trim().is_empty()) {
             return Err(StoreError::Validation(
                 "a blank topic would offer to stop receiving nothing in particular".to_owned(),
@@ -156,7 +179,7 @@ impl UnsubscribeInvitation {
         self.validated()?;
         Ok([
             // RFC 2369 §3.2: each URL in angle brackets.
-            (LIST_UNSUBSCRIBE, format!("<{}>", self.url.trim())),
+            (LIST_UNSUBSCRIBE, format!("<{}>", self.one_click_url.trim())),
             (LIST_UNSUBSCRIBE_POST, ONE_CLICK_POST.to_owned()),
         ])
     }
@@ -171,7 +194,8 @@ impl UnsubscribeInvitation {
 #[cfg(test)]
 pub(crate) fn an_invitation() -> UnsubscribeInvitation {
     UnsubscribeInvitation {
-        url: "https://alo.test/u/9tOKENx".to_owned(),
+        one_click_url: "https://alo.test/jmap/campaign-unsubscribe/9tOKENx".to_owned(),
+        page_url: "https://alo.test/unsubscribe/9tOKENx".to_owned(),
         topic: Some("Nieuwsbrief".to_owned()),
         link_text: "Uitschrijven".to_owned(),
     }
@@ -183,9 +207,15 @@ mod tests {
 
     use super::*;
 
+    /// An invitation whose BOTH addresses are `url`.
+    ///
+    /// The URL tests below are about one rule applied to each address, so they
+    /// set the two together; `the_two_addresses_are_not_interchangeable` is the
+    /// one that holds them apart.
     fn invitation(url: &str) -> UnsubscribeInvitation {
         UnsubscribeInvitation {
-            url: url.to_owned(),
+            one_click_url: url.to_owned(),
+            page_url: url.to_owned(),
             topic: Some("Monthly Newsletter".to_owned()),
             // Deliberately not English: the words come from the caller, and a
             // fixture that only ever spoke English would let a hardcoded
@@ -282,10 +312,59 @@ mod tests {
         // The store renders letters and knows nothing about locale. Nothing in
         // this module may assume English.
         let dutch = UnsubscribeInvitation {
-            url: "https://alo.test/u/abc".to_owned(),
+            one_click_url: "https://alo.test/jmap/campaign-unsubscribe/abc".to_owned(),
+            page_url: "https://alo.test/unsubscribe/abc".to_owned(),
             topic: Some("Nieuwsbrief".to_owned()),
             link_text: "Uitschrijven".to_owned(),
         };
         assert!(dutch.validated().is_ok());
+    }
+    #[test]
+    fn the_two_addresses_are_not_interchangeable() {
+        // The header is POSTed by software and must reach the API; the footer
+        // is clicked by a person and must reach the page. Swap them and either
+        // a human reads a JSON object, or — worse — the client's POST lands on
+        // the SPA, does nothing, and the button appears to have worked while
+        // the recipient keeps receiving mail.
+        let invitation = UnsubscribeInvitation {
+            one_click_url: "https://alo.test/jmap/campaign-unsubscribe/tok".to_owned(),
+            page_url: "https://alo.test/unsubscribe/tok".to_owned(),
+            topic: Some("Nieuwsbrief".to_owned()),
+            link_text: "Uitschrijven".to_owned(),
+        };
+        let pair = invitation.header_pair().expect("a good invitation");
+        assert_eq!(
+            pair[0].1, "<https://alo.test/jmap/campaign-unsubscribe/tok>",
+            "the header names the endpoint that answers a POST, not the page"
+        );
+        assert_ne!(
+            invitation.page_url, invitation.one_click_url,
+            "if these are ever the same, one of the two doors is broken"
+        );
+    }
+
+    #[test]
+    fn each_address_is_refused_by_name_so_a_refusal_is_actionable() {
+        let mut bad_header = UnsubscribeInvitation {
+            one_click_url: "http://alo.test/jmap/campaign-unsubscribe/tok".to_owned(),
+            page_url: "https://alo.test/unsubscribe/tok".to_owned(),
+            topic: None,
+            link_text: "Uitschrijven".to_owned(),
+        };
+        match bad_header.validated() {
+            Err(StoreError::Validation(detail)) => {
+                assert!(detail.contains("button"), "names which address: {detail}");
+            }
+            other => panic!("expected a refusal, got {other:?}"),
+        }
+
+        bad_header.one_click_url = "https://alo.test/jmap/campaign-unsubscribe/tok".to_owned();
+        bad_header.page_url = "http://alo.test/unsubscribe/tok".to_owned();
+        match bad_header.validated() {
+            Err(StoreError::Validation(detail)) => {
+                assert!(detail.contains("letter"), "names which address: {detail}");
+            }
+            other => panic!("expected a refusal, got {other:?}"),
+        }
     }
 }

@@ -42,7 +42,8 @@ use serde_json::json;
 /// placeholder: a preview has no recipient, so there is no token to mint.
 fn unsub() -> UnsubscribeInvitation {
     UnsubscribeInvitation {
-        url: "https://alo.test/u/preview".to_owned(),
+        one_click_url: "https://alo.test/jmap/campaign-unsubscribe/preview".to_owned(),
+        page_url: "https://alo.test/unsubscribe/preview".to_owned(),
         topic: Some("Nieuwsbrief".to_owned()),
         link_text: "Uitschrijven".to_owned(),
     }

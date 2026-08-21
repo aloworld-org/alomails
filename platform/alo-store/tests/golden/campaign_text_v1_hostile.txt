@@ -12,4 +12,4 @@ She said "it's <b>fine</b>" &amp; left — 5 > 3.
         const x = '<a href="#">';
 
 --
-Uitschrijven: https://alo.test/u/9tOKENx
+Uitschrijven: https://alo.test/unsubscribe/9tOKENx

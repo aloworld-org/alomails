@@ -13,4 +13,4 @@ https://alo.test/campaigns/spring-prices-2026/orders?reference=NL-2026-0042
 en de prijs geldt tot het einde van de maand.
 
 --
-Uitschrijven: https://alo.test/u/9tOKENx
+Uitschrijven: https://alo.test/unsubscribe/9tOKENx

@@ -1,6 +1,6 @@
-Content-Type: multipart/alternative; boundary="=_alo_b04f2b4308a638eb7e0da526"
+Content-Type: multipart/alternative; boundary="=_alo_215fdc89f16de3500445b0c9"
 
---=_alo_b04f2b4308a638eb7e0da526
+--=_alo_215fdc89f16de3500445b0c9
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
 
@@ -28,9 +28,9 @@ Met vriendelijke groet,
 Nordwind & Co
 
 --
-Uitschrijven: https://alo.test/u/9tOKENx
+Uitschrijven: https://alo.test/unsubscribe/9tOKENx
 
---=_alo_b04f2b4308a638eb7e0da526
+--=_alo_215fdc89f16de3500445b0c9
 Content-Type: text/html; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
 
@@ -188,8 +188,8 @@ g=3D"0" border=3D"0" style=3D"width:100%;border-collapse:collapse;">
 <td align=3D"center" style=3D"padding:16px 28px 8px 28px;font-family:Ari=
 al,Helvetica,sans-serif;font-size:12px;line-height:18px;mso-line-height-=
 rule:exactly;color:#475569;">
-<a href=3D"https://alo.test/u/9tOKENx" style=3D"color:#475569;text-decor=
-ation:underline;">Uitschrijven</a>
+<a href=3D"https://alo.test/unsubscribe/9tOKENx" style=3D"color:#475569;=
+text-decoration:underline;">Uitschrijven</a>
 </td>
 </tr>
 </table>
@@ -201,4 +201,4 @@ ation:underline;">Uitschrijven</a>
 </body>
 </html>
 
---=_alo_b04f2b4308a638eb7e0da526--
+--=_alo_215fdc89f16de3500445b0c9--

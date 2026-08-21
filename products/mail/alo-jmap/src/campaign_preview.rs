@@ -92,14 +92,14 @@ impl PreviewQuery {
 
     /// The way out the preview shows, or the `422` naming what is missing.
     ///
-    /// **The URL is the server's**, built from its own public origin: a
+    /// **Both URLs are the server's**, built from its own public origin: a
     /// client-supplied address rendered into a letter is an open redirect
     /// wearing a preview's clothes. Only the words come from the caller.
     ///
-    /// `/u/preview` is deliberately not a real token. A preview has no
-    /// recipient, so there is nobody to mint one for — and a working token
-    /// minted for a rehearsal is a live unsubscribe link sitting in whatever
-    /// screenshot the colleague pastes into chat.
+    /// `preview` stands where a token would and is deliberately not a real one.
+    /// A preview has no recipient, so there is nobody to mint one for — and a
+    /// working token minted for a rehearsal is a live unsubscribe link sitting
+    /// in whatever screenshot the colleague pastes into chat.
     fn unsubscribe(&self, base_url: &str) -> Result<UnsubscribeInvitation, Problem> {
         let text = stated(self.unsubscribe_text.as_deref()).ok_or_else(|| {
             Problem::with(
@@ -108,8 +108,13 @@ impl PreviewQuery {
                  language — the server has no translations of its own",
             )
         })?;
+        let base = base_url.trim_end_matches('/');
         Ok(UnsubscribeInvitation {
-            url: format!("{}/u/preview", base_url.trim_end_matches('/')),
+            // The endpoint a mail client POSTs to, and the page a person opens.
+            // Two different routes doing two different jobs — see
+            // `UnsubscribeInvitation::page_url`.
+            one_click_url: format!("{base}/jmap/campaign-unsubscribe/preview"),
+            page_url: format!("{base}/unsubscribe/preview"),
             topic: None,
             link_text: text.to_owned(),
         })
@@ -308,7 +313,11 @@ mod tests {
         // Built from the server's origin — a client-supplied address rendered
         // into a letter would be an open redirect wearing a preview's clothes —
         // and with the trailing slash not doubled.
-        assert_eq!(invitation.url, "https://alo.test/u/preview");
+        assert_eq!(
+            invitation.one_click_url,
+            "https://alo.test/jmap/campaign-unsubscribe/preview"
+        );
+        assert_eq!(invitation.page_url, "https://alo.test/unsubscribe/preview");
         assert_eq!(invitation.link_text, "Uitschrijven");
         // A preview has no recipient, so there is nobody to mint a token for,
         // and the placeholder still has to be a letter-worthy invitation.

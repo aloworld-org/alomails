@@ -41,7 +41,8 @@ use serde_json::{Value, json};
 /// though they belonged to the renderer.
 fn unsub() -> UnsubscribeInvitation {
     UnsubscribeInvitation {
-        url: "https://alo.test/u/9tOKENx".to_owned(),
+        one_click_url: "https://alo.test/jmap/campaign-unsubscribe/9tOKENx".to_owned(),
+        page_url: "https://alo.test/unsubscribe/9tOKENx".to_owned(),
         topic: Some("Nieuwsbrief".to_owned()),
         link_text: "Uitschrijven".to_owned(),
     }

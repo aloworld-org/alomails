@@ -479,7 +479,7 @@ fn unsubscribe_html(unsubscribe: &UnsubscribeInvitation, out: &mut String) {
     ));
     out.push_str(&format!(
         "<a href=\"{}\" style=\"color:{TEXT_COLOUR};text-decoration:underline;\">{}</a>\n",
-        esc(unsubscribe.url.trim()),
+        esc(unsubscribe.page_url.trim()),
         esc_text(&unsubscribe.link_text)
     ));
     out.push_str("</td>\n</tr>\n</table>\n");

@@ -171,7 +171,7 @@ pub fn render_campaign_text(
     lines.push(format!(
         "{}: {}",
         unsubscribe.link_text.trim(),
-        unsubscribe.url.trim()
+        unsubscribe.page_url.trim()
     ));
 
     let mut out = lines.join("\n");
@@ -718,7 +718,7 @@ mod tests {
         let whole = render_whole(&letter());
 
         assert!(
-            whole.contains(&invitation.url),
+            whole.contains(&invitation.page_url),
             "the address is written out in full — a text part has nowhere to              hide a link, and a reader has to be able to copy it: {whole}"
         );
         assert!(
@@ -745,7 +745,7 @@ mod tests {
         // is render a part with no way out of it.
         let whole = render_whole(&CampaignContent::empty());
         let invitation = crate::campaign_unsubscribe_link::an_invitation();
-        assert!(whole.contains(&invitation.url), "{whole}");
+        assert!(whole.contains(&invitation.page_url), "{whole}");
         assert!(
             !whole.contains("--"),
             "with no letter above it there is nothing to separate from: {whole}"
