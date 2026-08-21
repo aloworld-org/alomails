@@ -422,6 +422,7 @@ export const nl: Partial<Catalog> = {
   taskTimeTrackingHint: "Registreer deze taak rechtstreeks in je urenstaat.",
   taskTimerRunningOnTask: "De tijd voor deze taak wordt bijgehouden.",
   taskTimerRunningElsewhere: "Er loopt al een andere timer.",
+  taskSwitchTimer: "Timer wisselen",
   taskAssignee: "Toegewezen aan",
   taskAssigneePlaceholder: "naam@voorbeeld.com",
   taskDue: "Vervaldatum",

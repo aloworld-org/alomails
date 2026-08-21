@@ -470,6 +470,7 @@ export const en = {
   taskTimeTrackingHint: "Track this task directly into your timesheet.",
   taskTimerRunningOnTask: "Time is being tracked on this task.",
   taskTimerRunningElsewhere: "Another timer is already running.",
+  taskSwitchTimer: "Switch timer",
   taskAssignee: "Assignee",
   taskAssigneePlaceholder: "name@example.com",
   taskDue: "Due",

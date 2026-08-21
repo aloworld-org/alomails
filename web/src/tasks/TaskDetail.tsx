@@ -60,11 +60,34 @@ interface Props {
 export type TaskTimerState = "idle" | "this-task" | "another-task";
 
 /** A task owns the stop action only when the running timer names that task.
- *  A project-only timer, or a timer on a sibling task, remains visible but is
- *  never silently replaced: stopping time is a billable write. */
+ *  A project-only timer or a sibling task produces an explicit switch action:
+ *  the current time is safely logged before tracking moves to this task. */
 export function taskTimerState(timer: RunningTimer | null, taskId: string): TaskTimerState {
   if (timer === null) return "idle";
   return timer.taskId === taskId ? "this-task" : "another-task";
+}
+
+interface TaskTimerApi {
+  stopTimer(): Promise<unknown>;
+  startTimer(input: {
+    projectId: string;
+    taskId: string;
+    note: string;
+  }): Promise<RunningTimer>;
+}
+
+/** Persist the running entry before moving time tracking to another task. */
+export async function changeTaskTimer(
+  api: TaskTimerApi,
+  state: TaskTimerState,
+  task: Pick<Task, "id" | "projectId" | "title">,
+): Promise<RunningTimer | null> {
+  if (state === "this-task") {
+    await api.stopTimer();
+    return null;
+  }
+  if (state === "another-task") await api.stopTimer();
+  return api.startTimer({ projectId: task.projectId, taskId: task.id, note: task.title });
 }
 
 export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
@@ -274,21 +297,11 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
 
   async function toggleTimer() {
     const state = taskTimerState(runningTimer, t.id);
-    if (state === "another-task" || timerBusy) return;
+    if (timerBusy) return;
     setTimerBusy(true);
     setTimerError(null);
     try {
-      if (state === "this-task") {
-        await projectsApi.stopTimer();
-        setRunningTimer(null);
-      } else {
-        const timer = await projectsApi.startTimer({
-          projectId: t.projectId,
-          taskId: t.id,
-          note: t.title,
-        });
-        setRunningTimer(timer);
-      }
+      setRunningTimer(await changeTaskTimer(projectsApi, state, t));
       announceTimerChanged();
       onChanged();
     } catch (error) {
@@ -414,10 +427,14 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
                   : "bg-raised text-primary hover:bg-strong"
               }`}
               onClick={() => void toggleTimer()}
-              disabled={timerBusy || timerState === "another-task"}
+              disabled={timerBusy}
             >
               {timerState === "this-task" ? <Square size={14} aria-hidden="true" /> : <Play size={14} aria-hidden="true" />}
-              {timerState === "this-task" ? strings.projectsStopTimer : strings.projectsStartTimer}
+              {timerState === "this-task"
+                ? strings.projectsStopTimer
+                : timerState === "another-task"
+                  ? strings.taskSwitchTimer
+                  : strings.projectsStartTimer}
             </button>
           </section>
           {timerError !== null && <p className="text-sm text-danger" role="alert">{timerError}</p>}

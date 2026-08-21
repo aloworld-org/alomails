@@ -430,6 +430,7 @@ export const fr: Partial<Catalog> = {
   taskTimeTrackingHint: "Enregistrez cette tâche directement dans votre feuille de temps.",
   taskTimerRunningOnTask: "Le temps est suivi sur cette tâche.",
   taskTimerRunningElsewhere: "Un autre chronomètre est déjà en cours.",
+  taskSwitchTimer: "Changer de chronomètre",
   taskAssignee: "Responsable",
   taskAssigneePlaceholder: "nom@exemple.com",
   taskDue: "Échéance",
