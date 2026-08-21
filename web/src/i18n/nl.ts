@@ -2615,6 +2615,8 @@ export const nl: Partial<Catalog> = {
   projectsChooseTimeProjectHint: "Kies een project om deze week een tijdregistratie toe te voegen.",
   projectsBillableOfWeek: (duration: string) =>
     `waarvan ${duration} factureerbaar`,
+  projectsCompleteWeek: "Volledige week",
+  projectsCompleteWeekSubmission: "Volledige week ingediend ter goedkeuring",
   projectsProposedInWeek: (duration: string) =>
     `${duration} voorgesteld, nog niet geaccepteerd`,
   // Beslissen over een voorstel (B3.10b). Pas door te accepteren wordt het een

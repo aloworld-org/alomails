@@ -4489,6 +4489,8 @@ export const en = {
   projectsChooseTimeProject: "What did you work on?",
   projectsChooseTimeProjectHint: "Choose a project to add a time entry for this week.",
   projectsBillableOfWeek: (duration: string) => `${duration} billable`,
+  projectsCompleteWeek: "Entire week",
+  projectsCompleteWeekSubmission: "Entire week submitted for approval",
   projectsProposedInWeek: (duration: string) =>
     `${duration} suggested, not yet accepted`,
   // Deciding about a suggestion (B3.10b). Accepting is what makes it an hour —

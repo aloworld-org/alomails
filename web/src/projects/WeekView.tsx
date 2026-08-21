@@ -121,6 +121,8 @@ export function WeekView({
   const [monday, setMonday] = useState(() => mondayOf(new Date()));
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [totals, setTotals] = useState<TimeTotals | null>(null);
+  const [completeWeekTotals, setCompleteWeekTotals] =
+    useState<TimeTotals | null>(null);
   const [week, setWeek] = useState<TimesheetWeek | null>(null);
   const [extraRows, setExtraRows] = useState<string[]>([]);
   const [target, setTarget] = useState<CellTarget | null>(null);
@@ -144,13 +146,15 @@ export function WeekView({
     setLoading(true);
     void (async () => {
       try {
-        const [period, weeks] = await Promise.all([
+        const [period, completePeriod, weeks] = await Promise.all([
           api.time(monday, sunday, projectId ?? undefined),
+          projectId === null ? Promise.resolve(null) : api.time(monday, sunday),
           api.weeks(monday, sunday),
         ]);
         if (!live) return;
         setEntries(period.entries);
         setTotals(period.totals);
+        setCompleteWeekTotals(completePeriod?.totals ?? period.totals);
         setWeek(weeks.find((w) => w.weekStart === monday) ?? null);
         setError(null);
       } catch (err) {
@@ -625,12 +629,17 @@ export function WeekView({
 
       <div className={styles.weekFoot}>
         <div className={styles.weekFootFacts}>
+          <span className="text-xs font-semibold uppercase tracking-wide text-tertiary">
+            {projectId === null
+              ? strings.projectsCompleteWeek
+              : strings.projectsCompleteWeekSubmission}
+          </span>
           <span className={styles.weekFootTotal}>
-            {durationLabel(totals?.minutes ?? 0)}
+            {durationLabel(completeWeekTotals?.minutes ?? 0)}
           </span>
           <p className={styles.weekFootNote}>
             {strings.projectsBillableOfWeek(
-              durationLabel(totals?.billableMinutes ?? 0),
+              durationLabel(completeWeekTotals?.billableMinutes ?? 0),
             )}
           </p>
           {(totals?.proposedMinutes ?? 0) > 0 && (
@@ -668,7 +677,9 @@ export function WeekView({
         ) : (
           <Button
             disabled={
-              busy || status === "approved" || (totals?.minutes ?? 0) === 0
+              busy ||
+              status === "approved" ||
+              (completeWeekTotals?.minutes ?? 0) === 0
             }
             onClick={() => void decide("submit")}
           >

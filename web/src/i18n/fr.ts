@@ -2656,6 +2656,8 @@ export const fr: Partial<Catalog> = {
   projectsChooseTimeProject: "Sur quoi avez-vous travaillé ?",
   projectsChooseTimeProjectHint: "Choisissez un projet pour ajouter une saisie de temps cette semaine.",
   projectsBillableOfWeek: (duration: string) => `dont ${duration} facturables`,
+  projectsCompleteWeek: "Semaine entière",
+  projectsCompleteWeekSubmission: "Semaine entière soumise pour approbation",
   projectsProposedInWeek: (duration: string) =>
     `${duration} proposées, pas encore acceptées`,
   // Décider d’une proposition (B3.10b). C’est l’acceptation qui en fait une
