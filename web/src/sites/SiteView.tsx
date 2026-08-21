@@ -46,7 +46,6 @@ import type {
   SiteTranslationEnvelope,
   SiteTranslationReadiness,
 } from "./types";
-import styles from "./SitesModule.module.css";
 
 export function SiteView() {
   const { siteId = "" } = useParams();
@@ -372,7 +371,7 @@ export function SiteView() {
                   )}
                   <Button
                     size="sm"
-                disabled={publishBusy}
+                    disabled={publishBusy}
                     onClick={() => void publish()}
                   >
                     {live ? strings.sitesPublishChanges : strings.sitesPublish}
@@ -426,46 +425,49 @@ export function SiteView() {
                 </span>
               </summary>
               <section
-                className="border-t border-subtle px-5 py-5 sm:px-6"
+                className="flex flex-col gap-5 border-t border-subtle px-5 py-5 sm:px-6"
                 aria-labelledby="site-languages-title"
               >
                 <div className="sr-only">
-                  <span className={styles.languagePanelIcon} aria-hidden="true">
+                  <span aria-hidden="true">
                     <Languages />
                   </span>
                   <div>
                     <h2
                       id="site-languages-title"
-                      className={styles.languageTitle}
+                      className="m-0 text-base font-semibold text-text-primary"
                     >
                       {strings.sitesLanguages}
                     </h2>
-                    <p className={styles.languageHint}>
+                    <p className="mb-0 mt-1 text-sm text-text-secondary">
                       {strings.sitesLanguagesHint}
                     </p>
                   </div>
                 </div>
 
-                <div className={styles.languageRows}>
+                <div className="overflow-hidden rounded-xl border border-subtle bg-surface">
                   {readiness?.languages.map((language) => (
-                    <div className={styles.languageRow} key={language.locale}>
-                      <span className={styles.languageCode}>
+                    <div
+                      className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 border-t border-subtle px-4 py-3 first:border-t-0 hover:bg-surface-raised"
+                      key={language.locale}
+                    >
+                      <span className="min-w-10 font-mono text-sm font-semibold text-text-primary">
                         {language.locale.toUpperCase()}
                       </span>
-                      <span className={styles.languageName}>
+                      <span className="min-w-0 flex-1 text-sm font-medium text-text-primary sm:min-w-40">
                         {languageName(language.locale)}
                       </span>
                       {language.locale === site.defaultLocale && (
-                        <span className={styles.badge}>
+                        <span className="inline-flex rounded-full bg-surface-raised px-2.5 py-1 text-xs font-medium text-text-secondary">
                           {strings.sitesLanguageDefaultBadge}
                         </span>
                       )}
                       <span
-                        className={
+                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
                           language.ready
-                            ? styles.translationReady
-                            : styles.translationWarning
-                        }
+                            ? "bg-success-tint text-success"
+                            : "bg-surface-raised text-warning"
+                        }`}
                       >
                         {language.ready
                           ? strings.sitesTranslationReady
@@ -475,7 +477,7 @@ export function SiteView() {
                             )}
                       </span>
                       {language.locale !== site.defaultLocale && (
-                        <span className={styles.languageRowActions}>
+                        <span className="flex w-full flex-wrap items-center justify-end gap-2 sm:ml-auto sm:w-auto">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -504,11 +506,11 @@ export function SiteView() {
                   ))}
                 </div>
 
-                <div className={styles.languageControls}>
-                  <label className={styles.languageControl}>
+                <div className="grid gap-4 rounded-xl bg-surface-raised p-4 lg:grid-cols-2">
+                  <label className="flex min-w-0 flex-col gap-1.5 text-xs font-semibold text-text-secondary">
                     <span>{strings.sitesDefaultLanguage}</span>
                     <select
-                      className={styles.input}
+                      className="min-h-11 w-full rounded-xl border border-default bg-surface px-3 text-sm font-medium text-text-primary outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent-soft"
                       value={site.defaultLocale}
                       disabled={languageBusy}
                       onChange={(event) =>
@@ -525,11 +527,11 @@ export function SiteView() {
                       ))}
                     </select>
                   </label>
-                  <label className={styles.languageControl}>
+                  <label className="flex min-w-0 flex-col gap-1.5 text-xs font-semibold text-text-secondary">
                     <span>{strings.sitesAddLanguage}</span>
-                    <span className={styles.languageAddRow}>
+                    <span className="flex min-w-0 flex-wrap items-center gap-2 sm:flex-nowrap">
                       <input
-                        className={styles.input}
+                        className="min-h-11 min-w-0 flex-1 rounded-xl border border-default bg-surface px-3 text-sm font-medium text-text-primary outline-none transition-colors placeholder:text-text-tertiary focus:border-accent focus:ring-2 focus:ring-accent-soft"
                         value={languageInput}
                         placeholder={strings.sitesLanguagePlaceholder}
                         disabled={languageBusy}
@@ -554,51 +556,67 @@ export function SiteView() {
                   </label>
                   {firstIncompleteLocale !== undefined &&
                     firstPageId !== undefined && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        icon={<Globe2 size="var(--icon-size-inline)" />}
-                        onClick={() =>
-                          navigate(
-                            `pages/${firstPageId}?locale=${encodeURIComponent(firstIncompleteLocale)}`,
-                          )
-                        }
-                      >
-                        {strings.sitesContinueTranslating}
-                      </Button>
+                      <div className="flex items-end lg:col-span-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          icon={<Globe2 size="var(--icon-size-inline)" />}
+                          onClick={() =>
+                            navigate(
+                              `pages/${firstPageId}?locale=${encodeURIComponent(firstIncompleteLocale)}`,
+                            )
+                          }
+                        >
+                          {strings.sitesContinueTranslating}
+                        </Button>
+                      </div>
                     )}
                 </div>
                 {languageError !== null && (
-                  <span className={styles.publishError} role="alert">
+                  <span
+                    className="text-sm font-medium text-danger"
+                    role="alert"
+                  >
                     {languageError}
                   </span>
                 )}
                 {translationError !== null && (
-                  <span className={styles.publishError} role="alert">
+                  <span
+                    className="text-sm font-medium text-danger"
+                    role="alert"
+                  >
                     {translationError}
                   </span>
                 )}
                 {translationBusy && translationProposal === null && (
-                  <div className={styles.translationPreparing} role="status">
+                  <div
+                    className="flex min-h-11 items-center gap-2 text-sm text-text-secondary"
+                    role="status"
+                  >
                     <Spinner size={16} />
                     <span>{strings.sitesWholeTranslationPreparing}</span>
                   </div>
                 )}
                 {translationProposal !== null && (
                   <section
-                    className={styles.translationReview}
+                    className="overflow-hidden rounded-xl border border-default bg-surface"
                     aria-labelledby="translation-review-title"
                   >
-                    <div className={styles.translationReviewHead}>
+                    <div className="flex flex-col gap-4 border-b border-subtle p-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <h3 id="translation-review-title">
+                        <h3
+                          id="translation-review-title"
+                          className="m-0 text-base font-semibold text-text-primary"
+                        >
                           {strings.sitesWholeTranslationReview(
                             languageName(translationProposal.target_locale),
                           )}
                         </h3>
-                        <p>{strings.sitesWholeTranslationReviewHint}</p>
+                        <p className="mb-0 mt-1 text-sm text-text-secondary">
+                          {strings.sitesWholeTranslationReviewHint}
+                        </p>
                       </div>
-                      <div className={styles.translationReviewActions}>
+                      <div className="flex flex-wrap items-center gap-2">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -617,35 +635,35 @@ export function SiteView() {
                         </Button>
                       </div>
                     </div>
-                    <div className={styles.translationReviewList}>
+                    <div className="flex max-h-96 flex-col overflow-y-auto">
                       {translationProposal.pages.map(({ before, after }) => (
                         <article
-                          className={styles.translationReviewItem}
+                          className="grid min-h-12 grid-cols-1 gap-2 border-b border-subtle px-4 py-3 text-sm text-text-secondary last:border-b-0 sm:grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto] sm:items-center sm:gap-3"
                           key={`page-${before.id}`}
                         >
-                          <span className={styles.translationReviewKind}>
+                          <span className="text-xs font-semibold uppercase text-accent-active">
                             {strings.sitesTranslationPageKind}
                           </span>
                           <span>{before.title}</span>
                           <ArrowRight aria-hidden="true" />
                           <strong>{after.title}</strong>
-                          <span className={styles.translationReviewSlug}>
+                          <span className="font-mono text-xs text-text-tertiary">
                             /{after.slug}
                           </span>
                         </article>
                       ))}
                       {translationProposal.posts.map(({ before, after }) => (
                         <article
-                          className={styles.translationReviewItem}
+                          className="grid min-h-12 grid-cols-1 gap-2 border-b border-subtle px-4 py-3 text-sm text-text-secondary last:border-b-0 sm:grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto] sm:items-center sm:gap-3"
                           key={`post-${before.id}`}
                         >
-                          <span className={styles.translationReviewKind}>
+                          <span className="text-xs font-semibold uppercase text-accent-active">
                             {strings.sitesTranslationPostKind}
                           </span>
                           <span>{before.title}</span>
                           <ArrowRight aria-hidden="true" />
                           <strong>{after.title}</strong>
-                          <span className={styles.translationReviewSlug}>
+                          <span className="font-mono text-xs text-text-tertiary">
                             /{after.slug}
                           </span>
                         </article>
