@@ -42,7 +42,42 @@ import type {
   SiteDetail,
   SiteKnowledgeSource,
 } from "./types";
-import styles from "./SitesModule.module.css";
+
+const styles = {
+  page: "mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8",
+  header: "flex flex-wrap items-center gap-4 border-b border-subtle pb-5",
+  backLink:
+    "inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-secondary no-underline transition hover:bg-muted hover:text-primary",
+  siteHead: "min-w-0 flex-1",
+  title: "text-2xl font-semibold tracking-tight text-primary",
+  mono: "mt-1 block truncate text-sm text-secondary",
+  pageBody: "grid gap-5 lg:grid-cols-2",
+  languagePanel:
+    "flex min-w-0 flex-col gap-5 rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6",
+  languagePanelIntro: "flex items-start gap-3 border-b border-subtle pb-4",
+  languagePanelIcon:
+    "grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent [&_svg]:size-5",
+  languageTitle: "text-base font-semibold text-primary",
+  languageHint: "mt-1 text-sm leading-6 text-secondary",
+  assistantSwitch:
+    "flex min-h-12 cursor-pointer items-center justify-between gap-4 rounded-xl bg-muted px-4 text-sm font-semibold text-primary [&_input]:size-5 [&_input]:accent-[var(--accent)]",
+  languageControls: "grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_auto]",
+  languageControl:
+    "flex min-w-0 flex-col gap-2 text-xs font-semibold uppercase tracking-wide text-secondary",
+  input:
+    "min-h-11 w-full rounded-xl border border-default bg-surface px-3.5 py-2.5 text-base font-normal normal-case tracking-normal text-primary outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15 disabled:bg-muted",
+  hint: "text-sm leading-6 text-secondary",
+  assistantWarning:
+    "rounded-xl border border-warning/20 bg-warning/10 px-4 py-3 text-sm leading-6 text-primary",
+  publishError: "text-sm font-medium text-danger",
+  assistantSources:
+    "flex list-none flex-col divide-y divide-subtle overflow-hidden rounded-xl border border-subtle p-0",
+  assistantSource:
+    "flex min-w-0 flex-wrap items-center gap-3 bg-surface px-4 py-3 text-sm text-primary [&>svg]:shrink-0 [&>svg]:text-secondary",
+  badge:
+    "inline-flex min-h-7 items-center rounded-full bg-muted px-2.5 text-xs font-semibold text-secondary",
+  assistantSourceMeta: "ml-auto text-xs text-tertiary",
+};
 
 const added = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
 const acted = new Intl.DateTimeFormat(undefined, {
@@ -166,7 +201,11 @@ export function AssistantView() {
     setSaved(false);
     setSaveError(null);
     try {
-      const next = await api.setChatSettings(siteId, enabled, Math.round(euros * 100));
+      const next = await api.setChatSettings(
+        siteId,
+        enabled,
+        Math.round(euros * 100),
+      );
       setSettings(next);
       setEnabled(next.enabled);
       setBudgetInput((next.monthlyCeilingCents / 100).toString());
@@ -208,6 +247,16 @@ export function AssistantView() {
       <div className={styles.pageBody}>
         {error !== null && <ErrorBanner message={error} />}
 
+        {loading && (
+          <div
+            className="col-span-full flex min-h-72 items-center justify-center rounded-2xl border border-subtle bg-surface shadow-sm"
+            role="status"
+            aria-label={strings.sitesAssistantTitle}
+          >
+            <Spinner size={22} />
+          </div>
+        )}
+
         {settings !== null && (
           <section
             className={styles.languagePanel}
@@ -218,10 +267,15 @@ export function AssistantView() {
                 <Bot />
               </span>
               <div>
-                <h2 id="assistant-settings-title" className={styles.languageTitle}>
+                <h2
+                  id="assistant-settings-title"
+                  className={styles.languageTitle}
+                >
                   {strings.sitesAssistantSwitchTitle}
                 </h2>
-                <p className={styles.languageHint}>{strings.sitesAssistantSwitchHint}</p>
+                <p className={styles.languageHint}>
+                  {strings.sitesAssistantSwitchHint}
+                </p>
               </div>
             </div>
 
@@ -300,7 +354,9 @@ export function AssistantView() {
                 </h2>
                 {/* The whole permission model, in the one sentence a customer
                     can be shown after an incident (ADR 0040 §1). */}
-                <p className={styles.languageHint}>{strings.sitesAssistantReadsRule}</p>
+                <p className={styles.languageHint}>
+                  {strings.sitesAssistantReadsRule}
+                </p>
               </div>
             </div>
 
@@ -308,22 +364,30 @@ export function AssistantView() {
               <li className={styles.assistantSource}>
                 <Globe2 size={16} aria-hidden="true" />
                 <span>{strings.sitesAssistantReadsPublishedSite}</span>
-                <span className={styles.badge}>{strings.sitesAssistantAlwaysRead}</span>
+                <span className={styles.badge}>
+                  {strings.sitesAssistantAlwaysRead}
+                </span>
               </li>
               <li className={styles.assistantSource}>
                 <Newspaper size={16} aria-hidden="true" />
                 <span>{strings.sitesAssistantReadsPublishedPosts}</span>
-                <span className={styles.badge}>{strings.sitesAssistantAlwaysRead}</span>
+                <span className={styles.badge}>
+                  {strings.sitesAssistantAlwaysRead}
+                </span>
               </li>
               {sources.map((source) => (
                 <li className={styles.assistantSource} key={source.id}>
                   <FileText size={16} aria-hidden="true" />
                   <span>{source.title}</span>
                   {source.trashed ? (
-                    <span className={styles.badge}>{strings.sitesAssistantTrashed}</span>
+                    <span className={styles.badge}>
+                      {strings.sitesAssistantTrashed}
+                    </span>
                   ) : (
                     <span className={styles.assistantSourceMeta}>
-                      {strings.sitesAssistantAddedOn(added.format(new Date(source.addedAt)))}
+                      {strings.sitesAssistantAddedOn(
+                        added.format(new Date(source.addedAt)),
+                      )}
                     </span>
                   )}
                   <Button
@@ -376,7 +440,9 @@ export function AssistantView() {
                 {/* The accountability half of ADR 0040: every act, the fact
                     it used, the page that fact came from — and never the
                     conversation's words or the visitor (S3.03e). */}
-                <p className={styles.languageHint}>{strings.sitesAssistantDidHint}</p>
+                <p className={styles.languageHint}>
+                  {strings.sitesAssistantDidHint}
+                </p>
               </div>
             </div>
 
@@ -405,7 +471,9 @@ export function AssistantView() {
           </section>
         )}
 
-        {settings !== null && <AssistantAppearance siteId={siteId} site={site} />}
+        {settings !== null && (
+          <AssistantAppearance siteId={siteId} site={site} />
+        )}
       </div>
 
       {picking && (
