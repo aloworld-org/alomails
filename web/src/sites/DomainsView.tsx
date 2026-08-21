@@ -9,7 +9,7 @@
 // one is last, and on a deployment that sells none it is replaced by the
 // server's own sentence saying so — not by a broken buy box.
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ExternalLink, Globe2 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 
 import { Spinner } from "../ds";
@@ -20,7 +20,6 @@ import { DomainBuyPanel } from "./DomainBuyPanel";
 import { DomainPurchaseList } from "./DomainPurchaseList";
 import { ErrorBanner } from "./parts";
 import type { SiteDetail, SiteDomainPurchase } from "./types";
-import styles from "./SitesModule.module.css";
 
 export function DomainsView() {
   const { siteId = "" } = useParams();
@@ -68,7 +67,11 @@ export function DomainsView() {
     let cancelled = false;
     api.config().then(
       (config) => {
-        if (!cancelled && typeof config.domain === "string" && config.domain !== "")
+        if (
+          !cancelled &&
+          typeof config.domain === "string" &&
+          config.domain !== ""
+        )
           setDomain(config.domain);
       },
       () => {
@@ -81,7 +84,8 @@ export function DomainsView() {
     };
   }, [api]);
 
-  const host = site !== null && domain !== null ? `${site.subdomain}.${domain}` : null;
+  const host =
+    site !== null && domain !== null ? `${site.subdomain}.${domain}` : null;
 
   /** One purchase changed by an action, folded into the list in place — and
    *  appended when it is one this screen has not seen before. */
@@ -94,16 +98,24 @@ export function DomainsView() {
   }
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <Link to=".." relative="path" className={styles.backLink}>
-          <ArrowLeft size="var(--icon-size-inline)" aria-hidden="true" />
-          {strings.sitesBack}
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 py-5 sm:px-6 sm:py-7 lg:px-8">
+      <header className="flex min-h-12 flex-wrap items-center gap-3">
+        <Link
+          to=".."
+          relative="path"
+          className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 font-medium text-text-secondary no-underline transition-colors hover:bg-surface-raised hover:text-text-primary"
+        >
+          <ArrowLeft size={18} aria-hidden="true" />
+          {strings.sitesBackToSite}
         </Link>
-        <div className={styles.siteHead}>
-          <h1 className={styles.title}>{strings.sitesDomains}</h1>
+        <div className="min-w-0 flex-1">
+          <h1 className="m-0 text-2xl font-bold tracking-tight text-text-primary sm:text-3xl">
+            {strings.sitesDomains}
+          </h1>
           {site !== null && (
-            <span className={styles.submissionSiteName}>{site.name}</span>
+            <p className="m-0 mt-0.5 truncate text-sm text-text-secondary">
+              {site.name}
+            </p>
           )}
         </div>
         {loading && <Spinner size={16} />}
@@ -112,31 +124,65 @@ export function DomainsView() {
       {error !== null && <ErrorBanner message={error} />}
 
       {host !== null && (
-        <p className={styles.domainAloAddress}>
-          {strings.sitesDomainAloAddress}{" "}
-          <a href={`https://${host}`} target="_blank" rel="noreferrer" className={styles.mono}>
-            {host}
+        <section className="flex flex-col gap-4 rounded-2xl border border-subtle bg-surface px-5 py-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <span
+              className="grid size-10 shrink-0 place-items-center rounded-xl bg-success-tint text-success"
+              aria-hidden="true"
+            >
+              <Globe2 size={20} />
+            </span>
+            <div className="min-w-0">
+              <p className="m-0 text-sm text-text-secondary">
+                {strings.sitesDomainAloAddress}
+              </p>
+              <strong className="block truncate font-mono text-sm text-text-primary sm:text-base">
+                {host}
+              </strong>
+            </div>
+          </div>
+          <a
+            href={`https://${host}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-subtle bg-surface px-4 font-semibold text-text-primary no-underline transition-colors hover:bg-surface-raised"
+          >
+            {strings.sitesPreview}
+            <ExternalLink size={16} aria-hidden="true" />
           </a>
-        </p>
+        </section>
       )}
 
       {site !== null && (
-        <>
+        <div className="flex flex-col gap-5">
           <ConnectedDomains siteId={site.id} siteHost={host} />
           {site.canManageCollaborators ? (
-            <>
-              <DomainBuyPanel siteId={site.id} onPurchased={absorb} />
-              <DomainPurchaseList
-                siteId={site.id}
-                purchases={purchases}
-                onUpdated={absorb}
-                onRefresh={() => void loadPurchases()}
-              />
-            </>
+            <details className="group rounded-2xl border border-subtle bg-surface shadow-sm">
+              <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-5 py-3 font-semibold text-text-primary marker:content-none hover:bg-surface-raised sm:px-6">
+                <span>{strings.sitesDomainBuy}</span>
+                <span
+                  className="text-xl font-normal text-text-secondary transition-transform group-open:rotate-45"
+                  aria-hidden="true"
+                >
+                  +
+                </span>
+              </summary>
+              <div className="flex flex-col gap-5 border-t border-subtle p-5 sm:p-6">
+                <DomainBuyPanel siteId={site.id} onPurchased={absorb} />
+                <DomainPurchaseList
+                  siteId={site.id}
+                  purchases={purchases}
+                  onUpdated={absorb}
+                  onRefresh={() => void loadPurchases()}
+                />
+              </div>
+            </details>
           ) : (
-            <p className={styles.domainAloAddress}>{strings.sitesDomainOwnerOnly}</p>
+            <p className="m-0 rounded-xl border border-subtle bg-surface-raised px-4 py-3 text-sm text-text-secondary">
+              {strings.sitesDomainOwnerOnly}
+            </p>
           )}
-        </>
+        </div>
       )}
     </div>
   );

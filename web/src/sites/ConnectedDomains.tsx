@@ -22,7 +22,6 @@ import { Button, Spinner } from "../ds";
 import { strings } from "../i18n";
 import { sitesMessage, useSitesApi } from "./api";
 import type { SiteDomain } from "./types";
-import styles from "./SitesModule.module.css";
 
 /** What to call a claim's status in the reader's language. */
 function statusLabel(domain: SiteDomain): string {
@@ -144,24 +143,38 @@ export function ConnectedDomains({
   }
 
   return (
-    <section className={styles.domainPanel} aria-labelledby="site-domains-title">
-      <div className={styles.languagePanelIntro}>
-        <span className={styles.languagePanelIcon} aria-hidden="true">
-          <Globe2 />
+    <section
+      className="overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm"
+      aria-labelledby="site-domains-title"
+    >
+      <div className="flex items-start gap-3 px-5 py-5 sm:px-6">
+        <span
+          className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent"
+          aria-hidden="true"
+        >
+          <Globe2 size={20} />
         </span>
-        <div>
-          <h2 id="site-domains-title" className={styles.languageTitle}>
+        <div className="min-w-0">
+          <h2
+            id="site-domains-title"
+            className="m-0 text-lg font-semibold text-text-primary"
+          >
             {strings.sitesDomainOwned}
           </h2>
-          <p className={styles.languageHint}>{strings.sitesDomainOwnedHint}</p>
+          <p className="m-0 mt-1 text-sm leading-6 text-text-secondary">
+            {strings.sitesDomainOwnedHint}
+          </p>
         </div>
       </div>
 
-      <form className={styles.domainAddRow} onSubmit={add}>
-        <label className={styles.domainAddField}>
+      <form
+        className="flex flex-col gap-3 border-t border-subtle px-5 py-5 sm:flex-row sm:items-end sm:px-6"
+        onSubmit={add}
+      >
+        <label className="flex min-w-0 flex-1 flex-col gap-1.5 text-sm font-semibold text-text-primary">
           <span>{strings.sitesDomainAddress}</span>
           <input
-            className={styles.input}
+            className="min-h-11 w-full rounded-xl border border-subtle bg-surface px-3.5 text-base text-text-primary outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-soft disabled:cursor-not-allowed disabled:opacity-60"
             value={typed}
             placeholder={strings.sitesDomainPlaceholder}
             autoComplete="url"
@@ -169,47 +182,63 @@ export function ConnectedDomains({
             onChange={(event) => setTyped(event.target.value)}
           />
         </label>
-        <Button type="submit" size="sm" disabled={busy || typed.trim() === ""}>
+        <Button type="submit" disabled={busy || typed.trim() === ""}>
           {strings.sitesDomainAdd}
         </Button>
       </form>
 
       {loading && (
-        <div className={styles.collaboratorStatus} role="status">
+        <div
+          className="flex items-center gap-2 border-t border-subtle px-5 py-4 text-sm text-text-secondary sm:px-6"
+          role="status"
+        >
           <Spinner size={16} />
           {strings.sitesDomainsLoading}
         </div>
       )}
       {error !== null && (
-        <p className={styles.publishError} role="alert">
+        <p
+          className="m-0 border-t border-danger/20 bg-danger/5 px-5 py-3 text-sm text-danger sm:px-6"
+          role="alert"
+        >
           {error}
         </p>
       )}
       {notice !== null && (
-        <p className={styles.collaboratorNotice} role="status">
+        <p
+          className="m-0 border-t border-success/20 bg-success-tint px-5 py-3 text-sm text-success sm:px-6"
+          role="status"
+        >
           {notice}
         </p>
       )}
 
       {!loading && domains.length === 0 && (
-        <p className={styles.collaboratorEmpty}>{strings.sitesDomainNoneBody}</p>
+        <p className="m-0 border-t border-subtle px-5 py-5 text-sm text-text-secondary sm:px-6">
+          {strings.sitesDomainNoneBody}
+        </p>
       )}
 
-      <div className={styles.domainRows}>
+      <div className="divide-y divide-subtle border-t border-subtle">
         {domains.map((domain) => (
-          <article className={styles.domainRow} key={domain.domain}>
-            <div className={styles.domainRowHead}>
-              <span className={styles.mono}>{domain.domain}</span>
+          <article
+            className="flex flex-col gap-4 px-5 py-5 sm:px-6"
+            key={domain.domain}
+          >
+            <div className="flex flex-wrap items-center gap-3">
+              <strong className="min-w-0 flex-1 truncate font-mono text-sm text-text-primary sm:text-base">
+                {domain.domain}
+              </strong>
               <span
                 className={
                   domain.status === "live"
-                    ? `${styles.chip} ${styles.chipLive}`
-                    : styles.chip
+                    ? "inline-flex min-h-7 items-center rounded-full bg-success-tint px-3 text-xs font-semibold text-success"
+                    : "inline-flex min-h-7 items-center rounded-full bg-surface-raised px-3 text-xs font-semibold text-text-secondary"
                 }
               >
                 {statusLabel(domain)}
               </span>
-              <span className={styles.domainRowActions}>
+              <span className="flex flex-wrap items-center gap-2">
                 {domain.status === "pending" && (
                   <Button
                     variant="ghost"
@@ -236,24 +265,42 @@ export function ConnectedDomains({
             </div>
 
             {armed === domain.domain && (
-              <p className={styles.hint}>{strings.sitesDomainRemoveHint}</p>
+              <p className="m-0 rounded-xl bg-danger/5 px-4 py-3 text-sm text-danger">
+                {strings.sitesDomainRemoveHint}
+              </p>
             )}
 
             {domain.status === "pending" && (
-              <div className={styles.domainRecord}>
-                <p className={styles.domainRecordTitle}>
+              <div className="rounded-xl border border-subtle bg-surface-raised p-4 sm:p-5">
+                <p className="m-0 font-semibold text-text-primary">
                   {strings.sitesDomainRecordTitle}
                 </p>
-                <dl className={styles.domainRecordFields}>
+                <dl className="mt-4 grid gap-3">
                   {[
-                    { label: strings.sitesDomainRecordName, value: domain.verifyRecord.name },
-                    { label: strings.sitesDomainRecordType, value: domain.verifyRecord.type },
-                    { label: strings.sitesDomainRecordValue, value: domain.verifyRecord.value },
+                    {
+                      label: strings.sitesDomainRecordName,
+                      value: domain.verifyRecord.name,
+                    },
+                    {
+                      label: strings.sitesDomainRecordType,
+                      value: domain.verifyRecord.type,
+                    },
+                    {
+                      label: strings.sitesDomainRecordValue,
+                      value: domain.verifyRecord.value,
+                    },
                   ].map((field) => (
-                    <div key={field.label}>
-                      <dt>{field.label}</dt>
-                      <dd>
-                        <code className={styles.mono}>{field.value}</code>
+                    <div
+                      className="grid gap-1 sm:grid-cols-[7rem_minmax(0,1fr)_auto] sm:items-center"
+                      key={field.label}
+                    >
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                        {field.label}
+                      </dt>
+                      <dd className="contents">
+                        <code className="min-w-0 overflow-x-auto rounded-lg bg-surface px-3 py-2 font-mono text-sm text-text-primary">
+                          {field.value}
+                        </code>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -268,12 +315,16 @@ export function ConnectedDomains({
                     </div>
                   ))}
                 </dl>
-                <p className={styles.hint}>{strings.sitesDomainRecordHint}</p>
+                <p className="m-0 mt-4 text-sm leading-6 text-text-secondary">
+                  {strings.sitesDomainRecordHint}
+                </p>
               </div>
             )}
 
             {domain.status !== "pending" && siteHost !== null && (
-              <p className={styles.hint}>{strings.sitesDomainPointHint(siteHost)}</p>
+              <p className="m-0 rounded-xl bg-surface-raised px-4 py-3 text-sm leading-6 text-text-secondary">
+                {strings.sitesDomainPointHint(siteHost)}
+              </p>
             )}
           </article>
         ))}
