@@ -38,14 +38,15 @@ export function projectNextStep(project: Project, taskCount: number): ProjectNex
   if (taskCount === 0) return "tasks";
   if (project.hours.minutes === 0) return "time";
   if (canCreateProjectInvoice(project)) return "invoice";
-  if (project.client !== null && project.hours.submittedUnbilledMinutes > 0) return "awaitingApproval";
-  const awaitingApproval = Math.max(
+  const readyToSubmit = Math.max(
     0,
     project.hours.billableMinutes
       - project.hours.approvedUnbilledMinutes
+      - project.hours.submittedUnbilledMinutes
       - project.hours.billedMinutes,
   );
-  if (project.client !== null && awaitingApproval > 0) return "approval";
+  if (project.client !== null && readyToSubmit > 0) return "approval";
+  if (project.client !== null && project.hours.submittedUnbilledMinutes > 0) return "awaitingApproval";
   return "continue";
 }
 

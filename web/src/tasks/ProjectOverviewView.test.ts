@@ -68,8 +68,14 @@ describe("project workflow next step", () => {
 
   it("shows submitted time as awaiting approval instead of asking for submission again", () => {
     const value = project(0);
-    value.hours.submittedUnbilledMinutes = 120;
+    value.hours.submittedUnbilledMinutes = value.hours.billableMinutes;
     expect(projectNextStep(value, 1)).toBe("awaitingApproval");
+  });
+
+  it("keeps newer unsubmitted time actionable while earlier time awaits approval", () => {
+    const value = project(0);
+    value.hours.submittedUnbilledMinutes = 120;
+    expect(projectNextStep(value, 1)).toBe("approval");
   });
 
   it("never offers the invoice workflow for internal work", () => {
