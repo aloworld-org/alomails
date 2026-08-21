@@ -44,7 +44,7 @@ pub use session::{SessionContext, SessionStore};
 pub enum RequestType {
     /// Establish a Session Context.
     Connect,
-    /// Carry a ROP payload against an established context (stage 3+).
+    /// Carry a ROP payload against an established context.
     Execute,
     /// End a Session Context.
     Disconnect,
@@ -83,7 +83,7 @@ impl RequestType {
     /// it states exactly which are open today.
     #[must_use]
     pub const fn is_implemented(self) -> bool {
-        matches!(self, Self::Connect | Self::Disconnect)
+        matches!(self, Self::Connect | Self::Disconnect | Self::Execute)
     }
 }
 
@@ -117,10 +117,10 @@ mod tests {
     /// States plainly which stage we are at. When `Execute` lands this test
     /// changes in the same commit that implements it — that is the point.
     #[test]
-    fn only_the_handshake_is_served_at_this_stage() {
+    fn the_request_types_served_today_are_stated_out_loud() {
         assert!(RequestType::Connect.is_implemented());
         assert!(RequestType::Disconnect.is_implemented());
-        assert!(!RequestType::Execute.is_implemented());
+        assert!(RequestType::Execute.is_implemented());
         assert!(!RequestType::NotificationWait.is_implemented());
     }
 }

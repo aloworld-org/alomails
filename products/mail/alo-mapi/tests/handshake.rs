@@ -99,6 +99,45 @@ fn connect_body(user_dn: &str) -> Vec<u8> {
     out
 }
 
+/// The blank line that separates the response framing from the binary body.
+const BLANK_LINE: &[u8] = b"\r\n\r\n";
+
+/// A `RopLogon` request for `essdn`, laid out as [MS-OXCROPS] §2.2.3.1.1.
+fn rop_logon(essdn: &str) -> Vec<u8> {
+    let mut rop = vec![0xFE, 0x00, 0x00, 0x01];
+    rop.extend_from_slice(&0u32.to_le_bytes()); // OpenFlags
+    rop.extend_from_slice(&0u32.to_le_bytes()); // StoreState
+    let mut name = essdn.as_bytes().to_vec();
+    name.push(0);
+    rop.extend_from_slice(&u16::try_from(name.len()).unwrap().to_le_bytes());
+    rop.extend_from_slice(&name);
+
+    // The ROP container: RopSize counts itself, then one unset handle slot.
+    let mut buffer = u16::try_from(rop.len() + 2).unwrap().to_le_bytes().to_vec();
+    buffer.extend_from_slice(&rop);
+    buffer.extend_from_slice(&0xFFFF_FFFFu32.to_le_bytes());
+    buffer
+}
+
+/// An `Execute` request body wrapping `rops` in a single `Last` segment.
+fn execute_body(rops: &[u8], max_rop_out: u32) -> Vec<u8> {
+    let mut segment = Vec::new();
+    segment.extend_from_slice(&0u16.to_le_bytes()); // Version
+    segment.extend_from_slice(&0x0004u16.to_le_bytes()); // Last
+    let size = u16::try_from(rops.len()).unwrap();
+    segment.extend_from_slice(&size.to_le_bytes());
+    segment.extend_from_slice(&size.to_le_bytes());
+    segment.extend_from_slice(rops);
+
+    let mut out = Vec::new();
+    out.extend_from_slice(&0u32.to_le_bytes()); // Flags
+    out.extend_from_slice(&u32::try_from(segment.len()).unwrap().to_le_bytes());
+    out.extend_from_slice(&segment);
+    out.extend_from_slice(&max_rop_out.to_le_bytes());
+    out.extend_from_slice(&0u32.to_le_bytes()); // AuxiliaryBufferSize
+    out
+}
+
 fn basic(email: &str, password: &str) -> String {
     format!("Basic {}", BASE64.encode(format!("{email}:{password}")))
 }
@@ -337,6 +376,132 @@ async fn a_malformed_connect_body_is_refused_by_code() {
     }
 }
 
+/// **A logon through `Execute`, end to end.** Connect, then a ROP buffer
+/// carrying a `RopLogon` for the caller's own mailbox, framed exactly as a
+/// client frames it: extended buffer inside the Execute body, ROP container
+/// inside that.
+#[tokio::test]
+async fn a_logon_through_execute_opens_the_callers_own_mailbox() {
+    let h = harness("exec").await;
+    let auth = basic(&h.email, &h.password);
+
+    let (_, headers, _) = send(
+        &h.app,
+        "Connect",
+        Some(&auth),
+        None,
+        connect_body("/o=alo/cn=x"),
+    )
+    .await;
+    let cookie = format!("{SESSION_COOKIE}={}", session_cookie(&headers));
+
+    let local = h.email.split('@').next().unwrap().to_owned();
+    let (status, headers, body) = send(
+        &h.app,
+        "Execute",
+        Some(&auth),
+        Some(&cookie),
+        execute_body(&rop_logon(&format!("/o=alo/cn={local}")), 32 * 1024),
+    )
+    .await;
+
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(response_code(&headers), ResponseCode::Success.code());
+
+    // Dig the ROP response out: framing, Execute body, extended buffer, ROP
+    // container — the same four layers the client unwraps.
+    let split = body
+        .windows(4)
+        .position(|w| w == BLANK_LINE)
+        .expect("framing");
+    let execute = &body[split + 4..];
+    assert_eq!(&execute[0..4], &0u32.to_le_bytes(), "StatusCode");
+    assert_eq!(&execute[4..8], &0u32.to_le_bytes(), "ErrorCode");
+    let rop_len = u32::from_le_bytes(execute[12..16].try_into().unwrap()) as usize;
+    let wrapped = &execute[16..16 + rop_len];
+
+    // RPC_HEADER_EXT, then the ROP buffer.
+    let payload = &wrapped[8..];
+    let rop_size = u16::from_le_bytes(payload[0..2].try_into().unwrap()) as usize;
+    let responses = &payload[2..rop_size];
+
+    assert_eq!(responses[0], 0xFE, "a RopLogon response");
+    assert_eq!(
+        u32::from_le_bytes(responses[2..6].try_into().unwrap()),
+        0,
+        "the logon failed"
+    );
+    assert_eq!(
+        responses.len(),
+        166,
+        "a full private-mailbox logon response"
+    );
+}
+
+/// A caller who authenticated perfectly cannot log on to somebody else's
+/// mailbox by naming it — through the real router, not just the dispatcher.
+#[tokio::test]
+async fn execute_refuses_a_logon_to_another_mailbox() {
+    let h = harness("exec-deny").await;
+    let auth = basic(&h.email, &h.password);
+
+    let (_, headers, _) = send(
+        &h.app,
+        "Connect",
+        Some(&auth),
+        None,
+        connect_body("/o=alo/cn=x"),
+    )
+    .await;
+    let cookie = format!("{SESSION_COOKIE}={}", session_cookie(&headers));
+
+    let (_, headers, body) = send(
+        &h.app,
+        "Execute",
+        Some(&auth),
+        Some(&cookie),
+        execute_body(&rop_logon("/o=alo/cn=somebody-else"), 32 * 1024),
+    )
+    .await;
+    assert_eq!(response_code(&headers), ResponseCode::Success.code());
+
+    let split = body
+        .windows(4)
+        .position(|w| w == BLANK_LINE)
+        .expect("framing");
+    let execute = &body[split + 4..];
+    let rop_len = u32::from_le_bytes(execute[12..16].try_into().unwrap()) as usize;
+    let payload = &execute[16..16 + rop_len][8..];
+    let rop_size = u16::from_le_bytes(payload[0..2].try_into().unwrap()) as usize;
+    let responses = &payload[2..rop_size];
+
+    assert_eq!(responses.len(), 6, "a failure response");
+    assert_eq!(
+        u32::from_le_bytes(responses[2..6].try_into().unwrap()),
+        0x8007_0005,
+        "expected ecAccessDenied"
+    );
+}
+
+/// An `Execute` without a Session Context is refused before its body is read.
+#[tokio::test]
+async fn execute_without_a_session_is_refused() {
+    let h = harness("exec-nosess").await;
+    let auth = basic(&h.email, &h.password);
+    let (_, headers, _) = send(
+        &h.app,
+        "Execute",
+        Some(&auth),
+        None,
+        execute_body(&rop_logon(""), 32 * 1024),
+    )
+    .await;
+    assert_eq!(
+        response_code(&headers),
+        ResponseCode::ContextNotFound.code()
+    );
+}
+
 /// The stages that are not built say so, rather than answering with a
 /// plausible empty success that would have Outlook believe the mailbox is
 /// empty. When `Execute` lands, this test changes in that commit.
@@ -345,7 +510,7 @@ async fn the_unbuilt_request_types_refuse_honestly() {
     let h = harness("stage").await;
     let auth = basic(&h.email, &h.password);
 
-    for request_type in ["Execute", "NotificationWait"] {
+    for request_type in ["NotificationWait"] {
         let (status, headers, _) = send(&h.app, request_type, Some(&auth), None, Vec::new()).await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(

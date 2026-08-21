@@ -13,7 +13,7 @@
 //! reach across a tenant boundary.
 
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use alo_store::{TenantId, UserId};
 use ring::rand::{SecureRandom, SystemRandom};
@@ -51,6 +51,14 @@ pub struct SessionContext {
     pub login: String,
     /// When this context stops being valid unless used again.
     pub expires_at: OffsetDateTime,
+    /// The server objects this session holds — logons, and later the folders
+    /// and messages opened through them.
+    ///
+    /// Shared behind an `Arc` on purpose: [`SessionStore::touch`] hands back a
+    /// clone of the context on every request, and a table that cloned with it
+    /// would give each request its own empty one — every handle a client held
+    /// would evaporate between calls.
+    pub objects: Arc<Mutex<crate::dispatch::ObjectTable>>,
 }
 
 /// The live Session Contexts, keyed by their cookie value.
@@ -116,6 +124,7 @@ impl SessionStore {
                 user_dn,
                 login,
                 expires_at: now + CONTEXT_LIFETIME,
+                objects: Arc::new(Mutex::new(crate::dispatch::ObjectTable::new())),
             },
         );
         Some(token)

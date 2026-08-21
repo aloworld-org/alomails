@@ -33,7 +33,12 @@ use base64::engine::general_purpose::STANDARD as BASE64;
 use time::OffsetDateTime;
 
 use crate::connect::{ConnectRequest, MAX_CONNECT_BODY, success_body};
+use crate::dispatch::dispatch;
+use crate::execute::{ExecuteRequest, success_body as execute_success_body};
+use crate::logon_response::LogonTime;
 use crate::response::{MapiResponse, ResponseCode};
+use crate::rop::RopBuffer;
+use crate::rpc::{read_extended_buffer, write_extended_buffer};
 use crate::session::{SEQUENCE_COOKIE, SESSION_COOKIE, SessionStore, cookie_value, set_cookie};
 use crate::{RequestType, session};
 
@@ -274,16 +279,183 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
             }
         }
 
-        // Recognised, authenticated, and honestly refused. Answering these with
-        // an empty success would have Outlook believe it had an empty mailbox
-        // — a far worse lie than a refusal it can report.
-        RequestType::Execute | RequestType::NotificationWait => MapiResponse::new(
+        RequestType::Execute => {
+            // Every operation happens inside a Session Context, so the cookie is
+            // required before the body is even read.
+            let context = match header_str(&headers, "cookie")
+                .and_then(|cookie| cookie_value(cookie, SESSION_COOKIE))
+                .and_then(|token| state.sessions.touch(&token, now))
+            {
+                Some(context) => context,
+                None => {
+                    return MapiResponse::new(
+                        request_type.as_str(),
+                        request_id,
+                        ResponseCode::ContextNotFound,
+                    )
+                    .with_client_info(client_info)
+                    .into_response();
+                }
+            };
+
+            // **The same boundary `Disconnect` enforces.** A valid credential
+            // from another tenant must not act inside this context, however it
+            // came by the cookie.
+            if context.tenant != principal.tenant {
+                return MapiResponse::new(
+                    request_type.as_str(),
+                    request_id,
+                    ResponseCode::NoPrivilege,
+                )
+                .with_client_info(client_info)
+                .into_response();
+            }
+
+            let request = match ExecuteRequest::parse(&body) {
+                Ok(request) => request,
+                Err(error) => {
+                    tracing::debug!(%error, "mapi: malformed Execute body");
+                    return MapiResponse::new(
+                        request_type.as_str(),
+                        request_id,
+                        ResponseCode::InvalidRequestBody,
+                    )
+                    .with_client_info(client_info)
+                    .into_response();
+                }
+            };
+
+            // Two layers down to the operations: the extended-buffer chain,
+            // then the ROP container inside it.
+            let payload = match read_extended_buffer(&request.rop_buffer) {
+                Ok(payload) => payload,
+                Err(error) => {
+                    tracing::debug!(%error, "mapi: unreadable ROP payload");
+                    return MapiResponse::new(
+                        request_type.as_str(),
+                        request_id,
+                        ResponseCode::InvalidRequestBody,
+                    )
+                    .with_client_info(client_info)
+                    .into_response();
+                }
+            };
+            let input = match RopBuffer::parse(&payload) {
+                Ok(input) => input,
+                Err(error) => {
+                    tracing::debug!(%error, "mapi: unreadable ROP buffer");
+                    return MapiResponse::new(
+                        request_type.as_str(),
+                        request_id,
+                        ResponseCode::InvalidRequestBody,
+                    )
+                    .with_client_info(client_info)
+                    .into_response();
+                }
+            };
+
+            let dispatched = {
+                // The lock is held only across the dispatch, which awaits
+                // nothing — a poisoned lock means another request panicked
+                // mid-dispatch, and continuing on a half-updated table would be
+                // worse than refusing this one.
+                let Ok(mut objects) = context.objects.lock() else {
+                    tracing::error!("mapi: session object table is poisoned");
+                    return MapiResponse::new(
+                        request_type.as_str(),
+                        request_id,
+                        ResponseCode::UnknownFailure,
+                    )
+                    .with_client_info(client_info)
+                    .into_response();
+                };
+                dispatch(
+                    &context,
+                    &state.dn_prefix,
+                    &mut objects,
+                    &input,
+                    logon_time(now),
+                )
+            };
+
+            let output = RopBuffer {
+                rops: dispatched.responses,
+                handles: dispatched.handles,
+            };
+            let Ok(framed) = output.to_bytes() else {
+                tracing::error!("mapi: ROP responses do not fit a ROP buffer");
+                return MapiResponse::new(
+                    request_type.as_str(),
+                    request_id,
+                    ResponseCode::UnknownFailure,
+                )
+                .with_client_info(client_info)
+                .into_response();
+            };
+            let Ok(wrapped) = write_extended_buffer(&framed) else {
+                tracing::error!("mapi: ROP buffer does not fit an extended buffer");
+                return MapiResponse::new(
+                    request_type.as_str(),
+                    request_id,
+                    ResponseCode::UnknownFailure,
+                )
+                .with_client_info(client_info)
+                .into_response();
+            };
+
+            // `MaxRopOut` is the client's ceiling and it binds us: the client
+            // sized its receive buffer from that number, so overrunning it is
+            // not a large answer but a broken one. The protocol's proper reply
+            // is `RopBackoff` (a later stage); until then this refuses rather
+            // than overruns, and says so in the log.
+            if wrapped.len() as u64 > u64::from(request.max_rop_out) {
+                tracing::warn!(
+                    produced = wrapped.len(),
+                    max_rop_out = request.max_rop_out,
+                    "mapi: response exceeds the client's ceiling"
+                );
+                return MapiResponse::new(
+                    request_type.as_str(),
+                    request_id,
+                    ResponseCode::TooLarge,
+                )
+                .with_client_info(client_info)
+                .into_response();
+            }
+
+            MapiResponse::new(request_type.as_str(), request_id, ResponseCode::Success)
+                .with_client_info(client_info)
+                .with_body(execute_success_body(0, &wrapped))
+                .into_response()
+        }
+
+        // Recognised, authenticated, and honestly refused. Answering it with an
+        // empty success would have Outlook wait on notifications that never
+        // come — a worse failure than a refusal it can report.
+        RequestType::NotificationWait => MapiResponse::new(
             request_type.as_str(),
             request_id,
             ResponseCode::EndpointDisabled,
         )
         .with_client_info(client_info)
         .into_response(),
+    }
+}
+
+/// The wall-clock components a logon reports, from an instant.
+///
+/// `time`'s weekday numbers Monday as one; [MS-OXCROPS] §2.2.3.1.2.1 numbers
+/// Sunday as zero, so the conversion is explicit rather than a cast that would
+/// be wrong by one for six days of the week.
+fn logon_time(now: OffsetDateTime) -> LogonTime {
+    LogonTime {
+        seconds: now.second(),
+        minutes: now.minute(),
+        hour: now.hour(),
+        day_of_week: now.weekday().number_days_from_sunday(),
+        day: now.day(),
+        month: u8::from(now.month()),
+        year: u16::try_from(now.year()).unwrap_or(0),
     }
 }
 

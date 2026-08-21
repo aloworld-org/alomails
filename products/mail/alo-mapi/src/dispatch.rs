@@ -319,6 +319,7 @@ mod tests {
             user_dn: "/o=alo/cn=whatever-they-claimed".to_owned(),
             login: login.to_owned(),
             expires_at: OffsetDateTime::UNIX_EPOCH,
+            objects: std::sync::Arc::new(std::sync::Mutex::new(ObjectTable::new())),
         }
     }
 
