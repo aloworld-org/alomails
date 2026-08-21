@@ -60,7 +60,30 @@ describe("InvoiceHandoffDialog", () => {
     createTimeInvoice.mockResolvedValue({ id: "invoice-1", entries: 2, lines: 1, minutes: 120 });
   });
 
-  it("loads approved time through the chosen cutoff and opens the created draft", async () => {
+  it("loads all approved customer work through the cutoff and opens one consolidated draft", async () => {
+    unbilledTime.mockResolvedValue({
+      customerId: "customer-1",
+      groups: [
+        {
+          projectId: "project-1",
+          projectName: "Website redesign",
+          rateCents: 12000,
+          currency: "EUR",
+          minutes: 120,
+          netCents: 24000,
+          entryIds: ["entry-1", "entry-2"],
+        },
+        {
+          projectId: "project-2",
+          projectName: "Brand launch",
+          rateCents: 10000,
+          currency: "EUR",
+          minutes: 60,
+          netCents: 10000,
+          entryIds: ["entry-3"],
+        },
+      ],
+    });
     const onCreated = vi.fn();
     render(<InvoiceHandoffDialog project={project} onClose={vi.fn()} onCreated={onCreated} />);
 
@@ -69,10 +92,11 @@ describe("InvoiceHandoffDialog", () => {
 
     fireEvent.change(cutoff, { target: { value: "2026-08-19" } });
     await waitFor(() => expect(unbilledTime).toHaveBeenLastCalledWith("customer-1", "2026-08-19"));
-    await screen.findByText("2h");
+    expect((await screen.findAllByText("Website redesign")).length).toBeGreaterThan(0);
+    expect(screen.getByText("Brand launch")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: strings.projectsCreateDraftInvoice }));
 
-    await waitFor(() => expect(createTimeInvoice).toHaveBeenCalledWith("customer-1", ["entry-1", "entry-2"]));
+    await waitFor(() => expect(createTimeInvoice).toHaveBeenCalledWith("customer-1", ["entry-1", "entry-2", "entry-3"]));
     expect(onCreated).toHaveBeenCalledWith("invoice-1");
-  });
+  }, 10_000);
 });

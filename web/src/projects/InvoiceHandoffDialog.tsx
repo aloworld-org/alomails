@@ -29,16 +29,15 @@ export function InvoiceHandoffDialog({ project, onClose, onCreated }: Props) {
     setError(null);
     void api.unbilledTime(customerId, cutoff).then((result) => {
       if (!active) return;
-      const matching = result.groups.filter((group) => group.projectId === project.id);
-      setGroups(matching);
-      setSelected(new Set(matching.flatMap((group) => group.entryIds)));
+      setGroups(result.groups);
+      setSelected(new Set(result.groups.flatMap((group) => group.entryIds)));
     }).catch((cause: unknown) => {
       if (active) setError(projectsMessage(cause, strings.projectsInvoiceLoadFailed));
     }).finally(() => {
       if (active) setLoading(false);
     });
     return () => { active = false; };
-  }, [api, cutoff, customerId, project.id]);
+  }, [api, cutoff, customerId]);
 
   const selectedGroups = useMemo(() => groups.filter((group) =>
     group.entryIds.some((id) => selected.has(id))), [groups, selected]);
@@ -96,7 +95,12 @@ export function InvoiceHandoffDialog({ project, onClose, onCreated }: Props) {
             const checked = group.entryIds.every((id) => selected.has(id));
             return <button key={`${group.projectId}-${group.rateCents ?? "unrated"}`} type="button" onClick={() => toggle(group)} className={`flex w-full items-center gap-4 rounded-xl border p-4 text-left !no-underline transition-colors hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${checked ? "border-accent bg-accent-soft" : "border-subtle bg-surface hover:bg-raised"}`}>
               <span className={`inline-flex size-6 shrink-0 items-center justify-center rounded-md border ${checked ? "border-accent bg-accent text-on-accent" : "border-subtle bg-surface"}`}>{checked && <Check size={15} />}</span>
-              <span className="min-w-0 flex-1"><span className="block font-semibold text-primary">{durationLabel(group.minutes)}</span><span className="mt-1 block text-sm text-secondary">{group.rateCents === null || group.currency === null ? strings.projectsUnratedTime : strings.projectsInvoiceRate(amountLabel(group.rateCents, group.currency))}</span></span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-semibold text-primary">{group.projectName}</span>
+                <span className="mt-1 block text-sm text-secondary">
+                  {durationLabel(group.minutes)} · {group.rateCents === null || group.currency === null ? strings.projectsUnratedTime : strings.projectsInvoiceRate(amountLabel(group.rateCents, group.currency))}
+                </span>
+              </span>
               <span className="shrink-0 font-semibold tabular-nums text-primary">{group.netCents === null || group.currency === null ? "—" : amountLabel(group.netCents, group.currency)}</span>
             </button>;
           })}</div>}
