@@ -247,12 +247,20 @@ describe("the page editor applies what the preview reports", () => {
     expect(moves()[0]?.body).toEqual({ to: 2 });
     // A reorder is invisible to a reader who cannot see the page reflow, so it
     // is said out loud as well as done.
+    //
+    // `waitFor`, because the move request going out and the live region saying
+    // so are two different renders: the await above proves only the first. Read
+    // synchronously, this is a race an idle machine wins and a loaded one loses
+    // — which is exactly how it failed, under a full workspace build. The
+    // assertion is unchanged; a move that announces nothing still fails it.
     const announced = strings.sitesSectionMoved(strings.sitesSectionHero, 3, 3);
-    expect(
-      screen
-        .getAllByRole("status")
-        .some((region) => region.textContent?.includes(announced)),
-    ).toBe(true);
+    await waitFor(() =>
+      expect(
+        screen
+          .getAllByRole("status")
+          .some((region) => region.textContent?.includes(announced)),
+      ).toBe(true),
+    );
 
     const undo = await screen.findByRole<HTMLButtonElement>("button", {
       name: strings.sitesUndoEdit,

@@ -178,6 +178,30 @@ impl Identity {
             }
         };
 
+        // Whoever signs up **is** the tenant: they just created it, they are its
+        // only member, and there is nobody above them to grant this later. A
+        // tenant whose creator is not its admin therefore has no admin at all,
+        // and every admin surface in it is dark forever.
+        //
+        // That is what shipped. The operator-provisioned path does this one line
+        // (`provision.rs`) and self-service signup never did, so every account
+        // made this way since the feature landed administers nothing — including
+        // the deployment's own owner, whose flag had to be set by hand in psql.
+        //
+        // It cannot promote an *invited* member: an invite adds a user to an
+        // existing tenant and does not come through here. Only the creation of a
+        // brand-new tenant reaches this line.
+        if let Err(error) = self
+            .store()
+            .for_tenant(tenant.clone())
+            .set_admin(&user, true)
+            .await
+        {
+            self.cleanup(&tenant).await;
+            tracing::warn!(%error, "personal signup: set_admin failed");
+            return Err(SignupError::Internal);
+        }
+
         // set_password writes the credential; the global username unique index
         // is the real uniqueness guard. A lost race → Conflict → address taken.
         if let Err(error) = self.set_password(&tenant, &user, &email, password).await {

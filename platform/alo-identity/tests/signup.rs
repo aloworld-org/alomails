@@ -47,6 +47,76 @@ async fn provisions_a_usable_personal_account() {
     assert!(accs.mailbox_by_role("trash").await.unwrap().is_some());
     // Inbox is get-or-create; it must already be there.
     assert!(accs.mailbox_by_role("inbox").await.unwrap().is_some());
+
+    // **And they administer the tenant they just made.** Nobody else can grant
+    // this: the tenant is one second old and they are its only member, so a
+    // signup that leaves the flag false produces a tenant with no admin at all
+    // and every admin surface in it dark forever. That shipped — the flag had
+    // to be set by hand in psql on the deployment's own owner — because this
+    // assertion did not exist.
+    assert!(
+        accs.is_admin().await.unwrap(),
+        "the person who created the tenant does not administer it"
+    );
+}
+
+/// Signing up makes an admin **of that tenant only**.
+///
+/// The guard on the line above: "the creator is an admin" must never decay into
+/// "signing up grants admin", so this proves the flag stops at the tenant
+/// boundary. Two people sign up, and neither can administer the other — which
+/// is the whole tenancy promise, stated where the flag is granted.
+#[tokio::test]
+async fn a_signup_admin_administers_nobody_else() {
+    let (store, identity) = setup().await;
+
+    let mine = identity
+        .provision_personal(
+            &unique_domain("mine"),
+            "Ada",
+            "correct-horse-battery",
+            "recover@example.test",
+        )
+        .await
+        .expect("provisioned");
+    let theirs = identity
+        .provision_personal(
+            &unique_domain("theirs"),
+            "Grace",
+            "correct-horse-battery",
+            "recover@example.test",
+        )
+        .await
+        .expect("provisioned");
+
+    // Each is an admin at home.
+    assert!(
+        store
+            .for_account(mine.tenant.clone(), mine.user.clone())
+            .is_admin()
+            .await
+            .unwrap()
+    );
+    assert!(
+        store
+            .for_account(theirs.tenant.clone(), theirs.user.clone())
+            .is_admin()
+            .await
+            .unwrap()
+    );
+
+    // Neither tenant is the other's, and one person's id carries no standing in
+    // the other's tenant — the lookup is scoped by both, so it simply is not
+    // them.
+    assert_ne!(mine.tenant, theirs.tenant);
+    assert!(
+        !store
+            .for_account(theirs.tenant.clone(), mine.user.clone())
+            .is_admin()
+            .await
+            .unwrap(),
+        "a signup admin reaches into another tenant"
+    );
 }
 
 #[tokio::test]

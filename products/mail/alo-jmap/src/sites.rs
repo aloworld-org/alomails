@@ -1052,16 +1052,25 @@ pub async fn check_subdomain(
     let subdomain = q.subdomain.trim().to_lowercase();
     // **A check answers the question; it does not fail it.** A name that is
     // reserved, malformed or too short is a perfectly good answer of "no", and
-    // the store says so by refusing — so a `Validation` refusal becomes the
-    // verdict rather than a 422.
+    // the store says so by refusing — so a refusal becomes the verdict rather
+    // than an error status.
     //
     // It matters in practice: the composer calls this as somebody types, so
     // every keystroke against a reserved name logged a failed request in their
     // console and read as a broken screen. Only a genuine fault — the database
     // unreachable — is still an error here.
+    //
+    // Both refusal variants, and `Conflict` is the one that carries the traffic:
+    // `validate_subdomain` states all four of its rejections that way, as this
+    // module's own header records ("the sites store family spells all of those
+    // as `StoreError::Conflict`"). Matching only `Validation` — the variant this
+    // path arguably *ought* to use — left the arm dead and every keystroke still
+    // 422ing, which is exactly what the paragraph above claimed to have fixed.
     let (available, reason) = match account.acc.subdomain_available(&subdomain).await {
         Ok(available) => (available, None),
-        Err(alo_store::StoreError::Validation(why)) => (false, Some(why)),
+        Err(alo_store::StoreError::Validation(why) | alo_store::StoreError::Conflict(why)) => {
+            (false, Some(why))
+        }
         Err(other) => return Err(map_store_err(other)),
     };
     Ok(Json(json!({
