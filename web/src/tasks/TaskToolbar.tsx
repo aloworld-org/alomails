@@ -9,7 +9,6 @@ import { Check, ListFilter, ArrowUpDown, Rows3, SlidersHorizontal } from "lucide
 import { strings } from "../i18n";
 import type { TaskPriority } from "../jmap";
 import { isFiltering, type GroupKey, type SortKey, type ViewConfig } from "./viewConfig";
-import styles from "./TasksModule.module.css";
 
 interface Props {
   config: ViewConfig;
@@ -45,18 +44,19 @@ function Dropdown({
     };
   }, [open]);
   return (
-    <div className={styles.tbWrap} ref={ref}>
+    <div className="relative" ref={ref}>
       <button
         type="button"
-        className={`${styles.tbBtn} ${active === true ? styles.tbBtnActive : ""}`}
+        className={`relative inline-flex min-h-9 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium !no-underline transition-colors hover:bg-raised hover:text-primary hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${active === true ? "text-accent" : "text-secondary"}`}
         onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
       >
         {icon}
         {label}
-        {active === true && <span className={styles.tbDot} aria-hidden />}
+        {active === true && <span className="absolute right-1 top-1 size-1.5 rounded-full bg-accent" aria-hidden />}
       </button>
       {open && (
-        <div className={styles.tbMenu} role="menu">
+        <div className="absolute left-0 top-[calc(100%+0.25rem)] z-40 flex min-w-48 flex-col gap-px rounded-lg border border-default bg-surface p-1.5 shadow-lg" role="menu">
           {children}
         </div>
       )}
@@ -66,8 +66,8 @@ function Dropdown({
 
 function Choice({ on, label, onClick }: { on: boolean; label: string; onClick: () => void }) {
   return (
-    <button type="button" role="menuitemradio" aria-checked={on} className={styles.tbItem} onClick={onClick}>
-      <span className={styles.tbCheck}>{on && <Check size={14} />}</span>
+    <button type="button" role="menuitemradio" aria-checked={on} className="flex min-h-9 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-primary !no-underline hover:bg-raised hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent" onClick={onClick}>
+      <span className="inline-flex w-4 shrink-0 justify-center text-accent">{on && <Check size={14} />}</span>
       {label}
     </button>
   );
@@ -105,23 +105,23 @@ export function TaskToolbar({ config, onChange }: Props) {
   }
 
   return (
-    <div className={styles.toolbar2}>
+    <div className="flex items-center gap-1 px-6 pt-3 max-sm:overflow-x-auto max-sm:px-4">
       <Dropdown label={strings.taskFilter} icon={<ListFilter size={15} />} active={isFiltering(config)}>
-        <div className={styles.tbGroupLabel}>{strings.taskPriority}</div>
+        <div className="px-2 pb-0.5 pt-1.5 text-xs font-semibold uppercase tracking-wide text-tertiary">{strings.taskPriority}</div>
         {prios.map((p) => (
           <button
             key={p.key}
             type="button"
             role="menuitemcheckbox"
             aria-checked={config.priorities.has(p.key)}
-            className={styles.tbItem}
+            className="flex min-h-9 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-primary !no-underline hover:bg-raised hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
             onClick={() => togglePriority(p.key)}
           >
-            <span className={styles.tbCheck}>{config.priorities.has(p.key) && <Check size={14} />}</span>
+            <span className="inline-flex w-4 shrink-0 justify-center text-accent">{config.priorities.has(p.key) && <Check size={14} />}</span>
             {p.label}
           </button>
         ))}
-        <div className={styles.tbSep} />
+        <div className="my-1 h-px bg-subtle" />
         <Choice on={config.onlyMine} label={strings.taskOnlyMine} onClick={() => set({ onlyMine: !config.onlyMine })} />
       </Dropdown>
 
