@@ -39,7 +39,7 @@ https://{$DOMAIN} {
 	# endpoint (discovery, authorize, token, userinfo, jwks, revoke). Everything
 	# else is the web app. `/auth/token` is backend; `/auth/callback` is a client
 	# route (falls through to the SPA).
-	@backend path /api/* /jmap/* /oauth/* /auth/token /.well-known/* /dav /dav/* /autodiscover/* /Autodiscover/* /mail/config-v1.1.xml /wopi/* /signup/* /reset/*
+	@backend path /api/* /jmap/* /mapi/* /oauth/* /auth/token /.well-known/* /dav /dav/* /autodiscover/* /Autodiscover/* /mail/config-v1.1.xml /wopi/* /signup/* /reset/*
 	handle @backend {
 		reverse_proxy alo-jmap:8080
 	}
@@ -186,7 +186,7 @@ https://app.aloworkplace.com {
 	tls /certs/live/aloworkplace.com/fullchain.pem /certs/live/aloworkplace.com/privkey.pem
 	encode zstd gzip
 
-	@backend path /api/* /jmap/* /oauth/* /auth/token /.well-known/* /dav /dav/* /autodiscover/* /Autodiscover/* /mail/config-v1.1.xml /wopi/* /signup/* /reset/*
+	@backend path /api/* /jmap/* /mapi/* /oauth/* /auth/token /.well-known/* /dav /dav/* /autodiscover/* /Autodiscover/* /mail/config-v1.1.xml /wopi/* /signup/* /reset/*
 	handle @backend {
 		reverse_proxy alo-jmap:8080
 	}
@@ -268,7 +268,7 @@ https://app.alodrives.com {
 	tls /certs/live/alodrives.com/fullchain.pem /certs/live/alodrives.com/privkey.pem
 	encode zstd gzip
 
-	@backend path /api/* /jmap/* /oauth/* /auth/token /.well-known/* /dav /dav/* /autodiscover/* /Autodiscover/* /mail/config-v1.1.xml /wopi/* /signup/* /reset/*
+	@backend path /api/* /jmap/* /mapi/* /oauth/* /auth/token /.well-known/* /dav /dav/* /autodiscover/* /Autodiscover/* /mail/config-v1.1.xml /wopi/* /signup/* /reset/*
 	handle @backend {
 		reverse_proxy alo-jmap:8080
 	}

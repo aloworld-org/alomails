@@ -10,6 +10,8 @@ publish.workspace = true
 alo-store = { path = "../../../platform/alo-store" }
 alo-sieve = { path = "../../../platform/alo-sieve" }
 alo-identity = { path = "../../../platform/alo-identity" }
+# MAPI-over-HTTP for native Outlook (ADR 0051); mounted only when enabled.
+alo-mapi = { path = "../alo-mapi" }
 # The PDF writer behind GET /billing/{invoices,quotes}/{id}/pdf (B1.17): the
 # printed document rendered a second way, from the same document model.
 alo-pdf = { path = "../../../platform/alo-pdf" }

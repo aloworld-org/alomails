@@ -57,6 +57,11 @@ pub struct AppState {
     /// Turning this on is the rollout; turning it off is the rollback.
     pub mapi_http: bool,
 
+    /// Live MAPI Session Contexts. Held here rather than inside the MAPI router
+    /// so the contexts outlive any one router build and can later be counted by
+    /// a metric alongside everything else this state owns.
+    pub mapi_sessions: std::sync::Arc<alo_mapi::SessionStore>,
+
     /// Junk training: Rspamd learn calls on moves into/out of Junk.
     /// `None` disables training (mail management is unaffected).
     pub junk_learner: Option<std::sync::Arc<crate::junk_learn::JunkLearner>>,

@@ -140,6 +140,7 @@ async fn junk_moves_train_rspamd_and_keyword_changes_do_not() {
         // configured base, which is what these tests assert against.
         session_origins: Vec::new(),
         mapi_http: false,
+        mapi_sessions: Arc::new(alo_mapi::SessionStore::new()),
         junk_learner: JunkLearner::new(format!("http://{mock_addr}"), None),
         personal_domains: Vec::new(),
         signup_limiter: alo_identity::ratelimit::RateLimiter::new(),
