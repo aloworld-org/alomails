@@ -73,7 +73,7 @@ https://{$DOMAIN} {
 		# images, talks only to its own origin, and may not be framed. Inline
 		# styles are allowed (component style attributes); scripts are not.
 		header {
-			Content-Security-Policy "default-src 'self'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
+			Content-Security-Policy "default-src 'self'; img-src 'self' data: blob:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
 			X-Content-Type-Options nosniff
 			Referrer-Policy strict-origin-when-cross-origin
 			-Server
@@ -210,7 +210,7 @@ https://app.aloworkplace.com {
 		try_files {path} /index.html
 		file_server
 		header {
-			Content-Security-Policy "default-src 'self'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
+			Content-Security-Policy "default-src 'self'; img-src 'self' data: blob:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
 			X-Content-Type-Options nosniff
 			Referrer-Policy strict-origin-when-cross-origin
 			-Server
@@ -291,7 +291,7 @@ https://app.alodrives.com {
 		try_files {path} /index.html
 		file_server
 		header {
-			Content-Security-Policy "default-src 'self'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
+			Content-Security-Policy "default-src 'self'; img-src 'self' data: blob:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
 			X-Content-Type-Options nosniff
 			Referrer-Policy strict-origin-when-cross-origin
 			-Server
