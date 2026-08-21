@@ -188,6 +188,19 @@ describe("the site list", () => {
     expect(screen.getByText(strings.sitesStatusDraft)).toBeTruthy();
   });
 
+  test("opens a website from the whole website row", async () => {
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites"),
+        status: 200,
+        body: { sites: [ALPHA] },
+      },
+    ];
+    ui("/sites");
+    fireEvent.click(await screen.findByRole("button", { name: /Alpha Bakery/ }));
+    expect(screen.getByTestId("location").textContent).toBe("/sites/site-1");
+  });
+
   test("an empty tenant sees the empty state, not a bare table", async () => {
     ui("/sites");
     expect(await screen.findByText(strings.sitesNoSitesTitle)).toBeTruthy();

@@ -4,7 +4,7 @@
 // what a returning owner checks first.
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Globe } from "lucide-react";
+import { ArrowRight, Globe2, Plus } from "lucide-react";
 
 import { strings } from "../i18n";
 import { Button, Spinner } from "../ds";
@@ -12,13 +12,22 @@ import { sitesMessage, useSitesApi } from "./api";
 import { NewSiteDialog } from "./NewSiteDialog";
 import { EmptyState, ErrorBanner } from "./parts";
 import type { Site, SitePage } from "./types";
-import styles from "./SitesModule.module.css";
 
 /** The live/draft state chip of a site row. */
 function StatusChip({ status }: { status: Site["status"] }) {
   const live = status === "live";
   return (
-    <span className={live ? `${styles.chip} ${styles.chipLive}` : styles.chip}>
+    <span
+      className={
+        live
+          ? "inline-flex items-center gap-1.5 rounded-full bg-success-tint px-2.5 py-1 text-xs font-medium text-success"
+          : "inline-flex items-center gap-1.5 rounded-full bg-raised px-2.5 py-1 text-xs font-medium text-secondary"
+      }
+    >
+      <span
+        className={live ? "size-1.5 rounded-full bg-success" : "size-1.5 rounded-full bg-tertiary"}
+        aria-hidden="true"
+      />
       {live ? strings.sitesStatusLive : strings.sitesStatusDraft}
     </span>
   );
@@ -49,57 +58,69 @@ export function SitesListView() {
   }, [load]);
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>{strings.moduleSites}</h1>
-        {loading && <Spinner size={16} />}
-        <div className={styles.headerActions}>
-          <Button onClick={() => setCreating(true)}>{strings.sitesNewSite}</Button>
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-app px-5 py-6 sm:px-8 lg:px-10">
+      <header className="mx-auto flex w-full max-w-screen-xl items-center justify-between gap-6">
+        <div>
+          <h1 className="m-0 text-3xl font-semibold tracking-tight text-primary">
+            {strings.moduleSites}
+          </h1>
+          <p className="mt-1 text-sm text-secondary">{strings.sitesNoSitesBody}</p>
         </div>
+        <Button icon={<Plus />} onClick={() => setCreating(true)}>
+          {strings.sitesNewSite}
+        </Button>
       </header>
 
-      {error !== null && <ErrorBanner message={error} />}
+      <div className="mx-auto mt-6 w-full max-w-screen-xl">
+        {error !== null && <ErrorBanner message={error} />}
 
-      {sites.length === 0 && !loading ? (
-        <EmptyState
-          Icon={Globe}
-          title={strings.sitesNoSitesTitle}
-          body={strings.sitesNoSitesBody}
-          cta={strings.sitesNewSite}
-          onCta={() => setCreating(true)}
-        />
-      ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th scope="col">{strings.sitesColName}</th>
-                <th scope="col">{strings.sitesColAddress}</th>
-                <th scope="col">{strings.sitesColStatus}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sites.map((s) => (
-                <tr key={s.id}>
-                  <td>
-                    <button
-                      type="button"
-                      className={styles.rowName}
-                      onClick={() => void navigate(s.id)}
-                    >
-                      {s.name}
-                    </button>
-                  </td>
-                  <td className={styles.mono}>{s.subdomain}</td>
-                  <td>
-                    <StatusChip status={s.status} />
-                  </td>
-                </tr>
+        {loading ? (
+          <div className="flex min-h-72 items-center justify-center rounded-2xl border border-default bg-surface">
+            <Spinner />
+          </div>
+        ) : sites.length === 0 ? (
+          <div className="rounded-2xl border border-default bg-surface shadow-sm">
+            <EmptyState
+              Icon={Globe2}
+              title={strings.sitesNoSitesTitle}
+              body={strings.sitesNoSitesBody}
+              cta={strings.sitesNewSite}
+              onCta={() => setCreating(true)}
+            />
+          </div>
+        ) : (
+          <section className="overflow-hidden rounded-2xl border border-default bg-surface shadow-sm">
+            <div className="border-b border-subtle px-5 py-4 sm:px-6">
+              <h2 className="text-base font-semibold text-primary">{strings.moduleSites}</h2>
+            </div>
+            <div className="divide-y divide-subtle">
+              {sites.map((site) => (
+                <button
+                  key={site.id}
+                  type="button"
+                  className="group flex min-h-20 w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent sm:px-6"
+                  onClick={() => void navigate(site.id)}
+                >
+                  <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">
+                    <Globe2 size={21} aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold text-primary">{site.name}</span>
+                    <span className="mt-1 block truncate font-mono text-sm text-secondary">
+                      {site.subdomain}
+                    </span>
+                  </span>
+                  <StatusChip status={site.status} />
+                  <ArrowRight
+                    className="size-5 shrink-0 text-tertiary transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
+                    aria-hidden="true"
+                  />
+                </button>
               ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </div>
+          </section>
+        )}
+      </div>
 
       {creating && (
         <NewSiteDialog

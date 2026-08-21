@@ -16,7 +16,10 @@ import styles from "./SitesModule.module.css";
 /** A failure the page could not hide: shown, never swallowed. */
 export function ErrorBanner({ message }: { message: string }) {
   return (
-    <p className={styles.error} role="alert">
+    <p
+      className="mx-6 my-3 rounded-lg border border-danger bg-danger-tint px-4 py-3 text-sm text-primary"
+      role="alert"
+    >
       {message}
     </p>
   );
@@ -37,12 +40,15 @@ export function EmptyState({
   onCta?: () => void;
 }) {
   return (
-    <div className={styles.empty}>
-      <span className={styles.emptyArt} aria-hidden="true">
+    <div className="flex min-h-80 flex-1 flex-col items-center justify-center gap-3 px-8 py-12 text-center">
+      <span
+        className="inline-flex size-20 items-center justify-center rounded-full bg-accent-soft text-accent"
+        aria-hidden="true"
+      >
         <Icon size={38} />
       </span>
-      <h2 className={styles.emptyTitle}>{title}</h2>
-      <p className={styles.emptyBody}>{body}</p>
+      <h2 className="m-0 text-xl font-semibold text-primary">{title}</h2>
+      <p className="mb-2 max-w-[42ch] text-base text-secondary">{body}</p>
       {cta !== undefined && onCta !== undefined && <Button onClick={onCta}>{cta}</Button>}
     </div>
   );
@@ -61,12 +67,12 @@ export function Field({
   children: ReactNode;
 }) {
   return (
-    <div className={styles.field}>
-      <label className={styles.fieldLabel}>
-        <span className={styles.label}>{label}</span>
+    <div className="flex flex-col gap-1.5">
+      <label className="flex flex-col gap-1.5">
+        <span className="text-sm font-semibold text-primary">{label}</span>
         {children}
       </label>
-      {hint !== undefined && <span className={styles.hint}>{hint}</span>}
+      {hint !== undefined && <span className="text-sm text-secondary">{hint}</span>}
     </div>
   );
 }

@@ -22,11 +22,9 @@ import { HeatmapView } from "./HeatmapView";
 import { HistoryView } from "./HistoryView";
 import { SitesListView } from "./SitesListView";
 import { SubmissionsView } from "./SubmissionsView";
-import styles from "./SitesModule.module.css";
-
 export function SitesModule() {
   return (
-    <div className={styles.sites}>
+    <div className="flex h-full min-h-0 flex-col bg-surface">
       <Routes>
         <Route index element={<SitesListView />} />
         <Route path=":siteId" element={<SiteView />} />
