@@ -17,7 +17,7 @@
 // The one price this screen edits is the site's own: the flat delivery rate
 // per order, charged by the public checkout beside the goods.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Package, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Package, Plus, Sparkles, Trash2 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { Button, Spinner } from "../ds";
@@ -288,17 +288,29 @@ export function ShopView() {
         <div className={styles.headerActions}>
           {loading && <Spinner size={16} />}
           {manager && (
-            <Button
-              size="sm"
-              icon={<Plus size="var(--icon-size-inline)" />}
-              disabled={addable === null || addable.products.length === 0}
-              onClick={() => {
-                setDialogError(null);
-                setAdding(true);
-              }}
-            >
-              {strings.sitesShopAddProduct}
-            </Button>
+            <>
+              {products !== null && !noCandidates && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={<Sparkles size="var(--icon-size-inline)" />}
+                  onClick={() => navigate(`/sites/${siteId}/shop-setup`)}
+                >
+                  {strings.sitesShopSetup}
+                </Button>
+              )}
+              <Button
+                size="sm"
+                icon={<Plus size="var(--icon-size-inline)" />}
+                disabled={addable === null || addable.products.length === 0}
+                onClick={() => {
+                  setDialogError(null);
+                  setAdding(true);
+                }}
+              >
+                {strings.sitesShopAddProduct}
+              </Button>
+            </>
           )}
         </div>
       </header>

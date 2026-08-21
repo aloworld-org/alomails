@@ -117,6 +117,14 @@ function productsReply(products: unknown[]): Reply {
   };
 }
 
+function ticketProductsReply(products: unknown[]): Reply {
+  return {
+    match: (url, method) => method === "GET" && url.endsWith("/ticket-products"),
+    status: 200,
+    body: { currency: "EUR", currencyExponent: 2, products },
+  };
+}
+
 function itemsReply(items: SiteShopItemRow[]): Reply {
   return {
     match: (url, method) =>
@@ -176,6 +184,31 @@ describe("the shop screen", () => {
     expect(screen.getByText(strings.sitesShopNoProductsHint)).toBeTruthy();
     const add = screen.getByRole("button", { name: strings.sitesShopAddProduct });
     expect(add.hasAttribute("disabled")).toBe(true);
+    expect(
+      screen.getByRole("button", { name: strings.sitesShopSetup }),
+    ).toBeTruthy();
+  });
+
+  test("shop setup is a contextual shop action and returns to the shop", async () => {
+    replies = [
+      productsReply([GUIDE]),
+      itemsReply([]),
+      shippingReply(0),
+      ticketProductsReply([GUIDE]),
+      shippingReply(0),
+    ];
+
+    ui();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesShopSetup }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: strings.sitesShopSetup }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: strings.sitesShop }).getAttribute("href"),
+    ).toBe("/sites/site-1/shop");
   });
 
   test("a collaborator reads the shelf and is offered nothing to change — and the price list is never asked for", async () => {

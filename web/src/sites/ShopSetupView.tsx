@@ -353,9 +353,9 @@ export function ShopSetupView() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <Link to=".." relative="path" className={styles.backLink}>
+        <Link to="../shop" relative="path" className={styles.backLink}>
           <ArrowLeft size="var(--icon-size-inline)" aria-hidden="true" />
-          {strings.sitesBack}
+          {strings.sitesShop}
         </Link>
         <div className={styles.siteHead}>
           <h1 className={styles.title}>{strings.sitesShopSetup}</h1>
