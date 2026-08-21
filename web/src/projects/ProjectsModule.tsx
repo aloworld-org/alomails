@@ -31,6 +31,7 @@ import { TasksModule } from "../tasks";
 import { ApprovalsView } from "./ApprovalsView";
 import { ClientDialog } from "./ClientDialog";
 import { EditProjectDialog } from "./EditProjectDialog";
+import { InvoiceHandoffDialog } from "./InvoiceHandoffDialog";
 import { NewProjectDialog } from "./NewProjectDialog";
 import type { NewProjectDraft } from "./NewProjectDialog";
 import { projectsMessage, useProjectsApi } from "./api";
@@ -117,6 +118,7 @@ export function ProjectsModule() {
   const [editingDetails, setEditingDetails] = useState<Project | null>(null);
   const [creating, setCreating] = useState(false);
   const [startingFromTemplate, setStartingFromTemplate] = useState(false);
+  const [invoiceHandoff, setInvoiceHandoff] = useState<{ project: Project; cutoff: string } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [projectsLoadFailed, setProjectsLoadFailed] = useState(false);
@@ -382,7 +384,15 @@ export function ProjectsModule() {
             personal data). */}
         <Route
           path="reports"
-          element={<ReportView projects={projects} projectsLoading={loading} customerName={customerName} revision={revision} />}
+          element={(
+            <ReportView
+              projects={projects}
+              projectsLoading={loading}
+              customerName={customerName}
+              revision={revision}
+              onCreateInvoice={(project, cutoff) => setInvoiceHandoff({ project, cutoff })}
+            />
+          )}
         />
         {/* The admin tab is a route too, so a manager's bookmark works — and a
             non-admin who follows one gets the server's own `403` on the read
@@ -452,6 +462,18 @@ export function ProjectsModule() {
           project={editingDetails}
           onClose={() => setEditingDetails(null)}
           onSave={(draft) => updateProject(editingDetails, draft)}
+        />
+      )}
+
+      {invoiceHandoff !== null && (
+        <InvoiceHandoffDialog
+          project={invoiceHandoff.project}
+          initialCutoff={invoiceHandoff.cutoff}
+          onClose={() => setInvoiceHandoff(null)}
+          onCreated={(invoiceId) => {
+            setInvoiceHandoff(null);
+            navigate(`/billing/invoices/${encodeURIComponent(invoiceId)}`);
+          }}
         />
       )}
     </div>

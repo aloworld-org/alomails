@@ -8,18 +8,19 @@ import type { Project, UnbilledTimeGroup } from "./types";
 
 interface Props {
   project: Project;
+  initialCutoff?: string;
   onClose: () => void;
   onCreated: (invoiceId: string) => void;
 }
 
-export function InvoiceHandoffDialog({ project, onClose, onCreated }: Props) {
+export function InvoiceHandoffDialog({ project, initialCutoff, onClose, onCreated }: Props) {
   const api = useProjectsApi();
   const [groups, setGroups] = useState<UnbilledTimeGroup[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cutoff, setCutoff] = useState(() => new Date().toISOString().slice(0, 10));
+  const [cutoff, setCutoff] = useState(() => initialCutoff ?? new Date().toISOString().slice(0, 10));
   const customerId = project.client?.customerId;
 
   useEffect(() => {

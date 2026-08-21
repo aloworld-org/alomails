@@ -38,6 +38,8 @@ interface Props {
   customerName: (customerId: string) => string | null;
   /** Bumped when an hour was written anywhere, so the figures follow the work. */
   revision: number;
+  /** Continues from a report row into the approved-time invoice handoff. */
+  onCreateInvoice: (project: Project, cutoff: string) => void;
 }
 
 /** What a saved report is called: the server names the file in its own
@@ -48,7 +50,7 @@ function fileName(period: Period): string {
   return `profitability-${period.from}-to-${period.to}.csv`;
 }
 
-export function ReportView({ projects, projectsLoading, customerName, revision }: Props) {
+export function ReportView({ projects, projectsLoading, customerName, revision, onCreateInvoice }: Props) {
   const api = useProjectsApi();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedProjectId = searchParams.get("project");
@@ -191,7 +193,14 @@ export function ReportView({ projects, projectsLoading, customerName, revision }
           body={strings.projectsReportEmptyBody}
         />
       ) : (
-        report !== null && <ReportTable report={report} customerName={customerName} />
+        report !== null && (
+          <ReportTable
+            report={report}
+            projects={projects}
+            customerName={customerName}
+            onCreateInvoice={(project) => onCreateInvoice(project, report.to)}
+          />
+        )
       )}
 
       {report !== null && report.projects.length > 0 && (
@@ -207,10 +216,14 @@ export function ReportView({ projects, projectsLoading, customerName, revision }
 /** One engagement per row, with the whole report's totals under them. */
 function ReportTable({
   report,
+  projects,
   customerName,
+  onCreateInvoice,
 }: {
   report: ProfitabilityReport;
+  projects: Project[];
   customerName: (customerId: string) => string | null;
+  onCreateInvoice: (project: Project) => void;
 }) {
   const locale = useLocale();
   return (
@@ -246,8 +259,10 @@ function ReportTable({
             <ProjectRow
               key={project.projectId}
               project={project}
+              sourceProject={projects.find((candidate) => candidate.id === project.projectId) ?? null}
               customerName={customerName}
               locale={locale}
+              onCreateInvoice={onCreateInvoice}
             />
           ))}
         </tbody>
@@ -289,15 +304,20 @@ function ReportTable({
 
 function ProjectRow({
   project,
+  sourceProject,
   customerName,
   locale,
+  onCreateInvoice,
 }: {
   project: ProjectProfitability;
+  sourceProject: Project | null;
   customerName: (customerId: string) => string | null;
   locale: string;
+  onCreateInvoice: (project: Project) => void;
 }) {
   const customer = customerName(project.customerId);
   const remaining = project.budgetRemainingCents;
+  const hasUnbilledValue = project.byCurrency.some((row) => row.unbilledNetCents > 0);
   return (
     <tr>
       <td>
@@ -323,7 +343,19 @@ function ProjectRow({
         <Money rows={project.byCurrency} pick={(row) => row.billedNetCents} locale={locale} />
       </td>
       <td className="whitespace-nowrap text-right tabular-nums">
-        <Money rows={project.byCurrency} pick={(row) => row.unbilledNetCents} locale={locale} />
+        {sourceProject !== null && hasUnbilledValue ? (
+          <button
+            type="button"
+            className="inline-flex min-h-9 items-center rounded-lg px-3 py-1.5 font-semibold text-accent !no-underline transition-colors hover:bg-[var(--accent-soft)] hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            aria-label={`${strings.projectsCreateInvoice}: ${project.projectName}`}
+            title={strings.projectsCreateInvoice}
+            onClick={() => onCreateInvoice(sourceProject)}
+          >
+            <Money rows={project.byCurrency} pick={(row) => row.unbilledNetCents} locale={locale} />
+          </button>
+        ) : (
+          <Money rows={project.byCurrency} pick={(row) => row.unbilledNetCents} locale={locale} />
+        )}
       </td>
       <td className="whitespace-nowrap text-right tabular-nums">{durationLabel(project.toDateMinutes)}</td>
       <td>
