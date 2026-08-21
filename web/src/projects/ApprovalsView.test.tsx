@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 
@@ -37,8 +43,18 @@ const pendingWeek = {
   minutes: 180,
   billableMinutes: 120,
   projects: [
-    { projectId: "project-1", projectName: "Website", minutes: 120, billableMinutes: 120 },
-    { projectId: "project-2", projectName: "Internal planning", minutes: 60, billableMinutes: 0 },
+    {
+      projectId: "project-1",
+      projectName: "Website",
+      minutes: 120,
+      billableMinutes: 120,
+    },
+    {
+      projectId: "project-2",
+      projectName: "Internal planning",
+      minutes: 60,
+      billableMinutes: 0,
+    },
   ],
 };
 
@@ -69,15 +85,23 @@ describe("ApprovalsView", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(await screen.findByRole("button", { name: strings.projectsApprove }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.projectsApprove }),
+    );
     await waitFor(() => expect(approveWeek).toHaveBeenCalledWith("week-1"));
     const confirmation = await screen.findByRole("status");
-    expect(within(confirmation).getByText(strings.projectsApprovalComplete)).toBeTruthy();
+    expect(
+      within(confirmation).getByText(strings.projectsApprovalComplete),
+    ).toBeTruthy();
 
-    expect(within(confirmation).getByRole("button", { name: /Website/ })).toBeTruthy();
+    expect(
+      within(confirmation).getByRole("button", { name: /Website/ }),
+    ).toBeTruthy();
     const reviewBilling = within(confirmation).getByRole("link", {
       name: strings.projectsReadyToInvoice,
     });
-    expect(reviewBilling.getAttribute("href")).toBe("/projects/reports");
+    expect(reviewBilling.getAttribute("href")).toBe(
+      "/projects/reports?from=2026-08-17&to=2026-08-23&project=project-1",
+    );
   });
 });

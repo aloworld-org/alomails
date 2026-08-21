@@ -61,6 +61,10 @@ function fileName(period: Period): string {
   return `profitability-${period.from}-to-${period.to}.csv`;
 }
 
+function isIsoDay(value: string | null): value is string {
+  return value !== null && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
 export function ReportView({
   projects,
   projectsLoading,
@@ -78,7 +82,13 @@ export function ReportView({
   );
   // The form opens on the quarter being lived through; the one being reviewed
   // is one click away.
-  const [period, setPeriod] = useState<Period>(() => quarterOf(new Date()));
+  const [period, setPeriod] = useState<Period>(() => {
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
+    return isIsoDay(from) && isIsoDay(to) && from <= to
+      ? { from, to }
+      : quarterOf(new Date());
+  });
   const [form, setForm] = useState<Period>(period);
   const [report, setReport] = useState<ProfitabilityReport | null>(null);
   const [loading, setLoading] = useState(true);

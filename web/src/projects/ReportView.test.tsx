@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 
@@ -70,14 +76,16 @@ const report: ProfitabilityReport = {
       minutes: 120,
       billableMinutes: 120,
       unratedMinutes: 0,
-      byCurrency: [{
-        currency: "EUR",
-        billableMinutes: 120,
-        netCents: 25_000,
-        billedMinutes: 0,
-        billedNetCents: 0,
-        unbilledNetCents: 25_000,
-      }],
+      byCurrency: [
+        {
+          currency: "EUR",
+          billableMinutes: 120,
+          netCents: 25_000,
+          billedMinutes: 0,
+          billedNetCents: 0,
+          unbilledNetCents: 25_000,
+        },
+      ],
       toDateMinutes: 120,
       toDateNetCents: 25_000,
       hoursConsumptionBp: null,
@@ -89,14 +97,16 @@ const report: ProfitabilityReport = {
     minutes: 120,
     billableMinutes: 120,
     unratedMinutes: 0,
-    byCurrency: [{
-      currency: "EUR",
-      billableMinutes: 120,
-      netCents: 25_000,
-      billedMinutes: 0,
-      billedNetCents: 0,
-      unbilledNetCents: 25_000,
-    }],
+    byCurrency: [
+      {
+        currency: "EUR",
+        billableMinutes: 120,
+        netCents: 25_000,
+        billedMinutes: 0,
+        billedNetCents: 0,
+        unbilledNetCents: 25_000,
+      },
+    ],
   },
 };
 
@@ -106,6 +116,38 @@ afterEach(() => {
 });
 
 describe("ReportView invoice handoff", () => {
+  it("opens with the approved week and project carried through the URL", async () => {
+    profitability.mockResolvedValue({
+      ...report,
+      from: "2026-08-17",
+      to: "2026-08-23",
+    });
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          "/projects/reports?project=project-1&from=2026-08-17&to=2026-08-23",
+        ]}
+      >
+        <ReportView
+          projects={[project]}
+          projectsLoading={false}
+          customerName={() => "Atelier Dupont SARL"}
+          revision={0}
+          onCreateInvoice={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(profitability).toHaveBeenCalledWith(
+        "2026-08-17",
+        "2026-08-23",
+        "project-1",
+      );
+    });
+  });
+
   it("opens invoice creation for the reported project and cutoff", async () => {
     profitability.mockResolvedValue(report);
     const onCreateInvoice = vi.fn();
@@ -132,15 +174,18 @@ describe("ReportView invoice handoff", () => {
 
   it("keeps a zero unbilled amount informational", async () => {
     const reportedProject = report.projects[0];
-    if (reportedProject === undefined) throw new Error("missing report fixture");
+    if (reportedProject === undefined)
+      throw new Error("missing report fixture");
     const currency = reportedProject.byCurrency[0];
     if (currency === undefined) throw new Error("missing currency fixture");
     profitability.mockResolvedValue({
       ...report,
-      projects: [{
-        ...reportedProject,
-        byCurrency: [{ ...currency, unbilledNetCents: 0 }],
-      }],
+      projects: [
+        {
+          ...reportedProject,
+          byCurrency: [{ ...currency, unbilledNetCents: 0 }],
+        },
+      ],
     });
 
     render(
@@ -156,6 +201,10 @@ describe("ReportView invoice handoff", () => {
     );
 
     await waitFor(() => expect(profitability).toHaveBeenCalled());
-    expect(screen.queryByRole("button", { name: "Create invoice: Website redesign" })).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: "Create invoice: Website redesign",
+      }),
+    ).toBeNull();
   });
 });

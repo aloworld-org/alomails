@@ -21,7 +21,7 @@ import { strings } from "../i18n";
 import { projectsMessage, useProjectsApi } from "./api";
 import { dayLabel, durationLabel, momentLabel } from "./format";
 import { EmptyState, ErrorBanner } from "./parts";
-import type { PendingProjectHours, PendingWeek } from "./types";
+import type { PendingWeek } from "./types";
 
 export function ApprovalsView({
   onDecided,
@@ -36,7 +36,7 @@ export function ApprovalsView({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [approvedProjects, setApprovedProjects] = useState<PendingProjectHours[]>([]);
+  const [approvedWeek, setApprovedWeek] = useState<PendingWeek | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -64,8 +64,10 @@ export function ApprovalsView({
     setError(null);
     try {
       await api.approveWeek(week.id);
-      setApprovedProjects(week.projects);
-      setWeeks((current) => current.filter((candidate) => candidate.id !== week.id));
+      setApprovedWeek(week);
+      setWeeks((current) =>
+        current.filter((candidate) => candidate.id !== week.id),
+      );
       onDecided();
     } catch (err) {
       setError(projectsMessage(err, strings.projectsSaveFailed));
@@ -87,7 +89,9 @@ export function ApprovalsView({
     setError(null);
     try {
       await api.rejectWeek(week.id, note);
-      setWeeks((current) => current.filter((candidate) => candidate.id !== week.id));
+      setWeeks((current) =>
+        current.filter((candidate) => candidate.id !== week.id),
+      );
       onDecided();
     } catch (err) {
       setError(projectsMessage(err, strings.projectsSaveFailed));
@@ -107,15 +111,25 @@ export function ApprovalsView({
   return (
     <div className="flex min-h-0 flex-col gap-4 overflow-auto px-5 py-4">
       {error !== null && <ErrorBanner message={error} />}
-      {approvedProjects.length > 0 && (
-        <section className="flex flex-wrap items-center gap-4 rounded-xl border border-success/30 bg-success/10 px-4 py-3" role="status">
-          <CheckCircle2 className="size-5 shrink-0 text-success" aria-hidden="true" />
+      {approvedWeek !== null && (
+        <section
+          className="flex flex-wrap items-center gap-4 rounded-xl border border-success/30 bg-success/10 px-4 py-3"
+          role="status"
+        >
+          <CheckCircle2
+            className="size-5 shrink-0 text-success"
+            aria-hidden="true"
+          />
           <div className="min-w-52 flex-1">
-            <p className="font-semibold text-primary">{strings.projectsApprovalComplete}</p>
-            <p className="mt-0.5 text-sm text-secondary">{strings.projectsApprovalCompleteBody}</p>
+            <p className="font-semibold text-primary">
+              {strings.projectsApprovalComplete}
+            </p>
+            <p className="mt-0.5 text-sm text-secondary">
+              {strings.projectsApprovalCompleteBody}
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {approvedProjects.map((project) => (
+            {approvedWeek.projects.map((project) => (
               <button
                 key={project.projectId}
                 type="button"
@@ -127,7 +141,23 @@ export function ApprovalsView({
               </button>
             ))}
             <Link
-              to="/projects/reports"
+              to={{
+                pathname: "/projects/reports",
+                search: new URLSearchParams({
+                  from: approvedWeek.weekStart,
+                  to: approvedWeek.weekEnd,
+                  ...(approvedWeek.projects.filter(
+                    (project) => project.billableMinutes > 0,
+                  ).length === 1
+                    ? {
+                        project:
+                          approvedWeek.projects.find(
+                            (project) => project.billableMinutes > 0,
+                          )?.projectId ?? "",
+                      }
+                    : {}),
+                }).toString(),
+              }}
               className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-accent px-5 py-2 text-sm font-medium leading-none text-on-accent !no-underline transition-colors hover:bg-accent-hover hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
             >
               {strings.projectsReadyToInvoice}
@@ -150,10 +180,16 @@ export function ApprovalsView({
                 <th scope="col">{strings.projectsPerson}</th>
                 <th scope="col">{strings.projectsWeek}</th>
                 <th scope="col">{strings.projectsProject}</th>
-                <th scope="col" className="whitespace-nowrap text-right tabular-nums">
+                <th
+                  scope="col"
+                  className="whitespace-nowrap text-right tabular-nums"
+                >
                   {strings.projectsHoursLogged}
                 </th>
-                <th scope="col" className="whitespace-nowrap text-right tabular-nums">
+                <th
+                  scope="col"
+                  className="whitespace-nowrap text-right tabular-nums"
+                >
                   {strings.projectsBillableHours}
                 </th>
                 <th scope="col">{strings.projectsSubmittedAt}</th>
@@ -166,14 +202,20 @@ export function ApprovalsView({
                   <td>{week.userEmail}</td>
                   <td>
                     {strings.projectsWeekOf(
-                      dayLabel(week.weekStart, { day: "numeric", month: "short" }),
+                      dayLabel(week.weekStart, {
+                        day: "numeric",
+                        month: "short",
+                      }),
                       dayLabel(week.weekEnd),
                     )}
                   </td>
                   <td>
                     <div className="flex min-w-48 flex-col gap-1.5">
                       {week.projects.map((project) => (
-                        <div key={project.projectId} className="flex items-center justify-between gap-4 rounded-md bg-raised px-2.5 py-1.5">
+                        <div
+                          key={project.projectId}
+                          className="flex items-center justify-between gap-4 rounded-md bg-raised px-2.5 py-1.5"
+                        >
                           <button
                             type="button"
                             className="min-w-0 truncate rounded text-left font-medium text-primary !no-underline hover:text-accent hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
@@ -183,16 +225,23 @@ export function ApprovalsView({
                           </button>
                           <span className="shrink-0 text-xs tabular-nums text-secondary">
                             {durationLabel(project.minutes)}
-                            {project.billableMinutes > 0 && ` · ${durationLabel(project.billableMinutes)} ${strings.projectsBillableHours.toLocaleLowerCase()}`}
+                            {project.billableMinutes > 0 &&
+                              ` · ${durationLabel(project.billableMinutes)} ${strings.projectsBillableHours.toLocaleLowerCase()}`}
                           </span>
                         </div>
                       ))}
                     </div>
                   </td>
-                  <td className="whitespace-nowrap text-right tabular-nums">{durationLabel(week.minutes)}</td>
-                  <td className="whitespace-nowrap text-right tabular-nums">{durationLabel(week.billableMinutes)}</td>
+                  <td className="whitespace-nowrap text-right tabular-nums">
+                    {durationLabel(week.minutes)}
+                  </td>
+                  <td className="whitespace-nowrap text-right tabular-nums">
+                    {durationLabel(week.billableMinutes)}
+                  </td>
                   <td className="text-tertiary">
-                    {week.submittedAt === null ? "" : momentLabel(week.submittedAt)}
+                    {week.submittedAt === null
+                      ? ""
+                      : momentLabel(week.submittedAt)}
                   </td>
                   <td>
                     <div className="flex items-center justify-end gap-2">
