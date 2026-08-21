@@ -24,7 +24,14 @@ use tokio::net::{TcpListener, TcpStream};
 /// Every `EHLO`/`HELO` line the mock has seen, lowercased. Process-global
 /// because nextest gives each test its own process, so one test's greetings
 /// cannot be confused with another's.
-static GREETINGS: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
+/// Greetings observed by ONE mock server.
+///
+/// Per-server rather than per-file, and that is the whole point: a global
+/// buffer collected every test's greetings, so this suite's one assertion about
+/// which name we introduce ourselves by saw nine entries from eight tests
+/// running in parallel and failed on all of them. The capture belongs to the
+/// server that observed it.
+type Greetings = std::sync::Arc<std::sync::Mutex<Vec<String>>>;
 
 /// A resolver that must never be called (smarthost route bypasses it).
 struct PanicResolver;
@@ -42,6 +49,7 @@ impl MxResolve for PanicResolver {
 /// prefix it is replying to.
 struct MockServer {
     addr: SocketAddr,
+    greetings: Greetings,
 }
 
 /// Behaviour the mock applies to the RCPT/DATA phase.
@@ -62,6 +70,8 @@ impl MockServer {
     async fn spawn(behaviour: Behaviour) -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
+        let greetings: Greetings = std::sync::Arc::default();
+        let captured = std::sync::Arc::clone(&greetings);
         tokio::spawn(async move {
             // Serve a single connection per delivery attempt, looping
             // so retries reconnect cleanly.
@@ -69,14 +79,24 @@ impl MockServer {
                 let Ok((stream, _peer)) = listener.accept().await else {
                     return;
                 };
-                tokio::spawn(handle_mock(stream, behaviour));
+                tokio::spawn(handle_mock(
+                    stream,
+                    behaviour,
+                    std::sync::Arc::clone(&captured),
+                ));
             }
         });
-        Self { addr }
+        Self { addr, greetings }
+    }
+
+    /// The names the peer introduced itself by, in the order this server saw
+    /// them.
+    fn greetings(&self) -> Vec<String> {
+        self.greetings.lock().expect("greeting log").clone()
     }
 }
 
-async fn handle_mock(stream: TcpStream, behaviour: Behaviour) {
+async fn handle_mock(stream: TcpStream, behaviour: Behaviour, greetings: Greetings) {
     let (read_half, mut writer) = stream.into_split();
     let mut reader = BufReader::new(read_half);
     let mut line = String::new();
@@ -106,7 +126,7 @@ async fn handle_mock(stream: TcpStream, behaviour: Behaviour) {
             // Recorded so a test can assert which name we introduced ourselves
             // by: a receiver compares it against the connecting address's
             // reverse DNS, so it is part of the sending identity.
-            GREETINGS
+            greetings
                 .lock()
                 .expect("greeting log")
                 .push(line.trim_end().to_ascii_lowercase());
@@ -287,7 +307,7 @@ async fn a_campaign_identity_greets_by_its_own_name_and_transactional_mail_does_
     );
     assert_eq!(queue.process_once().await.unwrap().delivered, 1);
 
-    let greetings = GREETINGS.lock().unwrap().clone();
+    let greetings = mock.greetings();
     assert_eq!(
         greetings,
         vec![
