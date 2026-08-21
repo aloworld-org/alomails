@@ -25,8 +25,30 @@ import { strings } from "../i18n";
 import { sitesMessage, useSitesApi } from "./api";
 import { formatPrice, parsePriceInput, priceInput } from "./catalogPricing";
 import { DialogFrame, EmptyState, ErrorBanner, Field } from "./parts";
-import type { SiteDetail, SiteShopItemList, SiteShopProductList } from "./types";
-import styles from "./SitesModule.module.css";
+import type {
+  SiteDetail,
+  SiteShopItemList,
+  SiteShopProductList,
+} from "./types";
+
+const styles = {
+  page: "mx-auto flex w-full max-w-[90rem] flex-col gap-6 px-5 py-6 sm:px-8 lg:px-10",
+  header:
+    "flex flex-col gap-4 rounded-2xl border border-subtle bg-surface px-5 py-5 shadow-sm sm:flex-row sm:items-center",
+  backLink:
+    "inline-flex min-h-10 shrink-0 items-center gap-2 self-start rounded-xl border border-subtle bg-surface px-3.5 text-sm font-semibold text-primary no-underline transition-colors hover:bg-app focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+  siteHead: "min-w-0 flex-1",
+  title: "m-0 text-2xl font-semibold tracking-tight text-primary",
+  submissionSiteName: "mt-1 block truncate text-sm text-secondary",
+  headerActions: "flex min-h-10 items-center gap-3 sm:ml-auto",
+  hint: "text-sm leading-6 text-secondary",
+  input:
+    "min-h-11 w-full rounded-xl border border-subtle bg-surface px-3.5 text-base text-primary outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15",
+  tableWrapStatic:
+    "overflow-x-auto rounded-2xl border border-subtle bg-surface shadow-sm",
+  table:
+    "w-full min-w-[42rem] border-collapse text-left [&_th]:border-b [&_th]:border-subtle [&_th]:bg-app [&_th]:px-5 [&_th]:py-3.5 [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-secondary [&_td]:border-b [&_td]:border-subtle [&_td]:px-5 [&_td]:py-4 [&_td]:align-middle [&_td]:text-sm [&_td]:text-primary [&_tbody_tr:last-child_td]:border-b-0 [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-app/70",
+} as const;
 
 function AddProductDialog({
   products,
@@ -54,7 +76,10 @@ function AddProductDialog({
       onClose={onClose}
       onSubmit={() => onAdd(productId)}
     >
-      <Field label={strings.sitesShopProduct} hint={strings.sitesShopProductHint}>
+      <Field
+        label={strings.sitesShopProduct}
+        hint={strings.sitesShopProductHint}
+      >
         <select
           className={styles.input}
           value={productId}
@@ -229,7 +254,10 @@ export function ShopView() {
       setList((current) =>
         current === null
           ? current
-          : { ...current, items: current.items.filter((row) => row.id !== itemId) },
+          : {
+              ...current,
+              items: current.items.filter((row) => row.id !== itemId),
+            },
       );
       setArmedId(null);
     } catch (reason) {
@@ -253,7 +281,9 @@ export function ShopView() {
         </Link>
         <div className={styles.siteHead}>
           <h1 className={styles.title}>{strings.sitesShop}</h1>
-          {site !== null && <span className={styles.submissionSiteName}>{site.name}</span>}
+          {site !== null && (
+            <span className={styles.submissionSiteName}>{site.name}</span>
+          )}
         </div>
         <div className={styles.headerActions}>
           {loading && <Spinner size={16} />}
@@ -275,6 +305,16 @@ export function ShopView() {
 
       {error !== null && <ErrorBanner message={error} />}
 
+      {loading && (
+        <div
+          className="flex min-h-64 items-center justify-center rounded-2xl border border-subtle bg-surface shadow-sm"
+          role="status"
+          aria-label={strings.sitesShop}
+        >
+          <Spinner size={22} />
+        </div>
+      )}
+
       {/* A status, not a paragraph: the read-only fact arrives after the
           load, and a screen reader that has already moved past the header
           would otherwise never hear it (S3.06a). */}
@@ -285,15 +325,22 @@ export function ShopView() {
       )}
 
       {shipping !== null && list !== null && (
-        <p className={styles.hint}>
-          {shipping === 0
-            ? strings.sitesShopDeliveryFree
-            : strings.sitesShopDeliveryRate(
-                formatPrice(shipping, list.currency, list.currencyExponent),
-              )}{" "}
+        <section className="flex flex-col gap-3 rounded-2xl border border-subtle bg-surface px-5 py-4 shadow-sm sm:flex-row sm:items-center">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">
+              <Package size={19} aria-hidden="true" />
+            </span>
+            <p className="m-0 text-sm font-medium text-primary">
+              {shipping === 0
+                ? strings.sitesShopDeliveryFree
+                : strings.sitesShopDeliveryRate(
+                    formatPrice(shipping, list.currency, list.currencyExponent),
+                  )}
+            </p>
+          </div>
           {manager && (
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
               onClick={() => {
                 setDialogError(null);
@@ -303,7 +350,7 @@ export function ShopView() {
               {strings.sitesShopDeliveryChange}
             </Button>
           )}
-        </p>
+        </section>
       )}
 
       {!loading && manager && noCandidates && items.length === 0 && (
@@ -355,7 +402,9 @@ export function ShopView() {
                 <tr key={item.id}>
                   <td>
                     {item.productName ?? (
-                      <span className={styles.hint}>{strings.sitesShopGoneProduct}</span>
+                      <span className={styles.hint}>
+                        {strings.sitesShopGoneProduct}
+                      </span>
                     )}
                   </td>
                   <td>
@@ -369,7 +418,9 @@ export function ShopView() {
                   </td>
                   <td>
                     {item.availableUnits === null ? (
-                      <span className={styles.hint}>{strings.sitesShopNotStocked}</span>
+                      <span className={styles.hint}>
+                        {strings.sitesShopNotStocked}
+                      </span>
                     ) : (
                       strings.sitesShopUnits(item.availableUnits)
                     )}
@@ -386,7 +437,8 @@ export function ShopView() {
                           armedId === item.id
                             ? strings.sitesShopRemoveConfirm
                             : strings.sitesShopRemoveFor(
-                                item.productName ?? strings.sitesShopGoneProduct,
+                                item.productName ??
+                                  strings.sitesShopGoneProduct,
                               )
                         }
                         disabled={busyId === item.id}
