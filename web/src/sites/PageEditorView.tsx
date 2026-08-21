@@ -17,7 +17,13 @@
 // gesture on the page, the buttons in the stack and the assistant's
 // `reorder_section` are three ways to ask for one change, all of which come
 // back as the server's canonical envelope and all of which one ⌘Z takes back.
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -593,7 +599,11 @@ export function PageEditorView() {
         key,
         value,
       );
-      if (section === undefined || control === undefined || operation === null) {
+      if (
+        section === undefined ||
+        control === undefined ||
+        operation === null
+      ) {
         setError(strings.sitesInlineTextStale);
         setPreviewEpoch((epoch) => epoch + 1);
         return false;
@@ -611,7 +621,13 @@ export function PageEditorView() {
         setError(null);
         if (!replay) {
           setHistory((entries) =>
-            recordEdit(entries, { kind: "layout", index, key, before, after: value }),
+            recordEdit(entries, {
+              kind: "layout",
+              index,
+              key,
+              before,
+              after: value,
+            }),
           );
         }
         setTextNotice(
@@ -728,7 +744,10 @@ export function PageEditorView() {
   useEffect(() => {
     if (locale !== null) return undefined;
     function onKeyDown(event: KeyboardEvent) {
-      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "z") {
+      if (
+        !(event.metaKey || event.ctrlKey) ||
+        event.key.toLowerCase() !== "z"
+      ) {
         return;
       }
       const target = event.target;
@@ -754,7 +773,11 @@ export function PageEditorView() {
       if (locale !== null) {
         const nextSections = [...sections];
         if (target.index === null) {
-          nextSections.splice(target.insertAt ?? nextSections.length, 0, section);
+          nextSections.splice(
+            target.insertAt ?? nextSections.length,
+            0,
+            section,
+          );
         } else nextSections[target.index] = section;
         const saved = await saveLocalized(nextSections);
         if (!saved) return;
@@ -833,9 +856,7 @@ export function PageEditorView() {
     setPicking(false);
     setPaletteDrag(null);
     setPaletteOver(null);
-    document
-      .querySelector<HTMLButtonElement>("[data-add-section]")
-      ?.focus();
+    document.querySelector<HTMLButtonElement>("[data-add-section]")?.focus();
   }
 
   const empty = sections.length === 0;
@@ -847,19 +868,30 @@ export function PageEditorView() {
   }
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <Link to={`/sites/${siteId}`} className={styles.backLink}>
+    <div className="min-h-full bg-bg-app px-4 py-5 text-text-primary sm:px-6 lg:px-8">
+      <header className="mx-auto flex w-full max-w-[1600px] flex-wrap items-center gap-3 border-b border-subtle pb-5">
+        <Link
+          to={`/sites/${siteId}`}
+          className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 font-semibold text-text-primary no-underline transition-colors hover:bg-surface-raised"
+        >
           <ArrowLeft size={16} aria-hidden="true" />
           {strings.sitesBackToSite}
         </Link>
         {page !== null && (
-          <div className={styles.siteHead}>
-            <h1 className={styles.title}>{page.title}</h1>
-            <span className={styles.mono}>/{page.slug}</span>
-            {page.home && (
-              <span className={styles.badge}>{strings.sitesHomeBadge}</span>
-            )}
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl">
+                {page.title}
+              </h1>
+              <span className="rounded-lg bg-surface-raised px-2 py-1 font-mono text-xs text-text-secondary">
+                /{page.slug}
+              </span>
+              {page.home && (
+                <span className="rounded-full bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent">
+                  {strings.sitesHomeBadge}
+                </span>
+              )}
+            </div>
           </div>
         )}
         {loading && <Spinner size={16} />}
@@ -870,13 +902,13 @@ export function PageEditorView() {
       {page !== null && (
         <>
           <nav
-            className={styles.localeStrip}
+            className="mx-auto mt-5 flex w-full max-w-[1600px] flex-wrap items-center justify-between gap-3 rounded-2xl border border-subtle bg-surface px-4 py-3 shadow-sm sm:px-5"
             aria-label={strings.sitesLanguagesLabel}
           >
-            <span className={styles.localeStripLabel}>
+            <span className="text-sm font-semibold text-text-secondary">
               {strings.sitesEditingLanguage}
             </span>
-            <div className={styles.localeTabs}>
+            <div className="flex flex-wrap items-center gap-1 rounded-xl bg-surface-raised p-1">
               {enabledLocales.map((enabledLocale) => (
                 <Button
                   key={enabledLocale}
@@ -884,8 +916,8 @@ export function PageEditorView() {
                   size="sm"
                   className={
                     requestedLanguage === enabledLocale
-                      ? styles.localeTabActive
-                      : styles.localeTab
+                      ? "bg-surface text-accent shadow-sm"
+                      : "text-text-secondary"
                   }
                   aria-pressed={requestedLanguage === enabledLocale}
                   onClick={() => chooseLocale(enabledLocale)}
@@ -897,12 +929,15 @@ export function PageEditorView() {
           </nav>
 
           {locale !== null && translationFallback && (
-            <section className={styles.translationMissing} aria-live="polite">
+            <section
+              className="mx-auto mt-4 flex w-full max-w-[1600px] flex-wrap items-center justify-between gap-4 rounded-2xl border border-accent/20 bg-accent-soft px-5 py-4"
+              aria-live="polite"
+            >
               <div>
-                <h2 className={styles.translationMissingTitle}>
+                <h2 className="font-semibold text-text-primary">
                   {strings.sitesTranslationMissingTitle(locale.toUpperCase())}
                 </h2>
-                <p className={styles.translationMissingBody}>
+                <p className="mt-1 max-w-3xl text-sm text-text-secondary">
                   {strings.sitesTranslationMissingBody(
                     locale.toUpperCase(),
                     resolvedLocale.toUpperCase(),
@@ -924,16 +959,16 @@ export function PageEditorView() {
           )}
 
           {locale !== null && !translationFallback && (
-            <section className={styles.translationDetails}>
-              <div className={styles.translationDetailsIntro}>
-                <h2 className={styles.translationDetailsTitle}>
+            <details className="mx-auto mt-4 w-full max-w-[1600px] rounded-2xl border border-subtle bg-surface shadow-sm">
+              <summary className="cursor-pointer list-none px-5 py-4 marker:content-none">
+                <h2 className="font-semibold text-text-primary">
                   {strings.sitesTranslationDetails}
                 </h2>
-                <p className={styles.translationDetailsHint}>
+                <p className="mt-1 text-sm text-text-secondary">
                   {strings.sitesTranslationDetailsHint(locale.toUpperCase())}
                 </p>
-              </div>
-              <div className={styles.translationFields}>
+              </summary>
+              <div className="grid gap-4 border-t border-subtle px-5 py-5 sm:grid-cols-2">
                 <label className={styles.translationField}>
                   <span>{strings.sitesFieldPageTitle}</span>
                   <input
@@ -972,15 +1007,17 @@ export function PageEditorView() {
                     }
                   />
                 </label>
+                <div className="sm:col-span-2 flex justify-end">
+                  <Button
+                    size="sm"
+                    disabled={translationBusy}
+                    onClick={() => void saveIdentity()}
+                  >
+                    {strings.sitesSaveTranslation}
+                  </Button>
+                </div>
               </div>
-              <Button
-                size="sm"
-                disabled={translationBusy}
-                onClick={() => void saveIdentity()}
-              >
-                {strings.sitesSaveTranslation}
-              </Button>
-            </section>
+            </details>
           )}
 
           {translationError !== null && (
@@ -996,11 +1033,18 @@ export function PageEditorView() {
             onChange={setPageProtected}
           />
 
-          <div className={styles.editorLayout}>
-            <div className={styles.stackPane}>
-              <div className={styles.sectionBar}>
-                <h2 className={styles.sectionTitle}>{strings.sitesSections}</h2>
-                <div className={styles.sectionBarActions}>
+          <div className="mx-auto mt-5 grid w-full max-w-[1600px] min-w-0 gap-5 xl:grid-cols-[minmax(360px,0.78fr)_minmax(520px,1.22fr)]">
+            <div className="min-w-0 rounded-2xl border border-subtle bg-surface p-4 shadow-sm sm:p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-subtle pb-4">
+                <div>
+                  <h2 className="font-semibold text-text-primary">
+                    {strings.sitesSections}
+                  </h2>
+                  <p className="mt-1 text-sm text-text-secondary">
+                    {sections.length} {strings.sitesSections.toLowerCase()}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center justify-end gap-2">
                   {locale === null && (
                     <>
                       <IconButton
@@ -1041,7 +1085,9 @@ export function PageEditorView() {
                     size="sm"
                     data-add-section=""
                     aria-expanded={picking}
-                    onClick={() => (picking ? closePalette() : setPicking(true))}
+                    onClick={() =>
+                      picking ? closePalette() : setPicking(true)
+                    }
                     disabled={working || translationBusy || translationFallback}
                   >
                     {strings.sitesAddSection}
@@ -1171,7 +1217,9 @@ export function PageEditorView() {
                               translationFallback ||
                               i === 0
                             }
-                            onClick={() => void move(i, i - 1, { control: "up" })}
+                            onClick={() =>
+                              void move(i, i - 1, { control: "up" })
+                            }
                           />
                           <IconButton
                             size="sm"
@@ -1186,7 +1234,9 @@ export function PageEditorView() {
                               translationFallback ||
                               i === sections.length - 1
                             }
-                            onClick={() => void move(i, i + 1, { control: "down" })}
+                            onClick={() =>
+                              void move(i, i + 1, { control: "down" })
+                            }
                           />
                           <IconButton
                             size="sm"
@@ -1262,12 +1312,19 @@ export function PageEditorView() {
             </div>
 
             <aside
-              className={styles.previewPane}
+              className="min-w-0 self-start overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm xl:sticky xl:top-5"
               aria-label={strings.sitesPreview}
             >
-              <div className={styles.previewBar}>
-                <h2 className={styles.sectionTitle}>{strings.sitesPreview}</h2>
-                <div className={styles.previewControls}>
+              <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 border-b border-subtle px-4 py-3 sm:px-5">
+                <div>
+                  <h2 className="font-semibold text-text-primary">
+                    {strings.sitesPreview}
+                  </h2>
+                  <p className="mt-0.5 text-xs text-text-secondary">
+                    /{page.slug}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
                   {proposedPreviewHtml !== null && (
                     <div
                       className={styles.previewCompareToggle}
