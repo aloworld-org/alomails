@@ -14,6 +14,7 @@
 // empty one; this screen prompts for it.
 import { useEffect, useState } from "react";
 import { ArrowRight, CheckCircle2, Inbox } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import { Button, Spinner, useDialogs } from "../ds";
 import { strings } from "../i18n";
@@ -35,7 +36,6 @@ export function ApprovalsView({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [reload, setReload] = useState(0);
   const [approvedProjects, setApprovedProjects] = useState<PendingProjectHours[]>([]);
 
   useEffect(() => {
@@ -57,7 +57,7 @@ export function ApprovalsView({
     return () => {
       live = false;
     };
-  }, [api, reload]);
+  }, [api]);
 
   async function approve(week: PendingWeek) {
     setBusy(week.id);
@@ -66,7 +66,6 @@ export function ApprovalsView({
       await api.approveWeek(week.id);
       setApprovedProjects(week.projects);
       setWeeks((current) => current.filter((candidate) => candidate.id !== week.id));
-      setReload((r) => r + 1);
       onDecided();
     } catch (err) {
       setError(projectsMessage(err, strings.projectsSaveFailed));
@@ -89,7 +88,6 @@ export function ApprovalsView({
     try {
       await api.rejectWeek(week.id, note);
       setWeeks((current) => current.filter((candidate) => candidate.id !== week.id));
-      setReload((r) => r + 1);
       onDecided();
     } catch (err) {
       setError(projectsMessage(err, strings.projectsSaveFailed));
@@ -128,6 +126,13 @@ export function ApprovalsView({
                 <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
               </button>
             ))}
+            <Link
+              to="/projects/reports"
+              className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-accent px-5 py-2 text-sm font-medium leading-none text-on-accent !no-underline transition-colors hover:bg-accent-hover hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+            >
+              {strings.projectsReadyToInvoice}
+              <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
+            </Link>
           </div>
         </section>
       )}

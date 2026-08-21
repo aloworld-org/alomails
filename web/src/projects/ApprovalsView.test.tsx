@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 
 import { strings } from "../i18n";
 import { ApprovalsView } from "./ApprovalsView";
@@ -44,13 +45,17 @@ const pendingWeek = {
 describe("ApprovalsView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    approvals.mockResolvedValueOnce([pendingWeek]).mockResolvedValue([]);
+    approvals.mockResolvedValue([pendingWeek]);
     approveWeek.mockResolvedValue({ ...pendingWeek, status: "approved" });
   });
 
   it("opens a project directly from a pending week", async () => {
     const onOpenProject = vi.fn();
-    render(<ApprovalsView onDecided={vi.fn()} onOpenProject={onOpenProject} />);
+    render(
+      <MemoryRouter>
+        <ApprovalsView onDecided={vi.fn()} onOpenProject={onOpenProject} />
+      </MemoryRouter>,
+    );
 
     fireEvent.click(await screen.findByRole("button", { name: "Website" }));
     expect(onOpenProject).toHaveBeenCalledWith("project-1");
@@ -58,7 +63,11 @@ describe("ApprovalsView", () => {
 
   it("keeps affected project links visible after approval", async () => {
     const onOpenProject = vi.fn();
-    render(<ApprovalsView onDecided={vi.fn()} onOpenProject={onOpenProject} />);
+    render(
+      <MemoryRouter>
+        <ApprovalsView onDecided={vi.fn()} onOpenProject={onOpenProject} />
+      </MemoryRouter>,
+    );
 
     fireEvent.click(await screen.findByRole("button", { name: strings.projectsApprove }));
     await waitFor(() => expect(approveWeek).toHaveBeenCalledWith("week-1"));
@@ -66,5 +75,9 @@ describe("ApprovalsView", () => {
     expect(within(confirmation).getByText(strings.projectsApprovalComplete)).toBeTruthy();
 
     expect(within(confirmation).getByRole("button", { name: /Website/ })).toBeTruthy();
+    const reviewBilling = within(confirmation).getByRole("link", {
+      name: strings.projectsReadyToInvoice,
+    });
+    expect(reviewBilling.getAttribute("href")).toBe("/projects/reports");
   });
 });
