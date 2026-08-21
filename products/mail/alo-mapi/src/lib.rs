@@ -21,6 +21,7 @@ pub mod connect;
 pub mod direct2;
 pub mod dispatch;
 pub mod execute;
+pub mod hierarchy;
 pub mod logon;
 pub mod logon_response;
 pub mod openfolder;

@@ -19,6 +19,10 @@
 //! and act on it. A short answer is recoverable; acting on a misread request is
 //! not.
 
+use crate::hierarchy::{
+    HierarchyTableRequest, ROP_GET_HIERARCHY_TABLE, children,
+    success_body as hierarchy_table_success,
+};
 use crate::logon::LogonRequest;
 use crate::logon_response::{
     Fid, LogonResponse, LogonTime, RESPONSE_OWNER_RIGHT, RESPONSE_SEND_AS_RIGHT, ROP_LOGON,
@@ -66,6 +70,11 @@ pub enum ServerObject {
     /// An open folder, reached through a logon.
     Folder {
         /// Which special folder this is.
+        folder: SpecialFolder,
+    },
+    /// A table of a folder's children, opened on that folder.
+    HierarchyTable {
+        /// The folder whose children this table lists.
         folder: SpecialFolder,
     },
 }
@@ -363,6 +372,52 @@ pub fn dispatch(
                 responses.extend(open_folder_success(request.output_handle_index, false));
             }
 
+            ROP_GET_HIERARCHY_TABLE => {
+                let Ok((request, tail)) = HierarchyTableRequest::parse(rest) else {
+                    responses.extend(failure(
+                        ROP_GET_HIERARCHY_TABLE,
+                        header.input_handle_index,
+                        error::INVALID_OBJECT,
+                    ));
+                    return Dispatched {
+                        responses,
+                        handles,
+                        complete: false,
+                    };
+                };
+                rest = tail;
+
+                // A hierarchy table is opened **on a folder**, so the input
+                // handle must name one this session holds. A logon handle is
+                // not a folder, and neither is a table — asking the wrong kind
+                // of object for its children is refused rather than answered
+                // with an empty one.
+                let opened = handles
+                    .get(usize::from(request.input_handle_index))
+                    .copied()
+                    .filter(|handle| *handle != crate::rop::HANDLE_UNSET)
+                    .and_then(|handle| objects.get(handle));
+                let Some(ServerObject::Folder { folder }) = opened else {
+                    responses.extend(failure(
+                        ROP_GET_HIERARCHY_TABLE,
+                        request.output_handle_index,
+                        error::INVALID_OBJECT,
+                    ));
+                    continue;
+                };
+                let folder = *folder;
+
+                let handle = objects.insert(ServerObject::HierarchyTable { folder });
+                let index = usize::from(request.output_handle_index);
+                if handles.len() <= index {
+                    handles.resize(index + 1, crate::rop::HANDLE_UNSET);
+                }
+                handles[index] = handle;
+
+                let rows = u32::try_from(children(folder).len()).unwrap_or(0);
+                responses.extend(hierarchy_table_success(request.output_handle_index, rows));
+            }
+
             // An operation we do not implement. We answer it honestly and stop:
             // its body length is unknown, so whatever follows cannot be found
             // without guessing, and a guess would have us act on a misread
@@ -537,6 +592,102 @@ mod tests {
                 "{folder:?} did not resolve"
             );
         }
+    }
+
+    /// A `RopGetHierarchyTable` on the folder at handle index 1, storing the
+    /// table at index 2.
+    fn hierarchy_rop() -> Vec<u8> {
+        vec![ROP_GET_HIERARCHY_TABLE, 0x00, 0x01, 0x02, 0x00]
+    }
+
+    /// The whole chain a client performs to draw a folder tree: log on, open
+    /// the interpersonal-messages subtree, ask it for its children — all in one
+    /// buffer, each operation naming a handle the previous one created.
+    #[test]
+    fn a_client_can_log_on_open_a_folder_and_count_its_children_in_one_buffer() {
+        let ctx = context("disan@alo.test");
+        let mut objects = ObjectTable::new();
+
+        let mut rops = logon_buffer("", LOGON_PRIVATE, 0).rops;
+        rops.extend(open_folder_rop(fid_of(SpecialFolder::IpmSubtree)));
+        rops.extend(hierarchy_rop());
+        let buffer = RopBuffer {
+            rops,
+            handles: vec![crate::rop::HANDLE_UNSET; 3],
+        };
+
+        let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+        assert!(out.complete, "the walk stopped early");
+        assert_eq!(out.responses.len(), 166 + 8 + 10);
+
+        let table = &out.responses[174..];
+        assert_eq!(table[0], ROP_GET_HIERARCHY_TABLE);
+        assert_eq!(
+            u32::from_le_bytes(table[2..6].try_into().unwrap()),
+            error::SUCCESS
+        );
+        assert_eq!(
+            u32::from_le_bytes(table[6..10].try_into().unwrap()),
+            4,
+            "the subtree has Inbox, Outbox, Sent Items and Deleted Items"
+        );
+
+        assert_eq!(
+            objects.get(out.handles[2]),
+            Some(&ServerObject::HierarchyTable {
+                folder: SpecialFolder::IpmSubtree
+            })
+        );
+    }
+
+    /// A hierarchy table is opened on a folder. A **logon** handle is not a
+    /// folder, and asking the wrong kind of object for its children is refused
+    /// rather than answered with an empty table.
+    #[test]
+    fn a_hierarchy_table_cannot_be_opened_on_a_logon() {
+        let ctx = context("disan@alo.test");
+        let mut objects = ObjectTable::new();
+
+        let mut rops = logon_buffer("", LOGON_PRIVATE, 0).rops;
+        // Point the table request at index 0 — the logon, not a folder.
+        rops.extend(vec![ROP_GET_HIERARCHY_TABLE, 0x00, 0x00, 0x02, 0x00]);
+        let buffer = RopBuffer {
+            rops,
+            handles: vec![crate::rop::HANDLE_UNSET; 3],
+        };
+
+        let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+        let table = &out.responses[166..];
+        assert_eq!(table.len(), 6, "a failure response");
+        assert_eq!(
+            u32::from_le_bytes(table[2..6].try_into().unwrap()),
+            error::INVALID_OBJECT
+        );
+        assert_eq!(objects.len(), 1, "only the logon should exist");
+    }
+
+    /// A leaf folder reports no children — an empty table, not an error.
+    #[test]
+    fn a_leaf_folder_reports_an_empty_hierarchy() {
+        let ctx = context("disan@alo.test");
+        let mut objects = ObjectTable::new();
+
+        let mut rops = logon_buffer("", LOGON_PRIVATE, 0).rops;
+        rops.extend(open_folder_rop(fid_of(SpecialFolder::Inbox)));
+        rops.extend(hierarchy_rop());
+        let buffer = RopBuffer {
+            rops,
+            handles: vec![crate::rop::HANDLE_UNSET; 3],
+        };
+
+        let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+        let table = &out.responses[174..];
+        assert_eq!(
+            u32::from_le_bytes(table[2..6].try_into().unwrap()),
+            error::SUCCESS,
+            "an empty folder is not an error"
+        );
+        assert_eq!(u32::from_le_bytes(table[6..10].try_into().unwrap()), 0);
     }
 
     #[test]
