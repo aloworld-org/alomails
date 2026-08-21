@@ -4,9 +4,13 @@
 // or consent ceremony because collection stores no cookies or personal
 // browsing profile.
 import { useEffect, useMemo, useState } from "react";
-import type { CSSProperties } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, BarChart3, MousePointerClick, ShieldCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  BarChart3,
+  MousePointerClick,
+  ShieldCheck,
+} from "lucide-react";
 
 import { strings } from "../i18n";
 import { sitesMessage, useSitesApi } from "./api";
@@ -22,8 +26,11 @@ import {
   referrerLabel,
 } from "./analyticsLabels";
 import { EmptyState, ErrorBanner } from "./parts";
-import type { SiteAnalyticsDimension, SiteAnalyticsReport, SiteDetail } from "./types";
-import styles from "./SitesModule.module.css";
+import type {
+  SiteAnalyticsDimension,
+  SiteAnalyticsReport,
+  SiteDetail,
+} from "./types";
 
 /** Names one dimension's buckets for reading, keeping the server's order —
  *  which is by count everywhere except the reading-time histogram. */
@@ -31,7 +38,10 @@ function named(
   rows: SiteAnalyticsDimension[] | undefined,
   name: (label: string) => string,
 ): AnalyticsRow[] {
-  return (rows ?? []).map((row) => ({ label: name(row.label), visits: row.visits }));
+  return (rows ?? []).map((row) => ({
+    label: name(row.label),
+    visits: row.visits,
+  }));
 }
 
 type AnalyticsPeriod = 7 | 30 | 90;
@@ -61,7 +71,8 @@ export function AnalyticsView() {
         setSiteError(null);
       })
       .catch((error: unknown) => {
-        if (current) setSiteError(sitesMessage(error, strings.sitesSiteLoadFailed));
+        if (current)
+          setSiteError(sitesMessage(error, strings.sitesSiteLoadFailed));
       })
       .finally(() => {
         if (current) setLoadingSite(false);
@@ -82,7 +93,8 @@ export function AnalyticsView() {
         setReportError(null);
       })
       .catch((error: unknown) => {
-        if (current) setReportError(sitesMessage(error, strings.sitesAnalyticsLoadFailed));
+        if (current)
+          setReportError(sitesMessage(error, strings.sitesAnalyticsLoadFailed));
       })
       .finally(() => {
         if (current) setLoadingReport(false);
@@ -101,7 +113,8 @@ export function AnalyticsView() {
     [],
   );
   const numbers = useMemo(() => new Intl.NumberFormat(), []);
-  const maxVisits = report?.daily.reduce((max, row) => Math.max(max, row.visits), 0) ?? 0;
+  const maxVisits =
+    report?.daily.reduce((max, row) => Math.max(max, row.visits), 0) ?? 0;
   const liveAddress =
     site?.status === "live" && domain !== null
       ? `https://${site.subdomain}.${domain}`
@@ -116,37 +129,52 @@ export function AnalyticsView() {
   }
 
   return (
-    <div className={styles.page}>
-      <header className={`${styles.header} ${styles.analyticsHeader}`}>
-        <Link className={styles.backLink} to={`/sites/${encodeURIComponent(siteId)}`}>
-          <ArrowLeft size="var(--icon-size-inline)" />
-          {strings.sitesBackToSite}
-        </Link>
-        <div className={styles.siteHead}>
-          <h1 className={styles.title}>{strings.sitesAnalytics}</h1>
-          {site !== null && <span className={styles.submissionSiteName}>{site.name}</span>}
-        </div>
-        {/* The attention map is a drill-down of these numbers, so it is
+    <div className="mx-auto flex w-full max-w-[90rem] flex-col gap-5 px-4 py-5 sm:px-6 sm:py-7 lg:px-8">
+      <header className="flex flex-col gap-4 rounded-2xl border border-subtle bg-surface-raised p-5 shadow-sm sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link
+            className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-surface px-3.5 py-2 text-sm font-medium text-primary transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            to={`/sites/${encodeURIComponent(siteId)}`}
+          >
+            <ArrowLeft size={18} />
+            {strings.sitesBackToSite}
+          </Link>
+          {/* The attention map is a drill-down of these numbers, so it is
             reached from here rather than from a fifth button on the site
             page. */}
-        <Link className={styles.analyticsDrill} to={`/sites/${encodeURIComponent(siteId)}/heatmap`}>
-          <MousePointerClick size="var(--icon-size-inline)" aria-hidden="true" />
-          {strings.sitesHeatmap}
-        </Link>
-        <div className={styles.analyticsPeriods} aria-label={strings.sitesAnalyticsPeriod}>
-          {PERIODS.map((days) => (
-            <button
-              type="button"
-              key={days}
-              className={`${styles.analyticsPeriod} ${
-                period === days ? styles.analyticsPeriodActive : ""
-              }`}
-              aria-pressed={period === days}
-              onClick={() => setPeriod(days)}
-            >
-              {strings.sitesAnalyticsDays(days)}
-            </button>
-          ))}
+          <Link
+            className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-surface px-3.5 py-2 text-sm font-medium text-primary transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            to={`/sites/${encodeURIComponent(siteId)}/heatmap`}
+          >
+            <MousePointerClick size={18} aria-hidden="true" />
+            {strings.sitesHeatmap}
+          </Link>
+        </div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-primary sm:text-3xl">
+              {strings.sitesAnalytics}
+            </h1>
+            {site !== null && (
+              <p className="mt-1 text-sm text-secondary">{site.name}</p>
+            )}
+          </div>
+          <div
+            className="inline-flex self-start rounded-xl bg-surface p-1"
+            aria-label={strings.sitesAnalyticsPeriod}
+          >
+            {PERIODS.map((days) => (
+              <button
+                type="button"
+                key={days}
+                className={`min-h-9 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${period === days ? "bg-accent-soft text-accent shadow-sm" : "text-secondary hover:bg-surface-raised hover:text-primary"}`}
+                aria-pressed={period === days}
+                onClick={() => setPeriod(days)}
+              >
+                {strings.sitesAnalyticsDays(days)}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
@@ -155,13 +183,13 @@ export function AnalyticsView() {
 
       {loadingSite || loadingReport ? (
         <div
-          className={styles.analyticsSkeletons}
+          className="grid gap-4 sm:grid-cols-3"
           role="status"
           aria-label={strings.sitesAnalyticsLoading}
         >
-          <span />
-          <span />
-          <span />
+          <span className="h-28 animate-pulse rounded-2xl bg-surface" />
+          <span className="h-28 animate-pulse rounded-2xl bg-surface" />
+          <span className="h-28 animate-pulse rounded-2xl bg-surface" />
         </div>
       ) : report !== null && report.totals.visits === 0 ? (
         <>
@@ -179,28 +207,44 @@ export function AnalyticsView() {
           />
         </>
       ) : report !== null ? (
-        <div className={styles.analyticsContent}>
+        <div className="space-y-7">
           <PrivacyNote />
-          <section className={styles.analyticsSummary} aria-label={strings.sitesAnalyticsSummary}>
-            <article className={styles.analyticsMetric}>
-              <span>{strings.sitesAnalyticsVisits}</span>
-              <strong>{numbers.format(report.totals.visits)}</strong>
+          <section
+            className="grid gap-4 sm:grid-cols-2"
+            aria-label={strings.sitesAnalyticsSummary}
+          >
+            <article className="rounded-2xl border border-subtle bg-surface-raised p-5 shadow-sm">
+              <span className="text-sm font-medium text-secondary">
+                {strings.sitesAnalyticsVisits}
+              </span>
+              <strong className="mt-2 block text-3xl font-semibold tracking-tight text-primary">
+                {numbers.format(report.totals.visits)}
+              </strong>
             </article>
-            <article className={styles.analyticsMetric}>
-              <span>{strings.sitesAnalyticsVisitors}</span>
-              <strong>{numbers.format(report.totals.uniqueVisitors)}</strong>
+            <article className="rounded-2xl border border-subtle bg-surface-raised p-5 shadow-sm">
+              <span className="text-sm font-medium text-secondary">
+                {strings.sitesAnalyticsVisitors}
+              </span>
+              <strong className="mt-2 block text-3xl font-semibold tracking-tight text-primary">
+                {numbers.format(report.totals.uniqueVisitors)}
+              </strong>
             </article>
           </section>
 
-          <section className={styles.analyticsPanel}>
-            <div className={styles.analyticsPanelHead}>
-              <h2>{strings.sitesAnalyticsOverTime}</h2>
-              <span>
+          <section className="rounded-2xl border border-subtle bg-surface-raised p-5 shadow-sm sm:p-6">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-lg font-semibold tracking-tight text-primary">
+                {strings.sitesAnalyticsOverTime}
+              </h2>
+              <span className="text-sm text-secondary">
                 {dates.format(new Date(`${report.from}T00:00:00`))} –{" "}
                 {dates.format(new Date(`${report.to}T00:00:00`))}
               </span>
             </div>
-            <ol className={styles.analyticsChart} aria-label={strings.sitesAnalyticsChartLabel}>
+            <ol
+              className="mt-6 flex h-44 items-end gap-1.5 border-b border-subtle px-1"
+              aria-label={strings.sitesAnalyticsChartLabel}
+            >
               {report.daily.map((day) => (
                 <li
                   key={day.date}
@@ -209,13 +253,12 @@ export function AnalyticsView() {
                     day.visits,
                   )}
                 >
+                  className="flex h-full min-w-1 flex-1 items-end"
                   <span
-                    className={styles.analyticsBar}
-                    style={
-                      {
-                        "--analytics-value": maxVisits === 0 ? 0 : day.visits / maxVisits,
-                      } as CSSProperties
-                    }
+                    className="block min-h-1 w-full rounded-t-md bg-accent transition-[height]"
+                    style={{
+                      height: `${maxVisits === 0 ? 0 : (day.visits / maxVisits) * 100}%`,
+                    }}
                     aria-hidden="true"
                   />
                 </li>
@@ -309,12 +352,20 @@ export function AnalyticsView() {
 
 function PrivacyNote() {
   return (
-    <aside className={styles.analyticsPrivacy}>
-      <ShieldCheck size="var(--icon-size-control)" aria-hidden="true" />
-      <div>
-        <strong>{strings.sitesAnalyticsPrivacyTitle}</strong>
-        <p>{strings.sitesAnalyticsPrivacyBody}</p>
-        <p>{strings.sitesAnalyticsPrivacyBeacon}</p>
+    <aside className="flex gap-3 rounded-2xl border border-subtle bg-surface-raised p-4 shadow-sm sm:p-5">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-success/10 text-success">
+        <ShieldCheck size={20} aria-hidden="true" />
+      </span>
+      <div className="min-w-0">
+        <strong className="text-sm font-semibold text-primary">
+          {strings.sitesAnalyticsPrivacyTitle}
+        </strong>
+        <p className="mt-1 text-sm leading-5 text-secondary">
+          {strings.sitesAnalyticsPrivacyBody}
+        </p>
+        <p className="mt-1 text-sm leading-5 text-secondary">
+          {strings.sitesAnalyticsPrivacyBeacon}
+        </p>
       </div>
     </aside>
   );

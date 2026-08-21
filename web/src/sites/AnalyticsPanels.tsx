@@ -3,10 +3,9 @@
 // the rest one click away — a panel that dumps ten rows of every dimension at
 // once stops being readable at exactly the moment the site gets traffic.
 import { useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { strings } from "../i18n";
-import styles from "./SitesModule.module.css";
 
 /** One named row of a dimension: what it is, and how many views it got. */
 export interface AnalyticsRow {
@@ -46,39 +45,50 @@ export function DimensionPanel({
   const largest = rows.reduce((max, row) => Math.max(max, row.visits), 0);
 
   return (
-    <section className={styles.analyticsPanel}>
-      <div className={styles.analyticsPanelHead}>
-        <h3>{title}</h3>
+    <section className="flex min-w-0 flex-col rounded-2xl border border-subtle bg-surface-raised p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <h3 className="text-base font-semibold text-primary">{title}</h3>
       </div>
-      <p className={styles.analyticsNote}>{note}</p>
+      <p className="mt-1.5 text-sm leading-5 text-secondary">{note}</p>
       {rows.length === 0 ? (
-        <p className={styles.analyticsPanelEmpty}>{empty}</p>
+        <p className="mt-5 rounded-xl bg-surface px-4 py-5 text-sm leading-5 text-secondary">
+          {empty}
+        </p>
       ) : (
         <>
-          <ol className={styles.analyticsDimension}>
+          <ol className="mt-5 space-y-3">
             {shown.map((row) => (
-              <li key={row.label}>
-                <span className={styles.analyticsDimensionLabel} title={row.label}>
+              <li
+                key={row.label}
+                className="grid grid-cols-[minmax(0,1fr)_5rem_auto] items-center gap-3"
+              >
+                <span
+                  className="truncate text-sm font-medium text-primary"
+                  title={row.label}
+                >
                   {row.label}
                 </span>
                 <span
-                  className={styles.analyticsShare}
+                  className="h-1.5 overflow-hidden rounded-full bg-surface"
                   aria-hidden="true"
-                  style={
-                    {
-                      "--analytics-value":
-                        largest === 0 ? 0 : row.visits / largest,
-                    } as CSSProperties
-                  }
-                />
-                <strong>{numbers.format(row.visits)}</strong>
+                >
+                  <span
+                    className="block h-full rounded-full bg-accent"
+                    style={{
+                      width: `${largest === 0 ? 0 : (row.visits / largest) * 100}%`,
+                    }}
+                  />
+                </span>
+                <strong className="min-w-8 text-right text-sm tabular-nums text-primary">
+                  {numbers.format(row.visits)}
+                </strong>
               </li>
             ))}
           </ol>
           {rows.length > VISIBLE_ROWS && !ordered && (
             <button
               type="button"
-              className={styles.analyticsMore}
+              className="mt-5 self-start rounded-lg bg-surface px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               aria-expanded={expanded}
               onClick={() => setExpanded((open) => !open)}
             >
@@ -103,9 +113,11 @@ export function AnalyticsGroup({
   children: ReactNode;
 }) {
   return (
-    <section className={styles.analyticsGroup}>
-      <h2 className={styles.analyticsGroupTitle}>{title}</h2>
-      <div className={styles.analyticsRankings}>{children}</div>
+    <section className="space-y-3">
+      <h2 className="text-lg font-semibold tracking-tight text-primary">
+        {title}
+      </h2>
+      <div className="grid gap-4 lg:grid-cols-3">{children}</div>
     </section>
   );
 }
