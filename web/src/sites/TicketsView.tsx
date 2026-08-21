@@ -29,7 +29,26 @@ import type {
   SiteTicketEventList,
   SiteTicketProductList,
 } from "./types";
-import styles from "./SitesModule.module.css";
+
+const styles = {
+  page: "mx-auto flex w-full max-w-[90rem] flex-col gap-6 px-5 py-6 sm:px-8 lg:px-10",
+  header:
+    "flex flex-col gap-4 rounded-2xl border border-subtle bg-surface px-5 py-5 shadow-sm sm:flex-row sm:items-center",
+  backLink:
+    "inline-flex min-h-10 shrink-0 items-center gap-2 self-start rounded-xl border border-subtle bg-surface px-3.5 text-sm font-semibold text-primary no-underline transition-colors hover:bg-app focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+  siteHead: "min-w-0 flex-1",
+  title: "m-0 text-2xl font-semibold tracking-tight text-primary",
+  submissionSiteName: "mt-1 block truncate text-sm text-secondary",
+  headerActions: "flex min-h-10 items-center gap-3 sm:ml-auto",
+  hint: "text-sm leading-6 text-secondary",
+  input:
+    "min-h-11 w-full rounded-xl border border-subtle bg-surface px-3.5 text-base text-primary outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15",
+  tableWrapStatic:
+    "overflow-x-auto rounded-2xl border border-subtle bg-surface shadow-sm",
+  table:
+    "w-full min-w-[48rem] border-collapse text-left [&_th]:border-b [&_th]:border-subtle [&_th]:bg-app [&_th]:px-5 [&_th]:py-3.5 [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-secondary [&_td]:border-b [&_td]:border-subtle [&_td]:px-5 [&_td]:py-4 [&_td]:align-middle [&_td]:text-sm [&_td]:text-primary [&_tbody_tr:last-child_td]:border-b-0 [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-app/70",
+  catalogItemActions: "flex flex-wrap items-center justify-end gap-2",
+} as const;
 
 const when = new Intl.DateTimeFormat(undefined, {
   dateStyle: "medium",
@@ -73,7 +92,11 @@ function NewEventDialog({
   busy: boolean;
   error: string | null;
   onClose: () => void;
-  onCreate: (draft: { productId: string; startsAt: string; capacity: number }) => void;
+  onCreate: (draft: {
+    productId: string;
+    startsAt: string;
+    capacity: number;
+  }) => void;
 }) {
   const [productId, setProductId] = useState(products.products[0]?.id ?? "");
   const [starts, setStarts] = useState(suggestedStart);
@@ -87,12 +110,18 @@ function NewEventDialog({
       subtitle={strings.sitesNewTicketEventSubtitle}
       error={error}
       busy={busy}
-      canSubmit={productId !== "" && startsAt !== null && Number.isInteger(seats)}
+      canSubmit={
+        productId !== "" && startsAt !== null && Number.isInteger(seats)
+      }
       submitLabel={strings.sitesTicketCreateSubmit}
       onClose={onClose}
       onSubmit={() => {
         if (startsAt === null) return;
-        onCreate({ productId, startsAt, capacity: Number.isInteger(seats) ? seats : 0 });
+        onCreate({
+          productId,
+          startsAt,
+          capacity: Number.isInteger(seats) ? seats : 0,
+        });
       }}
     >
       <Field
@@ -232,7 +261,11 @@ export function TicketsView() {
 
   const events = useMemo(() => list?.events ?? [], [list]);
 
-  async function create(draft: { productId: string; startsAt: string; capacity: number }) {
+  async function create(draft: {
+    productId: string;
+    startsAt: string;
+    capacity: number;
+  }) {
     setDialogBusy(true);
     setDialogError(null);
     try {
@@ -256,7 +289,9 @@ export function TicketsView() {
           ? current
           : {
               ...current,
-              events: current.events.map((row) => (row.id === stored.id ? stored : row)),
+              events: current.events.map((row) =>
+                row.id === stored.id ? stored : row,
+              ),
             },
       );
       setResizing(null);
@@ -279,7 +314,10 @@ export function TicketsView() {
       setList((current) =>
         current === null
           ? current
-          : { ...current, events: current.events.filter((row) => row.id !== event.id) },
+          : {
+              ...current,
+              events: current.events.filter((row) => row.id !== event.id),
+            },
       );
       setArmedId(null);
     } catch (reason) {
@@ -301,7 +339,9 @@ export function TicketsView() {
         </Link>
         <div className={styles.siteHead}>
           <h1 className={styles.title}>{strings.sitesTickets}</h1>
-          {site !== null && <span className={styles.submissionSiteName}>{site.name}</span>}
+          {site !== null && (
+            <span className={styles.submissionSiteName}>{site.name}</span>
+          )}
         </div>
         <div className={styles.headerActions}>
           {loading && <Spinner size={16} />}
@@ -322,6 +362,16 @@ export function TicketsView() {
       </header>
 
       {error !== null && <ErrorBanner message={error} />}
+
+      {loading && (
+        <div
+          className="flex min-h-64 items-center justify-center rounded-2xl border border-subtle bg-surface shadow-sm"
+          role="status"
+          aria-label={strings.sitesTickets}
+        >
+          <Spinner size={22} />
+        </div>
+      )}
 
       {/* A status, not a paragraph: the read-only fact arrives after the
           load, and a screen reader that has already moved past the header
@@ -382,76 +432,78 @@ export function TicketsView() {
                   event.productName ?? strings.sitesTicketGoneProduct
                 }, ${when.format(new Date(event.startsAt))}`;
                 return (
-                <tr key={event.id}>
-                  <td>
-                    <time dateTime={event.startsAt}>
-                      {when.format(new Date(event.startsAt))}
-                    </time>
-                  </td>
-                  <td>
-                    {event.productName ?? (
-                      <span className={styles.hint}>{strings.sitesTicketGoneProduct}</span>
-                    )}
-                  </td>
-                  <td>
-                    {event.unitPriceCents === null
-                      ? "—"
-                      : formatPrice(
-                          event.unitPriceCents,
-                          list.currency,
-                          list.currencyExponent,
-                        )}
-                  </td>
-                  <td>
-                    {strings.sitesTicketSeatsCell(
-                      event.sold,
-                      event.remaining,
-                      event.capacity,
-                    )}
-                    {event.held > 0 && (
-                      <span className={styles.hint}>
-                        {" "}
-                        {strings.sitesTicketHeld(event.held)}
-                      </span>
-                    )}
-                  </td>
-                  {manager && (
+                  <tr key={event.id}>
                     <td>
-                      <div className={styles.catalogItemActions}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          aria-label={strings.sitesTicketChangeCapacityFor(
-                            eventLabel,
-                          )}
-                          disabled={busyId === event.id}
-                          onClick={() => {
-                            setDialogError(null);
-                            setResizing(event);
-                          }}
-                        >
-                          {strings.sitesTicketChangeCapacity}
-                        </Button>
-                        <Button
-                          variant={armedId === event.id ? "danger" : "ghost"}
-                          size="sm"
-                          icon={<Trash2 size="var(--icon-size-inline)" />}
-                          aria-label={
-                            armedId === event.id
-                              ? strings.sitesTicketDeleteConfirm
-                              : strings.sitesTicketDeleteFor(eventLabel)
-                          }
-                          disabled={busyId === event.id}
-                          onClick={() => void remove(event)}
-                        >
-                          {armedId === event.id
-                            ? strings.sitesTicketDeleteConfirm
-                            : strings.sitesTicketDelete}
-                        </Button>
-                      </div>
+                      <time dateTime={event.startsAt}>
+                        {when.format(new Date(event.startsAt))}
+                      </time>
                     </td>
-                  )}
-                </tr>
+                    <td>
+                      {event.productName ?? (
+                        <span className={styles.hint}>
+                          {strings.sitesTicketGoneProduct}
+                        </span>
+                      )}
+                    </td>
+                    <td>
+                      {event.unitPriceCents === null
+                        ? "—"
+                        : formatPrice(
+                            event.unitPriceCents,
+                            list.currency,
+                            list.currencyExponent,
+                          )}
+                    </td>
+                    <td>
+                      {strings.sitesTicketSeatsCell(
+                        event.sold,
+                        event.remaining,
+                        event.capacity,
+                      )}
+                      {event.held > 0 && (
+                        <span className={styles.hint}>
+                          {" "}
+                          {strings.sitesTicketHeld(event.held)}
+                        </span>
+                      )}
+                    </td>
+                    {manager && (
+                      <td>
+                        <div className={styles.catalogItemActions}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            aria-label={strings.sitesTicketChangeCapacityFor(
+                              eventLabel,
+                            )}
+                            disabled={busyId === event.id}
+                            onClick={() => {
+                              setDialogError(null);
+                              setResizing(event);
+                            }}
+                          >
+                            {strings.sitesTicketChangeCapacity}
+                          </Button>
+                          <Button
+                            variant={armedId === event.id ? "danger" : "ghost"}
+                            size="sm"
+                            icon={<Trash2 size="var(--icon-size-inline)" />}
+                            aria-label={
+                              armedId === event.id
+                                ? strings.sitesTicketDeleteConfirm
+                                : strings.sitesTicketDeleteFor(eventLabel)
+                            }
+                            disabled={busyId === event.id}
+                            onClick={() => void remove(event)}
+                          >
+                            {armedId === event.id
+                              ? strings.sitesTicketDeleteConfirm
+                              : strings.sitesTicketDelete}
+                          </Button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
                 );
               })}
             </tbody>
