@@ -31,7 +31,42 @@ import type {
   SiteDetail,
   ThemePreset,
 } from "./types";
-import styles from "./SitesModule.module.css";
+
+const styles = {
+  languagePanel:
+    "col-span-full flex min-w-0 flex-col gap-5 rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6",
+  languagePanelIntro: "flex items-start gap-3 border-b border-subtle pb-4",
+  languagePanelIcon:
+    "grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent [&_svg]:size-5",
+  languageTitle: "text-base font-semibold text-primary",
+  languageHint: "mt-1 text-sm leading-6 text-secondary",
+  appearanceLayout:
+    "grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.82fr)]",
+  appearanceFields: "flex min-w-0 flex-col gap-5",
+  appearanceField: "flex min-w-0 flex-col gap-2",
+  label: "text-xs font-semibold uppercase tracking-wide text-secondary",
+  input:
+    "min-h-11 w-full rounded-xl border border-default bg-surface px-3.5 py-2.5 text-base font-normal normal-case tracking-normal text-primary outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15 disabled:bg-muted",
+  hint: "text-sm leading-6 text-secondary",
+  appearanceChoices: "flex min-w-0 flex-col gap-2 border-0 p-0",
+  appearanceChoiceRow: "grid gap-2 sm:grid-cols-3",
+  appearanceChoice:
+    "flex min-h-11 cursor-pointer items-center gap-2.5 rounded-xl border border-default bg-surface px-3.5 py-2.5 text-sm font-medium text-primary transition hover:bg-muted has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:text-accent [&_input]:size-4 [&_input]:accent-[var(--accent)]",
+  appearanceAvatarRow: "flex flex-wrap items-center gap-2",
+  themeSlotState:
+    "inline-flex min-h-8 items-center rounded-full bg-muted px-3 text-xs font-semibold text-secondary",
+  publishError: "text-sm font-medium text-danger",
+  assistantSwitch:
+    "flex min-h-12 cursor-pointer items-center justify-between gap-4 rounded-xl border border-default bg-muted px-4 text-sm font-semibold text-primary [&_input]:size-5 [&_input]:accent-[var(--accent)]",
+  languageControls: "flex flex-wrap items-center gap-3",
+  appearancePreview:
+    "min-w-0 self-start rounded-2xl border border-subtle bg-muted p-4 xl:sticky xl:top-5 sm:p-5",
+  appearancePreviewFrame:
+    "mt-4 h-[28rem] w-full rounded-xl border border-default bg-surface shadow-sm",
+  appearanceA11y:
+    "mt-4 rounded-xl border border-success/20 bg-success-tint p-4 text-sm leading-6 text-primary [&_ul]:mt-2 [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-5",
+  srOnly: "sr-only",
+};
 
 /** How long a pause in typing is before the preview re-renders. */
 const PREVIEW_DEBOUNCE_MS = 400;
@@ -81,7 +116,10 @@ function fieldsOf(view: SiteChatAppearanceView): Fields {
 /** The wire appearance a form state saves and previews as. A welcome left at
  *  the written default is sent as absent, so the widget keeps speaking the
  *  site's language rather than freezing one translation of it. */
-function appearanceOf(fields: Fields, defaultWelcome: string): SiteChatAppearance {
+function appearanceOf(
+  fields: Fields,
+  defaultWelcome: string,
+): SiteChatAppearance {
   const welcome = trimmedOrNull(fields.welcome);
   return {
     botName: trimmedOrNull(fields.botName),
@@ -180,7 +218,8 @@ export function AssistantAppearance({
         setLoadError(null);
       },
       (error: unknown) => {
-        if (!stale) setLoadError(sitesMessage(error, strings.sitesAssistantLoadFailed));
+        if (!stale)
+          setLoadError(sitesMessage(error, strings.sitesAssistantLoadFailed));
       },
     );
     return () => {
@@ -190,7 +229,9 @@ export function AssistantAppearance({
 
   const edit = useCallback((change: Partial<Fields>) => {
     setSaved(false);
-    setFields((current) => (current === null ? null : { ...current, ...change }));
+    setFields((current) =>
+      current === null ? null : { ...current, ...change },
+    );
   }, []);
 
   // The draft the preview and the save both send — one builder, so the
@@ -207,17 +248,24 @@ export function AssistantAppearance({
     if (draftJson === null) return undefined;
     const call = ++previewCall.current;
     const handle = setTimeout(() => {
-      api.chatAppearancePreview(siteId, JSON.parse(draftJson) as SiteChatAppearance).then(
-        (html) => {
-          if (previewCall.current !== call) return;
-          setPreviewHtml(html);
-          setPreviewError(null);
-        },
-        (error: unknown) => {
-          if (previewCall.current !== call) return;
-          setPreviewError(sitesMessage(error, strings.sitesAssistantPreviewFailed));
-        },
-      );
+      api
+        .chatAppearancePreview(
+          siteId,
+          JSON.parse(draftJson) as SiteChatAppearance,
+        )
+        .then(
+          (html) => {
+            if (previewCall.current !== call) return;
+            setPreviewHtml(html);
+            setPreviewError(null);
+          },
+          (error: unknown) => {
+            if (previewCall.current !== call) return;
+            setPreviewError(
+              sitesMessage(error, strings.sitesAssistantPreviewFailed),
+            );
+          },
+        );
     }, PREVIEW_DEBOUNCE_MS);
     return () => clearTimeout(handle);
   }, [api, siteId, draftJson]);
@@ -260,7 +308,9 @@ export function AssistantAppearance({
         view.limits.suggestedQuestionChars,
       ).filter(
         (draft) =>
-          !kept.some((question) => question.toLowerCase() === draft.toLowerCase()),
+          !kept.some(
+            (question) => question.toLowerCase() === draft.toLowerCase(),
+          ),
       );
       if (drafts.length === 0) {
         setSuggestNote(strings.sitesAssistantSuggestedNone);
@@ -299,16 +349,24 @@ export function AssistantAppearance({
   const palette = useMemo(() => {
     if (presets.length === 0) return null;
     const chosen = site?.theme.preset;
-    return (presets.find((preset) => preset.id === chosen) ?? presets[0])?.palette ?? null;
+    return (
+      (presets.find((preset) => preset.id === chosen) ?? presets[0])?.palette ??
+      null
+    );
   }, [presets, site]);
   const contrast =
-    palette === null || fields === null ? null : accentContrast(fields.accent, palette);
+    palette === null || fields === null
+      ? null
+      : accentContrast(fields.accent, palette);
 
   const fileInput = useRef<HTMLInputElement>(null);
   const busy = saving || view === null;
 
   return (
-    <section className={styles.languagePanel} aria-labelledby="assistant-look-title">
+    <section
+      className={styles.languagePanel}
+      aria-labelledby="assistant-look-title"
+    >
       <div className={styles.languagePanelIntro}>
         <span className={styles.languagePanelIcon} aria-hidden="true">
           <Brush />
@@ -317,7 +375,9 @@ export function AssistantAppearance({
           <h2 id="assistant-look-title" className={styles.languageTitle}>
             {strings.sitesAssistantLookTitle}
           </h2>
-          <p className={styles.languageHint}>{strings.sitesAssistantLookHint}</p>
+          <p className={styles.languageHint}>
+            {strings.sitesAssistantLookHint}
+          </p>
         </div>
       </div>
 
@@ -329,7 +389,9 @@ export function AssistantAppearance({
           <div className={styles.appearanceFields}>
             <div className={styles.appearanceField}>
               <label className={styles.appearanceField}>
-                <span className={styles.label}>{strings.sitesAssistantBotNameLabel}</span>
+                <span className={styles.label}>
+                  {strings.sitesAssistantBotNameLabel}
+                </span>
                 <input
                   className={styles.input}
                   type="text"
@@ -340,11 +402,15 @@ export function AssistantAppearance({
                   onChange={(event) => edit({ botName: event.target.value })}
                 />
               </label>
-              <span className={styles.hint}>{strings.sitesAssistantBotNameHint}</span>
+              <span className={styles.hint}>
+                {strings.sitesAssistantBotNameHint}
+              </span>
             </div>
 
             <div className={styles.appearanceField}>
-              <span className={styles.label}>{strings.sitesAssistantAvatarLabel}</span>
+              <span className={styles.label}>
+                {strings.sitesAssistantAvatarLabel}
+              </span>
               <div className={styles.appearanceAvatarRow}>
                 <span className={styles.themeSlotState}>
                   {fields.avatarBlobId !== null
@@ -385,7 +451,9 @@ export function AssistantAppearance({
                   </Button>
                 )}
               </div>
-              <span className={styles.hint}>{strings.sitesAssistantAvatarHint}</span>
+              <span className={styles.hint}>
+                {strings.sitesAssistantAvatarHint}
+              </span>
               {uploadError !== null && (
                 <span className={styles.publishError} role="alert">
                   {uploadError}
@@ -395,7 +463,9 @@ export function AssistantAppearance({
 
             <div className={styles.appearanceField}>
               <label className={styles.appearanceField}>
-                <span className={styles.label}>{strings.sitesAssistantWelcomeLabel}</span>
+                <span className={styles.label}>
+                  {strings.sitesAssistantWelcomeLabel}
+                </span>
                 <textarea
                   className={styles.input}
                   rows={3}
@@ -416,7 +486,9 @@ export function AssistantAppearance({
               <legend className={styles.label}>
                 {strings.sitesAssistantQuestionsLegend}
               </legend>
-              <span className={styles.hint}>{strings.sitesAssistantQuestionsHint}</span>
+              <span className={styles.hint}>
+                {strings.sitesAssistantQuestionsHint}
+              </span>
               {fields.questions.map((question, index) => (
                 <label key={index} className={styles.appearanceField}>
                   <span className={styles.srOnly}>
@@ -469,7 +541,9 @@ export function AssistantAppearance({
 
             <div className={styles.appearanceField}>
               <label className={styles.appearanceField}>
-                <span className={styles.label}>{strings.sitesAssistantToneNoteLabel}</span>
+                <span className={styles.label}>
+                  {strings.sitesAssistantToneNoteLabel}
+                </span>
                 <textarea
                   className={styles.input}
                   rows={3}
@@ -479,7 +553,9 @@ export function AssistantAppearance({
                   onChange={(event) => edit({ toneNote: event.target.value })}
                 />
               </label>
-              <span className={styles.hint}>{strings.sitesAssistantToneNoteHint}</span>
+              <span className={styles.hint}>
+                {strings.sitesAssistantToneNoteHint}
+              </span>
             </div>
 
             <ChoiceGroup
@@ -501,7 +577,10 @@ export function AssistantAppearance({
               disabled={saving}
               options={[
                 { value: "chat", label: strings.sitesAssistantIconChat },
-                { value: "question", label: strings.sitesAssistantIconQuestion },
+                {
+                  value: "question",
+                  label: strings.sitesAssistantIconQuestion,
+                },
                 { value: "sparkle", label: strings.sitesAssistantIconSparkle },
               ]}
               onChange={(icon) => edit({ icon })}
@@ -514,9 +593,15 @@ export function AssistantAppearance({
               value={fields.accent}
               disabled={saving}
               options={[
-                { value: "primary", label: strings.sitesAssistantAccentPrimary },
+                {
+                  value: "primary",
+                  label: strings.sitesAssistantAccentPrimary,
+                },
                 { value: "text", label: strings.sitesAssistantAccentText },
-                { value: "surface", label: strings.sitesAssistantAccentSurface },
+                {
+                  value: "surface",
+                  label: strings.sitesAssistantAccentSurface,
+                },
               ]}
               onChange={(accent) => edit({ accent })}
             />
@@ -530,11 +615,15 @@ export function AssistantAppearance({
               />
               <span>{strings.sitesAssistantAutoOpenLabel}</span>
             </label>
-            <span className={styles.hint}>{strings.sitesAssistantAutoOpenHint}</span>
+            <span className={styles.hint}>
+              {strings.sitesAssistantAutoOpenHint}
+            </span>
 
             <div className={styles.appearanceField}>
               <label className={styles.appearanceField}>
-                <span className={styles.label}>{strings.sitesAssistantOfflineLabel}</span>
+                <span className={styles.label}>
+                  {strings.sitesAssistantOfflineLabel}
+                </span>
                 <input
                   className={styles.input}
                   type="text"
@@ -545,14 +634,18 @@ export function AssistantAppearance({
                   onChange={(event) => edit({ offline: event.target.value })}
                 />
               </label>
-              <span className={styles.hint}>{strings.sitesAssistantOfflineHint}</span>
+              <span className={styles.hint}>
+                {strings.sitesAssistantOfflineHint}
+              </span>
             </div>
 
             <div className={styles.languageControls}>
               <Button size="sm" disabled={busy} onClick={() => void save()}>
                 {strings.sitesAssistantAppearanceSave}
               </Button>
-              {saved && <span role="status">{strings.sitesAssistantSaved}</span>}
+              {saved && (
+                <span role="status">{strings.sitesAssistantSaved}</span>
+              )}
             </div>
             {saveError !== null && (
               <span className={styles.publishError} role="alert">
@@ -562,7 +655,9 @@ export function AssistantAppearance({
           </div>
 
           <div className={styles.appearancePreview}>
-            <h3 className={styles.languageTitle}>{strings.sitesAssistantPreviewTitle}</h3>
+            <h3 className={styles.languageTitle}>
+              {strings.sitesAssistantPreviewTitle}
+            </h3>
             <p className={styles.hint}>{strings.sitesAssistantPreviewHint}</p>
             {/* Fully sandboxed: the preview document carries no script by
                 design — it is a picture of the widget, not a live chat. */}
@@ -588,7 +683,9 @@ export function AssistantAppearance({
               <ul>
                 <li>
                   {contrast !== null
-                    ? strings.sitesAssistantA11yContrast(contrast.toLocaleString())
+                    ? strings.sitesAssistantA11yContrast(
+                        contrast.toLocaleString(),
+                      )
                     : strings.sitesAssistantA11yContrastGuarantee}
                 </li>
                 <li>{strings.sitesAssistantA11yKeyboard}</li>
