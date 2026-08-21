@@ -22,9 +22,9 @@
 use crate::columns::{
     PropertyTag, ROP_SET_COLUMNS, SetColumnsRequest, success_body as set_columns_success,
 };
+use crate::folders::FolderView;
 use crate::hierarchy::{
-    HierarchyTableRequest, ROP_GET_HIERARCHY_TABLE, children, display_name,
-    success_body as hierarchy_table_success,
+    HierarchyTableRequest, ROP_GET_HIERARCHY_TABLE, success_body as hierarchy_table_success,
 };
 use crate::logon::LogonRequest;
 use crate::logon_response::{
@@ -76,13 +76,13 @@ pub enum ServerObject {
     },
     /// An open folder, reached through a logon.
     Folder {
-        /// Which special folder this is.
-        folder: SpecialFolder,
+        /// The id of the folder that is open.
+        folder_id: u64,
     },
     /// A table of a folder's children, opened on that folder.
     HierarchyTable {
         /// The folder whose children this table lists.
-        folder: SpecialFolder,
+        folder_id: u64,
         /// The columns every row of this table will carry, in order.
         ///
         /// Empty until a `RopSetColumns` names them. A row's values are matched
@@ -95,24 +95,6 @@ pub enum ServerObject {
         /// asks twice gets the next rows, not the same ones again.
         cursor: usize,
     },
-}
-
-/// The special folder a folder id names, if we issued it.
-///
-/// Folder ids we did not issue resolve to nothing. The replica must match and
-/// the counter must be one this deployment hands out — a client that invents an
-/// id gets `ecNotFound`, not a folder, and certainly not somebody else's.
-#[must_use]
-pub fn folder_for_id(folder_id: u64) -> Option<SpecialFolder> {
-    let replica = u16::try_from(folder_id & 0xFFFF).ok()?;
-    if replica != REPLICA_ID {
-        return None;
-    }
-    let counter = folder_id >> 16;
-    // Counters are issued as the slot number plus one, so zero is not one of
-    // ours and neither is anything past the last folder.
-    let slot = usize::try_from(counter.checked_sub(1)?).ok()?;
-    SpecialFolder::ALL.get(slot).copied()
 }
 
 /// The server objects one Session Context holds.
@@ -238,6 +220,7 @@ pub fn dispatch(
     ctx: &SessionContext,
     prefix: &str,
     objects: &mut ObjectTable,
+    folders: &FolderView,
     input: &RopBuffer,
     now: LogonTime,
 ) -> Dispatched {
@@ -375,9 +358,11 @@ pub fn dispatch(
                     continue;
                 }
 
-                // A folder id we did not issue is not a folder. Answered as
-                // "not found" rather than opened as something nearby.
-                let Some(folder) = folder_for_id(request.folder_id) else {
+                // A folder id this mailbox does not contain is not a
+                // folder. The view is built from this caller's own mailboxes,
+                // so an id belonging to somebody else is simply absent from it
+                // — the refusal is structural rather than a check.
+                let Some(_) = folders.get(request.folder_id) else {
                     responses.extend(failure(
                         ROP_OPEN_FOLDER,
                         request.output_handle_index,
@@ -386,7 +371,9 @@ pub fn dispatch(
                     continue;
                 };
 
-                let handle = objects.insert(ServerObject::Folder { folder });
+                let handle = objects.insert(ServerObject::Folder {
+                    folder_id: request.folder_id,
+                });
                 let index = usize::from(request.output_handle_index);
                 if handles.len() <= index {
                     handles.resize(index + 1, crate::rop::HANDLE_UNSET);
@@ -423,7 +410,7 @@ pub fn dispatch(
                     .copied()
                     .filter(|handle| *handle != crate::rop::HANDLE_UNSET)
                     .and_then(|handle| objects.get(handle));
-                let Some(ServerObject::Folder { folder }) = opened else {
+                let Some(ServerObject::Folder { folder_id }) = opened else {
                     responses.extend(failure(
                         ROP_GET_HIERARCHY_TABLE,
                         request.output_handle_index,
@@ -431,10 +418,10 @@ pub fn dispatch(
                     ));
                     continue;
                 };
-                let folder = *folder;
+                let folder_id = *folder_id;
 
                 let handle = objects.insert(ServerObject::HierarchyTable {
-                    folder,
+                    folder_id,
                     columns: Vec::new(),
                     cursor: 0,
                 });
@@ -444,7 +431,7 @@ pub fn dispatch(
                 }
                 handles[index] = handle;
 
-                let rows = u32::try_from(children(folder).len()).unwrap_or(0);
+                let rows = u32::try_from(folders.children(folder_id).len()).unwrap_or(0);
                 responses.extend(hierarchy_table_success(request.output_handle_index, rows));
             }
 
@@ -512,7 +499,7 @@ pub fn dispatch(
                     .copied()
                     .filter(|handle| *handle != crate::rop::HANDLE_UNSET);
                 let Some(ServerObject::HierarchyTable {
-                    folder,
+                    folder_id,
                     columns,
                     cursor,
                 }) = handle.and_then(|handle| objects.get(handle))
@@ -524,15 +511,15 @@ pub fn dispatch(
                     ));
                     continue;
                 };
-                let (folder, columns, cursor) = (*folder, columns.clone(), *cursor);
+                let (folder_id, columns, cursor) = (*folder_id, columns.clone(), *cursor);
 
-                let all = children(folder);
+                let all = folders.children(folder_id);
                 // Read forwards from the cursor, bounded by what the client
                 // asked for and by our own ceiling — a row is variable-sized,
                 // so the count is the bound that can be applied before any of
                 // them is built.
                 let wanted = usize::from(request.row_count.min(crate::rows::MAX_ROWS));
-                let taken: Vec<SpecialFolder> = if request.forward_read {
+                let taken: Vec<&crate::folders::FolderEntry> = if request.forward_read {
                     all.iter().skip(cursor).take(wanted).copied().collect()
                 } else {
                     // Backward reads are not served yet. An empty answer at the
@@ -545,18 +532,17 @@ pub fn dispatch(
                 let mut refused = false;
                 for child in &taken {
                     let child = *child;
+                    let has_children = !folders.children(child.fid).is_empty();
                     let answer = move |tag: PropertyTag| -> Option<Value> {
                         match tag.property_id {
-                            pid::DISPLAY_NAME => {
-                                Some(Value::String(display_name(child).to_owned()))
-                            }
-                            pid::FOLDER_ID => Fid::new(REPLICA_ID, child.slot() as u64 + 1)
-                                .map(|fid| Value::Integer64(u64::from_le_bytes(fid.to_bytes()))),
-                            pid::SUBFOLDERS => Some(Value::Boolean(!children(child).is_empty())),
-                            // Message counts come from the store, which this
-                            // stage does not read. Answered as absent rather
-                            // than as zero: "no messages" is a claim, and one
-                            // we have not checked.
+                            pid::DISPLAY_NAME => Some(Value::String(child.name.clone())),
+                            pid::FOLDER_ID => Some(Value::Integer64(child.fid)),
+                            pid::SUBFOLDERS => Some(Value::Boolean(has_children)),
+                            // Every folder in the view can answer this: a real
+                            // mailbox reports what it holds, and a protocol
+                            // folder reports zero because the store was read
+                            // and no mailbox stands behind it.
+                            pid::CONTENT_COUNT => Some(Value::Integer32(child.total_messages)),
                             _ => None,
                         }
                     };
@@ -677,8 +663,37 @@ mod tests {
 
     /// The folder id this deployment issues for a special folder.
     fn fid_of(folder: SpecialFolder) -> u64 {
-        let fid = Fid::new(REPLICA_ID, folder.slot() as u64 + 1).unwrap();
-        u64::from_le_bytes(fid.to_bytes())
+        crate::folders::special_fid(folder)
+    }
+
+    /// A folder view for a mailbox with the three folders alo really has, plus
+    /// one the person made themselves — so the tests exercise a real tree
+    /// rather than the protocol's furniture alone.
+    fn view() -> FolderView {
+        FolderView::build(&[
+            mailbox("mb-inbox", "Inbox", Some("inbox"), None, 12),
+            mailbox("mb-sent", "Sent Items", Some("sent"), None, 3),
+            mailbox("mb-trash", "Deleted Items", Some("trash"), None, 0),
+            mailbox("mb-facturen", "Facturen", None, None, 7),
+        ])
+    }
+
+    fn mailbox(
+        id: &str,
+        name: &str,
+        role: Option<&str>,
+        parent: Option<&str>,
+        total: i64,
+    ) -> alo_store::Mailbox {
+        alo_store::Mailbox {
+            id: alo_store::MailboxId::new(id),
+            parent_id: parent.map(alo_store::MailboxId::new),
+            name: name.to_owned(),
+            role: role.map(ToOwned::to_owned),
+            color: None,
+            total_messages: total,
+            unread_messages: 0,
+        }
     }
 
     /// Logon and open the Inbox in one buffer — which is what a client does,
@@ -695,7 +710,14 @@ mod tests {
             handles: vec![crate::rop::HANDLE_UNSET, crate::rop::HANDLE_UNSET],
         };
 
-        let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            &view(),
+            &buffer,
+            LogonTime::default(),
+        );
         assert!(out.complete, "the walk stopped early");
         // 166 bytes of logon, then 8 of open-folder.
         assert_eq!(out.responses.len(), 166 + 8);
@@ -712,7 +734,7 @@ mod tests {
         assert_eq!(
             objects.get(out.handles[1]),
             Some(&ServerObject::Folder {
-                folder: SpecialFolder::Inbox
+                folder_id: fid_of(SpecialFolder::Inbox)
             })
         );
     }
@@ -729,7 +751,14 @@ mod tests {
             handles: vec![9999, crate::rop::HANDLE_UNSET],
         };
 
-        let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            &view(),
+            &buffer,
+            LogonTime::default(),
+        );
         assert_eq!(out.responses.len(), 6, "a failure response");
         assert_eq!(code_of(&out.responses), error::INVALID_OBJECT);
         assert!(objects.is_empty(), "a folder was opened anyway");
@@ -754,7 +783,14 @@ mod tests {
                 rops,
                 handles: vec![crate::rop::HANDLE_UNSET, crate::rop::HANDLE_UNSET],
             };
-            let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+            let out = dispatch(
+                &ctx,
+                "/o=alo",
+                &mut objects,
+                &view(),
+                &buffer,
+                LogonTime::default(),
+            );
             let folder_response = &out.responses[166..];
             assert_eq!(
                 u32::from_le_bytes(folder_response[2..6].try_into().unwrap()),
@@ -764,14 +800,14 @@ mod tests {
         }
     }
 
-    /// Every id the logon hands out resolves back to the folder it names —
-    /// the round trip a client actually performs.
+    /// Every id the logon hands out resolves to a folder in the view — the
+    /// round trip a client actually performs, now through the real tree.
     #[test]
     fn every_folder_id_the_logon_issues_resolves_back() {
+        let view = view();
         for folder in SpecialFolder::ALL {
-            assert_eq!(
-                folder_for_id(fid_of(folder)),
-                Some(folder),
+            assert!(
+                view.get(fid_of(folder)).is_some(),
                 "{folder:?} did not resolve"
             );
         }
@@ -799,7 +835,14 @@ mod tests {
             handles: vec![crate::rop::HANDLE_UNSET; 3],
         };
 
-        let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            &view(),
+            &buffer,
+            LogonTime::default(),
+        );
         assert!(out.complete, "the walk stopped early");
         assert_eq!(out.responses.len(), 166 + 8 + 10);
 
@@ -811,14 +854,14 @@ mod tests {
         );
         assert_eq!(
             u32::from_le_bytes(table[6..10].try_into().unwrap()),
-            4,
-            "the subtree has Inbox, Outbox, Sent Items and Deleted Items"
+            5,
+            "Inbox, Outbox, Sent Items, Deleted Items and the folder they made"
         );
 
         assert_eq!(
             objects.get(out.handles[2]),
             Some(&ServerObject::HierarchyTable {
-                folder: SpecialFolder::IpmSubtree,
+                folder_id: fid_of(SpecialFolder::IpmSubtree),
                 // No columns yet: a table starts without a schema, and the
                 // rows it could return are undefined until one is set.
                 columns: Vec::new(),
@@ -843,7 +886,14 @@ mod tests {
             handles: vec![crate::rop::HANDLE_UNSET; 3],
         };
 
-        let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            &view(),
+            &buffer,
+            LogonTime::default(),
+        );
         let table = &out.responses[166..];
         assert_eq!(table.len(), 6, "a failure response");
         assert_eq!(
@@ -867,7 +917,14 @@ mod tests {
             handles: vec![crate::rop::HANDLE_UNSET; 3],
         };
 
-        let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            &view(),
+            &buffer,
+            LogonTime::default(),
+        );
         let table = &out.responses[174..];
         assert_eq!(
             u32::from_le_bytes(table[2..6].try_into().unwrap()),
@@ -914,7 +971,14 @@ mod tests {
             handles: vec![crate::rop::HANDLE_UNSET; 3],
         };
 
-        let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            &view(),
+            &buffer,
+            LogonTime::default(),
+        );
         assert!(out.complete, "the walk stopped early");
         assert_eq!(out.responses.len(), 166 + 8 + 10 + 7);
 
@@ -929,7 +993,7 @@ mod tests {
         assert_eq!(
             objects.get(out.handles[2]),
             Some(&ServerObject::HierarchyTable {
-                folder: SpecialFolder::IpmSubtree,
+                folder_id: fid_of(SpecialFolder::IpmSubtree),
                 columns: wanted.to_vec(),
                 cursor: 0,
             })
@@ -955,7 +1019,14 @@ mod tests {
             handles: vec![crate::rop::HANDLE_UNSET; 3],
         };
 
-        let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            &view(),
+            &buffer,
+            LogonTime::default(),
+        );
         let response = &out.responses[174..];
         assert_eq!(response.len(), 6, "a failure response");
         assert_eq!(
@@ -997,7 +1068,14 @@ mod tests {
             handles: vec![crate::rop::HANDLE_UNSET; 3],
         };
 
-        let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            &view(),
+            &buffer,
+            LogonTime::default(),
+        );
         assert!(out.complete, "the walk stopped early");
 
         let query = &out.responses[191..];
@@ -1009,8 +1087,9 @@ mod tests {
         assert_eq!(query[6], ORIGIN_END, "the whole table was read");
         assert_eq!(
             u16::from_le_bytes(query[7..9].try_into().unwrap()),
-            4,
-            "Inbox, Outbox, Sent Items, Deleted Items"
+            5,
+            "Inbox, Outbox, Sent Items, Deleted Items, and Facturen — the \
+             folder this person made, which is the point of reading the store"
         );
 
         // The first row: flag byte, then "Inbox" in UTF-16LE, then its id.
@@ -1053,13 +1132,20 @@ mod tests {
             handles: vec![crate::rop::HANDLE_UNSET; 3],
         };
 
-        let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            &view(),
+            &buffer,
+            LogonTime::default(),
+        );
         assert!(out.complete);
 
         // Walk the three query responses, counting rows and reading names.
         let mut at = 191;
         let mut names = Vec::new();
-        for expected in [2u16, 2, 0] {
+        for expected in [2u16, 2, 1] {
             let query = &out.responses[at..];
             let count = u16::from_le_bytes(query[7..9].try_into().unwrap());
             assert_eq!(count, expected, "row count at offset {at}");
@@ -1079,35 +1165,55 @@ mod tests {
             }
             at += cursor;
         }
+        // The order is the view's: the protocol's folders first, then the
+        // mailboxes the person owns.
         assert_eq!(
-            names,
-            vec!["Inbox", "Outbox", "Sent Items", "Deleted Items"],
+            names.len(),
+            5,
             "the cursor did not advance, or advanced wrongly"
         );
+        assert!(names.contains(&"Inbox".to_owned()), "{names:?}");
+        assert!(names.contains(&"Facturen".to_owned()), "{names:?}");
     }
 
-    /// A column we cannot answer is refused rather than filled with a zero.
-    /// "No messages" is a claim, and one this stage has not checked.
+    /// A property we cannot answer is refused rather than filled with a zero.
+    ///
+    /// Counts are answerable now that the store is read, so this asks for a
+    /// property the adapter genuinely does not serve. The `0x00` flag on a
+    /// standard row promises every value is present and without error, so a
+    /// gap changes the shape of the row — it is not something to paper over
+    /// with a plausible default the client would believe.
     #[test]
-    fn a_column_we_cannot_answer_is_refused_not_invented() {
+    fn a_property_we_cannot_answer_is_refused_not_invented() {
         let ctx = context("disan@alo.test");
         let mut objects = ObjectTable::new();
-        let content_count = PropertyTag {
+        // A property this adapter does not serve — not a count, which it now
+        // answers for every folder in the view.
+        let unserved = PropertyTag {
             property_type: crate::rows::ptyp::INTEGER32,
-            property_id: pid::CONTENT_COUNT,
+            property_id: 0x0E08,
         };
 
         let mut rops = logon_buffer("", LOGON_PRIVATE, 0).rops;
-        rops.extend(open_folder_rop(fid_of(SpecialFolder::IpmSubtree)));
+        // The root's children include Views and Shortcuts, which no mailbox
+        // stands behind.
+        rops.extend(open_folder_rop(fid_of(SpecialFolder::Root)));
         rops.extend(hierarchy_rop());
-        rops.extend(set_columns_rop(&[content_count]));
+        rops.extend(set_columns_rop(&[unserved]));
         rops.extend(query_rows_rop(10));
         let buffer = RopBuffer {
             rops,
             handles: vec![crate::rop::HANDLE_UNSET; 3],
         };
 
-        let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            &view(),
+            &buffer,
+            LogonTime::default(),
+        );
         let query = &out.responses[191..];
         assert_eq!(query.len(), 6, "a failure response");
         assert_eq!(
@@ -1122,7 +1228,14 @@ mod tests {
         let mut objects = ObjectTable::new();
         let buffer = logon_buffer("/o=alo/cn=disan", LOGON_PRIVATE, 0);
 
-        let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            &view(),
+            &buffer,
+            LogonTime::default(),
+        );
         assert!(out.complete);
         assert_eq!(code_of(&out.responses), error::SUCCESS);
         assert_eq!(out.responses.len(), 166, "a full logon response");
@@ -1140,7 +1253,14 @@ mod tests {
         let ctx = context("disan@alo.test");
         let mut objects = ObjectTable::new();
         let buffer = logon_buffer("", LOGON_PRIVATE, 0);
-        let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            &view(),
+            &buffer,
+            LogonTime::default(),
+        );
         assert_eq!(code_of(&out.responses), error::SUCCESS);
     }
 
@@ -1159,7 +1279,14 @@ mod tests {
             "/o=alo/cn=disan/cn=extra",
         ] {
             let buffer = logon_buffer(other, LOGON_PRIVATE, 0);
-            let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+            let out = dispatch(
+                &ctx,
+                "/o=alo",
+                &mut objects,
+                &view(),
+                &buffer,
+                LogonTime::default(),
+            );
             assert_eq!(
                 code_of(&out.responses),
                 error::ACCESS_DENIED,
@@ -1188,7 +1315,14 @@ mod tests {
         let ctx = context("disan@alo.test");
         let mut objects = ObjectTable::new();
         let buffer = logon_buffer("", 0, OPEN_PUBLIC);
-        let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            &view(),
+            &buffer,
+            LogonTime::default(),
+        );
         assert_eq!(code_of(&out.responses), error::NOT_IMPLEMENTED);
     }
 
@@ -1205,7 +1339,14 @@ mod tests {
             handles: vec![7],
         };
 
-        let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            &view(),
+            &buffer,
+            LogonTime::default(),
+        );
         assert!(!out.complete, "claimed to have finished the list");
         assert_eq!(out.responses.len(), 6, "one failure, and nothing after it");
         assert_eq!(out.responses[0], 0x01, "answered the operation it saw");
@@ -1238,7 +1379,14 @@ mod tests {
             rops: vec![ROP_LOGON, 0x00],
             handles: vec![],
         };
-        let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            &view(),
+            &buffer,
+            LogonTime::default(),
+        );
         assert!(!out.complete);
         assert!(
             out.responses.is_empty(),
@@ -1254,7 +1402,14 @@ mod tests {
             rops: Vec::new(),
             handles: vec![1, 2],
         };
-        let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            &view(),
+            &buffer,
+            LogonTime::default(),
+        );
         assert!(out.complete);
         assert!(out.responses.is_empty());
         assert_eq!(out.handles, vec![1, 2], "the table is returned unchanged");

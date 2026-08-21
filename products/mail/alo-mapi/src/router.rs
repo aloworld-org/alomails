@@ -35,6 +35,7 @@ use time::OffsetDateTime;
 use crate::connect::{ConnectRequest, MAX_CONNECT_BODY, success_body};
 use crate::dispatch::dispatch;
 use crate::execute::{ExecuteRequest, success_body as execute_success_body};
+use crate::folders::FolderView;
 use crate::logon_response::LogonTime;
 use crate::response::{MapiResponse, ResponseCode};
 use crate::rop::RopBuffer;
@@ -46,6 +47,14 @@ use crate::{RequestType, session};
 /// (`X-PendingPeriod`, [MS-OXCMAPIHTTP] §2.2.3.3.5).
 const PENDING_PERIOD_MS: u32 = 15_000;
 
+/// The most folders one mailbox may present.
+///
+/// A ceiling on a page read, not on what a person may own: a mailbox with more
+/// folders than this shows the first of them rather than failing, and the
+/// number is far above any real mailbox. Without it a single `Execute` could
+/// pull an unbounded result set into memory on every call.
+const MAX_FOLDERS: i64 = 10_000;
+
 /// What the client is told about retrying, mirroring Exchange's own pacing.
 /// A client told to retry zero times gives up on the first hiccup.
 const POLLS_MAX_MS: u32 = 60_000;
@@ -55,6 +64,8 @@ const RETRY_DELAY_MS: u32 = 1_000;
 /// What this deployment serves the endpoints with.
 #[derive(Clone)]
 pub struct MapiState {
+    /// The store the folder tree is read from.
+    pub store: std::sync::Arc<alo_store::Store>,
     /// The credential door — the same one SMTP and IMAP use.
     pub identity: Identity,
     /// Live Session Contexts.
@@ -354,6 +365,31 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
                 }
             };
 
+            // **The folder tree is read before the dispatch, not during it.**
+            // Dispatching happens under a lock and must not await, so the
+            // store is consulted here and the result handed in as a snapshot.
+            // One query per `Execute`, taken as the caller's own account — a
+            // view built from somebody else's mailboxes is not something this
+            // code can accidentally produce, because the account door is the
+            // only way in.
+            let account = state
+                .store
+                .for_account(context.tenant.clone(), context.user.clone());
+            let folders = match account.mailboxes(alo_store::Page::first(MAX_FOLDERS)).await {
+                Ok(mailboxes) => FolderView::build(&mailboxes),
+                Err(error) => {
+                    // No mailbox names and no addresses in the log line.
+                    tracing::warn!(%error, "mapi: could not read the folder tree");
+                    return MapiResponse::new(
+                        request_type.as_str(),
+                        request_id,
+                        ResponseCode::UnknownFailure,
+                    )
+                    .with_client_info(client_info)
+                    .into_response();
+                }
+            };
+
             let dispatched = {
                 // The lock is held only across the dispatch, which awaits
                 // nothing — a poisoned lock means another request panicked
@@ -373,6 +409,7 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
                     &context,
                     &state.dn_prefix,
                     &mut objects,
+                    &folders,
                     &input,
                     logon_time(now),
                 )

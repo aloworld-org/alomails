@@ -2390,6 +2390,9 @@ pub fn app_with_site_boundaries(
     // will never look anywhere else.
     if state.mapi_http {
         assembled.merge(alo_mapi::router(alo_mapi::MapiState {
+            // The folder tree a MAPI client reads comes from the same store
+            // every other surface reads, through the same account door.
+            store: Arc::clone(&state.store),
             identity: state.identity.clone(),
             sessions: Arc::clone(&state.mapi_sessions),
             // The prefix clients build recipient DNs from. One organisation per

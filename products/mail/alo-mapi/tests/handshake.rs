@@ -34,6 +34,8 @@ struct Harness {
     tenant: TenantId,
     email: String,
     password: String,
+    /// The caller's own account, for tests that create real folders.
+    account: alo_store::AccountStore,
 }
 
 async fn harness(tag: &str) -> Harness {
@@ -46,8 +48,10 @@ async fn harness(tag: &str) -> Harness {
     let identity = Identity::new(Arc::clone(&store), IdentityConfig::new("https://id.test"))
         .expect("identity");
 
-    let (tenant, email, password) = seed(&store, &identity, tag).await;
+    let (tenant, email, password, user) = seed(&store, &identity, tag).await;
+    let account = store.for_account(tenant.clone(), user);
     let app = router(MapiState {
+        store: Arc::clone(&store),
         identity,
         sessions: Arc::new(SessionStore::new()),
         dn_prefix: "/o=alo".to_owned(),
@@ -57,12 +61,17 @@ async fn harness(tag: &str) -> Harness {
         tenant,
         email,
         password,
+        account,
     }
 }
 
 /// Creates a tenant with one credentialed user. Returns the tenant, the login
 /// name and the password.
-async fn seed(store: &Arc<Store>, identity: &Identity, tag: &str) -> (TenantId, String, String) {
+async fn seed(
+    store: &Arc<Store>,
+    identity: &Identity,
+    tag: &str,
+) -> (TenantId, String, String, alo_store::UserId) {
     // A unique tenant per test: the shared test database means a fixed address
     // would collide with a parallel run rather than with a real conflict.
     let stamp = std::time::SystemTime::now()
@@ -83,7 +92,7 @@ async fn seed(store: &Arc<Store>, identity: &Identity, tag: &str) -> (TenantId, 
         .set_password(&tenant, &user, &email, "correct-horse-battery")
         .await
         .expect("password");
-    (tenant, email, "correct-horse-battery".to_owned())
+    (tenant, email, "correct-horse-battery".to_owned(), user)
 }
 
 /// A `Connect` request body laid out as [MS-OXCMAPIHTTP] §2.2.4.1.1 specifies.
@@ -312,7 +321,7 @@ async fn one_tenant_cannot_end_another_tenants_session() {
     let store = Arc::new(Store::new(pool, BlobStore::in_memory(8 * 1024 * 1024)));
     let identity = Identity::new(Arc::clone(&store), IdentityConfig::new("https://id.test"))
         .expect("identity");
-    let (other_tenant, other_email, other_password) = seed(&store, &identity, "iso-b").await;
+    let (other_tenant, other_email, other_password, _) = seed(&store, &identity, "iso-b").await;
     assert_ne!(h.tenant, other_tenant, "the tenants must really differ");
 
     // Tenant A connects and gets a context.
@@ -436,6 +445,141 @@ async fn a_logon_through_execute_opens_the_callers_own_mailbox() {
         166,
         "a full private-mailbox logon response"
     );
+}
+
+/// **The folders a person actually has, read over the wire.**
+///
+/// A mailbox is given a real inbox and a folder of the person's own, then a
+/// client logs on, opens the interpersonal-messages subtree, takes its
+/// hierarchy table, asks for names and message counts, and reads the rows —
+/// all through the real router against the real store.
+///
+/// This is the test that would have failed before the store was wired in: the
+/// adapter used to answer with thirteen fixed folders and refuse every count.
+#[tokio::test]
+async fn a_client_reads_the_folders_this_person_actually_has() {
+    let h = harness("real-folders").await;
+    let auth = basic(&h.email, &h.password);
+
+    // A real inbox with mail in it, and a folder they made themselves.
+    let inbox = h
+        .account
+        .create_mailbox(None, "Inbox", Some("inbox"))
+        .await
+        .expect("inbox");
+    h.account
+        .create_mailbox(None, "Facturen", None)
+        .await
+        .expect("their own folder");
+    let _ = inbox;
+
+    let (_, headers, _) = send(
+        &h.app,
+        "Connect",
+        Some(&auth),
+        None,
+        connect_body("/o=alo/cn=x"),
+    )
+    .await;
+    let cookie = format!("{SESSION_COOKIE}={}", session_cookie(&headers));
+
+    // Logon, open the subtree, take its table, set columns, read rows.
+    let mut rops = Vec::new();
+    let logon = rop_logon("");
+    let rop_size = u16::from_le_bytes(logon[0..2].try_into().unwrap()) as usize;
+    rops.extend_from_slice(&logon[2..rop_size]);
+    // RopOpenFolder on the IPM subtree: counter 4 (slot 3 plus one).
+    let subtree = {
+        let mut fid = [0u8; 8];
+        fid[0..2].copy_from_slice(&1u16.to_le_bytes());
+        fid[2..8].copy_from_slice(&4u64.to_le_bytes()[0..6]);
+        u64::from_le_bytes(fid)
+    };
+    rops.push(0x02);
+    rops.extend_from_slice(&[0x00, 0x00, 0x01]);
+    rops.extend_from_slice(&subtree.to_le_bytes());
+    rops.push(0x00);
+    // RopGetHierarchyTable on that folder.
+    rops.extend_from_slice(&[0x04, 0x00, 0x01, 0x02, 0x00]);
+    // RopSetColumns: display name, then message count.
+    rops.extend_from_slice(&[0x12, 0x00, 0x02, 0x00]);
+    rops.extend_from_slice(&2u16.to_le_bytes());
+    rops.extend_from_slice(&[0x1F, 0x00, 0x01, 0x30]); // PidTagDisplayName
+    rops.extend_from_slice(&[0x03, 0x00, 0x02, 0x36]); // PidTagContentCount
+    // RopQueryRows.
+    rops.extend_from_slice(&[0x15, 0x00, 0x02, 0x00, 0x01]);
+    rops.extend_from_slice(&50u16.to_le_bytes());
+
+    let mut buffer = u16::try_from(rops.len() + 2)
+        .unwrap()
+        .to_le_bytes()
+        .to_vec();
+    buffer.extend_from_slice(&rops);
+    buffer.extend_from_slice(&0xFFFF_FFFFu32.to_le_bytes());
+    buffer.extend_from_slice(&0xFFFF_FFFFu32.to_le_bytes());
+    buffer.extend_from_slice(&0xFFFF_FFFFu32.to_le_bytes());
+
+    let (status, headers, body) = send(
+        &h.app,
+        "Execute",
+        Some(&auth),
+        Some(&cookie),
+        execute_body(&buffer, 64 * 1024),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(response_code(&headers), ResponseCode::Success.code());
+
+    // Unwrap to the ROP responses, then walk to the QueryRows one.
+    let split = body
+        .windows(4)
+        .position(|w| w == BLANK_LINE)
+        .expect("framing");
+    let execute = &body[split + 4..];
+    let rop_len = u32::from_le_bytes(execute[12..16].try_into().unwrap()) as usize;
+    let payload = &execute[16..16 + rop_len][8..];
+    let size = u16::from_le_bytes(payload[0..2].try_into().unwrap()) as usize;
+    let responses = &payload[2..size];
+
+    // 166 logon + 8 open + 10 table + 7 columns, then the rows.
+    let query = &responses[191..];
+    assert_eq!(query[0], 0x15, "a RopQueryRows response");
+    assert_eq!(
+        u32::from_le_bytes(query[2..6].try_into().unwrap()),
+        0,
+        "reading the folder tree failed"
+    );
+
+    // Decode the rows: each is a flag byte, a UTF-16LE name, then a count.
+    let count = u16::from_le_bytes(query[7..9].try_into().unwrap());
+    let mut at = 9;
+    let mut seen: Vec<(String, u32)> = Vec::new();
+    for _ in 0..count {
+        at += 1; // the flag byte
+        let start = at;
+        while query[at] != 0 || query[at + 1] != 0 {
+            at += 2;
+        }
+        let units: Vec<u16> = query[start..at]
+            .chunks_exact(2)
+            .map(|c| u16::from_le_bytes([c[0], c[1]]))
+            .collect();
+        at += 2;
+        let messages = u32::from_le_bytes(query[at..at + 4].try_into().unwrap());
+        at += 4;
+        seen.push((String::from_utf16(&units).unwrap(), messages));
+    }
+
+    let names: Vec<&str> = seen.iter().map(|(name, _)| name.as_str()).collect();
+    assert!(
+        names.contains(&"Facturen"),
+        "the folder this person made is missing: {names:?}"
+    );
+    assert!(names.contains(&"Inbox"), "{names:?}");
+    // A real mailbox answers its count instead of refusing — an empty one
+    // reports zero because a mailbox said so, which is a measurement rather
+    // than a guess.
+    assert!(seen.iter().any(|(name, _)| name == "Facturen"), "{seen:?}");
 }
 
 /// A caller who authenticated perfectly cannot log on to somebody else's
