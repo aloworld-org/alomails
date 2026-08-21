@@ -33,7 +33,44 @@ import type {
   SiteDetail,
   SiteTicketProductList,
 } from "./types";
-import styles from "./SitesModule.module.css";
+
+const styles = {
+  page: "mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8",
+  header: "flex flex-wrap items-center gap-4 border-b border-subtle pb-5",
+  backLink:
+    "inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-secondary no-underline transition hover:bg-muted hover:text-primary",
+  siteHead: "min-w-0 flex-1",
+  title: "text-2xl font-semibold tracking-tight text-primary",
+  submissionSiteName: "mt-1 block truncate text-sm text-secondary",
+  headerActions: "flex min-h-10 items-center",
+  hint: "text-sm leading-6 text-secondary [&_a]:font-semibold [&_a]:text-accent [&_a]:no-underline hover:[&_a]:opacity-80",
+  shopDescribe:
+    "mx-auto flex w-full max-w-3xl flex-col gap-5 rounded-2xl border border-subtle bg-surface p-6 shadow-sm sm:p-8",
+  shopIntro: "max-w-2xl text-base leading-7 text-secondary",
+  input:
+    "min-h-11 w-full rounded-xl border border-default bg-surface px-3.5 py-2.5 text-primary outline-none transition placeholder:text-tertiary focus:border-accent focus:ring-2 focus:ring-accent/15 disabled:cursor-not-allowed disabled:bg-muted disabled:text-tertiary",
+  textarea: "min-h-36 resize-y leading-6",
+  shopActions: "flex flex-wrap items-center gap-3 pt-1",
+  shopProposal: "flex flex-col gap-5",
+  sectionTitle: "text-xl font-semibold tracking-tight text-primary",
+  shopRows: "grid list-none gap-4 p-0 lg:grid-cols-2",
+  shopRow:
+    "flex min-w-0 flex-col gap-4 rounded-2xl border border-subtle bg-surface p-5 shadow-sm",
+  shopRowHead: "flex flex-wrap items-center gap-2 border-b border-subtle pb-4",
+  chip: "inline-flex min-h-7 items-center gap-1.5 rounded-full bg-muted px-2.5 text-xs font-semibold text-secondary",
+  chipLive: "bg-success-tint text-success",
+  fieldRow: "grid gap-4 sm:grid-cols-2",
+  shopGuess:
+    "rounded-xl bg-warning/10 px-3.5 py-3 text-sm leading-6 text-secondary",
+  badge:
+    "mr-1 inline-flex rounded-full bg-surface px-2 py-0.5 text-xs font-semibold text-warning shadow-sm",
+  shopShipping:
+    "flex flex-col gap-4 rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6",
+  shopShippingTitle: "text-base font-semibold text-primary",
+  shopDone:
+    "flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-success/25 bg-success-tint p-5 text-sm font-semibold text-primary [&_a]:text-accent [&_a]:no-underline",
+  submitRequirement: "text-sm font-medium text-secondary",
+};
 
 /** One proposed item as the owner is editing it. `priceStated` remembers
  *  whether the price arrived stated or as a flagged blank — the blank keeps
@@ -75,14 +112,20 @@ function kindLabel(kind: ProposalRow["kind"]): string {
   return strings.sitesShopSetupKindService;
 }
 
-function rowsFrom(proposal: ShopConfigProposal, exponent: number): ProposalRow[] {
+function rowsFrom(
+  proposal: ShopConfigProposal,
+  exponent: number,
+): ProposalRow[] {
   return proposal.items.map((item, index) => ({
     key: index,
     included: true,
     name: item.name,
     kind: item.kind,
     unit: item.unit,
-    priceText: item.price.state === "stated" ? priceInput(item.price.cents, exponent) : "",
+    priceText:
+      item.price.state === "stated"
+        ? priceInput(item.price.cents, exponent)
+        : "",
     priceStated: item.price.state === "stated",
     vatText: percentText(item.vat_guess.rate_bp),
     vatBasis: item.vat_guess.basis,
@@ -92,14 +135,24 @@ function rowsFrom(proposal: ShopConfigProposal, exponent: number): ProposalRow[]
   }));
 }
 
-function shippingFrom(proposal: ShopConfigProposal, exponent: number): ShippingDraft {
+function shippingFrom(
+  proposal: ShopConfigProposal,
+  exponent: number,
+): ShippingDraft {
   const shipping = proposal.shipping;
   if (shipping.state === "not_needed") {
-    return { relevant: false, text: "", stated: false, status: "pending", error: null };
+    return {
+      relevant: false,
+      text: "",
+      stated: false,
+      status: "pending",
+      error: null,
+    };
   }
   return {
     relevant: true,
-    text: shipping.state === "stated" ? priceInput(shipping.cents, exponent) : "",
+    text:
+      shipping.state === "stated" ? priceInput(shipping.cents, exponent) : "",
     stated: shipping.state === "stated",
     status: "pending",
     error: null,
@@ -134,7 +187,10 @@ export function ShopSetupView() {
       // with a refusal banner instead of the read-only fact (S3.06b).
       const detail = await api.site(siteId);
       const [items, shippingCents] = detail.canManageCollaborators
-        ? await Promise.all([api.ticketProducts(siteId), api.shopShipping(siteId)])
+        ? await Promise.all([
+            api.ticketProducts(siteId),
+            api.shopShipping(siteId),
+          ])
         : [null, null];
       setSite(detail);
       setProducts(items);
@@ -163,7 +219,9 @@ export function ShopSetupView() {
       if (reason instanceof SitesError && reason.reason === "unconfigured") {
         setUnconfigured(true);
       } else {
-        setProposeError(sitesMessage(reason, strings.sitesShopSetupProposeFailed));
+        setProposeError(
+          sitesMessage(reason, strings.sitesShopSetupProposeFailed),
+        );
       }
     } finally {
       setProposing(false);
@@ -201,7 +259,11 @@ export function ShopSetupView() {
         return strings.sitesShopSetupVatMissing;
       }
     }
-    if (shippingPending && shipping !== null && parsePriceInput(shipping.text, exponent) === null) {
+    if (
+      shippingPending &&
+      shipping !== null &&
+      parsePriceInput(shipping.text, exponent) === null
+    ) {
       return strings.sitesShopSetupShippingMissing;
     }
     return null;
@@ -225,18 +287,27 @@ export function ShopSetupView() {
           stocked: row.kind === "stock",
         });
         next = next.map((r) =>
-          r.key === row.key ? { ...r, status: "created" as const, error: null } : r,
+          r.key === row.key
+            ? { ...r, status: "created" as const, error: null }
+            : r,
         );
       } catch (reason) {
         next = next.map((r) =>
           r.key === row.key
-            ? { ...r, error: sitesMessage(reason, strings.sitesShopSetupCreateFailed) }
+            ? {
+                ...r,
+                error: sitesMessage(reason, strings.sitesShopSetupCreateFailed),
+              }
             : r,
         );
       }
       setRows(next);
     }
-    if (shipping !== null && shipping.relevant && shipping.status === "pending") {
+    if (
+      shipping !== null &&
+      shipping.relevant &&
+      shipping.status === "pending"
+    ) {
       const cents = parsePriceInput(shipping.text, exponent);
       if (cents !== null) {
         try {
@@ -288,18 +359,35 @@ export function ShopSetupView() {
         </Link>
         <div className={styles.siteHead}>
           <h1 className={styles.title}>{strings.sitesShopSetup}</h1>
-          {site !== null && <span className={styles.submissionSiteName}>{site.name}</span>}
+          {site !== null && (
+            <span className={styles.submissionSiteName}>{site.name}</span>
+          )}
         </div>
-        <div className={styles.headerActions}>{loading && <Spinner size={16} />}</div>
+        <div className={styles.headerActions}>
+          {loading && <Spinner size={16} />}
+        </div>
       </header>
 
       {error !== null && <ErrorBanner message={error} />}
+
+      {loading && (
+        <div
+          className="flex min-h-72 items-center justify-center rounded-2xl border border-subtle bg-surface shadow-sm"
+          role="status"
+          aria-label={strings.sitesShopSetup}
+        >
+          <Spinner size={22} />
+        </div>
+      )}
 
       {/* A status, not a paragraph: the read-only fact arrives after the
           load, and a screen reader that has already moved past the header
           would otherwise never hear it (S3.06a, S3.06b). */}
       {!loading && site !== null && !manager && (
-        <section className={styles.shopDescribe} aria-label={strings.sitesShopSetup}>
+        <section
+          className={styles.shopDescribe}
+          aria-label={strings.sitesShopSetup}
+        >
           <p className={styles.hint} role="status">
             {strings.sitesCommerceReadOnly}
           </p>
@@ -307,7 +395,10 @@ export function ShopSetupView() {
       )}
 
       {!loading && manager && rows === null && (
-        <section className={styles.shopDescribe} aria-label={strings.sitesShopSetup}>
+        <section
+          className={styles.shopDescribe}
+          aria-label={strings.sitesShopSetup}
+        >
           <p className={styles.shopIntro}>{strings.sitesShopSetupSubtitle}</p>
           {unconfigured ? (
             <p className={styles.hint} role="status">
@@ -350,9 +441,16 @@ export function ShopSetupView() {
       )}
 
       {rows !== null && (
-        <section className={styles.shopProposal} aria-label={strings.sitesShopSetupProposalTitle}>
-          <h2 className={styles.sectionTitle}>{strings.sitesShopSetupProposalTitle}</h2>
-          <p className={styles.shopIntro}>{strings.sitesShopSetupProposalIntro}</p>
+        <section
+          className={styles.shopProposal}
+          aria-label={strings.sitesShopSetupProposalTitle}
+        >
+          <h2 className={styles.sectionTitle}>
+            {strings.sitesShopSetupProposalTitle}
+          </h2>
+          <p className={styles.shopIntro}>
+            {strings.sitesShopSetupProposalIntro}
+          </p>
           <ul className={styles.shopRows}>
             {rows.map((row) => (
               <li key={row.key} className={styles.shopRow}>
@@ -362,12 +460,17 @@ export function ShopSetupView() {
                     checked={row.included}
                     disabled={applying || row.status === "created"}
                     aria-label={strings.sitesShopSetupInclude(row.name)}
-                    onChange={(event) => change(row.key, { included: event.target.checked })}
+                    onChange={(event) =>
+                      change(row.key, { included: event.target.checked })
+                    }
                   />
                   <span className={styles.chip}>{kindLabel(row.kind)}</span>
                   {row.status === "created" && (
                     <span className={`${styles.chip} ${styles.chipLive}`}>
-                      <Check size="var(--icon-size-inline)" aria-hidden="true" />{" "}
+                      <Check
+                        size="var(--icon-size-inline)"
+                        aria-hidden="true"
+                      />{" "}
                       {strings.sitesShopSetupCreated}
                     </span>
                   )}
@@ -376,23 +479,33 @@ export function ShopSetupView() {
                   <input
                     className={styles.input}
                     value={row.name}
-                    disabled={applying || !row.included || row.status === "created"}
-                    onChange={(event) => change(row.key, { name: event.target.value })}
+                    disabled={
+                      applying || !row.included || row.status === "created"
+                    }
+                    onChange={(event) =>
+                      change(row.key, { name: event.target.value })
+                    }
                   />
                 </Field>
                 <div className={styles.fieldRow}>
                   <Field
                     label={strings.sitesShopSetupItemPrice(currency)}
                     hint={
-                      row.priceStated ? undefined : strings.sitesShopSetupPriceMissing
+                      row.priceStated
+                        ? undefined
+                        : strings.sitesShopSetupPriceMissing
                     }
                   >
                     <input
                       className={styles.input}
                       inputMode="decimal"
                       value={row.priceText}
-                      disabled={applying || !row.included || row.status === "created"}
-                      onChange={(event) => change(row.key, { priceText: event.target.value })}
+                      disabled={
+                        applying || !row.included || row.status === "created"
+                      }
+                      onChange={(event) =>
+                        change(row.key, { priceText: event.target.value })
+                      }
                     />
                   </Field>
                   <Field label={strings.sitesShopSetupVatLabel}>
@@ -400,8 +513,12 @@ export function ShopSetupView() {
                       className={styles.input}
                       inputMode="decimal"
                       value={row.vatText}
-                      disabled={applying || !row.included || row.status === "created"}
-                      onChange={(event) => change(row.key, { vatText: event.target.value })}
+                      disabled={
+                        applying || !row.included || row.status === "created"
+                      }
+                      onChange={(event) =>
+                        change(row.key, { vatText: event.target.value })
+                      }
                     />
                   </Field>
                 </div>
@@ -410,13 +527,19 @@ export function ShopSetupView() {
                     <input
                       className={styles.input}
                       value={row.unit}
-                      disabled={applying || !row.included || row.status === "created"}
-                      onChange={(event) => change(row.key, { unit: event.target.value })}
+                      disabled={
+                        applying || !row.included || row.status === "created"
+                      }
+                      onChange={(event) =>
+                        change(row.key, { unit: event.target.value })
+                      }
                     />
                   </Field>
                 )}
                 <p className={styles.shopGuess}>
-                  <span className={styles.badge}>{strings.sitesShopSetupVatGuessBadge}</span>{" "}
+                  <span className={styles.badge}>
+                    {strings.sitesShopSetupVatGuessBadge}
+                  </span>{" "}
                   {row.vatBasis}
                 </p>
                 {row.note !== null && <p className={styles.hint}>{row.note}</p>}
@@ -426,16 +549,22 @@ export function ShopSetupView() {
           </ul>
 
           <div className={styles.shopShipping}>
-            <h3 className={styles.shopShippingTitle}>{strings.sitesShopSetupShippingTitle}</h3>
+            <h3 className={styles.shopShippingTitle}>
+              {strings.sitesShopSetupShippingTitle}
+            </h3>
             {shipping !== null && !shipping.relevant && (
-              <p className={styles.hint}>{strings.sitesShopSetupShippingNotNeeded}</p>
+              <p className={styles.hint}>
+                {strings.sitesShopSetupShippingNotNeeded}
+              </p>
             )}
             {shipping !== null && shipping.relevant && (
               <>
                 <Field
                   label={strings.sitesShopSetupShippingLabel(currency)}
                   hint={
-                    shipping.stated ? undefined : strings.sitesShopSetupShippingMissing
+                    shipping.stated
+                      ? undefined
+                      : strings.sitesShopSetupShippingMissing
                   }
                 >
                   <input
@@ -445,7 +574,9 @@ export function ShopSetupView() {
                     disabled={applying || shipping.status === "saved"}
                     onChange={(event) =>
                       setShipping((current) =>
-                        current === null ? current : { ...current, text: event.target.value },
+                        current === null
+                          ? current
+                          : { ...current, text: event.target.value },
                       )
                     }
                   />
@@ -462,10 +593,14 @@ export function ShopSetupView() {
                     {strings.sitesShopSetupShippingSaved}
                   </p>
                 )}
-                {shipping.error !== null && <ErrorBanner message={shipping.error} />}
+                {shipping.error !== null && (
+                  <ErrorBanner message={shipping.error} />
+                )}
               </>
             )}
-            {shippingNote !== null && <p className={styles.hint}>{shippingNote}</p>}
+            {shippingNote !== null && (
+              <p className={styles.hint}>{shippingNote}</p>
+            )}
           </div>
 
           {allDone ? (
@@ -501,7 +636,9 @@ export function ShopSetupView() {
                 </Button>
                 {applying && <Spinner size={16} />}
               </div>
-              {blocked !== null && <p className={styles.submitRequirement}>{blocked}</p>}
+              {blocked !== null && (
+                <p className={styles.submitRequirement}>{blocked}</p>
+              )}
             </>
           )}
         </section>
