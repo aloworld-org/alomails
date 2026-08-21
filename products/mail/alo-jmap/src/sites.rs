@@ -1050,36 +1050,27 @@ pub async fn check_subdomain(
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     let subdomain = q.subdomain.trim().to_lowercase();
-    // **A check answers the question; it does not fail it.** A name that is
-    // reserved, malformed or too short is a perfectly good answer of "no", and
-    // the store says so by refusing — so a refusal becomes the verdict rather
-    // than an error status.
+    // A rule violation stays a `422` naming the rule, and that is load-bearing:
+    // the composer has three states — available / **taken** / **invalid** — and
+    // only the error channel carries the last one. Folding a reserved or
+    // malformed name into `available: false` would draw "www" as *taken*, which
+    // is a lie: nobody holds it and nobody ever can.
     //
-    // It matters in practice: the composer calls this as somebody types, so
-    // every keystroke against a reserved name logged a failed request in their
-    // console and read as a broken screen. Only a genuine fault — the database
-    // unreachable — is still an error here.
-    //
-    // Both refusal variants, and `Conflict` is the one that carries the traffic:
-    // `validate_subdomain` states all four of its rejections that way, as this
-    // module's own header records ("the sites store family spells all of those
-    // as `StoreError::Conflict`"). Matching only `Validation` — the variant this
-    // path arguably *ought* to use — left the arm dead and every keystroke still
-    // 422ing, which is exactly what the paragraph above claimed to have fixed.
-    let (available, reason) = match account.acc.subdomain_available(&subdomain).await {
-        Ok(available) => (available, None),
-        Err(alo_store::StoreError::Validation(why) | alo_store::StoreError::Conflict(why)) => {
-            (false, Some(why))
-        }
-        Err(other) => return Err(map_store_err(other)),
-    };
-    Ok(Json(json!({
-        "subdomain": subdomain,
-        "available": available,
-        // Present only when the name is unusable for a stated reason, so a
-        // screen can say *why* rather than only "no".
-        "reason": reason,
-    })))
+    // Written down because I got this wrong. A console full of `422`s while
+    // somebody types looks like a broken screen, but the screen was correct and
+    // those requests were the client learning which rule it had broken;
+    // `rule_violations_answer_422_with_the_rule` is what caught the change.
+    // Devtools noise is not a defect, and if it is ever worth removing, the fix
+    // belongs in the client — not asking about input it can already see is
+    // malformed — and never in this contract.
+    let available = account
+        .acc
+        .subdomain_available(&subdomain)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(
+        json!({ "subdomain": subdomain, "available": available }),
+    ))
 }
 
 /// `GET /sites/:id` → the site plus its current publish (`"publish"` is

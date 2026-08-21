@@ -695,52 +695,6 @@ async fn submissions_export_is_safe_complete_and_downloadable() {
     assert!(csv.ends_with(",needs reply\r\n"));
 }
 
-/// A name nobody may have is still an *answer*: `200`, `available: false`, and
-/// a reason a screen can show.
-///
-/// The composer calls this on every keystroke, so a name typed on the way to a
-/// longer one is briefly too short, and a name like `test` is reserved forever.
-/// Answering those with an error status paints a working screen as a broken one
-/// and fills the console with failed requests — which is what shipped, because
-/// the handler matched `Validation` while `validate_subdomain` states every one
-/// of its rejections as `Conflict`. The arm was dead and nothing noticed: the
-/// only check covered until now read a name that was free.
-///
-/// So this pins the shape of a "no" for each rejection rule, not just one.
-#[tokio::test]
-async fn a_name_that_cannot_be_used_is_an_answer_not_an_error() {
-    let h = harness("sites-check-no").await;
-
-    // One per rule in `validate_subdomain`: reserved, reserved, too short,
-    // illegal characters, and a hyphen at either end.
-    for name in ["test", "www", "a", "Not%20Valid", "-leading", "trailing-"] {
-        let (status, body) = get(
-            &h.app,
-            &h.token,
-            &format!("/sites/subdomain-check?subdomain={name}"),
-        )
-        .await;
-        assert_eq!(status, StatusCode::OK, "`{name}` answered with an error");
-        assert_eq!(body["available"], json!(false), "`{name}` read as free");
-        // A screen can say *why*, so the reason is present and has words in it.
-        let reason = body["reason"].as_str().unwrap_or_default();
-        assert!(!reason.is_empty(), "`{name}` refused without saying why");
-    }
-
-    // And a free name still answers yes — so the arm above cannot be a blanket
-    // "everything is unavailable", which would pass every assertion so far.
-    let free = sub("checkno", &h);
-    let (status, body) = get(
-        &h.app,
-        &h.token,
-        &format!("/sites/subdomain-check?subdomain={free}"),
-    )
-    .await;
-    assert_eq!(status, StatusCode::OK);
-    assert_eq!(body["available"], json!(true));
-    assert_eq!(body["reason"], Value::Null, "a free name needs no excuse");
-}
-
 // ---- the site arc ------------------------------------------------------------
 
 #[tokio::test]
