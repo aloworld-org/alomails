@@ -330,7 +330,11 @@ describe("a tile shows the tenant's own content, or says it has none", () => {
     await openPalette();
 
     fireEvent.mouseEnter(tile("pricing"));
-    expect(screen.getByText(strings.sitesPaletteNeedsWriting)).toBeTruthy();
+    // `findByText`, not `getByText`: hovering sets state, and the note it draws
+    // arrives on a later render than the event that asked for it. Reading
+    // synchronously straight after the event is a race that an idle machine
+    // wins and a loaded CI runner loses.
+    expect(await screen.findByText(strings.sitesPaletteNeedsWriting)).toBeTruthy();
     // Nothing is fetched to preview a block that has nothing to show.
     expect(
       calls.some((call) => call.url.endsWith("/palette/pricing/preview")),

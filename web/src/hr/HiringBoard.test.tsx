@@ -163,7 +163,12 @@ describe("the hiring board", () => {
     await screen.findByText(AMARA.name);
     // Three columns, because the API said three — not the seven this build's
     // store happens to have.
-    expect(screen.getAllByRole("list")).toHaveLength(STAGES.length);
+    //
+    // `findAllByRole`: the first card arriving does not mean every column has
+    // rendered, so counting synchronously straight after the await is a race an
+    // idle machine wins and a loaded runner loses. The count is unchanged — a
+    // fourth column still fails this.
+    expect(await screen.findAllByRole("list")).toHaveLength(STAGES.length);
     expect(within(column(strings.hrStageApplied)).getByText(AMARA.name)).toBeTruthy();
     expect(within(column(strings.hrStageInterview)).getByText(BAS.name)).toBeTruthy();
     // The retention flag is the server's, and it is the only tone a card wears.

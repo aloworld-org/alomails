@@ -219,8 +219,14 @@ test("an agent's message is marked as an agent, not shown as a colleague", async
 
   await screen.findByText("Here is what I found.");
   // The word that stops an agent being mistaken for a person.
-  expect(screen.getByText(strings.chatAgentTag)).toBeTruthy();
-  expect(screen.getByText("alo")).toBeTruthy();
+  //
+  // `findByText`, not `getByText`: the body and the tag are not guaranteed to
+  // arrive in the same render pass, so a synchronous read straight after an
+  // await is a race — it passed on an idle machine and failed on a loaded CI
+  // runner, which is the shape of every flake this suite has had. The claim is
+  // no weaker: a tag that never appears still fails, just a moment later.
+  expect(await screen.findByText(strings.chatAgentTag)).toBeTruthy();
+  expect(await screen.findByText("alo")).toBeTruthy();
 });
 
 test("the person who asked sees a live Approve button", async () => {
