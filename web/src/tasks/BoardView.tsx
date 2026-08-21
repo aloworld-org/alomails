@@ -9,7 +9,6 @@ import { CalendarDays, Plus } from "lucide-react";
 import { strings } from "../i18n";
 import type { Task } from "../jmap";
 import { Avatar, COLUMNS, LabelChips, columnLabel, dueLabel, isOverdue, statusColor } from "./parts";
-import styles from "./TasksModule.module.css";
 
 interface Props {
   tasks: Task[];
@@ -50,14 +49,16 @@ export function BoardView({ tasks, onOpen, onMove, onAdd }: Props) {
   }
 
   return (
-    <div className={styles.board}>
+    <div className="flex min-h-full items-start gap-4 overflow-x-auto p-4">
       {COLUMNS.map((c) => {
         const cards = inColumn(c.key);
         const color = statusColor(c.key);
         return (
           <div
             key={c.key}
-            className={`${styles.column} ${overCol === c.key ? styles.columnOver : ""}`}
+            className={`flex w-72 shrink-0 flex-col gap-2 rounded-xl bg-app p-2.5 ${
+              overCol === c.key ? "outline-2 outline-dashed -outline-offset-2 outline-accent" : ""
+            }`}
             onDragOver={(e) => {
               e.preventDefault();
               setOverCol(c.key);
@@ -65,17 +66,19 @@ export function BoardView({ tasks, onOpen, onMove, onAdd }: Props) {
             onDragLeave={() => setOverCol((s) => (s === c.key ? null : s))}
             onDrop={() => dropOnColumn(c.key)}
           >
-            <div className={styles.columnHead}>
-              <span className={styles.columnDot} style={{ background: color }} aria-hidden />
-              <span className={styles.columnName}>{columnLabel(c.key)}</span>
-              <span className={styles.columnCount}>{cards.length}</span>
+            <div className="flex items-center gap-2 px-1 py-0.5 text-sm font-semibold text-secondary">
+              <span className="size-2 shrink-0 rounded-full" style={{ background: color }} aria-hidden />
+              <span className="text-primary">{columnLabel(c.key)}</span>
+              <span className="font-normal text-tertiary">{cards.length}</span>
             </div>
             {cards.map((t) => {
               const done = t.status === "done";
               return (
                 <div
                   key={t.id}
-                  className={`${styles.card} ${dragId === t.id ? styles.cardDragging : ""}`}
+                  className={`flex cursor-pointer flex-col gap-2 rounded-lg border border-subtle bg-surface px-3 py-2.5 shadow-sm transition-[border-color,box-shadow,opacity] hover:border-default hover:shadow-md ${
+                    dragId === t.id ? "opacity-40" : ""
+                  }`}
                   draggable
                   onDragStart={() => setDragId(t.id)}
                   onDragEnd={() => {
@@ -88,26 +91,26 @@ export function BoardView({ tasks, onOpen, onMove, onAdd }: Props) {
                   }}
                   onClick={() => onOpen(t.id)}
                 >
-                  <div className={styles.cardTitle}>{t.title}</div>
+                  <div className="text-sm leading-snug text-primary">{t.title}</div>
                   <LabelChips labels={t.labels} />
-                  <div className={styles.cardMeta}>
+                  <div className="flex flex-wrap items-center gap-2">
                     {t.dueAt !== null && (
                       <span
-                        className={styles.cardDue}
+                        className="inline-flex items-center gap-1 text-xs font-medium tabular-nums"
                         style={{ color: !done && isOverdue(t.dueAt) ? "var(--danger)" : color }}
                       >
                         <CalendarDays size={13} />
                         {dueLabel(t.dueAt)}
                       </span>
                     )}
-                    <span className={styles.cardSpacer} />
+                    <span className="flex-1" />
                     {t.assignee !== null && <Avatar email={t.assignee} />}
                   </div>
                 </div>
               );
             })}
             {onAdd !== undefined && (
-              <button type="button" className={styles.cardAdd} onClick={() => onAdd(c.key)}>
+              <button type="button" className="flex w-full items-center gap-1.5 rounded-lg p-2 text-sm text-tertiary transition-colors hover:bg-surface hover:text-accent" onClick={() => onAdd(c.key)}>
                 <Plus size={15} /> {strings.taskAdd}
               </button>
             )}
