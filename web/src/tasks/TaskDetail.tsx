@@ -163,9 +163,12 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
 
   if (data === null) {
     return (
-      <div className={styles.detailScrim} onMouseDown={onClose}>
-        <div className={styles.detail} onMouseDown={(e) => e.stopPropagation()}>
-          <div className={styles.detailBody} style={{ alignItems: "center" }}>
+      <div className="fixed inset-0 z-modal flex justify-end bg-overlay" onMouseDown={onClose}>
+        <div
+          className="flex h-full w-full max-w-xl flex-col bg-surface shadow-xl"
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <div className="flex flex-1 items-center justify-center">
             <Spinner size={20} />
           </div>
         </div>
@@ -327,19 +330,22 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
   const timerState = taskTimerState(runningTimer, t.id);
   const prioClass =
     t.priority === "high"
-      ? styles.prioDotHigh
+      ? "bg-danger"
       : t.priority === "medium"
-        ? styles.prioDotMedium
+        ? "bg-warning"
         : t.priority === "low"
-          ? styles.prioDotLow
-          : "";
+          ? "bg-success"
+          : "bg-tertiary";
 
   return (
-    <div className={styles.detailScrim} onMouseDown={onClose}>
-      <div className={styles.detail} onMouseDown={(e) => e.stopPropagation()}>
-        <div className={styles.tdHead}>
+    <div className="fixed inset-0 z-modal flex justify-end bg-overlay" onMouseDown={onClose}>
+      <div
+        className="flex h-full w-full max-w-xl flex-col bg-surface shadow-xl"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="flex shrink-0 items-center gap-2 border-b border-subtle px-5 py-4">
           <select
-            className={styles.tdStatus}
+            className="h-10 rounded-lg border border-default bg-surface px-3 text-sm font-medium text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/15"
             value={t.status}
             onChange={(e) => void changeStatus(e.target.value)}
           >
@@ -351,7 +357,7 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
           </select>
           <button
             type="button"
-            className={styles.tdDelete}
+            className="ml-auto rounded-lg p-2 text-tertiary hover:bg-raised hover:text-danger"
             onClick={async () => {
               await client.deleteTask(t.id);
               onChanged();
@@ -361,23 +367,28 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
           >
             <Trash2 size={16} />
           </button>
-          <button type="button" className={styles.iconBtn} onClick={onClose} aria-label={strings.taskClose}>
+          <button
+            type="button"
+            className="rounded-lg p-2 text-tertiary hover:bg-raised hover:text-primary"
+            onClick={onClose}
+            aria-label={strings.taskClose}
+          >
             <X size={18} />
           </button>
         </div>
 
-        <div className={styles.detailBody}>
-          <div className={styles.tdTitleRow}>
+        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 py-5">
+          <div className="flex items-center gap-3">
             <button
               type="button"
-              className={styles.tdTitleCheck}
+              className="inline-flex shrink-0 text-tertiary transition-colors hover:text-success"
               onClick={() => void changeStatus(done ? "todo" : "done")}
               aria-label={done ? strings.taskMarkNotDone : strings.taskMarkDone}
             >
               {done ? <CheckCircle2 size={22} /> : <Circle size={22} />}
             </button>
             <input
-              className={`${styles.tdTitle} ${done ? styles.tdTitleDone : ""}`}
+              className={`min-w-0 flex-1 border-0 border-b-2 border-transparent bg-transparent px-0.5 py-1 text-xl font-bold text-primary outline-none focus:border-accent ${done ? "text-tertiary line-through" : ""}`}
               defaultValue={t.title}
               onBlur={(e) => {
                 if (e.target.value.trim() && e.target.value !== t.title) void save({ title: e.target.value.trim() });
@@ -388,7 +399,7 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
           {t.sourceKind === "email" && t.sourceId && (
             <button
               type="button"
-              className={styles.sourceLink}
+              className="inline-flex w-fit items-center gap-1.5 rounded-lg bg-raised px-3 py-2 text-sm font-medium text-primary hover:bg-accent-tint hover:text-accent"
               onClick={() => {
                 onClose();
                 navigate(`/mail?open=${encodeURIComponent(t.sourceId!)}`);
@@ -398,7 +409,7 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
             </button>
           )}
           {t.sourceKind === "event" && (
-            <span className={styles.sourceLink}>
+            <span className="inline-flex w-fit items-center gap-1.5 rounded-lg bg-raised px-3 py-2 text-sm font-medium text-secondary">
               <Link2 size={14} /> {strings.taskFromEvent}
             </span>
           )}
@@ -439,13 +450,13 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
           </section>
           {timerError !== null && <p className="text-sm text-danger" role="alert">{timerError}</p>}
 
-          <div className={styles.tdFields}>
-            <label className={styles.tdField}>
-              <span className={styles.tdFieldLabel}>
+          <div className="flex flex-col gap-1 rounded-xl border border-subtle bg-surface p-3">
+            <label className="grid min-h-10 grid-cols-[8.5rem_minmax(0,1fr)] items-center gap-3">
+              <span className="inline-flex items-center gap-2 text-sm text-secondary [&>svg]:text-tertiary">
                 <User size={15} /> {strings.taskAssignee}
               </span>
               <input
-                className={styles.tdFieldInput}
+                className="rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-primary outline-none hover:bg-raised focus:border-accent focus:bg-surface"
                 defaultValue={t.assignee ?? ""}
                 placeholder={strings.taskAssigneePlaceholder}
                 inputMode="email"
@@ -456,15 +467,15 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
               />
             </label>
             {projectName !== undefined && projectName !== "" && (
-              <div className={styles.tdField}>
-                <span className={styles.tdFieldLabel}>
+              <div className="grid min-h-10 grid-cols-[8.5rem_minmax(0,1fr)] items-center gap-3">
+                <span className="inline-flex items-center gap-2 text-sm text-secondary [&>svg]:text-tertiary">
                   <FolderClosed size={15} /> {strings.taskColProject}
                 </span>
-                <span className={styles.tdFieldValue}>{projectName}</span>
+                <span className="px-2 py-1.5 text-sm text-primary">{projectName}</span>
               </div>
             )}
-            <label className={styles.tdField}>
-              <span className={styles.tdFieldLabel}>
+            <label className="grid min-h-10 grid-cols-[8.5rem_minmax(0,1fr)] items-center gap-3">
+              <span className="inline-flex items-center gap-2 text-sm text-secondary [&>svg]:text-tertiary">
                 <CalendarDays size={15} /> {strings.taskDue}
               </span>
               <DatePicker
@@ -473,12 +484,12 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
                 placeholder={strings.taskDue}
               />
             </label>
-            <label className={styles.tdField}>
-              <span className={styles.tdFieldLabel}>
-                <span className={`${styles.prioDot} ${prioClass}`} aria-hidden /> {strings.taskPriority}
+            <label className="grid min-h-10 grid-cols-[8.5rem_minmax(0,1fr)] items-center gap-3">
+              <span className="inline-flex items-center gap-2 text-sm text-secondary">
+                <span className={`size-2 rounded-full ${prioClass}`} aria-hidden /> {strings.taskPriority}
               </span>
               <select
-                className={styles.tdFieldInput}
+                className="rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-primary outline-none hover:bg-raised focus:border-accent focus:bg-surface"
                 value={t.priority}
                 onChange={(e) => void save({ priority: e.target.value as TaskPriority })}
               >
@@ -488,8 +499,8 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
                 <option value="high">{strings.taskPrioHigh}</option>
               </select>
             </label>
-            <div className={styles.tdField}>
-              <span className={styles.tdFieldLabel}>
+            <div className="grid min-h-10 grid-cols-[8.5rem_minmax(0,1fr)] items-start gap-3 py-1">
+              <span className="inline-flex items-center gap-2 pt-1.5 text-sm text-secondary [&>svg]:text-tertiary">
                 <Tag size={15} /> {strings.taskLabelsTitle}
               </span>
               <div className={styles.tdLabels} ref={labelWrapRef}>

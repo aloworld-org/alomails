@@ -30,16 +30,6 @@
   letter-spacing: 0.04em;
   color: var(--text-secondary);
 }
-.iconBtn {
-  display: inline-flex;
-  color: var(--text-secondary);
-  border-radius: var(--radius-sm);
-  padding: 3px;
-}
-.iconBtn:hover {
-  color: var(--accent);
-  background: var(--bg-raised);
-}
 .projList {
   display: flex;
   flex-direction: column;
@@ -285,63 +275,6 @@
   text-align: center;
 }
 
-/* ---- detail panel (slides in from the right) ---- */
-.detailScrim {
-  position: absolute;
-  inset: 0;
-  background: rgba(30, 22, 16, 0.18);
-  display: flex;
-  justify-content: flex-end;
-  z-index: 20;
-}
-.detail {
-  width: min(460px, 92vw);
-  background: var(--bg-surface);
-  height: 100%;
-  box-shadow: -8px 0 24px -12px rgba(40, 30, 20, 0.3);
-  display: flex;
-  flex-direction: column;
-  animation: slideIn 0.18s ease;
-}
-@keyframes slideIn {
-  from {
-    transform: translateX(24px);
-    opacity: 0.6;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-.detailHead {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--border-default);
-}
-.detailBody {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--space-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-.detailTitle {
-  font-size: var(--text-lg, 1.1rem);
-  font-weight: var(--weight-semibold);
-  color: var(--text-primary);
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  padding: 4px 6px;
-  margin: -4px -6px;
-}
-.detailTitle:hover,
-.detailTitle:focus {
-  border-color: var(--border-default);
-  outline: none;
-}
 .field {
   display: flex;
   flex-direction: column;
@@ -372,16 +305,6 @@
   font-family: inherit;
   background: var(--bg-surface);
   color: var(--text-primary);
-}
-.sourceLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--text-sm);
-  color: var(--accent);
-  background: var(--verdigris-50, #fceee9);
-  padding: 6px 10px;
-  border-radius: var(--radius-md);
 }
 .subtasks {
   display: flex;
@@ -608,22 +531,6 @@
 }
 
 /* ---- empty state ---- */
-.prioDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.prioDotHigh {
-  background: var(--danger);
-}
-.prioDotMedium {
-  background: var(--warning);
-}
-.prioDotLow {
-  background: var(--success);
-}
-
 .emptyState {
   display: flex;
   flex-direction: column;
@@ -675,108 +582,6 @@
   background: var(--accent-hover);
 }
 
-/* ---- task detail (redesigned rows + progress) ---- */
-.tdHead {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--border-subtle);
-}
-.tdStatus {
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  padding: 5px 10px;
-  font-size: var(--text-sm);
-  color: var(--text-primary);
-  background: var(--bg-surface);
-}
-.tdDelete {
-  margin-left: auto;
-  color: var(--text-tertiary);
-  padding: 6px;
-  border-radius: var(--radius-md);
-}
-.tdDelete:hover {
-  color: var(--danger);
-  background: var(--bg-raised);
-}
-.tdTitleRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-.tdTitleCheck {
-  flex-shrink: 0;
-  color: var(--text-tertiary);
-  display: inline-flex;
-  transition: color var(--transition-fast);
-}
-.tdTitleCheck:hover {
-  color: var(--success);
-}
-.tdTitle {
-  flex: 1;
-  min-width: 0;
-  border: none;
-  background: transparent;
-  font-size: var(--text-xl);
-  font-weight: var(--weight-bold);
-  color: var(--text-primary);
-  padding: 4px 2px;
-}
-.tdTitle:focus {
-  outline: none;
-  border-bottom: 2px solid var(--accent);
-}
-.tdTitleDone {
-  color: var(--text-tertiary);
-  text-decoration: line-through;
-}
-.tdFields {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-.tdField {
-  display: grid;
-  grid-template-columns: 130px 1fr;
-  align-items: center;
-  gap: var(--space-3);
-  min-height: 36px;
-}
-.tdFieldLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-}
-.tdFieldLabel > svg {
-  color: var(--text-tertiary);
-}
-.tdFieldInput {
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  padding: 5px 8px;
-  background: transparent;
-  color: var(--text-primary);
-  font: inherit;
-  font-size: var(--text-sm);
-}
-.tdFieldInput:hover {
-  background: var(--bg-raised);
-}
-.tdFieldInput:focus {
-  outline: none;
-  border-color: var(--accent);
-  background: var(--bg-surface);
-}
-.tdFieldValue {
-  font-size: var(--text-sm);
-  color: var(--text-primary);
-  padding: 5px 8px;
-}
 .tdSection {
   display: flex;
   flex-direction: column;
