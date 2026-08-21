@@ -37,6 +37,8 @@ export interface ProjectHours {
   billableMinutes: number;
   /** Approved, billable minutes not yet carried onto an invoice. */
   approvedUnbilledMinutes: number;
+  /** Billable minutes submitted for approval but not approved or invoiced. */
+  submittedUnbilledMinutes: number;
   /** Already carried onto a billing document. */
   billedMinutes: number;
   /** `YYYY-MM-DD` of the last day anybody worked, or `null`. */

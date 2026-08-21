@@ -2624,6 +2624,8 @@ export const fr: Partial<Catalog> = {
   projectsWorkflowTimeBody: "Saisissez le temps sur ce projet ou ses tâches pendant que le travail est encore récent.",
   projectsWorkflowApprovalTitle: "Envoyer le temps pour validation",
   projectsWorkflowApprovalBody: "Vérifiez la semaine et soumettez-la afin que le travail client approuvé puisse être facturé.",
+  projectsWorkflowAwaitingApprovalTitle: "Le temps attend une validation",
+  projectsWorkflowAwaitingApprovalBody: "Ce temps a déjà été soumis. Consultez la feuille de temps ou attendez sa validation avant de facturer.",
   projectsWorkflowInvoiceTitle: "Transformer le travail approuvé en facture",
   projectsWorkflowContinueTitle: "Faire avancer le projet",
   projectsWorkflowContinueBody: "Ajoutez la prochaine saisie de temps au fil du travail.",

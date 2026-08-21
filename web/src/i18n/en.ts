@@ -4457,6 +4457,8 @@ export const en = {
   projectsWorkflowTimeBody: "Log time against this project or its tasks while the work is fresh.",
   projectsWorkflowApprovalTitle: "Send the time for approval",
   projectsWorkflowApprovalBody: "Review the week and submit it so approved customer work can be invoiced.",
+  projectsWorkflowAwaitingApprovalTitle: "Time is awaiting approval",
+  projectsWorkflowAwaitingApprovalBody: "This time has already been submitted. Review the timesheet or wait for an approver before invoicing.",
   projectsWorkflowInvoiceTitle: "Turn approved work into an invoice",
   projectsWorkflowContinueTitle: "Keep the project moving",
   projectsWorkflowContinueBody: "Add the next time entry as work continues.",

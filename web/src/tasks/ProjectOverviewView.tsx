@@ -29,7 +29,7 @@ export function canCreateProjectInvoice(project: Project): boolean {
   return project.client !== null && project.hours.approvedUnbilledMinutes > 0;
 }
 
-export type ProjectNextStep = "tasks" | "time" | "approval" | "invoice" | "continue";
+export type ProjectNextStep = "tasks" | "time" | "approval" | "awaitingApproval" | "invoice" | "continue";
 
 /** One honest next action for the engagement. The overview is the hand-off
  * between project management and billing, so it must not make people infer
@@ -38,6 +38,7 @@ export function projectNextStep(project: Project, taskCount: number): ProjectNex
   if (taskCount === 0) return "tasks";
   if (project.hours.minutes === 0) return "time";
   if (canCreateProjectInvoice(project)) return "invoice";
+  if (project.client !== null && project.hours.submittedUnbilledMinutes > 0) return "awaitingApproval";
   const awaitingApproval = Math.max(
     0,
     project.hours.billableMinutes
@@ -210,6 +211,7 @@ export function ProjectOverviewView({
                 tasks: strings.projectsWorkflowTasksTitle,
                 time: strings.projectsWorkflowTimeTitle,
                 approval: strings.projectsWorkflowApprovalTitle,
+                awaitingApproval: strings.projectsWorkflowAwaitingApprovalTitle,
                 invoice: strings.projectsWorkflowInvoiceTitle,
                 continue: strings.projectsWorkflowContinueTitle,
               }[nextStep]}
@@ -219,6 +221,7 @@ export function ProjectOverviewView({
                 tasks: strings.projectsWorkflowTasksBody,
                 time: strings.projectsWorkflowTimeBody,
                 approval: strings.projectsWorkflowApprovalBody,
+                awaitingApproval: strings.projectsWorkflowAwaitingApprovalBody,
                 invoice: strings.projectsReadyToInvoiceBody(durationLabel(project.hours.approvedUnbilledMinutes)),
                 continue: strings.projectsWorkflowContinueBody,
               }[nextStep]}
@@ -237,6 +240,7 @@ export function ProjectOverviewView({
               tasks: strings.taskCreateFirst,
               time: strings.projectsAddTime,
               approval: strings.projectsReviewTimesheet,
+              awaitingApproval: strings.projectsReviewTimesheet,
               invoice: strings.projectsCreateInvoice,
               continue: strings.projectsAddTime,
             }[nextStep]}
@@ -248,7 +252,7 @@ export function ProjectOverviewView({
           aria-label={strings.projectsWorkflowLabel}
         >
           {workflowLabels.map((label, index) => {
-            const activeIndex = { tasks: 0, time: 1, approval: 2, invoice: 3, continue: project.client === null ? 2 : 3 }[nextStep];
+            const activeIndex = { tasks: 0, time: 1, approval: 2, awaitingApproval: 2, invoice: 3, continue: project.client === null ? 2 : 3 }[nextStep];
             const reached = index <= activeIndex;
             return (
               <li key={label} className={`flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-sm ${reached ? "bg-accent-soft font-medium text-accent" : "bg-raised text-secondary"}`}>

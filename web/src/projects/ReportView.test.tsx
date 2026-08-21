@@ -50,6 +50,7 @@ const project: Project = {
     minutes: 120,
     billableMinutes: 120,
     approvedUnbilledMinutes: 120,
+    submittedUnbilledMinutes: 0,
     billedMinutes: 0,
     budgetConsumptionBp: null,
     lastWorkedOn: "2026-08-20",

@@ -22,6 +22,7 @@ const project: Project = {
     minutes: 0,
     billableMinutes: 0,
     approvedUnbilledMinutes: 0,
+    submittedUnbilledMinutes: 0,
     billedMinutes: 0,
     budgetConsumptionBp: null,
     lastWorkedOn: null,

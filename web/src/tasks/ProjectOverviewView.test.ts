@@ -30,6 +30,7 @@ function project(approvedUnbilledMinutes: number, client = true): Project {
       minutes: 180,
       billableMinutes: 180,
       approvedUnbilledMinutes,
+      submittedUnbilledMinutes: 0,
       billedMinutes: 0,
       lastWorkedOn: "2026-08-20",
       budgetConsumptionBp: null,
@@ -63,6 +64,12 @@ describe("project workflow next step", () => {
     expect(projectNextStep(value, 1)).toBe("approval");
     value.hours.approvedUnbilledMinutes = 120;
     expect(projectNextStep(value, 1)).toBe("invoice");
+  });
+
+  it("shows submitted time as awaiting approval instead of asking for submission again", () => {
+    const value = project(0);
+    value.hours.submittedUnbilledMinutes = 120;
+    expect(projectNextStep(value, 1)).toBe("awaitingApproval");
   });
 
   it("never offers the invoice workflow for internal work", () => {

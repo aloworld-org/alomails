@@ -2582,6 +2582,8 @@ export const nl: Partial<Catalog> = {
   projectsWorkflowTimeBody: "Registreer tijd op dit project of de taken zolang het werk nog vers is.",
   projectsWorkflowApprovalTitle: "Dien de tijd ter goedkeuring in",
   projectsWorkflowApprovalBody: "Controleer de week en dien ze in zodat goedgekeurd klantwerk kan worden gefactureerd.",
+  projectsWorkflowAwaitingApprovalTitle: "Tijd wacht op goedkeuring",
+  projectsWorkflowAwaitingApprovalBody: "Deze tijd is al ingediend. Bekijk de urenstaat of wacht op goedkeuring voordat je factureert.",
   projectsWorkflowInvoiceTitle: "Maak van goedgekeurd werk een factuur",
   projectsWorkflowContinueTitle: "Houd het project in beweging",
   projectsWorkflowContinueBody: "Voeg de volgende tijdregistratie toe terwijl het werk doorgaat.",

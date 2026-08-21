@@ -55,6 +55,9 @@ pub struct ProjectHours {
     /// onto an invoice. This is the only total that may be presented as ready
     /// to invoice.
     pub approved_unbilled_minutes: i64,
+    /// Billable minutes in a submitted week that are waiting for approval and
+    /// have not yet been carried onto an invoice.
+    pub submitted_unbilled_minutes: i64,
     /// The subset already carried onto a billing document. Never larger than
     /// [`Self::billable_minutes`] — only a billable hour can be billed.
     pub billed_minutes: i64,
@@ -75,6 +78,7 @@ impl ProjectHours {
             minutes: 0,
             billable_minutes: 0,
             approved_unbilled_minutes: 0,
+            submitted_unbilled_minutes: 0,
             billed_minutes: 0,
             last_worked_on: None,
         }
@@ -110,6 +114,8 @@ const HOURS_COLS: &str = "e.project_id, \
      COALESCE(SUM(CASE WHEN e.billable THEN e.minutes ELSE 0 END), 0)::bigint AS billable_minutes, \
      COALESCE(SUM(CASE WHEN e.billable AND e.invoice_id IS NULL AND w.status = 'approved' \
          THEN e.minutes ELSE 0 END), 0)::bigint AS approved_unbilled_minutes, \
+     COALESCE(SUM(CASE WHEN e.billable AND e.invoice_id IS NULL AND w.status = 'submitted' \
+         THEN e.minutes ELSE 0 END), 0)::bigint AS submitted_unbilled_minutes, \
      COALESCE(SUM(CASE WHEN e.invoice_id IS NOT NULL THEN e.minutes ELSE 0 END), 0)::bigint \
          AS billed_minutes, \
      MAX(e.work_date) AS last_worked_on";
@@ -201,6 +207,7 @@ struct HoursRow {
     minutes: i64,
     billable_minutes: i64,
     approved_unbilled_minutes: i64,
+    submitted_unbilled_minutes: i64,
     billed_minutes: i64,
     last_worked_on: Option<Date>,
 }
@@ -212,6 +219,7 @@ impl HoursRow {
             minutes: self.minutes,
             billable_minutes: self.billable_minutes,
             approved_unbilled_minutes: self.approved_unbilled_minutes,
+            submitted_unbilled_minutes: self.submitted_unbilled_minutes,
             billed_minutes: self.billed_minutes,
             last_worked_on: self.last_worked_on,
         }
@@ -235,6 +243,7 @@ mod tests {
         assert_eq!(empty.minutes, 0);
         assert_eq!(empty.billable_minutes, 0);
         assert_eq!(empty.approved_unbilled_minutes, 0);
+        assert_eq!(empty.submitted_unbilled_minutes, 0);
         assert_eq!(empty.billed_minutes, 0);
         assert_eq!(empty.last_worked_on, None);
     }

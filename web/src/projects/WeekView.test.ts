@@ -37,6 +37,7 @@ const project: Project = {
     minutes: 30,
     billableMinutes: 30,
     approvedUnbilledMinutes: 0,
+    submittedUnbilledMinutes: 0,
     billedMinutes: 0,
     budgetConsumptionBp: null,
     lastWorkedOn: "2026-08-21",
