@@ -43,6 +43,7 @@ import {
   projectScopedPath,
   projectWorkspaceStatus,
   resolveProjectScope,
+  shouldRemoveProjectScope,
 } from "./scope";
 import { TemplateDialog } from "./TemplateDialog";
 import { announceTimerChanged, onTimerChanged } from "./timerBus";
@@ -169,12 +170,17 @@ export function ProjectsModule() {
   // authoritative, clean the query instead of showing "All projects" under a
   // URL that still claims otherwise and carrying that stale id to every tab.
   useEffect(() => {
-    if (loading || !searchParams.has("project")) return;
-    if (contextProjectId !== null) return;
+    if (!searchParams.has("project")) return;
+    if (!shouldRemoveProjectScope(
+      requestedContextProjectId,
+      loading,
+      projectsLoadFailed,
+      contextProjectId,
+    )) return;
     const next = new URLSearchParams(searchParams);
     next.delete("project");
     setSearchParams(next, { replace: true });
-  }, [contextProjectId, loading, requestedContextProjectId, searchParams, setSearchParams]);
+  }, [contextProjectId, loading, projectsLoadFailed, requestedContextProjectId, searchParams, setSearchParams]);
 
   // The templates ride the same revision counter, because marking one, copying
   // one, or archiving a board all change what this list says.

@@ -56,6 +56,21 @@ export function resolveProjectScope(
     : null;
 }
 
+/** A requested aggregate-view scope is stale only after the project
+ * collection loaded successfully. During loading or an outage the URL remains
+ * the source of truth, so retrying never drops the project somebody chose. */
+export function shouldRemoveProjectScope(
+  requestedProjectId: string | null,
+  projectsLoading: boolean,
+  projectsLoadFailed: boolean,
+  resolvedProjectId: string | null,
+): boolean {
+  return requestedProjectId !== null
+    && !projectsLoading
+    && !projectsLoadFailed
+    && resolvedProjectId === null;
+}
+
 export type ProjectWorkspaceStatus = "loading" | "available" | "missing" | "unavailable";
 
 /** Resolve a project deep link from the same authoritative collection that

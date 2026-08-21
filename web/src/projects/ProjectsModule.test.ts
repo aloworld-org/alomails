@@ -5,6 +5,7 @@ import {
   projectScopedPath,
   projectWorkspaceStatus,
   resolveProjectScope,
+  shouldRemoveProjectScope,
 } from "./scope";
 
 describe("projectContextId", () => {
@@ -75,5 +76,17 @@ describe("projectWorkspaceStatus", () => {
 
   it("opens an accessible project", () => {
     expect(projectWorkspaceStatus("project-1", false, false, projects)).toBe("available");
+  });
+});
+
+describe("shouldRemoveProjectScope", () => {
+  it("cleans a stale scope only after a successful authoritative read", () => {
+    expect(shouldRemoveProjectScope("removed", false, false, null)).toBe(true);
+    expect(shouldRemoveProjectScope("project-1", false, false, "project-1")).toBe(false);
+  });
+
+  it("preserves the chosen project during loading and collection failures", () => {
+    expect(shouldRemoveProjectScope("project-1", true, false, null)).toBe(false);
+    expect(shouldRemoveProjectScope("project-1", false, true, null)).toBe(false);
   });
 });
