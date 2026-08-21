@@ -18,8 +18,10 @@
 //! a second source of truth is how this becomes unmaintainable.
 
 pub mod connect;
+pub mod execute;
 pub mod response;
 pub mod router;
+pub mod rpc;
 pub mod session;
 
 pub use connect::{ConnectError, ConnectRequest};
