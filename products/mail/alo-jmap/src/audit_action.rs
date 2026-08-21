@@ -122,8 +122,13 @@ pub fn event_for(method: &str, template: &str, path: &str) -> Option<AuditEvent>
     if !AUDITED_MODULES.contains(&module) {
         return None;
     }
-    let collection = template_segments.get(1).copied();
-    if collection.is_none() {
+    // A bare module route (`POST /projects`) names no collection segment, so
+    // the entity it acts on has to be declared rather than derived — see
+    // `ROOT_COLLECTIONS`. `let … else` rather than an `is_none` test followed by
+    // an `expect`: the compiler then knows the collection exists below, where
+    // the previous shape only promised it in a comment and paid for the promise
+    // with a panic the lint refuses.
+    let Some(collection) = template_segments.get(1).copied() else {
         let root_entity = ROOT_COLLECTIONS
             .iter()
             .find_map(|(root, entity)| (*root == module).then_some(*entity))?;
@@ -133,8 +138,7 @@ pub fn event_for(method: &str, template: &str, path: &str) -> Option<AuditEvent>
             entity_type,
             entity_id: None,
         });
-    }
-    let collection = collection.expect("checked above");
+    };
 
     // Which segment names the collection, and which would name the record.
     //

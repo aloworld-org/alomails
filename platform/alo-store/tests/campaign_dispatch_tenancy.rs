@@ -26,6 +26,7 @@ use alo_store::{
     TenantId, TenantStore,
 };
 use serde_json::json;
+use time::{Duration, OffsetDateTime};
 
 const LINKS: DispatchLinks<'static> = DispatchLinks {
     base_url: "https://alo.test/",
@@ -73,6 +74,13 @@ fn a_letter() -> CampaignContent {
 }
 
 /// A campaign, opened as a send that has finished enrolling.
+/// Records a warm-up old enough that the day's ceiling is not what is under
+/// test. Day 15+ allows 500, which is far past any fixture here.
+async fn warmed(acc: &AccountStore) {
+    let long_ago = OffsetDateTime::now_utc().date() - Duration::days(20);
+    acc.record_campaign_warm_up_start(long_ago).await.unwrap();
+}
+
 async fn a_send(acc: &AccountStore) -> CampaignSendId {
     let campaign = acc
         .create_campaign(&NewCampaign {
@@ -83,6 +91,7 @@ async fn a_send(acc: &AccountStore) -> CampaignSendId {
         })
         .await
         .unwrap();
+    warmed(acc).await;
     let send = acc.open_campaign_send(&campaign.id).await.unwrap();
     let mut after = None;
     loop {
@@ -342,4 +351,141 @@ async fn a_recipient_already_sent_to_cannot_be_written_off_by_a_retry() {
     let tally = acc.campaign_send_tally(&send).await.unwrap();
     assert_eq!(tally.sent, 1);
     assert_eq!(tally.failed, 0);
+}
+
+#[tokio::test]
+async fn the_warm_up_ceiling_bounds_the_day_and_says_so() {
+    let store = common::test_store().await;
+    let (acc, _, _) = tenant(&store, "ceiling").await;
+    for who in ["ann", "ben", "cara", "dan"] {
+        mailable(&acc, who, &format!("{who}@example.test")).await;
+    }
+    let send = a_send(&acc).await;
+
+    // Back to day 1, where the published schedule allows five a day. Four
+    // recipients is under it, so this pass is not the interesting one — it is
+    // what makes the next assertion mean something.
+    acc.record_campaign_warm_up_start(OffsetDateTime::now_utc().date())
+        .await
+        .unwrap();
+
+    let pass = acc
+        .prepare_campaign_send_batch(&send, 500, &LINKS)
+        .await
+        .unwrap();
+    assert_eq!(pass.allowance.day, 1);
+    assert_eq!(pass.allowance.ceiling, 5, "the published day-1 ceiling");
+    assert_eq!(
+        pass.prepared.len(),
+        4,
+        "a caller asking for 500 on day one gets what the schedule allows"
+    );
+
+    // Spend the day: mark all four sent, then ask again.
+    for who in ["ann", "ben", "cara", "dan"] {
+        assert!(
+            acc.mark_campaign_recipient_sent(&send, &format!("{who}@example.test"))
+                .await
+                .unwrap()
+        );
+    }
+    let after = acc.campaign_send_allowance().await.unwrap();
+    assert_eq!(after.sent_today, 4);
+    assert_eq!(after.remaining, 1, "five minus the four that have gone");
+}
+
+#[tokio::test]
+async fn a_tenant_with_no_recorded_warm_up_may_send_nothing() {
+    let store = common::test_store().await;
+    let (acc, _, _) = tenant(&store, "unwarmed").await;
+    mailable(&acc, "Ann", "ann@example.test").await;
+
+    // Deliberately not calling `warmed`. An identity nobody has started warming
+    // is one nobody has checked the DNS of, and the cost of sending from it is
+    // months of deliverability rather than a refused request.
+    let campaign = acc
+        .create_campaign(&NewCampaign {
+            subject: "Nothing yet",
+            preheader: None,
+            topic: "Monthly Newsletter",
+            content: a_letter(),
+        })
+        .await
+        .unwrap();
+    let send = acc.open_campaign_send(&campaign.id).await.unwrap();
+    // Walked to exhaustion, so the send reaches `sending` — otherwise this
+    // would be testing the enrolling-state refusal rather than the ceiling.
+    let mut after = None;
+    loop {
+        let page = AudiencePage {
+            after: after.clone(),
+            limit: 50,
+        };
+        let done = acc.enrol_campaign_send_page(&send.id, &page).await.unwrap();
+        match done.next_cursor {
+            None => break,
+            Some(cursor) => after = Some(cursor),
+        }
+    }
+
+    let pass = acc
+        .prepare_campaign_send_batch(&send.id, 10, &LINKS)
+        .await
+        .unwrap();
+    assert_eq!(pass.allowance.day, 0);
+    assert_eq!(pass.allowance.ceiling, 0);
+    assert!(pass.prepared.is_empty(), "nobody is handed to submission");
+    assert_eq!(pass.failed, 0, "and nobody is written off for it either");
+    assert!(
+        pass.allowance.is_exhausted(),
+        "the caller is told why, rather than left with an empty list"
+    );
+}
+
+#[tokio::test]
+async fn the_ceiling_is_the_identitys_and_is_shared_across_campaigns() {
+    let store = common::test_store().await;
+    let (acc, _, _) = tenant(&store, "shared").await;
+    for who in ["ann", "ben", "cara", "dan", "eve"] {
+        mailable(&acc, who, &format!("{who}@example.test")).await;
+    }
+
+    // One campaign spends most of day one.
+    let first = a_send(&acc).await;
+    acc.record_campaign_warm_up_start(OffsetDateTime::now_utc().date())
+        .await
+        .unwrap();
+    let pass = acc
+        .prepare_campaign_send_batch(&first, 500, &LINKS)
+        .await
+        .unwrap();
+    assert_eq!(pass.prepared.len(), 5, "day one allows five");
+    for who in ["ann", "ben", "cara", "dan"] {
+        acc.mark_campaign_recipient_sent(&first, &format!("{who}@example.test"))
+            .await
+            .unwrap();
+    }
+
+    // A second campaign the same day does not get a fresh five. The reputation
+    // being spent belongs to the sending identity, not to a campaign.
+    acc.stop_campaign_send(&first, Some("done for today"))
+        .await
+        .unwrap();
+    let second = a_send(&acc).await;
+    // `a_send` records a warm-up of its own so its enrolment is not the thing
+    // under test; put the clock back to day one now that it has.
+    acc.record_campaign_warm_up_start(OffsetDateTime::now_utc().date())
+        .await
+        .unwrap();
+    let pass = acc
+        .prepare_campaign_send_batch(&second, 500, &LINKS)
+        .await
+        .unwrap();
+    assert_eq!(pass.allowance.sent_today, 4);
+    assert_eq!(pass.allowance.remaining, 1);
+    assert_eq!(
+        pass.prepared.len(),
+        1,
+        "the second campaign gets what is left of the day, not a new day"
+    );
 }

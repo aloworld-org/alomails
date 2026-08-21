@@ -50,6 +50,7 @@ use crate::campaign_mime::{CampaignMessage, render_campaign_message};
 use crate::campaign_send::{RecipientState, SendState};
 use crate::campaign_unsubscribe::NewUnsubscribeToken;
 use crate::campaign_unsubscribe_link::UnsubscribeInvitation;
+use crate::campaign_warm_up::SendAllowance;
 use crate::error::{Result, StoreError};
 use crate::id::CampaignSendId;
 use crate::store::Store;
@@ -93,7 +94,7 @@ pub struct PreparedCampaignMessage {
 }
 
 /// What one pass prepared, and what it wrote off.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DispatchPass {
     /// Letters ready to send, in the order the recipients were enrolled.
     pub prepared: Vec<PreparedCampaignMessage>,
@@ -101,6 +102,14 @@ pub struct DispatchPass {
     /// their row. Counted rather than returned: the row is the record, and a
     /// caller that had to remember them would be a second place to look.
     pub failed: i64,
+    /// What the warm-up allowed today, as it stood when the pass began.
+    ///
+    /// Returned rather than left for the caller to ask again, because it is the
+    /// answer to the question a caller has after a short pass: *why did I get
+    /// twelve when I asked for five hundred?* C2.3 requires the cap and its
+    /// reason to be visible in the send flow, and a number a screen has to
+    /// derive is a number two screens will derive differently.
+    pub allowance: SendAllowance,
 }
 
 impl AccountStore {
@@ -147,8 +156,27 @@ impl AccountStore {
             .await?
             .ok_or(StoreError::NotFound)?;
 
+        // The warm-up ceiling (C2.3) is the identity's, not this campaign's, so
+        // it is spent across every send the tenant is running today. Clamping
+        // the pass rather than refusing it is deliberate: a caller asking for
+        // 500 on a day with 12 left should get 12 and be told, not an error it
+        // has to interpret before it can make progress.
+        let allowance = self.campaign_send_allowance().await?;
+        if allowance.is_exhausted() {
+            return Ok(DispatchPass {
+                prepared: Vec::new(),
+                failed: 0,
+                allowance,
+            });
+        }
+        let limit = limit.min(allowance.remaining);
+
         let addresses = self.campaign_send_pending(id, limit).await?;
-        let mut pass = DispatchPass::default();
+        let mut pass = DispatchPass {
+            prepared: Vec::new(),
+            failed: 0,
+            allowance: allowance.clone(),
+        };
         for address in addresses {
             match self.prepare_one(&campaign, &send.id, &address, links).await {
                 Ok(prepared) => pass.prepared.push(prepared),
@@ -330,9 +358,24 @@ mod tests {
     }
 
     #[test]
-    fn an_empty_pass_is_a_shape_rather_than_nothing() {
-        let pass = DispatchPass::default();
+    fn a_pass_that_prepared_nothing_still_says_why() {
+        // The shape a caller meets when the day's ceiling is spent: no letters,
+        // no failures, and the allowance that explains both.
+        let pass = DispatchPass {
+            prepared: Vec::new(),
+            failed: 0,
+            allowance: SendAllowance {
+                day: 1,
+                ceiling: 5,
+                sent_today: 5,
+                remaining: 0,
+            },
+        };
         assert!(pass.prepared.is_empty());
         assert_eq!(pass.failed, 0);
+        assert!(
+            pass.allowance.is_exhausted(),
+            "an empty pass without the reason is a caller left guessing"
+        );
     }
 }
