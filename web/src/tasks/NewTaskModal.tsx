@@ -10,7 +10,6 @@ import { strings } from "../i18n";
 import { useJmapClient, type DriveNodeDto, type TaskPriority, type TaskProject } from "../jmap";
 import { Button, DatePicker } from "../ds";
 import { DriveAttachmentPicker } from "./DriveAttachmentPicker";
-import styles from "./TasksModule.module.css";
 
 interface Props {
   projects: TaskProject[];
@@ -21,11 +20,14 @@ interface Props {
   onCreated: () => void;
 }
 
-const PRIOS: { key: TaskPriority; label: string; cls: string }[] = [
-  { key: "low", label: "", cls: "prioDotLow" },
-  { key: "medium", label: "", cls: "prioDotMedium" },
-  { key: "high", label: "", cls: "prioDotHigh" },
+const PRIOS: { key: TaskPriority; label: string; dot: string; active: string }[] = [
+  { key: "low", label: "", dot: "bg-success", active: "border-success text-success" },
+  { key: "medium", label: "", dot: "bg-warning", active: "border-warning text-warning" },
+  { key: "high", label: "", dot: "bg-danger", active: "border-danger text-danger" },
 ];
+
+const fieldClass = "w-full rounded-lg border border-default bg-surface px-4 py-3 text-base text-primary outline-none placeholder:text-tertiary focus:border-accent focus:ring-3 focus:ring-accent/15";
+const labelClass = "text-sm font-semibold text-primary";
 
 export function NewTaskModal({ projects, defaultProjectId, defaultStatus, defaultDueDate, onClose, onCreated }: Props) {
   const client = useJmapClient();
@@ -98,28 +100,28 @@ export function NewTaskModal({ projects, defaultProjectId, defaultStatus, defaul
   }
 
   return (
-    <div className={styles.ntScrim} role="dialog" aria-modal="true" onMouseDown={onClose}>
-      <form className={styles.ntModal} onSubmit={submit} onMouseDown={(e) => e.stopPropagation()}>
-        <div className={styles.ntHead}>
-          <span className={styles.ntHeadIcon}>
+    <div className="fixed inset-0 z-modal flex items-center justify-center bg-overlay p-6" role="dialog" aria-modal="true" onMouseDown={onClose}>
+      <form className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-surface shadow-xl" onSubmit={submit} onMouseDown={(e) => e.stopPropagation()}>
+        <div className="flex shrink-0 items-start gap-3 border-b border-subtle px-6 py-5">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent-tint text-accent-hover">
             <SquareCheckBig size={20} />
           </span>
-          <div className={styles.ntHeadText}>
-            <h2>{strings.taskNew}</h2>
-            <p>{strings.taskNewSubtitle}</p>
+          <div className="min-w-0 flex-1">
+            <h2 className="m-0 text-xl font-bold text-primary">{strings.taskNew}</h2>
+            <p className="mt-0.5 text-sm text-secondary">{strings.taskNewSubtitle}</p>
           </div>
-          <button type="button" className={styles.ntClose} onClick={onClose} aria-label={strings.taskCancel}>
+          <button type="button" className="shrink-0 rounded-lg p-2 text-tertiary hover:bg-raised hover:text-primary" onClick={onClose} aria-label={strings.taskCancel}>
             <X size={18} />
           </button>
         </div>
 
-        <div className={styles.ntBody}>
-          <label className={styles.ntField}>
-            <span className={styles.ntLabel}>
-              {strings.taskColName} <span className={styles.ntReq}>*</span>
+        <div className="flex min-h-0 flex-col gap-5 overflow-y-auto px-6 py-5">
+          <label className="flex min-w-0 flex-col gap-1.5">
+            <span className={labelClass}>
+              {strings.taskColName} <span className="text-danger">*</span>
             </span>
             <input
-              className={styles.ntTitle}
+              className={fieldClass}
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={strings.taskNamePlaceholder}
@@ -128,12 +130,12 @@ export function NewTaskModal({ projects, defaultProjectId, defaultStatus, defaul
             />
           </label>
 
-          <div className={styles.ntTwoCol}>
-            <label className={styles.ntField}>
-              <span className={styles.ntLabel}>{strings.taskColProject}</span>
-              <span className={styles.ntControl}>
-                <FolderClosed size={16} className={styles.ntControlIcon} />
-                <select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <label className="flex min-w-0 flex-col gap-1.5">
+              <span className={labelClass}>{strings.taskColProject}</span>
+              <span className="flex h-11 min-w-0 items-center gap-2 rounded-lg border border-default bg-surface px-3 focus-within:border-accent focus-within:ring-3 focus-within:ring-accent/15">
+                <FolderClosed size={16} className="shrink-0 text-tertiary" />
+                <select className="min-w-0 flex-1 bg-transparent text-primary outline-none" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
                   {projects.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
@@ -142,11 +144,12 @@ export function NewTaskModal({ projects, defaultProjectId, defaultStatus, defaul
                 </select>
               </span>
             </label>
-            <label className={styles.ntField}>
-              <span className={styles.ntLabel}>{strings.taskColAssignee}</span>
-              <span className={styles.ntControl}>
-                <User size={16} className={styles.ntControlIcon} />
+            <label className="flex min-w-0 flex-col gap-1.5">
+              <span className={labelClass}>{strings.taskColAssignee}</span>
+              <span className="flex h-11 min-w-0 items-center gap-2 rounded-lg border border-default bg-surface px-3 focus-within:border-accent focus-within:ring-3 focus-within:ring-accent/15">
+                <User size={16} className="shrink-0 text-tertiary" />
                 <input
+                  className="min-w-0 flex-1 bg-transparent text-primary outline-none placeholder:text-tertiary"
                   value={assignee}
                   onChange={(e) => setAssignee(e.target.value)}
                   placeholder={strings.taskAssigneePlaceholder}
@@ -159,23 +162,22 @@ export function NewTaskModal({ projects, defaultProjectId, defaultStatus, defaul
             </label>
           </div>
 
-          <div className={styles.ntTwoCol}>
-            <div className={styles.ntField}>
-              <span className={styles.ntLabel}>{strings.taskColDue}</span>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <span className={labelClass}>{strings.taskColDue}</span>
               <DatePicker value={dueDate} onChange={setDueDate} placeholder={strings.taskColDue} />
             </div>
-            <div className={styles.ntField}>
-              <span className={styles.ntLabel}>{strings.taskColPriority}</span>
-              <div className={styles.ntPrios}>
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <span className={labelClass}>{strings.taskColPriority}</span>
+              <div className="grid grid-cols-3 gap-2">
                 {PRIOS.map((p) => (
                   <button
                     key={p.key}
                     type="button"
-                    className={`${styles.ntPrio} ${priority === p.key ? styles.ntPrioOn : ""}`}
-                    data-prio={p.key}
+                    className={`inline-flex h-11 items-center justify-center gap-1.5 rounded-lg border bg-surface px-3 text-sm font-medium transition-colors hover:bg-raised ${priority === p.key ? p.active : "border-default text-secondary"}`}
                     onClick={() => setPriority((cur) => (cur === p.key ? "none" : p.key))}
                   >
-                    <span className={`${styles.prioDot} ${styles[p.cls] ?? ""}`} aria-hidden />
+                    <span className={`size-2 rounded-full ${p.dot}`} aria-hidden />
                     {prioLabel(p.key)}
                   </button>
                 ))}
@@ -183,10 +185,10 @@ export function NewTaskModal({ projects, defaultProjectId, defaultStatus, defaul
             </div>
           </div>
 
-          <label className={styles.ntField}>
-            <span className={styles.ntLabel}>{strings.taskDescription}</span>
+          <label className="flex min-w-0 flex-col gap-1.5">
+            <span className={labelClass}>{strings.taskDescription}</span>
             <textarea
-              className={styles.ntTextarea}
+              className={`${fieldClass} min-h-24 resize-y`}
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -194,11 +196,12 @@ export function NewTaskModal({ projects, defaultProjectId, defaultStatus, defaul
             />
           </label>
 
-          <div className={styles.ntField}>
-            <span className={styles.ntLabel}>{strings.taskSubtasks}</span>
+          <div className="flex min-w-0 flex-col gap-2">
+            <span className={labelClass}>{strings.taskSubtasks}</span>
             {subtasks.map((st, i) => (
-              <span key={i} className={styles.ntSubtask}>
+              <span key={i} className="flex items-center gap-2">
                 <input
+                  className="min-w-0 flex-1 rounded-lg border border-default bg-surface px-3 py-2.5 text-primary outline-none placeholder:text-tertiary focus:border-accent"
                   value={st}
                   onChange={(e) =>
                     setSubtasks((cur) => cur.map((v, j) => (j === i ? e.target.value : v)))
@@ -208,7 +211,7 @@ export function NewTaskModal({ projects, defaultProjectId, defaultStatus, defaul
                 />
                 <button
                   type="button"
-                  className={styles.ntSubDel}
+                  className="shrink-0 rounded-lg p-2 text-tertiary hover:bg-raised hover:text-danger"
                   onClick={() => setSubtasks((cur) => cur.filter((_, j) => j !== i))}
                   aria-label={strings.taskDelete}
                 >
@@ -218,19 +221,19 @@ export function NewTaskModal({ projects, defaultProjectId, defaultStatus, defaul
             ))}
             <button
               type="button"
-              className={styles.ntAdd}
+              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-default bg-surface px-4 text-sm font-semibold text-accent hover:bg-raised"
               onClick={() => setSubtasks((cur) => [...cur, ""])}
             >
               <Plus size={16} /> {strings.taskAddSubtask}
             </button>
           </div>
 
-          <div className={styles.ntField}>
-            <span className={styles.ntLabel}>{strings.taskAttachments}</span>
-            <div className={styles.ntAttachmentActions}>
+          <div className="flex min-w-0 flex-col gap-2">
+            <span className={labelClass}>{strings.taskAttachments}</span>
+            <div className="flex flex-wrap gap-2">
               <input
                 ref={fileRef}
-                className={styles.visuallyHidden}
+                className="sr-only"
                 type="file"
                 multiple
                 onChange={(event) => {
@@ -240,25 +243,25 @@ export function NewTaskModal({ projects, defaultProjectId, defaultStatus, defaul
                   event.target.value = "";
                 }}
               />
-              <button type="button" className={styles.ntAttachmentButton} onClick={() => fileRef.current?.click()}>
+              <button type="button" className="inline-flex h-10 items-center gap-2 rounded-lg bg-raised px-4 text-sm font-medium text-primary hover:bg-accent-tint" onClick={() => fileRef.current?.click()}>
                 <Upload size={16} /> {strings.taskAddAttachment}
               </button>
-              <button type="button" className={styles.ntAttachmentButton} onClick={() => setDriveOpen(true)}>
+              <button type="button" className="inline-flex h-10 items-center gap-2 rounded-lg bg-raised px-4 text-sm font-medium text-primary hover:bg-accent-tint" onClick={() => setDriveOpen(true)}>
                 <HardDrive size={16} /> {strings.taskChooseFromDrive}
               </button>
             </div>
             {(deviceFiles.length > 0 || driveFiles.length > 0) && (
-              <div className={styles.ntAttachmentList}>
+              <div className="flex flex-wrap gap-2">
                 {deviceFiles.map((file, index) => (
-                  <span key={`${file.name}-${index}`} className={styles.ntAttachmentChip}>
-                    <Paperclip size={14} /><span>{file.name}</span>
-                    <button type="button" onClick={() => setDeviceFiles((current) => current.filter((_, i) => i !== index))} aria-label={strings.taskDelete}><X size={13} /></button>
+                  <span key={`${file.name}-${index}`} className="inline-flex min-w-0 items-center gap-1.5 rounded-full bg-raised px-3 py-1.5 text-sm text-secondary">
+                    <Paperclip size={14} className="shrink-0" /><span className="max-w-48 truncate">{file.name}</span>
+                    <button className="rounded-full p-0.5 hover:bg-surface hover:text-danger" type="button" onClick={() => setDeviceFiles((current) => current.filter((_, i) => i !== index))} aria-label={strings.taskDelete}><X size={13} /></button>
                   </span>
                 ))}
                 {driveFiles.map((file) => (
-                  <span key={file.id} className={styles.ntAttachmentChip}>
-                    <HardDrive size={14} /><span>{file.name}</span>
-                    <button type="button" onClick={() => setDriveFiles((current) => current.filter((item) => item.id !== file.id))} aria-label={strings.taskDelete}><X size={13} /></button>
+                  <span key={file.id} className="inline-flex min-w-0 items-center gap-1.5 rounded-full bg-raised px-3 py-1.5 text-sm text-secondary">
+                    <HardDrive size={14} className="shrink-0" /><span className="max-w-48 truncate">{file.name}</span>
+                    <button className="rounded-full p-0.5 hover:bg-surface hover:text-danger" type="button" onClick={() => setDriveFiles((current) => current.filter((item) => item.id !== file.id))} aria-label={strings.taskDelete}><X size={13} /></button>
                   </span>
                 ))}
               </div>
@@ -266,8 +269,8 @@ export function NewTaskModal({ projects, defaultProjectId, defaultStatus, defaul
           </div>
         </div>
 
-        <div className={styles.ntFooter}>
-          <label className={styles.ntAnother}>
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-subtle px-6 py-4">
+          <label className="inline-flex items-center gap-2 text-sm text-secondary">
             <input
               type="checkbox"
               checked={createAnother}
@@ -275,13 +278,13 @@ export function NewTaskModal({ projects, defaultProjectId, defaultStatus, defaul
             />
             {strings.taskCreateAnother}
           </label>
-          <div className={styles.ntFooterRight}>
-            <button type="button" className={styles.ntCancel} onClick={onClose} disabled={busy}>
+          <div className="flex items-center gap-2">
+            <button type="button" className="h-11 rounded-lg bg-raised px-5 text-base font-medium text-primary hover:bg-accent-tint disabled:opacity-60" onClick={onClose} disabled={busy}>
               {strings.taskCancel}
             </button>
             <Button
               type="submit"
-              className={styles.ntCreate}
+              className="h-11 min-w-36 px-5 font-semibold disabled:opacity-60 [&_svg]:shrink-0"
               disabled={busy || name.trim() === "" || projectId === ""}
               icon={busy ? <LoaderCircle size={16} /> : <Plus size={16} />}
             >
