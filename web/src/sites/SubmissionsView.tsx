@@ -27,7 +27,6 @@ import { funnelMoney } from "./funnelReading";
 import { HandoffDialog } from "./HandoffDialog";
 import { EmptyState, ErrorBanner } from "./parts";
 import type { SiteDetail, SiteLeadLink, SiteSubmission } from "./types";
-import styles from "./SitesModule.module.css";
 
 const received = new Intl.DateTimeFormat(undefined, {
   dateStyle: "medium",
@@ -111,7 +110,8 @@ export function SubmissionsView() {
     () => new Map(leads.map((link) => [link.submissionId, link])),
     [leads],
   );
-  const selectedLead = selected === null ? undefined : leadBySubmission.get(selected.id);
+  const selectedLead =
+    selected === null ? undefined : leadBySubmission.get(selected.id);
 
   /** Unclaims the opportunity for this website. The opportunity itself stays
    *  on the board untouched — this undoes the link, not somebody's sale. */
@@ -176,19 +176,28 @@ export function SubmissionsView() {
   }
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <Link to=".." relative="path" className={styles.backLink}>
-          <ArrowLeft size={16} aria-hidden="true" />
-          {strings.sitesBackToSite}
-        </Link>
-        <div className={styles.siteHead}>
-          <h1 className={styles.title}>{strings.sitesSubmissions}</h1>
-          {site !== null && (
-            <span className={styles.submissionSiteName}>{site.name}</span>
-          )}
+    <div className="mx-auto flex w-full max-w-[90rem] flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
+      <header className="flex flex-col gap-4 rounded-2xl border border-subtle bg-surface px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-4">
+          <Link
+            to=".."
+            relative="path"
+            className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-secondary no-underline transition-colors hover:bg-app hover:text-primary"
+          >
+            <ArrowLeft size={16} aria-hidden="true" />
+            {strings.sitesBackToSite}
+          </Link>
+          <span className="h-8 w-px bg-subtle" aria-hidden="true" />
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold tracking-tight text-primary">
+              {strings.sitesSubmissions}
+            </h1>
+            {site !== null && (
+              <p className="truncate text-sm text-secondary">{site.name}</p>
+            )}
+          </div>
         </div>
-        <div className={styles.headerActions}>
+        <div className="flex items-center gap-3 self-end sm:self-auto">
           {loading && <Spinner size={16} />}
           <Button
             variant="secondary"
@@ -206,7 +215,11 @@ export function SubmissionsView() {
 
       {error !== null && <ErrorBanner message={error} />}
 
-      {!loading && submissions.length === 0 ? (
+      {loading ? (
+        <div className="flex min-h-[24rem] items-center justify-center rounded-2xl border border-subtle bg-surface">
+          <Spinner size={24} />
+        </div>
+      ) : submissions.length === 0 ? (
         <EmptyState
           Icon={Inbox}
           title={strings.sitesNoSubmissionsTitle}
@@ -215,43 +228,50 @@ export function SubmissionsView() {
           onCta={() => navigate(`/sites/${encodeURIComponent(siteId)}`)}
         />
       ) : (
-        <div className={styles.submissionsLayout}>
+        <div className="grid min-h-[34rem] overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm lg:grid-cols-[21rem_minmax(0,1fr)]">
           <section
-            className={styles.submissionList}
+            className="border-b border-subtle bg-app/35 p-2 lg:border-b-0 lg:border-r"
             aria-label={strings.sitesSubmissionList}
           >
             {submissions.map((submission) => (
               <button
                 type="button"
                 key={submission.id}
-                className={`${styles.submissionRow} ${
+                className={`mb-1 flex w-full flex-col gap-1 rounded-xl border px-4 py-3 text-left transition-colors ${
                   selectedId === submission.id
-                    ? styles.submissionRowSelected
-                    : ""
+                    ? "border-accent/25 bg-accent-soft text-primary shadow-sm"
+                    : "border-transparent bg-transparent text-primary hover:border-subtle hover:bg-surface"
                 }`}
                 onClick={() => setSelectedId(submission.id)}
                 aria-pressed={selectedId === submission.id}
               >
-                <span className={styles.submissionRowTop}>
-                  <strong>{submission.senderName}</strong>
-                  <time dateTime={submission.receivedAt}>
+                <span className="flex min-w-0 items-center justify-between gap-3">
+                  <strong className="truncate text-sm font-semibold">
+                    {submission.senderName}
+                  </strong>
+                  <time
+                    className="shrink-0 text-xs text-muted"
+                    dateTime={submission.receivedAt}
+                  >
                     {received.format(new Date(submission.receivedAt))}
                   </time>
                 </span>
-                <span className={styles.submissionEmail}>
+                <span className="truncate text-sm text-secondary">
                   {submission.senderEmail}
                 </span>
-                <span className={styles.submissionRowBottom}>
-                  <span>{submission.formName}</span>
+                <span className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
+                  <span className="truncate">{submission.formName}</span>
                   {leadBySubmission.has(submission.id) && (
-                    <span className={styles.submissionLeadChip}>
+                    <span className="rounded-full bg-surface px-2 py-1 font-medium text-secondary ring-1 ring-inset ring-subtle">
                       {strings.sitesInSales}
                     </span>
                   )}
                   <span
-                    className={
-                      submission.handled ? styles.handled : styles.open
-                    }
+                    className={`ml-auto rounded-full px-2 py-1 font-semibold ${
+                      submission.handled
+                        ? "bg-neutral-soft text-secondary"
+                        : "bg-accent-soft text-accent"
+                    }`}
                   >
                     {submission.handled
                       ? strings.sitesHandled
@@ -264,13 +284,18 @@ export function SubmissionsView() {
 
           {selected !== null && (
             <article
-              className={styles.submissionDetail}
+              className="flex min-w-0 flex-col p-5 sm:p-7 lg:p-8"
               aria-label={strings.sitesSubmissionDetail}
             >
-              <header className={styles.submissionDetailHead}>
-                <div>
-                  <h2>{selected.senderName}</h2>
-                  <a href={`mailto:${selected.senderEmail}`}>
+              <header className="flex flex-col gap-4 border-b border-subtle pb-5 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <h2 className="truncate text-2xl font-bold tracking-tight text-primary">
+                    {selected.senderName}
+                  </h2>
+                  <a
+                    className="mt-1 inline-block truncate text-sm text-secondary no-underline hover:text-accent"
+                    href={`mailto:${selected.senderEmail}`}
+                  >
                     {selected.senderEmail}
                   </a>
                 </div>
@@ -292,28 +317,42 @@ export function SubmissionsView() {
                     : strings.sitesMarkHandled}
                 </Button>
               </header>
-              <dl className={styles.submissionMeta}>
-                <div>
-                  <dt>{strings.sitesForm}</dt>
-                  <dd>{selected.formName}</dd>
+              <dl className="grid gap-3 py-5 sm:grid-cols-2">
+                <div className="rounded-xl bg-app px-4 py-3">
+                  <dt className="text-xs font-semibold uppercase tracking-wide text-muted">
+                    {strings.sitesForm}
+                  </dt>
+                  <dd className="mt-1 text-sm font-medium text-primary">
+                    {selected.formName}
+                  </dd>
                 </div>
-                <div>
-                  <dt>{strings.sitesReceived}</dt>
-                  <dd>{received.format(new Date(selected.receivedAt))}</dd>
+                <div className="rounded-xl bg-app px-4 py-3">
+                  <dt className="text-xs font-semibold uppercase tracking-wide text-muted">
+                    {strings.sitesReceived}
+                  </dt>
+                  <dd className="mt-1 text-sm font-medium text-primary">
+                    {received.format(new Date(selected.receivedAt))}
+                  </dd>
                 </div>
               </dl>
-              <p className={styles.submissionMessage}>{selected.message}</p>
+              <p className="min-h-32 whitespace-pre-wrap break-words rounded-2xl border border-subtle bg-surface px-5 py-4 text-base leading-7 text-primary">
+                {selected.message}
+              </p>
 
               {salesVisible && (
                 <section
-                  className={styles.submissionSales}
+                  className="mt-auto flex flex-col gap-4 border-t border-subtle pt-6 sm:flex-row sm:items-center sm:justify-between"
                   aria-label={strings.sitesHandoffSection}
                 >
                   {selectedLead === undefined ? (
                     <>
-                      <div className={styles.submissionSalesText}>
-                        <strong>{strings.sitesHandoffSection}</strong>
-                        <p>{strings.sitesHandoffInvite}</p>
+                      <div className="min-w-0">
+                        <strong className="text-sm font-semibold text-primary">
+                          {strings.sitesHandoffSection}
+                        </strong>
+                        <p className="mt-1 text-sm text-secondary">
+                          {strings.sitesHandoffInvite}
+                        </p>
                       </div>
                       <Button
                         variant="secondary"
@@ -326,11 +365,13 @@ export function SubmissionsView() {
                     </>
                   ) : (
                     <>
-                      <div className={styles.submissionSalesText}>
+                      <div className="min-w-0">
                         {/* The opportunity as CRM holds it right now — this
                             screen keeps no copy of a title or a value. */}
-                        <strong>{selectedLead.deal.title}</strong>
-                        <p>
+                        <strong className="block truncate text-sm font-semibold text-primary">
+                          {selectedLead.deal.title}
+                        </strong>
+                        <p className="mt-1 text-sm text-secondary">
                           {strings.sitesLeadStanding(
                             dealState(selectedLead.deal.state),
                             funnelMoney(
