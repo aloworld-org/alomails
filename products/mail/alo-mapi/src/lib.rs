@@ -17,6 +17,7 @@
 //! translator over the one store ([ADR 0001](../../../docs/decisions/0001-jmap-native-core.md));
 //! a second source of truth is how this becomes unmaintainable.
 
+pub mod columns;
 pub mod connect;
 pub mod direct2;
 pub mod dispatch;

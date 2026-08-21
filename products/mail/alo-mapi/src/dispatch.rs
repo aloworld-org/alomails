@@ -19,6 +19,9 @@
 //! and act on it. A short answer is recoverable; acting on a misread request is
 //! not.
 
+use crate::columns::{
+    PropertyTag, ROP_SET_COLUMNS, SetColumnsRequest, success_body as set_columns_success,
+};
 use crate::hierarchy::{
     HierarchyTableRequest, ROP_GET_HIERARCHY_TABLE, children,
     success_body as hierarchy_table_success,
@@ -76,6 +79,12 @@ pub enum ServerObject {
     HierarchyTable {
         /// The folder whose children this table lists.
         folder: SpecialFolder,
+        /// The columns every row of this table will carry, in order.
+        ///
+        /// Empty until a `RopSetColumns` names them. A row's values are matched
+        /// to properties **by position** against this list, so it is the
+        /// table's schema rather than a preference.
+        columns: Vec<PropertyTag>,
     },
 }
 
@@ -129,6 +138,14 @@ impl ObjectTable {
         self.next = self.next.saturating_add(1);
         self.objects.push((handle, object));
         handle
+    }
+
+    /// The object a handle names, mutably, if this session has one.
+    pub fn get_mut(&mut self, handle: u32) -> Option<&mut ServerObject> {
+        self.objects
+            .iter_mut()
+            .find(|(stored, _)| *stored == handle)
+            .map(|(_, object)| object)
     }
 
     /// The object a handle names, if this session has one.
@@ -407,7 +424,10 @@ pub fn dispatch(
                 };
                 let folder = *folder;
 
-                let handle = objects.insert(ServerObject::HierarchyTable { folder });
+                let handle = objects.insert(ServerObject::HierarchyTable {
+                    folder,
+                    columns: Vec::new(),
+                });
                 let index = usize::from(request.output_handle_index);
                 if handles.len() <= index {
                     handles.resize(index + 1, crate::rop::HANDLE_UNSET);
@@ -416,6 +436,50 @@ pub fn dispatch(
 
                 let rows = u32::try_from(children(folder).len()).unwrap_or(0);
                 responses.extend(hierarchy_table_success(request.output_handle_index, rows));
+            }
+
+            ROP_SET_COLUMNS => {
+                let Ok((request, tail)) = SetColumnsRequest::parse(rest) else {
+                    responses.extend(failure(
+                        ROP_SET_COLUMNS,
+                        header.input_handle_index,
+                        error::INVALID_OBJECT,
+                    ));
+                    return Dispatched {
+                        responses,
+                        handles,
+                        complete: false,
+                    };
+                };
+                rest = tail;
+
+                // Columns are set **on a table**. A folder or a logon is not
+                // one, and configuring the wrong kind of object is refused
+                // rather than quietly ignored — a client that believed its
+                // columns were set would misread every row that followed.
+                let handle = handles
+                    .get(usize::from(request.input_handle_index))
+                    .copied()
+                    .filter(|handle| *handle != crate::rop::HANDLE_UNSET);
+                let is_table = handle
+                    .and_then(|handle| objects.get(handle))
+                    .is_some_and(|object| matches!(object, ServerObject::HierarchyTable { .. }));
+                if !is_table {
+                    responses.extend(failure(
+                        ROP_SET_COLUMNS,
+                        request.input_handle_index,
+                        error::INVALID_OBJECT,
+                    ));
+                    continue;
+                }
+
+                if let Some(handle) = handle
+                    && let Some(ServerObject::HierarchyTable { columns, .. }) =
+                        objects.get_mut(handle)
+                {
+                    columns.clone_from(&request.columns);
+                }
+                responses.extend(set_columns_success(request.input_handle_index));
             }
 
             // An operation we do not implement. We answer it honestly and stop:
@@ -635,7 +699,10 @@ mod tests {
         assert_eq!(
             objects.get(out.handles[2]),
             Some(&ServerObject::HierarchyTable {
-                folder: SpecialFolder::IpmSubtree
+                folder: SpecialFolder::IpmSubtree,
+                // No columns yet: a table starts without a schema, and the
+                // rows it could return are undefined until one is set.
+                columns: Vec::new(),
             })
         );
     }
@@ -688,6 +755,92 @@ mod tests {
             "an empty folder is not an error"
         );
         assert_eq!(u32::from_le_bytes(table[6..10].try_into().unwrap()), 0);
+    }
+
+    /// A `RopSetColumns` on the table at handle index 2.
+    fn set_columns_rop(tags: &[PropertyTag]) -> Vec<u8> {
+        let mut out = vec![ROP_SET_COLUMNS, 0x00, 0x02, 0x00];
+        out.extend_from_slice(&u16::try_from(tags.len()).unwrap().to_le_bytes());
+        for tag in tags {
+            out.extend_from_slice(&tag.to_bytes());
+        }
+        out
+    }
+
+    /// The full chain a client performs before it can read a folder tree:
+    /// log on, open the subtree, take its hierarchy table, and tell the table
+    /// which columns its rows will carry — four operations, one buffer.
+    #[test]
+    fn a_client_can_set_the_columns_of_a_hierarchy_table() {
+        let ctx = context("disan@alo.test");
+        let mut objects = ObjectTable::new();
+        let wanted = [
+            PropertyTag {
+                property_type: 0x001F,
+                property_id: 0x3001,
+            },
+            PropertyTag {
+                property_type: 0x0003,
+                property_id: 0x3602,
+            },
+        ];
+
+        let mut rops = logon_buffer("", LOGON_PRIVATE, 0).rops;
+        rops.extend(open_folder_rop(fid_of(SpecialFolder::IpmSubtree)));
+        rops.extend(hierarchy_rop());
+        rops.extend(set_columns_rop(&wanted));
+        let buffer = RopBuffer {
+            rops,
+            handles: vec![crate::rop::HANDLE_UNSET; 3],
+        };
+
+        let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+        assert!(out.complete, "the walk stopped early");
+        assert_eq!(out.responses.len(), 166 + 8 + 10 + 7);
+
+        let set = &out.responses[184..];
+        assert_eq!(set[0], ROP_SET_COLUMNS);
+        assert_eq!(
+            u32::from_le_bytes(set[2..6].try_into().unwrap()),
+            error::SUCCESS
+        );
+
+        // The table remembers them, in order — it is the schema of every row.
+        assert_eq!(
+            objects.get(out.handles[2]),
+            Some(&ServerObject::HierarchyTable {
+                folder: SpecialFolder::IpmSubtree,
+                columns: wanted.to_vec(),
+            })
+        );
+    }
+
+    /// Columns are set on a table. A **folder** is not one, and configuring
+    /// the wrong kind of object is refused rather than quietly ignored — a
+    /// client that believed its columns were set would misread every row.
+    #[test]
+    fn columns_cannot_be_set_on_a_folder() {
+        let ctx = context("disan@alo.test");
+        let mut objects = ObjectTable::new();
+
+        let mut rops = logon_buffer("", LOGON_PRIVATE, 0).rops;
+        rops.extend(open_folder_rop(fid_of(SpecialFolder::IpmSubtree)));
+        // Index 1 is the folder, not a table.
+        let mut set = vec![ROP_SET_COLUMNS, 0x00, 0x01, 0x00];
+        set.extend_from_slice(&0u16.to_le_bytes());
+        rops.extend(set);
+        let buffer = RopBuffer {
+            rops,
+            handles: vec![crate::rop::HANDLE_UNSET; 3],
+        };
+
+        let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+        let response = &out.responses[174..];
+        assert_eq!(response.len(), 6, "a failure response");
+        assert_eq!(
+            u32::from_le_bytes(response[2..6].try_into().unwrap()),
+            error::INVALID_OBJECT
+        );
     }
 
     #[test]
