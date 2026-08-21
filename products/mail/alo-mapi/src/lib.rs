@@ -23,6 +23,7 @@ pub mod dispatch;
 pub mod execute;
 pub mod logon;
 pub mod logon_response;
+pub mod openfolder;
 pub mod response;
 pub mod rop;
 pub mod router;
