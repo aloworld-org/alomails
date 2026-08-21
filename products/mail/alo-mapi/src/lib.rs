@@ -29,6 +29,7 @@ pub mod openfolder;
 pub mod response;
 pub mod rop;
 pub mod router;
+pub mod rows;
 pub mod rpc;
 pub mod session;
 

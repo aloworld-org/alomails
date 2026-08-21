@@ -23,7 +23,7 @@ use crate::columns::{
     PropertyTag, ROP_SET_COLUMNS, SetColumnsRequest, success_body as set_columns_success,
 };
 use crate::hierarchy::{
-    HierarchyTableRequest, ROP_GET_HIERARCHY_TABLE, children,
+    HierarchyTableRequest, ROP_GET_HIERARCHY_TABLE, children, display_name,
     success_body as hierarchy_table_success,
 };
 use crate::logon::LogonRequest;
@@ -33,6 +33,10 @@ use crate::logon_response::{
 };
 use crate::openfolder::{OpenFolderRequest, ROP_OPEN_FOLDER, success_body as open_folder_success};
 use crate::rop::{RopBuffer, RopHeader};
+use crate::rows::{
+    ORIGIN_BEGINNING, ORIGIN_END, QueryRowsRequest, ROP_QUERY_ROWS, Value, pid, standard_row,
+    success_body as query_rows_success,
+};
 use crate::session::SessionContext;
 
 /// Error codes as they travel in ROP responses ([MS-OXCDATA] §2.4).
@@ -85,6 +89,11 @@ pub enum ServerObject {
         /// to properties **by position** against this list, so it is the
         /// table's schema rather than a preference.
         columns: Vec<PropertyTag>,
+        /// How many rows the client has already read.
+        ///
+        /// A table has a cursor, and `RopQueryRows` advances it: a client that
+        /// asks twice gets the next rows, not the same ones again.
+        cursor: usize,
     },
 }
 
@@ -427,6 +436,7 @@ pub fn dispatch(
                 let handle = objects.insert(ServerObject::HierarchyTable {
                     folder,
                     columns: Vec::new(),
+                    cursor: 0,
                 });
                 let index = usize::from(request.output_handle_index);
                 if handles.len() <= index {
@@ -480,6 +490,115 @@ pub fn dispatch(
                     columns.clone_from(&request.columns);
                 }
                 responses.extend(set_columns_success(request.input_handle_index));
+            }
+
+            ROP_QUERY_ROWS => {
+                let Ok((request, tail)) = QueryRowsRequest::parse(rest) else {
+                    responses.extend(failure(
+                        ROP_QUERY_ROWS,
+                        header.input_handle_index,
+                        error::INVALID_OBJECT,
+                    ));
+                    return Dispatched {
+                        responses,
+                        handles,
+                        complete: false,
+                    };
+                };
+                rest = tail;
+
+                let handle = handles
+                    .get(usize::from(request.input_handle_index))
+                    .copied()
+                    .filter(|handle| *handle != crate::rop::HANDLE_UNSET);
+                let Some(ServerObject::HierarchyTable {
+                    folder,
+                    columns,
+                    cursor,
+                }) = handle.and_then(|handle| objects.get(handle))
+                else {
+                    responses.extend(failure(
+                        ROP_QUERY_ROWS,
+                        request.input_handle_index,
+                        error::INVALID_OBJECT,
+                    ));
+                    continue;
+                };
+                let (folder, columns, cursor) = (*folder, columns.clone(), *cursor);
+
+                let all = children(folder);
+                // Read forwards from the cursor, bounded by what the client
+                // asked for and by our own ceiling — a row is variable-sized,
+                // so the count is the bound that can be applied before any of
+                // them is built.
+                let wanted = usize::from(request.row_count.min(crate::rows::MAX_ROWS));
+                let taken: Vec<SpecialFolder> = if request.forward_read {
+                    all.iter().skip(cursor).take(wanted).copied().collect()
+                } else {
+                    // Backward reads are not served yet. An empty answer at the
+                    // end of the table is a truthful "nothing further this
+                    // way", not a claim that the folder is empty.
+                    Vec::new()
+                };
+
+                let mut rows = Vec::with_capacity(taken.len());
+                let mut refused = false;
+                for child in &taken {
+                    let child = *child;
+                    let answer = move |tag: PropertyTag| -> Option<Value> {
+                        match tag.property_id {
+                            pid::DISPLAY_NAME => {
+                                Some(Value::String(display_name(child).to_owned()))
+                            }
+                            pid::FOLDER_ID => Fid::new(REPLICA_ID, child.slot() as u64 + 1)
+                                .map(|fid| Value::Integer64(u64::from_le_bytes(fid.to_bytes()))),
+                            pid::SUBFOLDERS => Some(Value::Boolean(!children(child).is_empty())),
+                            // Message counts come from the store, which this
+                            // stage does not read. Answered as absent rather
+                            // than as zero: "no messages" is a claim, and one
+                            // we have not checked.
+                            _ => None,
+                        }
+                    };
+                    match standard_row(&columns, &answer) {
+                        Some(row) => rows.push(row),
+                        None => {
+                            refused = true;
+                            break;
+                        }
+                    }
+                }
+
+                // A column we cannot answer makes this not a standard row, and
+                // flagged rows are a later stage. Refusing is honest; filling
+                // the gap with a zero would be a value the client believes.
+                if refused {
+                    responses.extend(failure(
+                        ROP_QUERY_ROWS,
+                        request.input_handle_index,
+                        error::NOT_IMPLEMENTED,
+                    ));
+                    continue;
+                }
+
+                let advanced = cursor + rows.len();
+                if let Some(handle) = handle
+                    && let Some(ServerObject::HierarchyTable { cursor, .. }) =
+                        objects.get_mut(handle)
+                {
+                    *cursor = advanced;
+                }
+
+                let origin = if advanced >= all.len() {
+                    ORIGIN_END
+                } else {
+                    ORIGIN_BEGINNING
+                };
+                responses.extend(query_rows_success(
+                    request.input_handle_index,
+                    origin,
+                    &rows,
+                ));
             }
 
             // An operation we do not implement. We answer it honestly and stop:
@@ -703,6 +822,7 @@ mod tests {
                 // No columns yet: a table starts without a schema, and the
                 // rows it could return are undefined until one is set.
                 columns: Vec::new(),
+                cursor: 0,
             })
         );
     }
@@ -811,6 +931,7 @@ mod tests {
             Some(&ServerObject::HierarchyTable {
                 folder: SpecialFolder::IpmSubtree,
                 columns: wanted.to_vec(),
+                cursor: 0,
             })
         );
     }
@@ -840,6 +961,158 @@ mod tests {
         assert_eq!(
             u32::from_le_bytes(response[2..6].try_into().unwrap()),
             error::INVALID_OBJECT
+        );
+    }
+
+    /// A `RopQueryRows` on the table at index 2.
+    fn query_rows_rop(count: u16) -> Vec<u8> {
+        let mut out = vec![ROP_QUERY_ROWS, 0x00, 0x02, 0x00, 0x01];
+        out.extend_from_slice(&count.to_le_bytes());
+        out
+    }
+
+    /// **The whole of stage 3 in one buffer**: log on, open the subtree, take
+    /// its hierarchy table, set the columns, and read the rows. This is what
+    /// Outlook does to draw a folder tree.
+    #[test]
+    fn a_client_can_read_a_folder_tree_in_one_buffer() {
+        let ctx = context("disan@alo.test");
+        let mut objects = ObjectTable::new();
+        let name = PropertyTag {
+            property_type: crate::rows::ptyp::STRING,
+            property_id: pid::DISPLAY_NAME,
+        };
+        let id = PropertyTag {
+            property_type: crate::rows::ptyp::INTEGER64,
+            property_id: pid::FOLDER_ID,
+        };
+
+        let mut rops = logon_buffer("", LOGON_PRIVATE, 0).rops;
+        rops.extend(open_folder_rop(fid_of(SpecialFolder::IpmSubtree)));
+        rops.extend(hierarchy_rop());
+        rops.extend(set_columns_rop(&[name, id]));
+        rops.extend(query_rows_rop(50));
+        let buffer = RopBuffer {
+            rops,
+            handles: vec![crate::rop::HANDLE_UNSET; 3],
+        };
+
+        let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+        assert!(out.complete, "the walk stopped early");
+
+        let query = &out.responses[191..];
+        assert_eq!(query[0], ROP_QUERY_ROWS);
+        assert_eq!(
+            u32::from_le_bytes(query[2..6].try_into().unwrap()),
+            error::SUCCESS
+        );
+        assert_eq!(query[6], ORIGIN_END, "the whole table was read");
+        assert_eq!(
+            u16::from_le_bytes(query[7..9].try_into().unwrap()),
+            4,
+            "Inbox, Outbox, Sent Items, Deleted Items"
+        );
+
+        // The first row: flag byte, then "Inbox" in UTF-16LE, then its id.
+        let rows = &query[9..];
+        assert_eq!(rows[0], 0x00, "a standard row");
+        let expected_name: Vec<u8> = "Inbox"
+            .encode_utf16()
+            .flat_map(u16::to_le_bytes)
+            .chain([0, 0])
+            .collect();
+        assert_eq!(&rows[1..1 + expected_name.len()], &expected_name[..]);
+        let at = 1 + expected_name.len();
+        assert_eq!(
+            u64::from_le_bytes(rows[at..at + 8].try_into().unwrap()),
+            fid_of(SpecialFolder::Inbox),
+            "the id a client would use to open the Inbox"
+        );
+    }
+
+    /// The cursor advances: asking twice returns the next rows, not the same
+    /// ones. A table that reset every read would loop a client forever.
+    #[test]
+    fn reading_twice_advances_the_cursor() {
+        let ctx = context("disan@alo.test");
+        let mut objects = ObjectTable::new();
+        let name = PropertyTag {
+            property_type: crate::rows::ptyp::STRING,
+            property_id: pid::DISPLAY_NAME,
+        };
+
+        let mut rops = logon_buffer("", LOGON_PRIVATE, 0).rops;
+        rops.extend(open_folder_rop(fid_of(SpecialFolder::IpmSubtree)));
+        rops.extend(hierarchy_rop());
+        rops.extend(set_columns_rop(&[name]));
+        rops.extend(query_rows_rop(2));
+        rops.extend(query_rows_rop(2));
+        rops.extend(query_rows_rop(2));
+        let buffer = RopBuffer {
+            rops,
+            handles: vec![crate::rop::HANDLE_UNSET; 3],
+        };
+
+        let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+        assert!(out.complete);
+
+        // Walk the three query responses, counting rows and reading names.
+        let mut at = 191;
+        let mut names = Vec::new();
+        for expected in [2u16, 2, 0] {
+            let query = &out.responses[at..];
+            let count = u16::from_le_bytes(query[7..9].try_into().unwrap());
+            assert_eq!(count, expected, "row count at offset {at}");
+            let mut cursor = 9;
+            for _ in 0..count {
+                cursor += 1; // the flag byte
+                let start = cursor;
+                while query[cursor] != 0 || query[cursor + 1] != 0 {
+                    cursor += 2;
+                }
+                let units: Vec<u16> = query[start..cursor]
+                    .chunks_exact(2)
+                    .map(|c| u16::from_le_bytes([c[0], c[1]]))
+                    .collect();
+                names.push(String::from_utf16(&units).unwrap());
+                cursor += 2; // the terminator
+            }
+            at += cursor;
+        }
+        assert_eq!(
+            names,
+            vec!["Inbox", "Outbox", "Sent Items", "Deleted Items"],
+            "the cursor did not advance, or advanced wrongly"
+        );
+    }
+
+    /// A column we cannot answer is refused rather than filled with a zero.
+    /// "No messages" is a claim, and one this stage has not checked.
+    #[test]
+    fn a_column_we_cannot_answer_is_refused_not_invented() {
+        let ctx = context("disan@alo.test");
+        let mut objects = ObjectTable::new();
+        let content_count = PropertyTag {
+            property_type: crate::rows::ptyp::INTEGER32,
+            property_id: pid::CONTENT_COUNT,
+        };
+
+        let mut rops = logon_buffer("", LOGON_PRIVATE, 0).rops;
+        rops.extend(open_folder_rop(fid_of(SpecialFolder::IpmSubtree)));
+        rops.extend(hierarchy_rop());
+        rops.extend(set_columns_rop(&[content_count]));
+        rops.extend(query_rows_rop(10));
+        let buffer = RopBuffer {
+            rops,
+            handles: vec![crate::rop::HANDLE_UNSET; 3],
+        };
+
+        let out = dispatch(&ctx, "/o=alo", &mut objects, &buffer, LogonTime::default());
+        let query = &out.responses[191..];
+        assert_eq!(query.len(), 6, "a failure response");
+        assert_eq!(
+            u32::from_le_bytes(query[2..6].try_into().unwrap()),
+            error::NOT_IMPLEMENTED
         );
     }
 

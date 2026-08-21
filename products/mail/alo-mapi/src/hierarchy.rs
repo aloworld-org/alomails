@@ -118,6 +118,33 @@ pub fn children(folder: SpecialFolder) -> &'static [SpecialFolder] {
     }
 }
 
+/// The display name a client sees for a special folder.
+///
+/// English and fixed, because these are the protocol's own folders rather than
+/// anything a person named: Exchange calls them this, Outlook expects to find
+/// them by these names, and a translated "Inbox" is a folder the client cannot
+/// recognise as the inbox. A user's own folders carry their own names, and
+/// those arrive with the stage that reads them from the store.
+#[must_use]
+pub fn display_name(folder: SpecialFolder) -> &'static str {
+    use SpecialFolder as F;
+    match folder {
+        F::Root => "Root",
+        F::DeferredAction => "Deferred Action",
+        F::SpoolerQueue => "Spooler Queue",
+        F::IpmSubtree => "Top of Information Store",
+        F::Inbox => "Inbox",
+        F::Outbox => "Outbox",
+        F::SentItems => "Sent Items",
+        F::DeletedItems => "Deleted Items",
+        F::CommonViews => "Common Views",
+        F::Schedule => "Schedule",
+        F::Search => "Finder",
+        F::Views => "Views",
+        F::Shortcuts => "Shortcuts",
+    }
+}
+
 /// Builds a `RopGetHierarchyTable` success response.
 #[must_use]
 pub fn success_body(output_handle_index: u8, row_count: u32) -> Vec<u8> {
