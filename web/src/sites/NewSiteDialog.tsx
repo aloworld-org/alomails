@@ -11,7 +11,6 @@ import { SitesError, sitesMessage, useSitesApi } from "./api";
 import { DialogFrame, Field } from "./parts";
 import { TemplateGallery } from "./TemplateGallery";
 import type { Site, SitePage } from "./types";
-import styles from "./SitesModule.module.css";
 
 /** How long the address field stays still before the availability question is
  *  asked — long enough to skip mid-word states, short enough to feel live. */
@@ -76,14 +75,14 @@ function AddressStatus({
             : strings.sitesAddressNotChecked;
   const tone =
     check.kind === "available"
-      ? styles.checkOk
+      ? "border-success bg-success-tint text-success"
       : check.kind === "checking" || check.kind === "idle"
-        ? styles.checkPending
-        : styles.checkBad;
+        ? "border-default bg-raised text-secondary"
+        : "border-danger bg-danger-tint text-danger";
   return (
-    <p className={`${styles.addressStatus} ${tone}`} role="status">
-      <Globe aria-hidden="true" />
-      <span className={styles.addressValue}>{address}</span>
+    <p className={`flex flex-wrap items-center gap-2 rounded-xl border px-3 py-2.5 text-sm ${tone}`} role="status">
+      <Globe className="size-4 shrink-0" aria-hidden="true" />
+      <span className="font-mono font-medium text-primary">{address}</span>
       <span>{text}</span>
     </p>
   );
@@ -245,33 +244,33 @@ export function NewSiteDialog({
       onClose={onClose}
       onSubmit={() => void (mode === "generate" ? generate() : createFromTemplate())}
     >
-      <div className={styles.onboardingChoices} aria-label={strings.sitesStartingPoint}>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" aria-label={strings.sitesStartingPoint}>
         <button
           type="button"
-          className={mode === "generate" ? `${styles.onboardingChoice} ${styles.onboardingChoiceActive}` : styles.onboardingChoice}
+          className={`flex min-h-20 items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${mode === "generate" ? "border-accent bg-accent-soft text-accent" : "border-default bg-surface text-primary hover:bg-raised"}`}
           aria-pressed={mode === "generate"}
           onClick={() => chooseMode("generate")}
         >
-          <Sparkles aria-hidden="true" />
-          <span>{strings.sitesGenerateChoice}</span>
+          <Sparkles className="size-5 shrink-0" aria-hidden="true" />
+          <span className="font-semibold">{strings.sitesGenerateChoice}</span>
         </button>
         <button
           type="button"
-          className={mode === "template" ? `${styles.onboardingChoice} ${styles.onboardingChoiceActive}` : styles.onboardingChoice}
+          className={`flex min-h-20 items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${mode === "template" ? "border-accent bg-accent-soft text-accent" : "border-default bg-surface text-primary hover:bg-raised"}`}
           aria-pressed={mode === "template"}
           onClick={() => chooseMode("template")}
         >
-          <LayoutTemplate aria-hidden="true" />
-          <span>{strings.sitesTemplateChoice}</span>
+          <LayoutTemplate className="size-5 shrink-0" aria-hidden="true" />
+          <span className="font-semibold">{strings.sitesTemplateChoice}</span>
         </button>
       </div>
 
-      {notice !== null && <p className={styles.onboardingNotice} role="status">{notice}</p>}
+      {notice !== null && <p className="rounded-xl border border-default bg-raised px-4 py-3 text-sm text-secondary" role="status">{notice}</p>}
 
       {mode === "generate" ? (
         <Field label={strings.sitesBusinessDescription} hint={strings.sitesBusinessDescriptionHint}>
           <textarea
-            className={`${styles.input} ${styles.onboardingDescription}`}
+            className="min-h-40 w-full resize-y rounded-xl border border-default bg-surface px-4 py-3 text-base text-primary outline-none transition-shadow placeholder:text-tertiary focus:border-accent focus:ring-2 focus:ring-accent-soft"
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             placeholder={strings.sitesBusinessDescriptionPlaceholder}
@@ -282,7 +281,7 @@ export function NewSiteDialog({
         <>
           <Field label={strings.sitesFieldName}>
             <input
-              className={styles.input}
+              className="h-11 w-full rounded-xl border border-default bg-surface px-3.5 text-base text-primary outline-none transition-shadow focus:border-accent focus:ring-2 focus:ring-accent-soft"
               value={name}
               onChange={(event) => {
                 const nextName = event.target.value;
@@ -294,7 +293,7 @@ export function NewSiteDialog({
           </Field>
           <Field label={strings.sitesFieldSubdomain} hint={strings.sitesSubdomainHint}>
             <input
-              className={styles.input}
+              className="h-11 w-full rounded-xl border border-default bg-surface px-3.5 font-mono text-base text-primary outline-none transition-shadow focus:border-accent focus:ring-2 focus:ring-accent-soft"
               value={subdomain}
               onChange={(event) => {
                 addressEdited.current = true;
@@ -307,7 +306,7 @@ export function NewSiteDialog({
           </Field>
           <AddressStatus check={check} subdomain={subdomain.trim()} domain={domain} />
           {missingTemplateValue !== null && (
-            <p className={styles.submitRequirement} role="status">{missingTemplateValue}</p>
+            <p className="text-sm text-secondary" role="status">{missingTemplateValue}</p>
           )}
           <TemplateGallery
             selected={template}

@@ -11,7 +11,6 @@ import type { LucideIcon } from "lucide-react";
 import { strings } from "../i18n";
 import { Button } from "../ds";
 import { useDialogKeyboard } from "./useDialogKeyboard";
-import styles from "./SitesModule.module.css";
 
 /** A failure the page could not hide: shown, never swallowed. */
 export function ErrorBanner({ message }: { message: string }) {
@@ -114,10 +113,14 @@ export function DialogFrame({
     if (!busy && canSubmit) onSubmit();
   }
   return (
-    <div className={styles.scrim} role="presentation" onMouseDown={onClose}>
+    <div
+      className="fixed inset-0 z-modal flex items-center justify-center bg-scrim p-4 sm:p-6"
+      role="presentation"
+      onMouseDown={onClose}
+    >
       <form
         ref={panel}
-        className={wide ? `${styles.modal} ${styles.modalWide}` : styles.modal}
+        className={`flex max-h-[min(52rem,calc(100dvh-2rem))] w-full flex-col overflow-hidden rounded-2xl border border-default bg-surface shadow-xl sm:max-h-[min(52rem,calc(100dvh-3rem))] ${wide ? "max-w-5xl" : "max-w-xl"}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -125,17 +128,20 @@ export function DialogFrame({
         onSubmit={submit}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className={styles.modalHead}>
-          <span className={styles.modalIcon} aria-hidden="true">
+        <div className="flex shrink-0 items-start gap-3 border-b border-subtle px-5 py-4 sm:px-6">
+          <span
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent"
+            aria-hidden="true"
+          >
             <Icon size={19} />
           </span>
-          <div className={styles.modalHeadText}>
-            <h2>{title}</h2>
-            <p>{subtitle}</p>
+          <div className="min-w-0 flex-1">
+            <h2 className="m-0 text-lg font-semibold text-primary">{title}</h2>
+            <p className="mt-0.5 text-sm leading-5 text-secondary">{subtitle}</p>
           </div>
           <button
             type="button"
-            className={styles.modalClose}
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-secondary transition-colors hover:bg-raised hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             onClick={onClose}
             // "Close", not "Cancel": the footer already carries a Cancel, and
             // two controls with one name in one dialog is a list of identical
@@ -145,11 +151,11 @@ export function DialogFrame({
             <X size={18} />
           </button>
         </div>
-        <div className={styles.modalBody}>
+        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 py-5 sm:px-6">
           {error !== null && <ErrorBanner message={error} />}
           {children}
         </div>
-        <div className={styles.modalFooter}>
+        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-subtle bg-surface px-5 py-4 sm:px-6">
           <Button variant="ghost" onClick={onClose} disabled={busy}>
             {strings.sitesCancel}
           </Button>
