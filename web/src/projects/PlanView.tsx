@@ -31,18 +31,18 @@ import { projectsMessage, useProjectsApi } from "./api";
 import { dayLabel, dayString, dayValue } from "./format";
 import { EmptyState, ErrorBanner } from "./parts";
 import { MilestoneDialog } from "./MilestoneDialog";
+import { ProjectScopePicker } from "./ProjectScopePicker";
 import { resolveProjectScope } from "./scope";
 import type { Milestone, Project, ProjectPlan } from "./types";
 const styles = {
   page: "flex min-h-0 flex-col gap-4 overflow-auto px-5 py-4",
   toolbar: "flex flex-wrap items-center gap-3",
-  inlineField: "inline-flex items-center gap-2 text-sm",
-  label: "text-sm font-medium text-secondary",
   select: "w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent",
   toolbarSpacer: "flex-1",
   timeline: "relative mx-3 mt-2 h-12",
   timelineTrack: "absolute inset-x-0 top-2.5 h-0.5 bg-subtle",
-  timelineMark: "absolute top-0 flex -translate-x-1/2 flex-col items-center gap-1",
+  timelineMark:
+    "absolute top-0 flex -translate-x-1/2 flex-col items-center gap-1",
   timelineDot: "mt-1 h-3 w-3 rounded-full border-2 border-tertiary bg-surface",
   timelineDotDone: "!border-success !bg-success",
   timelineDotLate: "!border-danger !bg-danger",
@@ -56,7 +56,8 @@ const styles = {
   chipGood: "bg-[var(--success-tint)] text-success",
   chipBad: "bg-[var(--danger-tint)] text-danger",
   milestoneTasks: "m-0 list-none border-t border-subtle p-0",
-  milestoneTask: "flex items-center gap-3 border-b border-subtle px-4 py-2 text-sm text-primary last:border-b-0",
+  milestoneTask:
+    "flex items-center gap-3 border-b border-subtle px-4 py-2 text-sm text-primary last:border-b-0",
   taskDone: "text-tertiary line-through",
   unplaced: "rounded-md border border-dashed border-default",
   unplacedTitle: "m-0 px-4 py-2.5 text-sm font-medium text-secondary",
@@ -95,9 +96,16 @@ export function PlanView({
   const [searchParams, setSearchParams] = useSearchParams();
 
   const requestedProjectId = searchParams.get("project");
-  const resolvedProjectId = resolveProjectScope(requestedProjectId, projectsLoading, projects);
+  const resolvedProjectId = resolveProjectScope(
+    requestedProjectId,
+    projectsLoading,
+    projects,
+  );
   const projectId = resolvedProjectId ?? ALL_PROJECTS;
-  const [plan, setPlan] = useState<ProjectPlan>({ milestones: [], placements: [] });
+  const [plan, setPlan] = useState<ProjectPlan>({
+    milestones: [],
+    placements: [],
+  });
   const [tasks, setTasks] = useState<Task[]>([]);
   const [editing, setEditing] = useState<Milestone | "new" | null>(null);
   const [loading, setLoading] = useState(false);
@@ -119,9 +127,10 @@ export function PlanView({
     setLoading(true);
     void (async () => {
       try {
-        const scopedProjects = projectId === ALL_PROJECTS
-          ? projects
-          : projects.filter((project) => project.id === projectId);
+        const scopedProjects =
+          projectId === ALL_PROJECTS
+            ? projects
+            : projects.filter((project) => project.id === projectId);
         // Each project is fetched in parallel. The portfolio timeline is the
         // same plans combined, never a separate source of truth.
         const loaded = await Promise.all(
@@ -142,7 +151,8 @@ export function PlanView({
           setError(null);
         }
       } catch (err) {
-        if (live) setError(projectsMessage(err, strings.projectsPlanLoadFailed));
+        if (live)
+          setError(projectsMessage(err, strings.projectsPlanLoadFailed));
       } finally {
         if (live) setLoading(false);
       }
@@ -150,7 +160,15 @@ export function PlanView({
     return () => {
       live = false;
     };
-  }, [api, client, projectId, projects, projectsLoading, revision, localRevision]);
+  }, [
+    api,
+    client,
+    projectId,
+    projects,
+    projectsLoading,
+    revision,
+    localRevision,
+  ]);
 
   const project = projects.find((p) => p.id === projectId) ?? null;
   const projectById = useMemo(
@@ -159,7 +177,8 @@ export function PlanView({
   );
   const placedIn = useMemo(() => {
     const byTask = new Map<string, string>();
-    for (const placement of plan.placements) byTask.set(placement.taskId, placement.milestoneId);
+    for (const placement of plan.placements)
+      byTask.set(placement.taskId, placement.milestoneId);
     return byTask;
   }, [plan.placements]);
   const unplaced = tasks.filter((task) => !placedIn.has(task.id));
@@ -194,22 +213,15 @@ export function PlanView({
 
   return (
     <div className={styles.page}>
+      <ProjectScopePicker
+        projects={projects}
+        value={projectId === ALL_PROJECTS ? null : projectId}
+        disabled={projectsLoading}
+        onChange={(nextProjectId) =>
+          selectProject(nextProjectId ?? ALL_PROJECTS)
+        }
+      />
       <div className={styles.toolbar}>
-        <label className={styles.inlineField}>
-          <span className={styles.label}>{strings.projectsProject}</span>
-          <select
-            className={styles.select}
-            value={projectId}
-            onChange={(e) => selectProject(e.target.value)}
-          >
-            <option value={ALL_PROJECTS}>{strings.projectsAllProjects}</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </label>
         <span className={styles.toolbarSpacer} />
         {loading && <Spinner size={16} />}
         {project !== null && plan.milestones.length > 0 && (
@@ -228,15 +240,22 @@ export function PlanView({
       ) : plan.milestones.length === 0 ? (
         <EmptyState
           Icon={Flag}
-          title={project === null
-            ? strings.projectsTimelineAllEmptyTitle
-            : strings.projectsPlanEmptyTitle}
-          body={project === null
-            ? strings.projectsTimelineAllEmptyBody
-            : strings.projectsPlanEmptyBody}
+          title={
+            project === null
+              ? strings.projectsTimelineAllEmptyTitle
+              : strings.projectsPlanEmptyTitle
+          }
+          body={
+            project === null
+              ? strings.projectsTimelineAllEmptyBody
+              : strings.projectsPlanEmptyBody
+          }
           {...(project === null
             ? {}
-            : { cta: strings.projectsMilestoneAdd, onCta: () => setEditing("new") })}
+            : {
+                cta: strings.projectsMilestoneAdd,
+                onCta: () => setEditing("new"),
+              })}
         />
       ) : (
         <>
@@ -259,7 +278,10 @@ export function PlanView({
                     }`}
                   />
                   <span className={styles.timelineDay}>
-                    {dayLabel(milestone.dueOn, { day: "numeric", month: "short" })}
+                    {dayLabel(milestone.dueOn, {
+                      day: "numeric",
+                      month: "short",
+                    })}
                   </span>
                 </span>
               ))}
@@ -268,7 +290,9 @@ export function PlanView({
 
           <ul className={styles.plan}>
             {plan.milestones.map((milestone) => {
-              const under = tasks.filter((task) => placedIn.get(task.id) === milestone.id);
+              const under = tasks.filter(
+                (task) => placedIn.get(task.id) === milestone.id,
+              );
               return (
                 <li key={milestone.id} className={styles.milestone}>
                   <div className={styles.milestoneHead}>
@@ -276,18 +300,24 @@ export function PlanView({
                       type="button"
                       className={styles.rowName}
                       onClick={() => {
-                        if (projectId === ALL_PROJECTS) selectProject(milestone.projectId);
+                        if (projectId === ALL_PROJECTS)
+                          selectProject(milestone.projectId);
                         setEditing(milestone);
                       }}
                     >
                       {milestone.name}
                     </button>
                     {projectId === ALL_PROJECTS && (
-                      <span className={`${styles.chip} bg-subtle text-secondary`}>
-                        {projectById.get(milestone.projectId)?.name ?? strings.projectsProject}
+                      <span
+                        className={`${styles.chip} bg-subtle text-secondary`}
+                      >
+                        {projectById.get(milestone.projectId)?.name ??
+                          strings.projectsProject}
                       </span>
                     )}
-                    <span className={styles.muted}>{dayLabel(milestone.dueOn)}</span>
+                    <span className={styles.muted}>
+                      {dayLabel(milestone.dueOn)}
+                    </span>
                     {milestone.done ? (
                       <span className={`${styles.chip} ${styles.chipGood}`}>
                         {strings.projectsMilestoneReached}
@@ -321,7 +351,11 @@ export function PlanView({
                       {under.map((task) => (
                         <li key={task.id} className={styles.milestoneTask}>
                           <span
-                            className={task.completedAt === null ? undefined : styles.taskDone}
+                            className={
+                              task.completedAt === null
+                                ? undefined
+                                : styles.taskDone
+                            }
                           >
                             {task.title}
                           </span>
@@ -344,11 +378,17 @@ export function PlanView({
 
           {unplaced.length > 0 && (
             <section className={styles.unplaced}>
-              <h2 className={styles.unplacedTitle}>{strings.projectsPlanUnplaced}</h2>
+              <h2 className={styles.unplacedTitle}>
+                {strings.projectsPlanUnplaced}
+              </h2>
               <ul className={styles.milestoneTasks}>
                 {unplaced.map((task) => (
                   <li key={task.id} className={styles.milestoneTask}>
-                    <span className={task.completedAt === null ? undefined : styles.taskDone}>
+                    <span
+                      className={
+                        task.completedAt === null ? undefined : styles.taskDone
+                      }
+                    >
                       {task.title}
                     </span>
                     <span className={styles.toolbarSpacer} />
@@ -362,13 +402,13 @@ export function PlanView({
                       onChange={(e) => void place(task.id, e.target.value)}
                     >
                       <option value="">{strings.projectsPlanPlace}</option>
-                      {plan.milestones.map((milestone) => (
+                      {plan.milestones.map((milestone) =>
                         milestone.projectId === task.projectId ? (
                           <option key={milestone.id} value={milestone.id}>
                             {milestone.name}
                           </option>
-                        ) : null
-                      ))}
+                        ) : null,
+                      )}
                     </select>
                   </li>
                 ))}

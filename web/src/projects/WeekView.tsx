@@ -43,6 +43,7 @@ import {
   weekDays,
 } from "./format";
 import { EmptyState, ErrorBanner, WeekChip } from "./parts";
+import { ProjectScopePicker } from "./ProjectScopePicker";
 import { resolveProjectScope } from "./scope";
 import type { Project, TimeEntry, TimeTotals, TimesheetWeek } from "./types";
 const styles = {
@@ -56,12 +57,15 @@ const styles = {
   gridProject: "flex !px-3.5 flex-col gap-0.5",
   gridProjectName: "font-medium",
   internal: "italic text-tertiary",
-  gridCell: "w-full min-w-14 rounded-sm border border-transparent bg-transparent px-2 py-1.5 text-right text-sm tabular-nums text-primary hover:border-default hover:bg-surface disabled:cursor-default disabled:text-tertiary",
+  gridCell:
+    "w-full min-w-14 rounded-sm border border-transparent bg-transparent px-2 py-1.5 text-right text-sm tabular-nums text-primary hover:border-default hover:bg-surface disabled:cursor-default disabled:text-tertiary",
   gridCellFilled: "font-medium",
   muted: "text-tertiary",
   numeric: "whitespace-nowrap text-right tabular-nums",
-  gridTotals: "[&_td]:border-b-0 [&_td]:border-t-2 [&_td]:border-default [&_td]:p-2.5 [&_td]:text-right [&_td]:font-semibold [&_td]:tabular-nums [&_td:first-child]:pl-3.5 [&_td:first-child]:text-left",
-  table: "w-full border-collapse text-sm [&_th]:whitespace-nowrap [&_th]:border-b [&_th]:border-subtle [&_th]:px-3.5 [&_th]:py-2.5 [&_th]:text-left [&_th]:font-medium [&_th]:text-tertiary [&_td]:border-b [&_td]:border-subtle [&_td]:px-3.5 [&_td]:py-2.5 [&_td]:align-middle [&_tbody_tr:hover]:bg-raised",
+  gridTotals:
+    "[&_td]:border-b-0 [&_td]:border-t-2 [&_td]:border-default [&_td]:p-2.5 [&_td]:text-right [&_td]:font-semibold [&_td]:tabular-nums [&_td:first-child]:pl-3.5 [&_td:first-child]:text-left",
+  table:
+    "w-full border-collapse text-sm [&_th]:whitespace-nowrap [&_th]:border-b [&_th]:border-subtle [&_th]:px-3.5 [&_th]:py-2.5 [&_th]:text-left [&_th]:font-medium [&_th]:text-tertiary [&_td]:border-b [&_td]:border-subtle [&_td]:px-3.5 [&_td]:py-2.5 [&_td]:align-middle [&_tbody_tr:hover]:bg-raised",
   rowActions: "flex items-center justify-end gap-2",
   weekFoot: "flex flex-wrap items-center gap-3 py-3",
   weekFootFacts: "flex flex-col gap-0.5",
@@ -109,7 +113,11 @@ export function WeekView({
   const api = useProjectsApi();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedProjectId = searchParams.get("project");
-  const projectId = resolveProjectScope(requestedProjectId, projectsLoading, projects);
+  const projectId = resolveProjectScope(
+    requestedProjectId,
+    projectsLoading,
+    projects,
+  );
   const [monday, setMonday] = useState(() => mondayOf(new Date()));
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [totals, setTotals] = useState<TimeTotals | null>(null);
@@ -169,8 +177,10 @@ export function WeekView({
    *  plus the ones this person has opened a row for. */
   const rows = useMemo(() => {
     const worked = new Set(entries.map((e) => e.projectId));
-    return projects.filter((p) =>
-      (projectId === null || p.id === projectId) && (worked.has(p.id) || extraRows.includes(p.id))
+    return projects.filter(
+      (p) =>
+        (projectId === null || p.id === projectId) &&
+        (worked.has(p.id) || extraRows.includes(p.id)),
     );
   }, [projects, entries, extraRows, projectId]);
 
@@ -178,7 +188,9 @@ export function WeekView({
    *  have written more than one — two sittings on the same job is not a
    *  mistake, and merging them would erase the notes. */
   function cell(projectId: string, workDate: string): TimeEntry[] {
-    return entries.filter((e) => e.projectId === projectId && e.workDate === workDate);
+    return entries.filter(
+      (e) => e.projectId === projectId && e.workDate === workDate,
+    );
   }
 
   /** The board's own name, or its id when the row belongs to a project this
@@ -232,7 +244,9 @@ export function WeekView({
     setError(null);
     try {
       const next =
-        action === "submit" ? await api.submitWeek(monday) : await api.withdrawWeek(monday);
+        action === "submit"
+          ? await api.submitWeek(monday)
+          : await api.withdrawWeek(monday);
       setWeek(next);
       onChanged();
     } catch (err) {
@@ -253,47 +267,50 @@ export function WeekView({
 
   return (
     <div className={styles.page}>
-      <section className="flex flex-wrap items-end gap-3 rounded-xl border border-subtle bg-surface p-4">
-        <label className="flex min-w-64 flex-1 flex-col gap-1.5 text-sm font-medium text-primary">
-          {strings.projectsProject}
-          <select
-            className="min-h-10 w-full rounded-lg border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            value={projectId ?? ""}
-            onChange={(event) => {
-              const next = new URLSearchParams(searchParams);
-              if (event.target.value === "") next.delete("project");
-              else next.set("project", event.target.value);
-              setSearchParams(next);
-            }}
-          >
-            <option value="">{strings.projectsAllProjects}</option>
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>{project.name}</option>
-            ))}
-          </select>
-        </label>
-        <p className="max-w-xl pb-2 text-sm text-secondary">
-          {projectId === null
+      <ProjectScopePicker
+        projects={projects}
+        value={projectId}
+        disabled={projectsLoading}
+        description={
+          projectId === null
             ? strings.projectsWeekAllScope
-            : strings.projectsWeekProjectScope(projects.find((project) => project.id === projectId)?.name ?? "")}
-        </p>
-      </section>
+            : strings.projectsWeekProjectScope(
+                projects.find((project) => project.id === projectId)?.name ??
+                  "",
+              )
+        }
+        onChange={(nextProjectId) => {
+          const next = new URLSearchParams(searchParams);
+          if (nextProjectId === null) next.delete("project");
+          else next.set("project", nextProjectId);
+          setSearchParams(next);
+        }}
+      />
       <section className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-default bg-surface px-5 py-4 shadow-sm">
         <div className="min-w-0">
-          <p className="text-lg font-semibold text-primary">{strings.projectsWeekTitle}</p>
-          <p className="mt-1 text-sm text-secondary">{strings.projectsWeekPurpose}</p>
+          <p className="text-lg font-semibold text-primary">
+            {strings.projectsWeekTitle}
+          </p>
+          <p className="mt-1 text-sm text-secondary">
+            {strings.projectsWeekPurpose}
+          </p>
         </div>
         {showTimesheetHeaderAddTime(rows.length, locked, projects.length) && (
-          <Button icon={<Plus size={17} />} onClick={() => {
-            if (projectId !== null) startEntry(projectId);
-            else setChoosingProject(true);
-          }}>
+          <Button
+            icon={<Plus size={17} />}
+            onClick={() => {
+              if (projectId !== null) startEntry(projectId);
+              else setChoosingProject(true);
+            }}
+          >
             {strings.projectsAddTime}
           </Button>
         )}
       </section>
 
-      <div className={`${styles.toolbar} rounded-xl border border-default bg-surface px-3 py-2`}>
+      <div
+        className={`${styles.toolbar} rounded-xl border border-default bg-surface px-3 py-2`}
+      >
         <Button
           variant="ghost"
           size="sm"
@@ -303,7 +320,10 @@ export function WeekView({
           {strings.projectsPreviousWeek}
         </Button>
         <span className={styles.periodLabel}>
-          {strings.projectsWeekOf(dayLabel(monday, { day: "numeric", month: "short" }), dayLabel(sunday))}
+          {strings.projectsWeekOf(
+            dayLabel(monday, { day: "numeric", month: "short" }),
+            dayLabel(sunday),
+          )}
         </span>
         <Button
           variant="ghost"
@@ -313,7 +333,11 @@ export function WeekView({
         >
           {strings.projectsNextWeek}
         </Button>
-        <Button variant="ghost" size="sm" onClick={() => setMonday(mondayOf(new Date()))}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setMonday(mondayOf(new Date()))}
+        >
           {strings.projectsThisWeek}
         </Button>
         <span className={styles.toolbarSpacer} />
@@ -329,10 +353,13 @@ export function WeekView({
           title={strings.projectsWeekEmptyTitle}
           body={strings.projectsWeekEmptyBody}
           {...(!locked && projects.length > 0
-            ? { cta: strings.projectsAddTime, onCta: () => {
-                if (projectId !== null) startEntry(projectId);
-                else setChoosingProject(true);
-              } }
+            ? {
+                cta: strings.projectsAddTime,
+                onCta: () => {
+                  if (projectId !== null) startEntry(projectId);
+                  else setChoosingProject(true);
+                },
+              }
             : {})}
         />
       ) : (
@@ -355,14 +382,20 @@ export function WeekView({
             </thead>
             <tbody>
               {rows.map((project) => {
-                const rowMinutes = minutesOf(entries.filter((e) => e.projectId === project.id));
+                const rowMinutes = minutesOf(
+                  entries.filter((e) => e.projectId === project.id),
+                );
                 return (
                   <tr key={project.id}>
                     <td>
                       <span className={styles.gridProject}>
-                        <span className={styles.gridProjectName}>{project.name}</span>
+                        <span className={styles.gridProjectName}>
+                          {project.name}
+                        </span>
                         {project.client === null && (
-                          <span className={styles.internal}>{strings.projectsInternal}</span>
+                          <span className={styles.internal}>
+                            {strings.projectsInternal}
+                          </span>
                         )}
                       </span>
                     </td>
@@ -383,16 +416,25 @@ export function WeekView({
                             )}
                             onClick={() => openCell(project.id, day)}
                           >
-                            {minutes === 0 && !proposed ? "" : durationLabel(minutes)}
+                            {minutes === 0 && !proposed
+                              ? ""
+                              : durationLabel(minutes)}
                             {set.length > 1 && (
-                              <span className={styles.muted}> ·{set.length}</span>
+                              <span className={styles.muted}>
+                                {" "}
+                                ·{set.length}
+                              </span>
                             )}
-                            {proposed && <span className={styles.muted}> ✦</span>}
+                            {proposed && (
+                              <span className={styles.muted}> ✦</span>
+                            )}
                           </button>
                         </td>
                       );
                     })}
-                    <td className={styles.numeric}>{durationLabel(rowMinutes)}</td>
+                    <td className={styles.numeric}>
+                      {durationLabel(rowMinutes)}
+                    </td>
                   </tr>
                 );
               })}
@@ -402,7 +444,9 @@ export function WeekView({
                 <td>{strings.projectsTotal}</td>
                 {days.map((day) => (
                   <td key={day}>
-                    {durationLabel(minutesOf(entries.filter((e) => e.workDate === day)))}
+                    {durationLabel(
+                      minutesOf(entries.filter((e) => e.workDate === day)),
+                    )}
                   </td>
                 ))}
                 {/* The week's own figure, as the server counted it. */}
@@ -415,28 +459,60 @@ export function WeekView({
 
       {choosingProject && !locked && (
         <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-overlay p-4">
-        <section role="dialog" aria-modal="true" className="w-full max-w-2xl rounded-2xl border border-default bg-surface p-5 shadow-xl" aria-labelledby="week-project-picker-title">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 id="week-project-picker-title" className="font-semibold text-primary">{strings.projectsChooseTimeProject}</h2>
-              <p className="mt-1 text-sm text-secondary">{strings.projectsChooseTimeProjectHint}</p>
-            </div>
-            <button type="button" className="flex size-9 shrink-0 items-center justify-center rounded-lg text-secondary transition-colors hover:bg-raised hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" aria-label={strings.close} onClick={() => setChoosingProject(false)}>
-              <X size={18} />
-            </button>
-          </div>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {projects.map((project) => (
-              <button key={project.id} type="button" className="flex min-h-14 items-center justify-between gap-3 rounded-xl border border-default bg-surface px-4 py-3 text-left transition-colors hover:border-accent hover:bg-[var(--accent-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" onClick={() => startEntry(project.id)}>
-                <span className="min-w-0">
-                  <span className="block truncate font-medium text-primary">{project.name}</span>
-                  <span className="mt-0.5 block truncate text-xs text-secondary">{project.client === null ? strings.projectsInternal : strings.projectsCustomer}</span>
-                </span>
-                <ChevronRight size={17} className="shrink-0 text-secondary" aria-hidden="true" />
+          <section
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-2xl rounded-2xl border border-default bg-surface p-5 shadow-xl"
+            aria-labelledby="week-project-picker-title"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2
+                  id="week-project-picker-title"
+                  className="font-semibold text-primary"
+                >
+                  {strings.projectsChooseTimeProject}
+                </h2>
+                <p className="mt-1 text-sm text-secondary">
+                  {strings.projectsChooseTimeProjectHint}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="flex size-9 shrink-0 items-center justify-center rounded-lg text-secondary transition-colors hover:bg-raised hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                aria-label={strings.close}
+                onClick={() => setChoosingProject(false)}
+              >
+                <X size={18} />
               </button>
-            ))}
-          </div>
-        </section>
+            </div>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {projects.map((project) => (
+                <button
+                  key={project.id}
+                  type="button"
+                  className="flex min-h-14 items-center justify-between gap-3 rounded-xl border border-default bg-surface px-4 py-3 text-left transition-colors hover:border-accent hover:bg-[var(--accent-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  onClick={() => startEntry(project.id)}
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium text-primary">
+                      {project.name}
+                    </span>
+                    <span className="mt-0.5 block truncate text-xs text-secondary">
+                      {project.client === null
+                        ? strings.projectsInternal
+                        : strings.projectsCustomer}
+                    </span>
+                  </span>
+                  <ChevronRight
+                    size={17}
+                    className="shrink-0 text-secondary"
+                    aria-hidden="true"
+                  />
+                </button>
+              ))}
+            </div>
+          </section>
         </div>
       )}
 
@@ -463,7 +539,11 @@ export function WeekView({
               {entries.map((entry) => (
                 <tr key={entry.id}>
                   <td className={styles.muted}>
-                    {dayLabel(entry.workDate, { weekday: "short", day: "numeric", month: "short" })}
+                    {dayLabel(entry.workDate, {
+                      weekday: "short",
+                      day: "numeric",
+                      month: "short",
+                    })}
                   </td>
                   <td>{projectName(entry.projectId)}</td>
                   <td>
@@ -484,7 +564,9 @@ export function WeekView({
                     {entry.proposed && ` · ${strings.projectsProposedEntry}`}
                     {entry.billed && ` · ${strings.projectsBilledEntry}`}
                   </td>
-                  <td className={styles.numeric}>{durationLabel(entry.minutes)}</td>
+                  <td className={styles.numeric}>
+                    {durationLabel(entry.minutes)}
+                  </td>
                   <td>
                     <div className={styles.rowActions}>
                       {entry.proposed ? (
@@ -543,14 +625,20 @@ export function WeekView({
 
       <div className={styles.weekFoot}>
         <div className={styles.weekFootFacts}>
-          <span className={styles.weekFootTotal}>{durationLabel(totals?.minutes ?? 0)}</span>
+          <span className={styles.weekFootTotal}>
+            {durationLabel(totals?.minutes ?? 0)}
+          </span>
           <p className={styles.weekFootNote}>
-            {strings.projectsBillableOfWeek(durationLabel(totals?.billableMinutes ?? 0))}
+            {strings.projectsBillableOfWeek(
+              durationLabel(totals?.billableMinutes ?? 0),
+            )}
           </p>
           {(totals?.proposedMinutes ?? 0) > 0 && (
             <>
               <p className={styles.weekFootNote}>
-                {strings.projectsProposedInWeek(durationLabel(totals?.proposedMinutes ?? 0))}
+                {strings.projectsProposedInWeek(
+                  durationLabel(totals?.proposedMinutes ?? 0),
+                )}
               </p>
               {/* What to do about them, where they are: the list above is the
                   only place a suggestion is decided, and a person who has just
@@ -570,12 +658,18 @@ export function WeekView({
           </p>
         )}
         {status === "submitted" ? (
-          <Button variant="ghost" disabled={busy} onClick={() => void decide("withdraw")}>
+          <Button
+            variant="ghost"
+            disabled={busy}
+            onClick={() => void decide("withdraw")}
+          >
             {strings.projectsWithdrawWeek}
           </Button>
         ) : (
           <Button
-            disabled={busy || status === "approved" || (totals?.minutes ?? 0) === 0}
+            disabled={
+              busy || status === "approved" || (totals?.minutes ?? 0) === 0
+            }
             onClick={() => void decide("submit")}
           >
             {strings.projectsSubmitWeek}
