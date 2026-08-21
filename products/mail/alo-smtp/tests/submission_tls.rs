@@ -69,10 +69,20 @@ async fn shared_store() -> Arc<Store> {
     store.migrate().await.unwrap();
     let identity = Identity::new(Arc::clone(&store), fast_config()).unwrap();
     let (tenant, user) = alice(&store).await;
-    identity
+    // The same race `alice` below already tolerates, one step further along.
+    // Every test in this file shares one fixture user and sets the same
+    // password on her; run in parallel, the second writer hits the credential
+    // row's unique index. The row that won holds exactly the secret this test
+    // was about to write, so a conflict is this test's work already done — not
+    // a failure. Anything else still fails loudly.
+    match identity
         .set_password(&tenant, &user, "alice@alo.test", "s3cret")
         .await
-        .unwrap();
+    {
+        Ok(()) => {}
+        Err(alo_identity::IdentityError::Store(alo_store::StoreError::Conflict(_))) => {}
+        Err(other) => panic!("could not give the fixture user a password: {other:?}"),
+    }
     store
 }
 
