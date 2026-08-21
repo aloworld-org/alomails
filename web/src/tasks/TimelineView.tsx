@@ -9,7 +9,6 @@ import { getLocale, strings } from "../i18n";
 import type { Task, TaskDepEdgeDto } from "../jmap";
 import { addDays, startOfDay } from "../agenda/dates";
 import { Avatar, COLUMNS, columnLabel, statusColor } from "./parts";
-import styles from "./TasksModule.module.css";
 
 const DAY = 86400000;
 const COL = 40; // px per day
@@ -77,22 +76,33 @@ export function TimelineView({ tasks, edges = [], onOpen }: Props) {
     .filter((a): a is { blocked: { x1: number; x2: number; y: number }; blocker: { x1: number; x2: number; y: number } } => a.blocked !== undefined && a.blocker !== undefined);
 
   return (
-    <div className={styles.timeline}>
-      <div className={styles.tlTitle}>{rangeLabel}</div>
+    <div className="overflow-auto px-6 pb-6 pt-4">
+      <div className="mb-3 text-base font-semibold text-primary">{rangeLabel}</div>
 
-      <div className={styles.tlHeadRow}>
-        <div className={styles.tlCorner} style={{ width: LABEL }}>
+      <div className="sticky top-0 z-20 flex bg-surface">
+        <div
+          className="sticky left-0 z-30 flex shrink-0 items-end border-b border-r border-subtle bg-surface px-2 pb-1.5 text-sm font-medium text-tertiary"
+          style={{ width: LABEL }}
+        >
           {strings.taskColName}
         </div>
-        <div className={styles.tlDays} style={{ width: total }}>
+        <div className="flex border-b border-subtle" style={{ width: total }}>
           {Array.from({ length: days }, (_, i) => {
             const d = addDays(from, i);
             const isMonthStart = d.getDate() === 1 || i === 0;
             const isToday = d.getTime() === today.getTime();
             return (
-              <div key={i} className={`${styles.tlDay} ${isToday ? styles.tlDayToday : ""}`} style={{ width: COL }}>
-                {isMonthStart && <span className={styles.tlMonth}>{new Intl.DateTimeFormat(locale, { month: "short" }).format(d)}</span>}
-                <span className={styles.tlWeekday}>{weekdayFmt.format(d)}</span>
+              <div
+                key={i}
+                className={`relative shrink-0 border-l border-subtle py-1 text-center text-[0.68rem] tabular-nums ${isToday ? "font-bold text-accent" : "text-tertiary"}`}
+                style={{ width: COL }}
+              >
+                {isMonthStart && (
+                  <span className="absolute left-1 top-0.5 text-[0.6rem] font-semibold uppercase text-secondary">
+                    {new Intl.DateTimeFormat(locale, { month: "short" }).format(d)}
+                  </span>
+                )}
+                <span className="block text-[0.6rem] uppercase text-tertiary">{weekdayFmt.format(d)}</span>
                 <span>{dayFmt.format(d)}</span>
               </div>
             );
@@ -100,10 +110,10 @@ export function TimelineView({ tasks, edges = [], onOpen }: Props) {
         </div>
       </div>
 
-      <div className={styles.tlRows}>
+      <div className="relative flex flex-col">
         {arrows.length > 0 && (
           <svg
-            className={styles.tlArrows}
+            className="pointer-events-none absolute left-0 top-0 z-20 overflow-visible"
             width={LABEL + total}
             height={scheduled.length * ROW}
             aria-hidden
@@ -134,7 +144,7 @@ export function TimelineView({ tasks, edges = [], onOpen }: Props) {
                 <path
                   key={i}
                   d={d}
-                  className={styles.tlArrowPath}
+                  className="fill-none stroke-tertiary opacity-55 [stroke-width:1.5]"
                   markerEnd="url(#tl-arrowhead)"
                 />
               );
@@ -144,20 +154,24 @@ export function TimelineView({ tasks, edges = [], onOpen }: Props) {
         {scheduled.map((t) => {
           const { left, width } = bar(t);
           return (
-            <div key={t.id} className={styles.tlRow}>
-              <div className={styles.tlLabel} style={{ width: LABEL }} title={t.title}>
+            <div key={t.id} className="flex h-10 items-center">
+              <div
+                className="sticky left-0 z-10 flex shrink-0 items-center gap-2 overflow-hidden whitespace-nowrap border-r border-subtle bg-surface pr-3 text-sm text-primary"
+                style={{ width: LABEL }}
+                title={t.title}
+              >
                 {t.assignee !== null && <Avatar email={t.assignee} />}
-                <span className={styles.tlLabelText}>{t.title}</span>
+                <span className="overflow-hidden text-ellipsis whitespace-nowrap">{t.title}</span>
               </div>
-              <div className={styles.tlTrack} style={{ width: total }}>
+              <div className="relative h-full" style={{ width: total }}>
                 <button
                   type="button"
-                  className={styles.tlBar}
+                  className="absolute top-2 flex h-6 items-center overflow-hidden rounded-full px-2 text-[0.72rem] font-medium text-white transition-[filter] hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                   style={{ left, width, background: statusColor(t.status) }}
                   onClick={() => onOpen(t.id)}
                   title={t.title}
                 >
-                  <span className={styles.tlBarText}>{columnLabel(t.status)}</span>
+                  <span className="overflow-hidden text-ellipsis whitespace-nowrap">{columnLabel(t.status)}</span>
                 </button>
               </div>
             </div>
@@ -165,20 +179,25 @@ export function TimelineView({ tasks, edges = [], onOpen }: Props) {
         })}
       </div>
 
-      <div className={styles.tlLegend}>
+      <div className="mt-3 flex flex-wrap gap-4 border-t border-subtle pt-4">
         {COLUMNS.map((c) => (
-          <span key={c.key} className={styles.tlLegendItem}>
-            <span className={styles.tlLegendDot} style={{ background: statusColor(c.key) }} aria-hidden />
+          <span key={c.key} className="inline-flex items-center gap-1.5 text-sm text-secondary">
+            <span className="size-2.5 shrink-0 rounded-[3px]" style={{ background: statusColor(c.key) }} aria-hidden />
             {c.label()}
           </span>
         ))}
       </div>
 
       {unscheduled.length > 0 && (
-        <div className={styles.tlUnscheduled}>
-          <div className={styles.tlUnschedHead}>{strings.taskUnscheduled}</div>
+        <div className="mt-5">
+          <div className="mb-2 text-sm font-semibold text-secondary">{strings.taskUnscheduled}</div>
           {unscheduled.map((t) => (
-            <button key={t.id} type="button" className={styles.tlUnschedItem} onClick={() => onOpen(t.id)}>
+            <button
+              key={t.id}
+              type="button"
+              className="block rounded-md px-2 py-1.5 text-left text-sm text-primary hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              onClick={() => onOpen(t.id)}
+            >
               {t.title}
             </button>
           ))}
