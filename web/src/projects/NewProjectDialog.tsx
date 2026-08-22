@@ -41,13 +41,13 @@ function CustomerPicker({ customers, value, onChange }: {
         aria-label={strings.projectsCustomer}
         aria-expanded={open}
         aria-controls="new-project-customer-list"
-        className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-md border bg-surface px-4 py-2 text-left text-sm transition-colors focus-visible:outline-2 focus-visible:outline-accent ${open ? "border-accent ring-1 ring-accent" : "border-default hover:border-strong"}`}
+        className={`flex min-h-12 w-full items-center justify-between gap-4 rounded-lg border bg-surface px-5 py-2.5 text-left text-sm transition-colors focus-visible:outline-2 focus-visible:outline-accent ${open ? "border-accent ring-1 ring-accent" : "border-default hover:border-strong"}`}
         onClick={() => setOpen((current) => !current)}
       >
         <span className={selected === null ? "text-tertiary" : "font-medium text-primary"}>
           {selected?.name ?? strings.projectsCustomerPick}
         </span>
-        <ChevronDown className={`size-4 shrink-0 text-secondary transition-transform ${open ? "rotate-180" : ""}`} aria-hidden="true" />
+        <ChevronDown className={`mr-0.5 size-4 shrink-0 text-secondary transition-transform ${open ? "rotate-180" : ""}`} aria-hidden="true" />
       </button>
       {open && (
         <div
@@ -64,7 +64,7 @@ function CustomerPicker({ customers, value, onChange }: {
                 type="button"
                 role="option"
                 aria-selected={active}
-                className={`flex min-h-10 w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors ${active ? "bg-accent-soft text-accent" : "text-primary hover:bg-raised"}`}
+                className={`flex min-h-10 w-full items-center justify-between gap-3 rounded-md px-4 py-2.5 text-left text-sm font-medium transition-colors ${active ? "bg-accent-soft text-accent" : "text-primary hover:bg-raised"}`}
                 onClick={() => {
                   onChange(customer.id);
                   setOpen(false);
