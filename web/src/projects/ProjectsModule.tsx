@@ -253,6 +253,13 @@ export function ProjectsModule() {
 
   async function createProject(draft: NewProjectDraft) {
     const project = await api.createProject(draft.name, draft.customerId);
+    await api.updateProject(project.id, {
+      name: draft.name,
+      description: draft.description,
+      status: draft.status,
+      startsOn: draft.startsOn,
+      targetOn: draft.targetOn,
+    });
     setCreating(false);
     setError(null);
     navigate(`/projects/${encodeURIComponent(project.id)}/overview`);
