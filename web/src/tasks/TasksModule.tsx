@@ -11,6 +11,7 @@ import {
   CalendarRange,
   ClipboardList,
   GanttChartSquare,
+  FolderKanban,
   LayoutDashboard,
   LayoutGrid,
   List,
@@ -47,6 +48,16 @@ type View = "overview" | "list" | "board" | "timeline" | "calendar" | "files";
 function isView(value: string | undefined | null): value is View {
   return value === "overview" || value === "list" || value === "board" ||
     value === "timeline" || value === "calendar" || value === "files";
+}
+
+function projectStatusLabel(status: Project["status"]): string {
+  return {
+    planned: strings.projectsStatusPlanned,
+    active: strings.projectsStatusActive,
+    on_hold: strings.projectsStatusOnHold,
+    completed: strings.projectsStatusCompleted,
+    cancelled: strings.projectsStatusCancelled,
+  }[status];
 }
 
 type Mode = { type: "project"; id: string } | { type: "plate" } | { type: "proposals" };
@@ -261,7 +272,7 @@ export function TasksModule({
       ? (projectsContext ? strings.projectsTabMyWork : strings.taskMyPlate)
       : mode.type === "proposals"
         ? strings.taskProposals
-        : (activeProject?.name ?? strings.moduleTasks);
+        : (engagement?.name ?? activeProject?.name ?? strings.moduleTasks);
 
   return (
     <div className="flex h-full min-h-0 bg-app">
@@ -321,19 +332,33 @@ export function TasksModule({
       )}
 
       <section className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-5 px-6 pb-3 pt-5 max-lg:flex-wrap max-sm:px-4">
+        <header className="flex items-center gap-5 px-6 pb-4 pt-5 max-lg:flex-wrap max-sm:px-4">
           <div className="min-w-0 shrink-0">
             {projectId !== undefined && (
               <button
                 type="button"
-                className="mb-1 inline-flex min-h-8 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-secondary !no-underline transition-colors hover:bg-raised hover:text-primary hover:!no-underline focus:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="mb-2 inline-flex min-h-9 items-center gap-2 rounded-lg px-2.5 text-sm font-medium text-secondary !no-underline transition-colors hover:bg-raised hover:text-primary hover:!no-underline focus:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 onClick={() => navigate("/projects/list")}
               >
                 <ArrowLeft size={15} aria-hidden="true" />
                 {strings.projectsTabList}
               </button>
             )}
-            <h1 className="m-0 shrink-0 text-2xl font-bold text-primary">{title}</h1>
+            <div className="flex min-w-0 items-center gap-3">
+              {projectId !== undefined && (
+                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-tint)] text-accent" aria-hidden="true">
+                  <FolderKanban size={20} />
+                </span>
+              )}
+              <div className="min-w-0">
+                <h1 className="m-0 truncate text-2xl font-bold text-primary">{title}</h1>
+                {projectId !== undefined && engagement !== null && (
+                  <p className="mt-0.5 text-sm text-secondary">
+                    {projectStatusLabel(engagement.status)}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
           <form
             className="mx-auto flex h-10 max-w-[28.75rem] flex-1 items-center gap-2 rounded-full border border-default bg-surface px-3 transition-shadow focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/15 max-sm:order-3 max-sm:w-full max-sm:max-w-none max-sm:basis-full"

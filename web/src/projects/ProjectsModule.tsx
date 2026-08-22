@@ -20,7 +20,6 @@
 // while Tasks also calls its boards projects. They are the same rows, which is
 // the point — so the copy here says *client project* wherever the distinction
 // carries weight, and the Tasks module's own strings are left alone.
-import { FolderKanban } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
@@ -125,9 +124,6 @@ export function ProjectsModule() {
   const [projectsLoadFailed, setProjectsLoadFailed] = useState(false);
   const requestedContextProjectId = projectContextId(location.pathname, searchParams.get("project"));
   const contextProjectId = resolveProjectScope(requestedContextProjectId, loading, projects);
-  const contextProject = contextProjectId === null
-    ? null
-    : projects.find((project) => project.id === contextProjectId) ?? null;
   const [revision, setRevision] = useState(0);
   const [runningTimer, setRunningTimer] = useState<RunningTimer | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -313,15 +309,6 @@ export function ProjectsModule() {
           >
             {strings.projectsTabMyWork}
           </NavLink>
-          {contextProject !== null && (
-            <NavLink
-              to={`/projects/${encodeURIComponent(contextProject.id)}/overview`}
-              className={projectTabClass}
-            >
-              <FolderKanban className="mr-2 size-4" aria-hidden="true" />
-              <span className="max-w-48 truncate">{contextProject.name}</span>
-            </NavLink>
-          )}
           <NavLink
             to={projectScopedPath("week", contextProjectId)}
             className={projectTabClass}
