@@ -19,6 +19,7 @@
 
 pub mod columns;
 pub mod connect;
+pub mod contents;
 pub mod direct2;
 pub mod dispatch;
 pub mod execute;
@@ -26,6 +27,7 @@ pub mod folders;
 pub mod hierarchy;
 pub mod logon;
 pub mod logon_response;
+pub mod messages;
 pub mod openfolder;
 pub mod response;
 pub mod rop;

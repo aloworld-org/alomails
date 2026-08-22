@@ -32,11 +32,13 @@
 //! subtree holds the four a user does. That structure is real — it is the same
 //! for every mailbox alo serves — so reporting it is not a guess.
 //!
-//! What is **not** here yet is the user's own folders: the ones they made
-//! themselves live in the JMAP store and are not part of this fixed set. Until
-//! the stage that reads them, a client sees the standard folders and no others.
-//! That is a smaller mailbox than the truth, which is why it is written down
-//! rather than left for somebody to discover.
+//! The user's own folders are here too, and no longer the gap this note once
+//! described: [`crate::folders::FolderView`] builds the tree from the tenant's
+//! actual mailboxes, so a client sees the folders a person made, under the
+//! names they gave them, each reporting what it holds.
+//!
+//! For the messages *inside* a folder see [`crate::contents`] — the same
+//! request and response shape, over an entirely different kind of row.
 
 use crate::logon_response::SpecialFolder;
 use crate::rop::RopError;

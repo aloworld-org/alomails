@@ -700,3 +700,289 @@ async fn the_address_book_endpoint_refuses_instead_of_vanishing() {
         ResponseCode::EndpointDisabled.code()
     );
 }
+
+/// **Stage 4 on the real wire**: a client logs on, opens its inbox, takes the
+/// contents table, names its columns and reads the rows — over HTTP, against a
+/// real store holding real delivered mail.
+///
+/// This is the test that says "Outlook can list the messages in a folder",
+/// because every byte here is the byte Outlook would send or read.
+#[tokio::test]
+async fn a_client_reads_the_messages_in_a_folder_over_http() {
+    let h = harness("contents").await;
+    let auth = basic(&h.email, &h.password);
+
+    let inbox = h
+        .account
+        .create_mailbox(None, "Inbox", Some("inbox"))
+        .await
+        .expect("inbox");
+    for (n, subject) in ["Rechnung", "Liège", "Müller"].iter().enumerate() {
+        let raw = format!(
+            "From: Sender {n} <s{n}@example.test>\r\nTo: {to}\r\n\
+             Subject: {subject}\r\nMessage-ID: <c{n}@example.test>\r\n\r\nbody\r\n",
+            to = h.email
+        );
+        h.account.deliver(raw.as_bytes()).await.expect("deliver");
+    }
+    let _ = inbox;
+
+    let (_, headers, _) = send(
+        &h.app,
+        "Connect",
+        Some(&auth),
+        None,
+        connect_body("/o=alo/cn=x"),
+    )
+    .await;
+    let cookie = format!("{SESSION_COOKIE}={}", session_cookie(&headers));
+
+    let mut rops = Vec::new();
+    let logon = rop_logon("");
+    let rop_size = u16::from_le_bytes(logon[0..2].try_into().unwrap()) as usize;
+    rops.extend_from_slice(&logon[2..rop_size]);
+
+    // RopOpenFolder on the Inbox: slot 4 of the special folders, counter 5.
+    let inbox_fid = {
+        let mut fid = [0u8; 8];
+        fid[0..2].copy_from_slice(&1u16.to_le_bytes());
+        fid[2..8].copy_from_slice(&5u64.to_le_bytes()[0..6]);
+        u64::from_le_bytes(fid)
+    };
+    rops.push(0x02);
+    rops.extend_from_slice(&[0x00, 0x00, 0x01]);
+    rops.extend_from_slice(&inbox_fid.to_le_bytes());
+    rops.push(0x00);
+
+    // RopGetContentsTable on that folder.
+    rops.extend_from_slice(&[0x05, 0x00, 0x01, 0x02, 0x00]);
+
+    // RopSetColumns: subject, sender, delivery time, flags.
+    rops.extend_from_slice(&[0x12, 0x00, 0x02, 0x00]);
+    rops.extend_from_slice(&4u16.to_le_bytes());
+    rops.extend_from_slice(&[0x1F, 0x00, 0x37, 0x00]); // PidTagSubject
+    rops.extend_from_slice(&[0x1F, 0x00, 0x1A, 0x0C]); // PidTagSenderName
+    rops.extend_from_slice(&[0x40, 0x00, 0x06, 0x0E]); // PidTagMessageDeliveryTime
+    rops.extend_from_slice(&[0x03, 0x00, 0x07, 0x0E]); // PidTagMessageFlags
+
+    // RopQueryRows.
+    rops.extend_from_slice(&[0x15, 0x00, 0x02, 0x00, 0x01]);
+    rops.extend_from_slice(&50u16.to_le_bytes());
+
+    let mut buffer = u16::try_from(rops.len() + 2)
+        .unwrap()
+        .to_le_bytes()
+        .to_vec();
+    buffer.extend_from_slice(&rops);
+    buffer.extend_from_slice(&0xFFFF_FFFFu32.to_le_bytes());
+    buffer.extend_from_slice(&0xFFFF_FFFFu32.to_le_bytes());
+    buffer.extend_from_slice(&0xFFFF_FFFFu32.to_le_bytes());
+
+    let (status, headers, body) = send(
+        &h.app,
+        "Execute",
+        Some(&auth),
+        Some(&cookie),
+        execute_body(&buffer, 64 * 1024),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(response_code(&headers), ResponseCode::Success.code());
+
+    let split = body
+        .windows(4)
+        .position(|w| w == BLANK_LINE)
+        .expect("framing");
+    let execute = &body[split + 4..];
+    let rop_len = u32::from_le_bytes(execute[12..16].try_into().unwrap()) as usize;
+    let payload = &execute[16..16 + rop_len][8..];
+    let size = u16::from_le_bytes(payload[0..2].try_into().unwrap()) as usize;
+    let responses = &payload[2..size];
+
+    // The contents table reports the folder's real count.
+    let table = &responses[174..184];
+    assert_eq!(table[0], 0x05, "a RopGetContentsTable response");
+    assert_eq!(
+        u32::from_le_bytes(table[2..6].try_into().unwrap()),
+        0,
+        "opening the contents table failed"
+    );
+    assert_eq!(
+        u32::from_le_bytes(table[6..10].try_into().unwrap()),
+        3,
+        "three messages were delivered"
+    );
+
+    // 166 logon + 8 open + 10 table + 7 columns, then the rows.
+    let query = &responses[191..];
+    assert_eq!(query[0], 0x15, "a RopQueryRows response");
+    assert_eq!(
+        u32::from_le_bytes(query[2..6].try_into().unwrap()),
+        0,
+        "reading the messages failed"
+    );
+
+    let count = u16::from_le_bytes(query[7..9].try_into().unwrap());
+    assert_eq!(count, 3, "every delivered message is listed");
+
+    // Decode: flag byte, subject, sender, an 8-byte time, a 4-byte flag word.
+    let mut at = 9;
+    let mut seen: Vec<(String, String, u64, u32)> = Vec::new();
+    for _ in 0..count {
+        at += 1; // the flag byte
+        let subject = read_utf16(query, &mut at);
+        let sender = read_utf16(query, &mut at);
+        let time = u64::from_le_bytes(query[at..at + 8].try_into().unwrap());
+        at += 8;
+        let flags = u32::from_le_bytes(query[at..at + 4].try_into().unwrap());
+        at += 4;
+        seen.push((subject, sender, time, flags));
+    }
+
+    let subjects: Vec<&str> = seen.iter().map(|(s, ..)| s.as_str()).collect();
+    assert!(subjects.contains(&"Rechnung"), "{subjects:?}");
+    // A European product: the accented subjects must survive UTF-16LE intact.
+    assert!(subjects.contains(&"Liège"), "{subjects:?}");
+    assert!(subjects.contains(&"Müller"), "{subjects:?}");
+
+    for (subject, sender, time, flags) in &seen {
+        assert!(sender.contains("example.test"), "{sender} for {subject}");
+        // A FILETIME, not a Unix timestamp: the epoch mistake renders as a
+        // plausible date in the wrong century rather than as a failure.
+        assert!(
+            *time > 130_000_000_000_000_000,
+            "delivery time is not a FILETIME: {time}"
+        );
+        // Delivered mail is unread, which is what makes a row bold.
+        assert_eq!(flags & 0x0000_0001, 0, "newly delivered mail reads unread");
+    }
+}
+
+/// Reads a UTF-16LE null-terminated string, advancing `at` past its terminator.
+fn read_utf16(bytes: &[u8], at: &mut usize) -> String {
+    let start = *at;
+    while bytes[*at] != 0 || bytes[*at + 1] != 0 {
+        *at += 2;
+    }
+    let units: Vec<u16> = bytes[start..*at]
+        .chunks_exact(2)
+        .map(|c| u16::from_le_bytes([c[0], c[1]]))
+        .collect();
+    *at += 2;
+    String::from_utf16(&units).expect("utf-16")
+}
+
+/// A caller cannot read another mailbox's messages by naming its folder: the
+/// contents table is opened on a folder from **this** session's own tree, and
+/// that tree was built from the authenticated account's mailboxes.
+#[tokio::test]
+async fn one_tenant_cannot_read_another_tenants_messages() {
+    let victim = harness("contents-victim").await;
+    victim
+        .account
+        .create_mailbox(None, "Inbox", Some("inbox"))
+        .await
+        .expect("inbox");
+    victim
+        .account
+        .deliver(
+            b"From: s@example.test\r\nTo: v@example.test\r\n\
+              Subject: Vertraulich\r\n\r\nbody\r\n",
+        )
+        .await
+        .expect("deliver");
+
+    // A different tenant entirely, with its own empty inbox.
+    let other = harness("contents-other").await;
+    other
+        .account
+        .create_mailbox(None, "Inbox", Some("inbox"))
+        .await
+        .expect("inbox");
+    let auth = basic(&other.email, &other.password);
+
+    let (_, headers, _) = send(
+        &other.app,
+        "Connect",
+        Some(&auth),
+        None,
+        connect_body("/o=alo/cn=x"),
+    )
+    .await;
+    let cookie = format!("{SESSION_COOKIE}={}", session_cookie(&headers));
+
+    // The Inbox folder id is the same fixed number in every mailbox — that is
+    // exactly why this test exists. Reading it must yield this caller's inbox,
+    // which is empty, and never the other tenant's.
+    let inbox_fid = {
+        let mut fid = [0u8; 8];
+        fid[0..2].copy_from_slice(&1u16.to_le_bytes());
+        fid[2..8].copy_from_slice(&5u64.to_le_bytes()[0..6]);
+        u64::from_le_bytes(fid)
+    };
+
+    let mut rops = Vec::new();
+    let logon = rop_logon("");
+    let rop_size = u16::from_le_bytes(logon[0..2].try_into().unwrap()) as usize;
+    rops.extend_from_slice(&logon[2..rop_size]);
+    rops.push(0x02);
+    rops.extend_from_slice(&[0x00, 0x00, 0x01]);
+    rops.extend_from_slice(&inbox_fid.to_le_bytes());
+    rops.push(0x00);
+    rops.extend_from_slice(&[0x05, 0x00, 0x01, 0x02, 0x00]);
+    rops.extend_from_slice(&[0x12, 0x00, 0x02, 0x00]);
+    rops.extend_from_slice(&1u16.to_le_bytes());
+    rops.extend_from_slice(&[0x1F, 0x00, 0x37, 0x00]); // PidTagSubject
+    rops.extend_from_slice(&[0x15, 0x00, 0x02, 0x00, 0x01]);
+    rops.extend_from_slice(&50u16.to_le_bytes());
+
+    let mut buffer = u16::try_from(rops.len() + 2)
+        .unwrap()
+        .to_le_bytes()
+        .to_vec();
+    buffer.extend_from_slice(&rops);
+    buffer.extend_from_slice(&0xFFFF_FFFFu32.to_le_bytes());
+    buffer.extend_from_slice(&0xFFFF_FFFFu32.to_le_bytes());
+    buffer.extend_from_slice(&0xFFFF_FFFFu32.to_le_bytes());
+
+    let (status, _, body) = send(
+        &other.app,
+        "Execute",
+        Some(&auth),
+        Some(&cookie),
+        execute_body(&buffer, 64 * 1024),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let split = body
+        .windows(4)
+        .position(|w| w == BLANK_LINE)
+        .expect("framing");
+    let execute = &body[split + 4..];
+    let rop_len = u32::from_le_bytes(execute[12..16].try_into().unwrap()) as usize;
+    let payload = &execute[16..16 + rop_len][8..];
+    let size = u16::from_le_bytes(payload[0..2].try_into().unwrap()) as usize;
+    let responses = &payload[2..size];
+
+    // The table opens — it is this caller's own inbox — and holds nothing.
+    let table = &responses[174..184];
+    assert_eq!(
+        u32::from_le_bytes(table[6..10].try_into().unwrap()),
+        0,
+        "another tenant's message count leaked"
+    );
+
+    let query = &responses[191..];
+    assert_eq!(
+        u16::from_le_bytes(query[7..9].try_into().unwrap()),
+        0,
+        "another tenant's mail was returned"
+    );
+    // And the word never appears anywhere in the answer.
+    let text = String::from_utf8_lossy(responses);
+    assert!(
+        !text.contains("Vertraulich"),
+        "the other tenant's subject is in the response"
+    );
+}

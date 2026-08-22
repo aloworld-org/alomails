@@ -33,10 +33,11 @@ use base64::engine::general_purpose::STANDARD as BASE64;
 use time::OffsetDateTime;
 
 use crate::connect::{ConnectRequest, MAX_CONNECT_BODY, success_body};
-use crate::dispatch::dispatch;
+use crate::dispatch::{dispatch, wanted_contents};
 use crate::execute::{ExecuteRequest, success_body as execute_success_body};
 use crate::folders::FolderView;
 use crate::logon_response::LogonTime;
+use crate::messages::MessageView;
 use crate::response::{MapiResponse, ResponseCode};
 use crate::rop::RopBuffer;
 use crate::rpc::{read_extended_buffer, write_extended_buffer};
@@ -54,6 +55,13 @@ const PENDING_PERIOD_MS: u32 = 15_000;
 /// number is far above any real mailbox. Without it a single `Execute` could
 /// pull an unbounded result set into memory on every call.
 const MAX_FOLDERS: i64 = 10_000;
+
+/// The most messages read from one folder in a single `Execute`.
+///
+/// A client pages a table with `RopQueryRows`, so this bounds one response
+/// rather than a folder. Mirrors [`crate::messages::MAX_MESSAGES`], as an
+/// `i64` because that is what a store page takes.
+const MAX_MESSAGES: i64 = crate::messages::MAX_MESSAGES as i64;
 
 /// What the client is told about retrying, mirroring Exchange's own pacing.
 /// A client told to retry zero times gives up on the first hiccup.
@@ -390,6 +398,66 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
                 }
             };
 
+            // **Which folders' messages this buffer needs, worked out before
+            // any of them is read.** Dispatch runs under a lock and awaits
+            // nothing, so a folder's messages have to be in hand before it
+            // starts — but the folder a client is about to read is named by a
+            // handle that the same buffer often opens (Outlook sends
+            // `RopOpenFolder`, `RopGetContentsTable`, `RopSetColumns` and
+            // `RopQueryRows` together). So the buffer is rehearsed against a
+            // copy of the object table, and only the folder list is kept.
+            let wanted = {
+                let Ok(objects) = context.objects.lock() else {
+                    tracing::error!("mapi: session object table is poisoned");
+                    return MapiResponse::new(
+                        request_type.as_str(),
+                        request_id,
+                        ResponseCode::UnknownFailure,
+                    )
+                    .with_client_info(client_info)
+                    .into_response();
+                };
+                wanted_contents(
+                    &context,
+                    &state.dn_prefix,
+                    &objects,
+                    &folders,
+                    &input,
+                    logon_time(now),
+                )
+            };
+
+            // One query per folder actually reached, as the caller's own
+            // account — the same door the folder tree came through, so a view
+            // of somebody else's mail is not something this code can produce.
+            let mut messages = MessageView::new();
+            for folder_id in wanted {
+                let Some(mailbox) = MessageView::mailbox_of(&folders, folder_id) else {
+                    // A special folder with no alo mailbox behind it. It holds
+                    // nothing, and that is a measurement: the tree was read and
+                    // no mailbox stands there.
+                    messages.insert(folder_id, &[]);
+                    continue;
+                };
+                match account
+                    .mapi_mailbox_rows(&mailbox, alo_store::Page::first(MAX_MESSAGES))
+                    .await
+                {
+                    Ok(rows) => messages.insert(folder_id, &rows),
+                    Err(error) => {
+                        // No subjects, addresses or mailbox names in the log.
+                        tracing::warn!(%error, "mapi: could not read a folder's messages");
+                        return MapiResponse::new(
+                            request_type.as_str(),
+                            request_id,
+                            ResponseCode::UnknownFailure,
+                        )
+                        .with_client_info(client_info)
+                        .into_response();
+                    }
+                }
+            }
+
             let dispatched = {
                 // The lock is held only across the dispatch, which awaits
                 // nothing — a poisoned lock means another request panicked
@@ -410,6 +478,7 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
                     &state.dn_prefix,
                     &mut objects,
                     &folders,
+                    &messages,
                     &input,
                     logon_time(now),
                 )

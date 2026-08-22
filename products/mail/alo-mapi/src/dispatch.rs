@@ -22,6 +22,9 @@
 use crate::columns::{
     PropertyTag, ROP_SET_COLUMNS, SetColumnsRequest, success_body as set_columns_success,
 };
+use crate::contents::{
+    ContentsTableRequest, ROP_GET_CONTENTS_TABLE, success_body as contents_table_success,
+};
 use crate::folders::FolderView;
 use crate::hierarchy::{
     HierarchyTableRequest, ROP_GET_HIERARCHY_TABLE, success_body as hierarchy_table_success,
@@ -31,11 +34,12 @@ use crate::logon_response::{
     Fid, LogonResponse, LogonTime, RESPONSE_OWNER_RIGHT, RESPONSE_SEND_AS_RIGHT, ROP_LOGON,
     SpecialFolder,
 };
+use crate::messages::MessageView;
 use crate::openfolder::{OpenFolderRequest, ROP_OPEN_FOLDER, success_body as open_folder_success};
 use crate::rop::{RopBuffer, RopHeader};
 use crate::rows::{
-    ORIGIN_BEGINNING, ORIGIN_END, QueryRowsRequest, ROP_QUERY_ROWS, Value, pid, standard_row,
-    success_body as query_rows_success,
+    MESSAGE_CLASS_NOTE, ORIGIN_BEGINNING, ORIGIN_END, QueryRowsRequest, ROP_QUERY_ROWS, Value, pid,
+    standard_row, success_body as query_rows_success,
 };
 use crate::session::SessionContext;
 
@@ -95,6 +99,28 @@ pub enum ServerObject {
         /// asks twice gets the next rows, not the same ones again.
         cursor: usize,
     },
+    /// A table of a folder's messages, opened on that folder.
+    ///
+    /// Deliberately its own variant rather than a flag on
+    /// [`ServerObject::HierarchyTable`]: the two tables share their shape on
+    /// the wire and nothing else. A child folder and a message answer
+    /// different properties out of different sources, so a single variant
+    /// would put a discriminant in every place either one is read.
+    ContentsTable {
+        /// The folder whose messages this table lists.
+        folder_id: u64,
+        /// The columns every row of this table will carry, in order.
+        columns: Vec<PropertyTag>,
+        /// How many rows the client has already read.
+        cursor: usize,
+        /// Whether this table was opened for associated (FAI) messages.
+        ///
+        /// alo keeps none, so such a table is empty. It is remembered rather
+        /// than discarded because the emptiness has to be *stable*: a client
+        /// that opens an associated table and reads it twice must not be told
+        /// a different story the second time.
+        associated: bool,
+    },
 }
 
 /// The server objects one Session Context holds.
@@ -102,7 +128,11 @@ pub enum ServerObject {
 /// Handles are allocated per session and never reused within it: a handle that
 /// came back after its object was released would let a stale client reach
 /// whatever took its place.
-#[derive(Debug, Default)]
+///
+/// `Clone` exists for one caller: [`wanted_contents`] dispatches against a copy
+/// to learn which folders a buffer is about to read, and must not leave the
+/// session's real table advanced by that rehearsal.
+#[derive(Debug, Default, Clone)]
 pub struct ObjectTable {
     objects: Vec<(u32, ServerObject)>,
     next: u32,
@@ -209,6 +239,49 @@ pub struct Dispatched {
     /// Whether the list was walked to its end. `false` means an operation could
     /// not be parsed and the rest of the buffer was not read.
     pub complete: bool,
+    /// The folders whose messages this buffer needed.
+    ///
+    /// Populated whether or not the messages were available, which is what
+    /// makes [`wanted_contents`] work: a rehearsal against an empty
+    /// [`MessageView`] still reports what it *would* have read.
+    pub contents_folders: Vec<u64>,
+}
+
+/// The folders whose messages a buffer is about to read.
+///
+/// The router has to load messages **before** dispatching, because dispatch
+/// runs under a lock and awaits nothing — but which folder a client is about to
+/// read is only knowable by walking the buffer, and the handle it names is
+/// often opened by an earlier operation in that same buffer (Outlook sends
+/// `RopOpenFolder`, `RopGetContentsTable`, `RopSetColumns` and `RopQueryRows`
+/// together). A scan that did not simulate handle allocation would miss
+/// exactly the common case.
+///
+/// So this rehearses the whole dispatch against a **copy** of the object table
+/// and an empty [`MessageView`], and reports what it reached. The responses are
+/// thrown away; only the folder list is kept. Rehearsing costs a second walk of
+/// a buffer that is at most tens of kilobytes, and it cannot drift from the
+/// real walk because it *is* the real walk.
+#[must_use]
+pub fn wanted_contents(
+    ctx: &SessionContext,
+    prefix: &str,
+    objects: &ObjectTable,
+    folders: &FolderView,
+    input: &RopBuffer,
+    now: LogonTime,
+) -> Vec<u64> {
+    let mut rehearsal = objects.clone();
+    dispatch(
+        ctx,
+        prefix,
+        &mut rehearsal,
+        folders,
+        &MessageView::new(),
+        input,
+        now,
+    )
+    .contents_folders
 }
 
 /// Walks a ROP input buffer and answers each request in turn.
@@ -221,12 +294,14 @@ pub fn dispatch(
     prefix: &str,
     objects: &mut ObjectTable,
     folders: &FolderView,
+    messages: &MessageView,
     input: &RopBuffer,
     now: LogonTime,
 ) -> Dispatched {
     let mut responses = Vec::new();
     let mut handles = input.handles.clone();
     let mut rest: &[u8] = &input.rops;
+    let mut contents_folders: Vec<u64> = Vec::new();
 
     while !rest.is_empty() {
         let Ok(header) = RopHeader::parse(rest) else {
@@ -236,6 +311,7 @@ pub fn dispatch(
                 responses,
                 handles,
                 complete: false,
+                contents_folders,
             };
         };
 
@@ -251,6 +327,7 @@ pub fn dispatch(
                         responses,
                         handles,
                         complete: false,
+                        contents_folders,
                     };
                 };
                 rest = tail;
@@ -335,6 +412,7 @@ pub fn dispatch(
                         responses,
                         handles,
                         complete: false,
+                        contents_folders,
                     };
                 };
                 rest = tail;
@@ -396,6 +474,7 @@ pub fn dispatch(
                         responses,
                         handles,
                         complete: false,
+                        contents_folders,
                     };
                 };
                 rest = tail;
@@ -435,6 +514,76 @@ pub fn dispatch(
                 responses.extend(hierarchy_table_success(request.output_handle_index, rows));
             }
 
+            ROP_GET_CONTENTS_TABLE => {
+                let Ok((request, tail)) = ContentsTableRequest::parse(rest) else {
+                    responses.extend(failure(
+                        ROP_GET_CONTENTS_TABLE,
+                        header.input_handle_index,
+                        error::INVALID_OBJECT,
+                    ));
+                    return Dispatched {
+                        responses,
+                        handles,
+                        complete: false,
+                        contents_folders,
+                    };
+                };
+                rest = tail;
+
+                // Opened **on a folder**, exactly as a hierarchy table is: a
+                // logon handle is not a folder and neither is another table.
+                // Asking the wrong kind of object for its messages is refused
+                // rather than answered with an empty table, which a client
+                // would cache as "this folder has no mail in it".
+                let opened = handles
+                    .get(usize::from(request.input_handle_index))
+                    .copied()
+                    .filter(|handle| *handle != crate::rop::HANDLE_UNSET)
+                    .and_then(|handle| objects.get(handle));
+                let Some(ServerObject::Folder { folder_id }) = opened else {
+                    responses.extend(failure(
+                        ROP_GET_CONTENTS_TABLE,
+                        request.output_handle_index,
+                        error::INVALID_OBJECT,
+                    ));
+                    continue;
+                };
+                let folder_id = *folder_id;
+
+                // Recorded even when the messages are already loaded: this list
+                // is what the rehearsal in `wanted_contents` exists to collect,
+                // and it runs against an empty view where nothing is loaded.
+                // An associated table needs nothing read — alo has no FAI
+                // messages — so asking for one loads nothing.
+                if !request.associated() && !contents_folders.contains(&folder_id) {
+                    contents_folders.push(folder_id);
+                }
+
+                let handle = objects.insert(ServerObject::ContentsTable {
+                    folder_id,
+                    columns: Vec::new(),
+                    cursor: 0,
+                    associated: request.associated(),
+                });
+                let index = usize::from(request.output_handle_index);
+                if handles.len() <= index {
+                    handles.resize(index + 1, crate::rop::HANDLE_UNSET);
+                }
+                handles[index] = handle;
+
+                // The count is what has actually been read for this folder. A
+                // folder nobody loaded reports zero here and its `RopQueryRows`
+                // refuses rather than returning an empty page — the count and
+                // the rows come from the same place, so they cannot disagree.
+                let loaded = if request.associated() {
+                    0
+                } else {
+                    messages.rows(folder_id).map_or(0, <[_]>::len)
+                };
+                let rows = u32::try_from(loaded).unwrap_or(u32::MAX);
+                responses.extend(contents_table_success(request.output_handle_index, rows));
+            }
+
             ROP_SET_COLUMNS => {
                 let Ok((request, tail)) = SetColumnsRequest::parse(rest) else {
                     responses.extend(failure(
@@ -446,6 +595,7 @@ pub fn dispatch(
                         responses,
                         handles,
                         complete: false,
+                        contents_folders,
                     };
                 };
                 rest = tail;
@@ -458,9 +608,16 @@ pub fn dispatch(
                     .get(usize::from(request.input_handle_index))
                     .copied()
                     .filter(|handle| *handle != crate::rop::HANDLE_UNSET);
-                let is_table = handle
-                    .and_then(|handle| objects.get(handle))
-                    .is_some_and(|object| matches!(object, ServerObject::HierarchyTable { .. }));
+                let is_table =
+                    handle
+                        .and_then(|handle| objects.get(handle))
+                        .is_some_and(|object| {
+                            matches!(
+                                object,
+                                ServerObject::HierarchyTable { .. }
+                                    | ServerObject::ContentsTable { .. }
+                            )
+                        });
                 if !is_table {
                     responses.extend(failure(
                         ROP_SET_COLUMNS,
@@ -470,9 +627,13 @@ pub fn dispatch(
                     continue;
                 }
 
+                // Both kinds of table carry a column list, and `RopSetColumns`
+                // means the same thing to each — it is the *rows* that differ.
                 if let Some(handle) = handle
-                    && let Some(ServerObject::HierarchyTable { columns, .. }) =
-                        objects.get_mut(handle)
+                    && let Some(
+                        ServerObject::HierarchyTable { columns, .. }
+                        | ServerObject::ContentsTable { columns, .. },
+                    ) = objects.get_mut(handle)
                 {
                     columns.clone_from(&request.columns);
                 }
@@ -490,6 +651,7 @@ pub fn dispatch(
                         responses,
                         handles,
                         complete: false,
+                        contents_folders,
                     };
                 };
                 rest = tail;
@@ -498,59 +660,139 @@ pub fn dispatch(
                     .get(usize::from(request.input_handle_index))
                     .copied()
                     .filter(|handle| *handle != crate::rop::HANDLE_UNSET);
-                let Some(ServerObject::HierarchyTable {
-                    folder_id,
-                    columns,
-                    cursor,
-                }) = handle.and_then(|handle| objects.get(handle))
-                else {
-                    responses.extend(failure(
-                        ROP_QUERY_ROWS,
-                        request.input_handle_index,
-                        error::INVALID_OBJECT,
-                    ));
-                    continue;
-                };
-                let (folder_id, columns, cursor) = (*folder_id, columns.clone(), *cursor);
 
-                let all = folders.children(folder_id);
+                // Which table this is decides where the rows come from. Both
+                // carry a folder id, a column list and a cursor; a hierarchy
+                // table reads the folder's children out of the tree, and a
+                // contents table reads its messages out of what was loaded.
+                let opened = handle.and_then(|handle| objects.get(handle));
+                let (folder_id, columns, cursor, is_contents, associated) = match opened {
+                    Some(ServerObject::HierarchyTable {
+                        folder_id,
+                        columns,
+                        cursor,
+                    }) => (*folder_id, columns.clone(), *cursor, false, false),
+                    Some(ServerObject::ContentsTable {
+                        folder_id,
+                        columns,
+                        cursor,
+                        associated,
+                    }) => (*folder_id, columns.clone(), *cursor, true, *associated),
+                    _ => {
+                        responses.extend(failure(
+                            ROP_QUERY_ROWS,
+                            request.input_handle_index,
+                            error::INVALID_OBJECT,
+                        ));
+                        continue;
+                    }
+                };
+
+                // The rows this table could ever return, before the cursor and
+                // the client's count are applied.
+                let total = if is_contents {
+                    if associated {
+                        // alo keeps no FAI messages, so this table is empty and
+                        // stays empty. Not a refusal: an empty answer here is
+                        // the truth, and a client caching it caches the truth.
+                        0
+                    } else {
+                        match messages.rows(folder_id) {
+                            Some(rows) => rows.len(),
+                            None => {
+                                // The folder's messages were never loaded, so
+                                // there is nothing truthful to say about them.
+                                // Returning an empty page would tell a client
+                                // the folder is empty, which it then caches.
+                                responses.extend(failure(
+                                    ROP_QUERY_ROWS,
+                                    request.input_handle_index,
+                                    error::NOT_FOUND,
+                                ));
+                                continue;
+                            }
+                        }
+                    }
+                } else {
+                    folders.children(folder_id).len()
+                };
+
                 // Read forwards from the cursor, bounded by what the client
                 // asked for and by our own ceiling — a row is variable-sized,
                 // so the count is the bound that can be applied before any of
                 // them is built.
                 let wanted = usize::from(request.row_count.min(crate::rows::MAX_ROWS));
-                let taken: Vec<&crate::folders::FolderEntry> = if request.forward_read {
-                    all.iter().skip(cursor).take(wanted).copied().collect()
+                // Backward reads are not served yet. An empty answer at the end
+                // of the table is a truthful "nothing further this way", not a
+                // claim that the folder is empty.
+                let span = if request.forward_read {
+                    (cursor.min(total), (cursor + wanted).min(total))
                 } else {
-                    // Backward reads are not served yet. An empty answer at the
-                    // end of the table is a truthful "nothing further this
-                    // way", not a claim that the folder is empty.
-                    Vec::new()
+                    (0, 0)
                 };
 
-                let mut rows = Vec::with_capacity(taken.len());
+                let mut rows = Vec::with_capacity(span.1.saturating_sub(span.0));
                 let mut refused = false;
-                for child in &taken {
-                    let child = *child;
-                    let has_children = !folders.children(child.fid).is_empty();
-                    let answer = move |tag: PropertyTag| -> Option<Value> {
-                        match tag.property_id {
-                            pid::DISPLAY_NAME => Some(Value::String(child.name.clone())),
-                            pid::FOLDER_ID => Some(Value::Integer64(child.fid)),
-                            pid::SUBFOLDERS => Some(Value::Boolean(has_children)),
-                            // Every folder in the view can answer this: a real
-                            // mailbox reports what it holds, and a protocol
-                            // folder reports zero because the store was read
-                            // and no mailbox stands behind it.
-                            pid::CONTENT_COUNT => Some(Value::Integer32(child.total_messages)),
-                            _ => None,
-                        }
+                if is_contents {
+                    let entries = if associated {
+                        &[][..]
+                    } else {
+                        messages.rows(folder_id).unwrap_or(&[])
                     };
-                    match standard_row(&columns, &answer) {
-                        Some(row) => rows.push(row),
-                        None => {
-                            refused = true;
-                            break;
+                    for message in &entries[span.0..span.1] {
+                        let answer = |tag: PropertyTag| -> Option<Value> {
+                            match tag.property_id {
+                                pid::MID => Some(Value::Integer64(message.mid)),
+                                pid::SUBJECT => Some(Value::String(message.subject.clone())),
+                                pid::SENDER_NAME => Some(Value::String(message.sender.clone())),
+                                pid::MESSAGE_DELIVERY_TIME => {
+                                    Some(Value::Time(message.delivery_time))
+                                }
+                                pid::MESSAGE_FLAGS => Some(Value::Integer32(message.flags)),
+                                pid::MESSAGE_SIZE => Some(Value::Integer32(message.size)),
+                                pid::HAS_ATTACHMENTS => {
+                                    Some(Value::Boolean(message.has_attachment))
+                                }
+                                // Everything alo keeps in a mailbox is a note.
+                                pid::MESSAGE_CLASS => {
+                                    Some(Value::String(MESSAGE_CLASS_NOTE.to_owned()))
+                                }
+                                _ => None,
+                            }
+                        };
+                        match standard_row(&columns, &answer) {
+                            Some(row) => rows.push(row),
+                            None => {
+                                refused = true;
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    let all = folders.children(folder_id);
+                    for child in &all[span.0..span.1] {
+                        let child = *child;
+                        let has_children = !folders.children(child.fid).is_empty();
+                        let answer = move |tag: PropertyTag| -> Option<Value> {
+                            match tag.property_id {
+                                pid::DISPLAY_NAME => Some(Value::String(child.name.clone())),
+                                pid::FOLDER_ID => Some(Value::Integer64(child.fid)),
+                                pid::SUBFOLDERS => Some(Value::Boolean(has_children)),
+                                // Every folder in the view can answer this: a
+                                // real mailbox reports what it holds, and a
+                                // protocol folder reports zero because the
+                                // store was read and no mailbox stands behind
+                                // it.
+                                pid::CONTENT_COUNT => Some(Value::Integer32(child.total_messages)),
+                                _ => None,
+                            }
+                        };
+                        match standard_row(&columns, &answer) {
+                            Some(row) => rows.push(row),
+                            None => {
+                                refused = true;
+                                break;
+                            }
                         }
                     }
                 }
@@ -569,13 +811,15 @@ pub fn dispatch(
 
                 let advanced = cursor + rows.len();
                 if let Some(handle) = handle
-                    && let Some(ServerObject::HierarchyTable { cursor, .. }) =
-                        objects.get_mut(handle)
+                    && let Some(
+                        ServerObject::HierarchyTable { cursor, .. }
+                        | ServerObject::ContentsTable { cursor, .. },
+                    ) = objects.get_mut(handle)
                 {
                     *cursor = advanced;
                 }
 
-                let origin = if advanced >= all.len() {
+                let origin = if advanced >= total {
                     ORIGIN_END
                 } else {
                     ORIGIN_BEGINNING
@@ -601,6 +845,7 @@ pub fn dispatch(
                     responses,
                     handles,
                     complete: false,
+                    contents_folders,
                 };
             }
         }
@@ -610,6 +855,7 @@ pub fn dispatch(
         responses,
         handles,
         complete: true,
+        contents_folders,
     }
 }
 
@@ -619,6 +865,7 @@ mod tests {
 
     use super::*;
     use crate::logon::{LOGON_PRIVATE, OPEN_PUBLIC};
+    use alo_store::MapiMessageRow;
     use alo_store::{TenantId, UserId};
     use time::OffsetDateTime;
 
@@ -715,6 +962,7 @@ mod tests {
             "/o=alo",
             &mut objects,
             &view(),
+            &MessageView::new(),
             &buffer,
             LogonTime::default(),
         );
@@ -756,6 +1004,7 @@ mod tests {
             "/o=alo",
             &mut objects,
             &view(),
+            &MessageView::new(),
             &buffer,
             LogonTime::default(),
         );
@@ -788,6 +1037,7 @@ mod tests {
                 "/o=alo",
                 &mut objects,
                 &view(),
+                &MessageView::new(),
                 &buffer,
                 LogonTime::default(),
             );
@@ -840,6 +1090,7 @@ mod tests {
             "/o=alo",
             &mut objects,
             &view(),
+            &MessageView::new(),
             &buffer,
             LogonTime::default(),
         );
@@ -891,6 +1142,7 @@ mod tests {
             "/o=alo",
             &mut objects,
             &view(),
+            &MessageView::new(),
             &buffer,
             LogonTime::default(),
         );
@@ -922,6 +1174,7 @@ mod tests {
             "/o=alo",
             &mut objects,
             &view(),
+            &MessageView::new(),
             &buffer,
             LogonTime::default(),
         );
@@ -976,6 +1229,7 @@ mod tests {
             "/o=alo",
             &mut objects,
             &view(),
+            &MessageView::new(),
             &buffer,
             LogonTime::default(),
         );
@@ -1024,6 +1278,7 @@ mod tests {
             "/o=alo",
             &mut objects,
             &view(),
+            &MessageView::new(),
             &buffer,
             LogonTime::default(),
         );
@@ -1073,6 +1328,7 @@ mod tests {
             "/o=alo",
             &mut objects,
             &view(),
+            &MessageView::new(),
             &buffer,
             LogonTime::default(),
         );
@@ -1137,6 +1393,7 @@ mod tests {
             "/o=alo",
             &mut objects,
             &view(),
+            &MessageView::new(),
             &buffer,
             LogonTime::default(),
         );
@@ -1211,6 +1468,7 @@ mod tests {
             "/o=alo",
             &mut objects,
             &view(),
+            &MessageView::new(),
             &buffer,
             LogonTime::default(),
         );
@@ -1233,6 +1491,7 @@ mod tests {
             "/o=alo",
             &mut objects,
             &view(),
+            &MessageView::new(),
             &buffer,
             LogonTime::default(),
         );
@@ -1258,6 +1517,7 @@ mod tests {
             "/o=alo",
             &mut objects,
             &view(),
+            &MessageView::new(),
             &buffer,
             LogonTime::default(),
         );
@@ -1284,6 +1544,7 @@ mod tests {
                 "/o=alo",
                 &mut objects,
                 &view(),
+                &MessageView::new(),
                 &buffer,
                 LogonTime::default(),
             );
@@ -1320,6 +1581,7 @@ mod tests {
             "/o=alo",
             &mut objects,
             &view(),
+            &MessageView::new(),
             &buffer,
             LogonTime::default(),
         );
@@ -1344,6 +1606,7 @@ mod tests {
             "/o=alo",
             &mut objects,
             &view(),
+            &MessageView::new(),
             &buffer,
             LogonTime::default(),
         );
@@ -1384,6 +1647,7 @@ mod tests {
             "/o=alo",
             &mut objects,
             &view(),
+            &MessageView::new(),
             &buffer,
             LogonTime::default(),
         );
@@ -1407,11 +1671,464 @@ mod tests {
             "/o=alo",
             &mut objects,
             &view(),
+            &MessageView::new(),
             &buffer,
             LogonTime::default(),
         );
         assert!(out.complete);
         assert!(out.responses.is_empty());
         assert_eq!(out.handles, vec![1, 2], "the table is returned unchanged");
+    }
+
+    // ---- stage 4: the messages in a folder --------------------------------
+
+    /// A `RopGetContentsTable` on the folder at handle index 1, storing the
+    /// table at index 2 — the same slots the hierarchy tests use, so the two
+    /// chains are directly comparable.
+    fn contents_rop(table_flags: u8) -> Vec<u8> {
+        vec![ROP_GET_CONTENTS_TABLE, 0x00, 0x01, 0x02, table_flags]
+    }
+
+    fn message_row(id: &str, subject: &str, seen: bool, attachment: bool) -> MapiMessageRow {
+        MapiMessageRow {
+            id: alo_store::MessageId::new(id.to_owned()),
+            subject: subject.to_owned(),
+            from_addr: "Müller <m@example.test>".to_owned(),
+            received_at: time::OffsetDateTime::from_unix_timestamp(1_787_713_200).unwrap(),
+            size: 2048,
+            seen,
+            has_attachment: attachment,
+        }
+    }
+
+    /// The messages loaded for the folder a test is about to read.
+    fn loaded(folder_id: u64, rows: &[MapiMessageRow]) -> MessageView {
+        let mut view = MessageView::new();
+        view.insert(folder_id, rows);
+        view
+    }
+
+    /// The columns Outlook asks a message list for: who it is from, what it is
+    /// about, when it arrived, and whether it has been read.
+    fn message_columns() -> Vec<PropertyTag> {
+        vec![
+            PropertyTag {
+                property_type: crate::rows::ptyp::INTEGER64,
+                property_id: pid::MID,
+            },
+            PropertyTag {
+                property_type: crate::rows::ptyp::STRING,
+                property_id: pid::SUBJECT,
+            },
+            PropertyTag {
+                property_type: crate::rows::ptyp::STRING,
+                property_id: pid::SENDER_NAME,
+            },
+            PropertyTag {
+                property_type: crate::rows::ptyp::TIME,
+                property_id: pid::MESSAGE_DELIVERY_TIME,
+            },
+            PropertyTag {
+                property_type: crate::rows::ptyp::INTEGER32,
+                property_id: pid::MESSAGE_FLAGS,
+            },
+        ]
+    }
+
+    /// **The whole of stage 4 in one buffer**: log on, open the inbox, take its
+    /// contents table, set the columns, and read the rows. This is what Outlook
+    /// does to list the messages in a folder.
+    #[test]
+    fn a_client_can_read_the_messages_in_a_folder_in_one_buffer() {
+        let ctx = context("disan@alo.test");
+        let mut objects = ObjectTable::new();
+        let inbox = fid_of(SpecialFolder::Inbox);
+        let messages = loaded(
+            inbox,
+            &[
+                message_row("m-1", "Rechnung", false, false),
+                message_row("m-2", "Liège", true, true),
+            ],
+        );
+
+        let mut rops = logon_buffer("", LOGON_PRIVATE, 0).rops;
+        rops.extend(open_folder_rop(inbox));
+        rops.extend(contents_rop(0x00));
+        rops.extend(set_columns_rop(&message_columns()));
+        rops.extend(query_rows_rop(50));
+        let buffer = RopBuffer {
+            rops,
+            handles: vec![crate::rop::HANDLE_UNSET; 3],
+        };
+
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            &view(),
+            &messages,
+            &buffer,
+            LogonTime::default(),
+        );
+        assert!(out.complete, "the walk stopped early");
+
+        // The contents-table response reports what the folder holds.
+        let table = &out.responses[174..184];
+        assert_eq!(table[0], ROP_GET_CONTENTS_TABLE);
+        assert_eq!(
+            u32::from_le_bytes(table[2..6].try_into().unwrap()),
+            error::SUCCESS
+        );
+        assert_eq!(u32::from_le_bytes(table[6..10].try_into().unwrap()), 2);
+
+        // Then the rows themselves.
+        let rows = &out.responses[191..];
+        assert_eq!(rows[0], ROP_QUERY_ROWS);
+        assert_eq!(
+            u32::from_le_bytes(rows[2..6].try_into().unwrap()),
+            error::SUCCESS
+        );
+        assert_eq!(rows[6], ORIGIN_END, "both messages were read");
+        assert_eq!(u16::from_le_bytes(rows[7..9].try_into().unwrap()), 2);
+
+        // First row: flag byte, then MID, subject, sender, time, flags.
+        let first = &rows[9..];
+        assert_eq!(first[0], 0x00, "a standard row, every value present");
+        let mid = u64::from_le_bytes(first[1..9].try_into().unwrap());
+        assert!(mid != 0, "a MID a client can ask us to open");
+
+        let subject = utf16_at(first, 9);
+        assert_eq!(subject.0, "Rechnung");
+        let sender = utf16_at(first, subject.1);
+        assert!(sender.0.contains("Müller"), "{}", sender.0);
+
+        let time = u64::from_le_bytes(first[sender.1..sender.1 + 8].try_into().unwrap());
+        assert_eq!(time, (1_787_713_200 + 11_644_473_600) * 10_000_000);
+        let flags = u32::from_le_bytes(first[sender.1 + 8..sender.1 + 12].try_into().unwrap());
+        assert_eq!(flags & crate::rows::mf::READ, 0, "unread");
+    }
+
+    /// Reads a UTF-16LE null-terminated string at `at`, returning it with the
+    /// offset just past its terminator.
+    fn utf16_at(bytes: &[u8], at: usize) -> (String, usize) {
+        let mut units = Vec::new();
+        let mut i = at;
+        loop {
+            let unit = u16::from_le_bytes([bytes[i], bytes[i + 1]]);
+            i += 2;
+            if unit == 0 {
+                break;
+            }
+            units.push(unit);
+        }
+        (String::from_utf16(&units).expect("utf-16"), i)
+    }
+
+    /// A contents table is opened **on a folder**. A logon is not one, and
+    /// asking the wrong kind of object for its messages is refused rather than
+    /// answered with an empty table — which a client would cache as "this
+    /// folder has no mail in it".
+    #[test]
+    fn a_contents_table_cannot_be_opened_on_a_logon() {
+        let ctx = context("disan@alo.test");
+        let mut objects = ObjectTable::new();
+
+        let mut rops = logon_buffer("", LOGON_PRIVATE, 0).rops;
+        // Index 0 is the logon, not a folder.
+        rops.extend(vec![ROP_GET_CONTENTS_TABLE, 0x00, 0x00, 0x02, 0x00]);
+        let buffer = RopBuffer {
+            rops,
+            handles: vec![crate::rop::HANDLE_UNSET; 3],
+        };
+
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            &view(),
+            &MessageView::new(),
+            &buffer,
+            LogonTime::default(),
+        );
+        let response = &out.responses[166..];
+        assert_eq!(response.len(), 6, "a failure response");
+        assert_eq!(response[0], ROP_GET_CONTENTS_TABLE);
+        assert_eq!(
+            u32::from_le_bytes(response[2..6].try_into().unwrap()),
+            error::INVALID_OBJECT
+        );
+    }
+
+    /// A folder whose messages were never loaded is refused rather than
+    /// reported empty. An empty page here is a claim a client caches, and it
+    /// would be a claim we had not checked.
+    #[test]
+    fn an_unloaded_folder_refuses_rather_than_claiming_to_be_empty() {
+        let ctx = context("disan@alo.test");
+        let mut objects = ObjectTable::new();
+
+        let mut rops = logon_buffer("", LOGON_PRIVATE, 0).rops;
+        rops.extend(open_folder_rop(fid_of(SpecialFolder::Inbox)));
+        rops.extend(contents_rop(0x00));
+        rops.extend(set_columns_rop(&message_columns()));
+        rops.extend(query_rows_rop(50));
+        let buffer = RopBuffer {
+            rops,
+            handles: vec![crate::rop::HANDLE_UNSET; 3],
+        };
+
+        // Nothing loaded — the state the rehearsal runs in.
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            &view(),
+            &MessageView::new(),
+            &buffer,
+            LogonTime::default(),
+        );
+        assert!(out.complete);
+        let rows = &out.responses[191..];
+        assert_eq!(rows.len(), 6, "a failure response");
+        assert_eq!(
+            u32::from_le_bytes(rows[2..6].try_into().unwrap()),
+            error::NOT_FOUND
+        );
+    }
+
+    /// The rehearsal reports the folder a buffer is about to read, even though
+    /// it runs with nothing loaded — which is the whole point of it, and the
+    /// only way the router can know what to fetch before dispatching.
+    #[test]
+    fn the_rehearsal_names_the_folder_a_buffer_will_read() {
+        let ctx = context("disan@alo.test");
+        let objects = ObjectTable::new();
+        let inbox = fid_of(SpecialFolder::Inbox);
+
+        let mut rops = logon_buffer("", LOGON_PRIVATE, 0).rops;
+        rops.extend(open_folder_rop(inbox));
+        rops.extend(contents_rop(0x00));
+        let buffer = RopBuffer {
+            rops,
+            handles: vec![crate::rop::HANDLE_UNSET; 3],
+        };
+
+        let wanted = wanted_contents(
+            &ctx,
+            "/o=alo",
+            &objects,
+            &view(),
+            &buffer,
+            LogonTime::default(),
+        );
+        assert_eq!(wanted, vec![inbox]);
+        // And the session's own table is untouched by the rehearsal.
+        assert!(objects.is_empty());
+    }
+
+    /// A buffer that opens no contents table asks for nothing, so drawing a
+    /// folder tree costs no message reads at all.
+    #[test]
+    fn a_buffer_that_reads_no_messages_asks_for_none() {
+        let ctx = context("disan@alo.test");
+        let objects = ObjectTable::new();
+
+        let mut rops = logon_buffer("", LOGON_PRIVATE, 0).rops;
+        rops.extend(open_folder_rop(fid_of(SpecialFolder::IpmSubtree)));
+        rops.extend(hierarchy_rop());
+        let buffer = RopBuffer {
+            rops,
+            handles: vec![crate::rop::HANDLE_UNSET; 3],
+        };
+
+        assert!(
+            wanted_contents(
+                &ctx,
+                "/o=alo",
+                &objects,
+                &view(),
+                &buffer,
+                LogonTime::default(),
+            )
+            .is_empty()
+        );
+    }
+
+    /// An associated (FAI) table is empty and needs nothing read: alo keeps no
+    /// FAI messages, so the truthful answer costs no query.
+    #[test]
+    fn an_associated_table_is_empty_and_loads_nothing() {
+        let ctx = context("disan@alo.test");
+        let mut objects = ObjectTable::new();
+
+        let mut rops = logon_buffer("", LOGON_PRIVATE, 0).rops;
+        rops.extend(open_folder_rop(fid_of(SpecialFolder::Inbox)));
+        rops.extend(contents_rop(crate::contents::TABLE_FLAG_ASSOCIATED));
+        rops.extend(set_columns_rop(&message_columns()));
+        rops.extend(query_rows_rop(50));
+        let buffer = RopBuffer {
+            rops,
+            handles: vec![crate::rop::HANDLE_UNSET; 3],
+        };
+
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            &view(),
+            &MessageView::new(),
+            &buffer,
+            LogonTime::default(),
+        );
+        assert!(out.complete);
+        assert!(
+            out.contents_folders.is_empty(),
+            "an associated table needs no message read"
+        );
+        // Success with no rows, not a refusal: the emptiness is the truth.
+        let rows = &out.responses[191..];
+        assert_eq!(
+            u32::from_le_bytes(rows[2..6].try_into().unwrap()),
+            error::SUCCESS
+        );
+        assert_eq!(u16::from_le_bytes(rows[7..9].try_into().unwrap()), 0);
+    }
+
+    /// The cursor advances, so a client paging through a folder gets the next
+    /// messages rather than the same ones again.
+    #[test]
+    fn reading_twice_advances_through_the_messages() {
+        let ctx = context("disan@alo.test");
+        let mut objects = ObjectTable::new();
+        let inbox = fid_of(SpecialFolder::Inbox);
+        let messages = loaded(
+            inbox,
+            &[
+                message_row("m-1", "one", false, false),
+                message_row("m-2", "two", false, false),
+                message_row("m-3", "three", false, false),
+            ],
+        );
+        let columns = vec![PropertyTag {
+            property_type: crate::rows::ptyp::STRING,
+            property_id: pid::SUBJECT,
+        }];
+
+        let mut rops = logon_buffer("", LOGON_PRIVATE, 0).rops;
+        rops.extend(open_folder_rop(inbox));
+        rops.extend(contents_rop(0x00));
+        rops.extend(set_columns_rop(&columns));
+        rops.extend(query_rows_rop(2));
+        rops.extend(query_rows_rop(2));
+        let buffer = RopBuffer {
+            rops,
+            handles: vec![crate::rop::HANDLE_UNSET; 3],
+        };
+
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            &view(),
+            &messages,
+            &buffer,
+            LogonTime::default(),
+        );
+        assert!(out.complete);
+
+        // First read: two rows, and not at the end.
+        let first = &out.responses[191..];
+        assert_eq!(first[6], ORIGIN_BEGINNING);
+        assert_eq!(u16::from_le_bytes(first[7..9].try_into().unwrap()), 2);
+        let one = utf16_at(first, 10);
+        assert_eq!(one.0, "one");
+        let two = utf16_at(first, one.1 + 1);
+        assert_eq!(two.0, "two");
+
+        // Second read: the remaining one, and now at the end.
+        let second = &first[9 + (one.1 - 10) + 1 + (two.1 - one.1 - 1) + 1..];
+        assert_eq!(second[0], ROP_QUERY_ROWS);
+        assert_eq!(second[6], ORIGIN_END);
+        assert_eq!(u16::from_le_bytes(second[7..9].try_into().unwrap()), 1);
+        assert_eq!(utf16_at(second, 10).0, "three");
+    }
+
+    /// A column we cannot answer refuses the read rather than filling the gap.
+    /// A zero in a column a client asked for is a value it believes.
+    #[test]
+    fn a_message_column_we_cannot_answer_is_refused() {
+        let ctx = context("disan@alo.test");
+        let mut objects = ObjectTable::new();
+        let inbox = fid_of(SpecialFolder::Inbox);
+        let messages = loaded(inbox, &[message_row("m-1", "one", false, false)]);
+        // PidTagBody: a real property, and not one a contents table carries.
+        let columns = vec![PropertyTag {
+            property_type: crate::rows::ptyp::STRING,
+            property_id: 0x1000,
+        }];
+
+        let mut rops = logon_buffer("", LOGON_PRIVATE, 0).rops;
+        rops.extend(open_folder_rop(inbox));
+        rops.extend(contents_rop(0x00));
+        rops.extend(set_columns_rop(&columns));
+        rops.extend(query_rows_rop(50));
+        let buffer = RopBuffer {
+            rops,
+            handles: vec![crate::rop::HANDLE_UNSET; 3],
+        };
+
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            &view(),
+            &messages,
+            &buffer,
+            LogonTime::default(),
+        );
+        let rows = &out.responses[191..];
+        assert_eq!(rows.len(), 6, "a failure response");
+        assert_eq!(
+            u32::from_le_bytes(rows[2..6].try_into().unwrap()),
+            error::NOT_IMPLEMENTED
+        );
+    }
+
+    /// A hierarchy table and a contents table opened on the same folder are
+    /// different tables with independent cursors. Sharing one would make
+    /// reading the folder list disturb the message list.
+    #[test]
+    fn the_two_kinds_of_table_do_not_share_a_cursor() {
+        let ctx = context("disan@alo.test");
+        let mut objects = ObjectTable::new();
+        let subtree = fid_of(SpecialFolder::IpmSubtree);
+        let messages = loaded(subtree, &[message_row("m-1", "one", false, false)]);
+
+        let mut rops = logon_buffer("", LOGON_PRIVATE, 0).rops;
+        rops.extend(open_folder_rop(subtree));
+        rops.extend(hierarchy_rop());
+        rops.extend(contents_rop(0x00));
+        let buffer = RopBuffer {
+            rops,
+            handles: vec![crate::rop::HANDLE_UNSET; 4],
+        };
+
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            &view(),
+            &messages,
+            &buffer,
+            LogonTime::default(),
+        );
+        assert!(out.complete);
+        // Both tables landed in slot 2 in turn; the second replaced the handle
+        // there, and both objects exist independently in the table.
+        assert!(matches!(
+            objects.get(out.handles[2]),
+            Some(ServerObject::ContentsTable { .. })
+        ));
+        assert_eq!(objects.len(), 4, "logon, folder, and two tables");
     }
 }

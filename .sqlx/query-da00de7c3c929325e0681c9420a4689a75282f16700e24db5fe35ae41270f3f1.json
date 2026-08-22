@@ -1,0 +1,63 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT m.id, m.subject, m.from_addr, m.received_at, m.size, COALESCE(m.has_attachment, false) AS \"has_attachment!: bool\", EXISTS ( SELECT 1 FROM message_keywords k WHERE k.tenant_id = m.tenant_id AND k.message_id = m.id AND k.keyword = $6 ) AS \"seen!: bool\" FROM mailbox_messages mm JOIN messages m ON m.id = mm.message_id AND m.tenant_id = mm.tenant_id WHERE mm.tenant_id = $1 AND mm.mailbox_id = $2 AND m.user_id = $3 ORDER BY mm.added_at DESC LIMIT $4 OFFSET $5",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "subject",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "from_addr",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "received_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "size",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "has_attachment!: bool",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "seen!: bool",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Int8",
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "da00de7c3c929325e0681c9420a4689a75282f16700e24db5fe35ae41270f3f1"
+}

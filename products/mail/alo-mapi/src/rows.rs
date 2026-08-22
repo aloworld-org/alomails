@@ -70,9 +70,11 @@ pub mod ptyp {
     pub const INTEGER64: u16 = 0x0014;
     /// Variable; UTF-16LE with a terminating null and no length prefix.
     pub const STRING: u16 = 0x001F;
+    /// 8 bytes; 100-nanosecond intervals since 1 January 1601 (a `FILETIME`).
+    pub const TIME: u16 = 0x0040;
 }
 
-/// The property ids a folder row can answer ([MS-OXPROPS]).
+/// The property ids a folder or message row can answer ([MS-OXPROPS]).
 pub mod pid {
     /// The folder's display name — `PtypString`.
     pub const DISPLAY_NAME: u16 = 0x3001;
@@ -82,6 +84,71 @@ pub mod pid {
     pub const SUBFOLDERS: u16 = 0x360A;
     /// The folder's id — `PtypInteger64`.
     pub const FOLDER_ID: u16 = 0x6748;
+
+    // ---- a message, as a contents-table row names it ----------------------
+
+    /// The message's id — `PtypInteger64` ([MS-OXPROPS] §2.803).
+    pub const MID: u16 = 0x674A;
+    /// The message's subject — `PtypString` (§2.1035).
+    pub const SUBJECT: u16 = 0x0037;
+    /// The display name of whoever sent it — `PtypString` (§2.1006).
+    pub const SENDER_NAME: u16 = 0x0C1A;
+    /// When the server received it, in UTC — `PtypTime` (§2.791).
+    pub const MESSAGE_DELIVERY_TIME: u16 = 0x0E06;
+    /// The message's status bits — `PtypInteger32` (§2.793). See [`mf`].
+    pub const MESSAGE_FLAGS: u16 = 0x0E07;
+    /// Its size in bytes on the server — `PtypInteger32` (§2.798).
+    pub const MESSAGE_SIZE: u16 = 0x0E08;
+    /// Whether it has at least one attachment — `PtypBoolean` (§2.717).
+    pub const HAS_ATTACHMENTS: u16 = 0x0E1B;
+    /// What kind of item it is — `PtypString` (§2.789).
+    pub const MESSAGE_CLASS: u16 = 0x001A;
+}
+
+/// `PidTagMessageFlags` bits ([MS-OXCMSG] §2.2.1.6).
+///
+/// Only the bits alo can answer truthfully are here. The rest of the flag word
+/// is real — `mfSubmitted`, `mfNotifyRead`, `mfFromMe` and the others — and is
+/// deliberately absent rather than defaulted to zero, because a status bit a
+/// client believes is worse than one it never saw.
+pub mod mf {
+    /// The message has been read.
+    pub const READ: u32 = 0x0000_0001;
+    /// Unmodified since it was delivered (or since first saved, if unsent).
+    pub const UNMODIFIED: u32 = 0x0000_0002;
+    /// Still being composed — a draft.
+    pub const UNSENT: u32 = 0x0000_0008;
+    /// Has at least one attachment; mirrors `PidTagHasAttachments`.
+    pub const HAS_ATTACH: u32 = 0x0000_0010;
+}
+
+/// The message class alo reports for ordinary mail ([MS-OXCMSG] §2.2.1.3).
+///
+/// Everything alo keeps in a mailbox is a note. Calendar items and contacts are
+/// separate objects that reach a client over CalDAV and CardDAV rather than as
+/// MAPI message classes; when they become native MAPI classes this stops being
+/// a constant.
+pub const MESSAGE_CLASS_NOTE: &str = "IPM.Note";
+
+/// The `FILETIME` epoch as a Unix timestamp: 1601-01-01 is this many seconds
+/// *before* 1970-01-01.
+///
+/// Named rather than inlined because a wrong epoch does not fail — it silently
+/// dates every message in the mailbox to the wrong century, and a client
+/// renders that without complaint.
+pub const FILETIME_EPOCH_OFFSET_SECS: i64 = 11_644_473_600;
+
+/// A Unix timestamp in seconds as a `PtypTime` value.
+///
+/// Times before the `FILETIME` epoch, and times far enough beyond it to
+/// overflow, clamp rather than wrap: a clamped date is visibly wrong, where a
+/// wrapped one looks plausible and is not.
+#[must_use]
+pub fn filetime_from_unix_secs(secs: i64) -> u64 {
+    let shifted = secs.saturating_add(FILETIME_EPOCH_OFFSET_SECS);
+    u64::try_from(shifted)
+        .unwrap_or(0)
+        .saturating_mul(10_000_000)
 }
 
 /// A value a row can carry.
@@ -95,6 +162,8 @@ pub enum Value {
     Boolean(bool),
     /// A string, written UTF-16LE with a terminating null.
     String(String),
+    /// A time, written as a `FILETIME` — see [`filetime_from_unix_secs`].
+    Time(u64),
 }
 
 impl Value {
@@ -106,6 +175,7 @@ impl Value {
             Self::Integer64(_) => ptyp::INTEGER64,
             Self::Boolean(_) => ptyp::BOOLEAN,
             Self::String(_) => ptyp::STRING,
+            Self::Time(_) => ptyp::TIME,
         }
     }
 
@@ -122,6 +192,9 @@ impl Value {
                 }
                 out.extend_from_slice(&[0, 0]);
             }
+            // Eight bytes little-endian, exactly like an Integer64 — the type
+            // differs, the encoding does not.
+            Self::Time(value) => out.extend_from_slice(&value.to_le_bytes()),
         }
     }
 }

@@ -9,6 +9,7 @@
 
 pub mod account;
 pub mod account_imap;
+pub mod account_mapi;
 pub mod account_sieve;
 pub mod agent_ground;
 pub mod agent_product;
@@ -278,6 +279,7 @@ pub mod vcard;
 
 pub use account::AccountStore;
 pub use account_imap::{ImapEntry, ImapMailbox, ImapSearchRow};
+pub use account_mapi::MapiMessageRow;
 pub use account_sieve::{OutboundAction, SieveDelivery, SieveScriptMeta};
 pub use agent_ground::GroundSource;
 pub use agent_product::{ALL_AGENT_PRODUCTS, AgentProduct};
