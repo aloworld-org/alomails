@@ -4344,6 +4344,8 @@ export const en = {
   projectsWorkType: "This work is for",
   projectsClientWork: "A customer",
   projectsInternalWork: "Our company",
+  projectsClientWorkHint: "Bill a customer for this work",
+  projectsInternalWorkHint: "Keep this work internal",
   projectsNewCustomerHint: "You can add rates and budgets after creating the project.",
   projectsCreate: "Create project",
   projectsCreateFailed: "The project could not be created.",

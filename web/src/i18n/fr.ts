@@ -2506,6 +2506,8 @@ export const fr: Partial<Catalog> = {
   projectsWorkType: "Ce travail est destiné à",
   projectsClientWork: "Un client",
   projectsInternalWork: "Notre entreprise",
+  projectsClientWorkHint: "Facturer ce travail à un client",
+  projectsInternalWorkHint: "Garder ce travail en interne",
   projectsNewCustomerHint: "Vous pourrez ajouter les tarifs et budgets après la création.",
   projectsCreate: "Créer le projet",
   projectsCreateFailed: "Le projet n’a pas pu être créé.",
