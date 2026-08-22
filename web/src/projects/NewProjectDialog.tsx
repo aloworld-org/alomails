@@ -3,6 +3,7 @@ import { BriefcaseBusiness, Building2, Check, ChevronDown, UserRound } from "luc
 
 import { strings } from "../i18n";
 import { DialogFrame, Field } from "./parts";
+import { ProjectStatusSchedule } from "./ProjectStatusSchedule";
 
 export interface NewProjectDraft {
   name: string;
@@ -14,18 +15,6 @@ export interface NewProjectDraft {
 }
 
 type ProjectStatus = "planned" | "active" | "on_hold" | "completed" | "cancelled";
-
-const statuses: ProjectStatus[] = ["planned", "active", "on_hold", "completed", "cancelled"];
-
-function statusLabel(status: ProjectStatus): string {
-  return {
-    planned: strings.projectsStatusPlanned,
-    active: strings.projectsStatusActive,
-    on_hold: strings.projectsStatusOnHold,
-    completed: strings.projectsStatusCompleted,
-    cancelled: strings.projectsStatusCancelled,
-  }[status];
-}
 
 function CustomerPicker({ customers, value, onChange }: {
   customers: Array<{ id: string; name: string }>;
@@ -193,29 +182,7 @@ export function NewProjectDialog({ customers, onClose, onCreate }: {
           onChange={(event) => setDescription(event.target.value)}
         />
       </Field>
-      <Field label={strings.projectsStatus}>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {statuses.map((option) => (
-            <button
-              key={option}
-              type="button"
-              aria-pressed={status === option}
-              className={`min-h-10 rounded-md border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-accent ${status === option ? "border-accent bg-accent-soft text-accent" : "border-default bg-surface text-secondary hover:bg-raised hover:text-primary"}`}
-              onClick={() => setStatus(option)}
-            >
-              {statusLabel(option)}
-            </button>
-          ))}
-        </div>
-      </Field>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={strings.projectsStartsOn}>
-          <input type="date" className="min-h-11 w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary accent-accent focus-visible:outline-2 focus-visible:outline-accent" value={startsOn} onChange={(event) => setStartsOn(event.target.value)} />
-        </Field>
-        <Field label={strings.projectsTargetOn} error={datesValid ? undefined : strings.projectsDatesInvalid}>
-          <input type="date" className="min-h-11 w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary accent-accent focus-visible:outline-2 focus-visible:outline-accent" value={targetOn} onChange={(event) => setTargetOn(event.target.value)} />
-        </Field>
-      </div>
+      <ProjectStatusSchedule status={status} startsOn={startsOn} targetOn={targetOn} datesValid={datesValid} onStatusChange={setStatus} onStartsOnChange={setStartsOn} onTargetOnChange={setTargetOn} />
     </DialogFrame>
   );
 }
