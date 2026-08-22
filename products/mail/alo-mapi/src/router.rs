@@ -37,7 +37,7 @@ use crate::dispatch::{dispatch, wanted_contents};
 use crate::execute::{ExecuteRequest, success_body as execute_success_body};
 use crate::folders::FolderView;
 use crate::logon_response::LogonTime;
-use crate::messages::MessageView;
+use crate::messages::{MessageBody, MessageView};
 use crate::response::{MapiResponse, ResponseCode};
 use crate::rop::RopBuffer;
 use crate::rpc::{read_extended_buffer, write_extended_buffer};
@@ -431,7 +431,20 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
             // account — the same door the folder tree came through, so a view
             // of somebody else's mail is not something this code can produce.
             let mut messages = MessageView::new();
-            for folder_id in wanted {
+            // A message's own folder must be loaded before its MID can be
+            // resolved, so the two lists are read as one.
+            let folder_ids: Vec<u64> = wanted
+                .folders
+                .iter()
+                .copied()
+                .chain(wanted.messages.iter().map(|(folder, _)| *folder))
+                .collect();
+            let mut seen: Vec<u64> = Vec::new();
+            for folder_id in folder_ids {
+                if seen.contains(&folder_id) {
+                    continue;
+                }
+                seen.push(folder_id);
                 let Some(mailbox) = MessageView::mailbox_of(&folders, folder_id) else {
                     // A special folder with no alo mailbox behind it. It holds
                     // nothing, and that is a measurement: the tree was read and
@@ -456,6 +469,47 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
                         .into_response();
                     }
                 }
+            }
+
+            // The content of each message a buffer opens: one blob fetch and
+            // one MIME parse each, and only for messages actually opened.
+            for (folder_id, mid) in &wanted.messages {
+                let Some(entry) = messages.entry(*folder_id, *mid) else {
+                    // The MID names no message of this account's. Nothing is
+                    // loaded, and the dispatch answers `ecNotFound` — the same
+                    // answer a message that never existed gets.
+                    continue;
+                };
+                let id = entry.message.clone();
+                let (Ok(meta), Ok(raw)) =
+                    (account.message(&id).await, account.message_bytes(&id).await)
+                else {
+                    tracing::warn!("mapi: could not read a message this account owns");
+                    return MapiResponse::new(
+                        request_type.as_str(),
+                        request_id,
+                        ResponseCode::UnknownFailure,
+                    )
+                    .with_client_info(client_info)
+                    .into_response();
+                };
+                let parsed = alo_store::mime_read::parse(&raw);
+                messages.insert_body(
+                    *mid,
+                    MessageBody {
+                        // A message with no plain-text alternative reads as
+                        // an empty body rather than a refusal: the message
+                        // exists and opens, and what it has to show over this
+                        // protocol is nothing until HTML bodies are served.
+                        text: parsed.text.unwrap_or_default(),
+                        display_to: meta.to_addrs,
+                        display_cc: meta.cc_addrs,
+                        submit_time: meta
+                            .sent_at
+                            .map(|at| crate::rows::filetime_from_unix_secs(at.unix_timestamp())),
+                        internet_message_id: meta.message_id_hdr,
+                    },
+                );
             }
 
             let dispatched = {

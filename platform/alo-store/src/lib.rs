@@ -176,6 +176,7 @@ pub mod inv_suppliers;
 pub mod maintenance;
 pub mod meet;
 pub mod message;
+pub mod mime_read;
 pub mod model;
 pub mod money_text;
 pub mod project_clients;

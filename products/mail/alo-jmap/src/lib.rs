@@ -161,7 +161,11 @@ pub mod junk_learn;
 pub mod meet_routes;
 pub mod meet_token;
 pub mod mime;
-pub mod mime_read;
+// Reading stored MIME moved down to `alo-store`, where the messages are:
+// MAPI serves the same bytes JMAP does, and a copy of the parser in each
+// protocol crate would be two answers to what a message says. Re-exported
+// so `crate::mime_read::` still names it.
+pub use alo_store::mime_read;
 pub mod module_access;
 pub mod projects;
 pub mod projects_clients;

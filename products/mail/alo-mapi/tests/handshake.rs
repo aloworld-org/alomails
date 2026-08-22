@@ -986,3 +986,275 @@ async fn one_tenant_cannot_read_another_tenants_messages() {
         "the other tenant's subject is in the response"
     );
 }
+
+/// **Stage 5 on the real wire — the kill gate.** A client logs on, opens its
+/// inbox, reads the contents table to learn a message's MID, opens that
+/// message, and asks for its subject, body, To line and sender. Over HTTP,
+/// against a real store holding a real delivered message.
+///
+/// If this passes, Outlook can open and read mail from alo.
+#[tokio::test]
+async fn a_client_opens_and_reads_a_message_over_http() {
+    let h = harness("open-message").await;
+    let auth = basic(&h.email, &h.password);
+
+    h.account
+        .create_mailbox(None, "Inbox", Some("inbox"))
+        .await
+        .expect("inbox");
+    let raw = format!(
+        "From: Müller <m@example.test>\r\nTo: {to}\r\nCc: Liège <l@example.test>\r\n\
+         Subject: Rechnung für August\r\nDate: Fri, 21 Aug 2026 09:15:00 +0000\r\n\
+         Message-ID: <open-1@example.test>\r\n\
+         Content-Type: text/plain; charset=utf-8\r\n\r\n\
+         Sehr geehrte Damen und Herren,\r\n\r\nanbei die Rechnung.\r\n",
+        to = h.email
+    );
+    h.account.deliver(raw.as_bytes()).await.expect("deliver");
+
+    let (_, headers, _) = send(
+        &h.app,
+        "Connect",
+        Some(&auth),
+        None,
+        connect_body("/o=alo/cn=x"),
+    )
+    .await;
+    let cookie = format!("{SESSION_COOKIE}={}", session_cookie(&headers));
+
+    let inbox_fid = {
+        let mut fid = [0u8; 8];
+        fid[0..2].copy_from_slice(&1u16.to_le_bytes());
+        fid[2..8].copy_from_slice(&5u64.to_le_bytes()[0..6]);
+        u64::from_le_bytes(fid)
+    };
+
+    // ---- first buffer: read the table to learn the MID --------------------
+    let mut rops = Vec::new();
+    let logon = rop_logon("");
+    let rop_size = u16::from_le_bytes(logon[0..2].try_into().unwrap()) as usize;
+    rops.extend_from_slice(&logon[2..rop_size]);
+    rops.push(0x02);
+    rops.extend_from_slice(&[0x00, 0x00, 0x01]);
+    rops.extend_from_slice(&inbox_fid.to_le_bytes());
+    rops.push(0x00);
+    rops.extend_from_slice(&[0x05, 0x00, 0x01, 0x02, 0x00]); // RopGetContentsTable
+    rops.extend_from_slice(&[0x12, 0x00, 0x02, 0x00]); // RopSetColumns
+    rops.extend_from_slice(&1u16.to_le_bytes());
+    rops.extend_from_slice(&[0x14, 0x00, 0x4A, 0x67]); // PidTagMid, PtypInteger64
+    rops.extend_from_slice(&[0x15, 0x00, 0x02, 0x00, 0x01]); // RopQueryRows
+    rops.extend_from_slice(&50u16.to_le_bytes());
+
+    let responses = execute(&h, &auth, &cookie, &rops).await;
+    let query = &responses[191..];
+    assert_eq!(
+        u32::from_le_bytes(query[2..6].try_into().unwrap()),
+        0,
+        "reading the table failed"
+    );
+    assert_eq!(u16::from_le_bytes(query[7..9].try_into().unwrap()), 1);
+    // Flag byte, then the 8-byte MID.
+    let mid = u64::from_le_bytes(query[10..18].try_into().unwrap());
+    assert!(mid != 0, "a MID the client can open");
+
+    // ---- second buffer: open the message and read its properties ----------
+    let mut rops = Vec::new();
+    let logon = rop_logon("");
+    let rop_size = u16::from_le_bytes(logon[0..2].try_into().unwrap()) as usize;
+    rops.extend_from_slice(&logon[2..rop_size]);
+
+    // RopOpenMessage on the logon at index 0, message handle to index 1.
+    rops.push(0x03);
+    rops.extend_from_slice(&[0x00, 0x00, 0x01]);
+    rops.extend_from_slice(&0u16.to_le_bytes()); // CodePageId
+    rops.extend_from_slice(&inbox_fid.to_le_bytes());
+    rops.push(0x00); // OpenModeFlags: read-only
+    rops.extend_from_slice(&mid.to_le_bytes());
+
+    // RopGetPropertiesSpecific on that message: subject, body, To, sender.
+    rops.push(0x07);
+    rops.extend_from_slice(&[0x00, 0x01]); // LogonId, InputHandleIndex
+    rops.extend_from_slice(&0u16.to_le_bytes()); // PropertySizeLimit: none
+    rops.extend_from_slice(&1u16.to_le_bytes()); // WantUnicode
+    rops.extend_from_slice(&4u16.to_le_bytes()); // PropertyTagCount
+    rops.extend_from_slice(&[0x1F, 0x00, 0x37, 0x00]); // PidTagSubject
+    rops.extend_from_slice(&[0x1F, 0x00, 0x00, 0x10]); // PidTagBody
+    rops.extend_from_slice(&[0x1F, 0x00, 0x04, 0x0E]); // PidTagDisplayTo
+    rops.extend_from_slice(&[0x1F, 0x00, 0x1A, 0x0C]); // PidTagSenderName
+
+    // RopRelease: the client is done with the message.
+    rops.extend_from_slice(&[0x01, 0x00, 0x01]);
+
+    let responses = execute(&h, &auth, &cookie, &rops).await;
+
+    // The open response: 166 logon, then RopOpenMessage.
+    let open = &responses[166..];
+    assert_eq!(open[0], 0x03, "a RopOpenMessage response");
+    assert_eq!(
+        u32::from_le_bytes(open[2..6].try_into().unwrap()),
+        0,
+        "opening the message failed"
+    );
+    assert_eq!(open[6], 0x00, "no named properties");
+    assert_eq!(open[7], 0x00, "SubjectPrefix absent");
+    assert_eq!(open[8], 0x04, "NormalizedSubject is Unicode");
+
+    let mut at = 9;
+    let subject = read_utf16(open, &mut at);
+    assert_eq!(subject, "Rechnung für August");
+    assert_eq!(
+        u16::from_le_bytes(open[at..at + 2].try_into().unwrap()),
+        0,
+        "RecipientCount"
+    );
+    assert_eq!(
+        u16::from_le_bytes(open[at + 2..at + 4].try_into().unwrap()),
+        0,
+        "ColumnCount"
+    );
+    assert_eq!(open[at + 4], 0, "RowCount");
+
+    // Then the properties.
+    let props = &open[at + 5..];
+    assert_eq!(props[0], 0x07, "a RopGetPropertiesSpecific response");
+    assert_eq!(
+        u32::from_le_bytes(props[2..6].try_into().unwrap()),
+        0,
+        "reading the properties failed"
+    );
+    assert_eq!(props[6], 0x00, "a standard row: every value present");
+
+    let mut at = 7;
+    assert_eq!(read_utf16(props, &mut at), "Rechnung für August");
+    let body = read_utf16(props, &mut at);
+    assert!(
+        body.contains("anbei die Rechnung"),
+        "the body did not come back: {body:?}"
+    );
+    assert!(
+        body.contains("Sehr geehrte Damen und Herren"),
+        "the body was truncated: {body:?}"
+    );
+    let display_to = read_utf16(props, &mut at);
+    assert!(display_to.contains(&h.email), "To line: {display_to:?}");
+    let sender = read_utf16(props, &mut at);
+    assert!(sender.contains("Müller"), "sender: {sender:?}");
+
+    // RopRelease contributes nothing to the output — the properties response
+    // is the last thing in the buffer.
+    assert_eq!(at, props.len(), "something followed the release");
+}
+
+/// A message a caller does not own cannot be opened by naming its MID: the
+/// lookup runs over this session's own loaded rows, and a MID that is not in
+/// them is `ecNotFound` — the same answer a MID that never existed gets.
+#[tokio::test]
+async fn one_tenant_cannot_open_another_tenants_message() {
+    let victim = harness("open-victim").await;
+    victim
+        .account
+        .create_mailbox(None, "Inbox", Some("inbox"))
+        .await
+        .expect("inbox");
+    victim
+        .account
+        .deliver(
+            b"From: s@example.test\r\nTo: v@example.test\r\n\
+              Subject: Vertraulich\r\n\r\ngeheim\r\n",
+        )
+        .await
+        .expect("deliver");
+
+    // The victim's own MID, obtained the way the victim would.
+    let inbox = victim.account.inbox().await.expect("inbox id");
+    let rows = victim
+        .account
+        .mapi_mailbox_rows(&inbox, alo_store::Page::first(10))
+        .await
+        .expect("rows");
+    assert_eq!(rows.len(), 1);
+    let victim_mid = alo_mapi::folders::fid(alo_mapi::messages::message_counter(&rows[0].id));
+
+    // A different tenant, with an inbox of its own.
+    let other = harness("open-other").await;
+    other
+        .account
+        .create_mailbox(None, "Inbox", Some("inbox"))
+        .await
+        .expect("inbox");
+    let auth = basic(&other.email, &other.password);
+
+    let (_, headers, _) = send(
+        &other.app,
+        "Connect",
+        Some(&auth),
+        None,
+        connect_body("/o=alo/cn=x"),
+    )
+    .await;
+    let cookie = format!("{SESSION_COOKIE}={}", session_cookie(&headers));
+
+    let inbox_fid = {
+        let mut fid = [0u8; 8];
+        fid[0..2].copy_from_slice(&1u16.to_le_bytes());
+        fid[2..8].copy_from_slice(&5u64.to_le_bytes()[0..6]);
+        u64::from_le_bytes(fid)
+    };
+
+    let mut rops = Vec::new();
+    let logon = rop_logon("");
+    let rop_size = u16::from_le_bytes(logon[0..2].try_into().unwrap()) as usize;
+    rops.extend_from_slice(&logon[2..rop_size]);
+    rops.push(0x03);
+    rops.extend_from_slice(&[0x00, 0x00, 0x01]);
+    rops.extend_from_slice(&0u16.to_le_bytes());
+    rops.extend_from_slice(&inbox_fid.to_le_bytes());
+    rops.push(0x00);
+    rops.extend_from_slice(&victim_mid.to_le_bytes());
+
+    let responses = execute(&other, &auth, &cookie, &rops).await;
+    let open = &responses[166..];
+    assert_eq!(open[0], 0x03);
+    assert_eq!(
+        u32::from_le_bytes(open[2..6].try_into().unwrap()),
+        0x8004_010F,
+        "another tenant's message was opened"
+    );
+    // And nothing of it appears anywhere in the answer.
+    let text = String::from_utf8_lossy(responses.as_slice());
+    assert!(!text.contains("Vertraulich"));
+    assert!(!text.contains("geheim"));
+}
+
+/// Sends one ROP buffer through `Execute` and returns the ROP responses.
+async fn execute(h: &Harness, auth: &str, cookie: &str, rops: &[u8]) -> Vec<u8> {
+    let mut buffer = u16::try_from(rops.len() + 2)
+        .unwrap()
+        .to_le_bytes()
+        .to_vec();
+    buffer.extend_from_slice(rops);
+    buffer.extend_from_slice(&0xFFFF_FFFFu32.to_le_bytes());
+    buffer.extend_from_slice(&0xFFFF_FFFFu32.to_le_bytes());
+    buffer.extend_from_slice(&0xFFFF_FFFFu32.to_le_bytes());
+
+    let (status, headers, body) = send(
+        &h.app,
+        "Execute",
+        Some(auth),
+        Some(cookie),
+        execute_body(&buffer, 64 * 1024),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(response_code(&headers), ResponseCode::Success.code());
+
+    let split = body
+        .windows(4)
+        .position(|w| w == BLANK_LINE)
+        .expect("framing");
+    let execute = &body[split + 4..];
+    let rop_len = u32::from_le_bytes(execute[12..16].try_into().unwrap()) as usize;
+    let payload = &execute[16..16 + rop_len][8..];
+    let size = u16::from_le_bytes(payload[0..2].try_into().unwrap()) as usize;
+    payload[2..size].to_vec()
+}

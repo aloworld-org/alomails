@@ -36,6 +36,13 @@ use crate::logon_response::{
 };
 use crate::messages::MessageView;
 use crate::openfolder::{OpenFolderRequest, ROP_OPEN_FOLDER, success_body as open_folder_success};
+use crate::openmessage::{
+    OpenMessageRequest, ROP_OPEN_MESSAGE, success_body as open_message_success,
+};
+use crate::properties::{
+    GetPropertiesRequest, ROP_GET_PROPERTIES_SPECIFIC, success_body as get_properties_success,
+};
+use crate::release::{ROP_RELEASE, ReleaseRequest};
 use crate::rop::{RopBuffer, RopHeader};
 use crate::rows::{
     MESSAGE_CLASS_NOTE, ORIGIN_BEGINNING, ORIGIN_END, QueryRowsRequest, ROP_QUERY_ROWS, Value, pid,
@@ -98,6 +105,18 @@ pub enum ServerObject {
         /// A table has a cursor, and `RopQueryRows` advances it: a client that
         /// asks twice gets the next rows, not the same ones again.
         cursor: usize,
+    },
+    /// An open message, reached through a logon.
+    Message {
+        /// The folder the message was opened from.
+        ///
+        /// Kept because a MID is only meaningful inside a folder: the lookup
+        /// that turns one into a store message searches that folder's loaded
+        /// rows, and a message object that forgot where it came from could not
+        /// be re-resolved on a later request.
+        folder_id: u64,
+        /// The id the client opened it by.
+        mid: u64,
     },
     /// A table of a folder's messages, opened on that folder.
     ///
@@ -178,6 +197,17 @@ impl ObjectTable {
             .map(|(_, object)| object)
     }
 
+    /// Forgets the object a handle names, if this session has one.
+    ///
+    /// The handle is **not** made available again: `next` only ever goes up, so
+    /// a client that released a handle and then used it names nothing rather
+    /// than naming whatever was created afterwards.
+    pub fn remove(&mut self, handle: u32) -> bool {
+        let before = self.objects.len();
+        self.objects.retain(|(stored, _)| *stored != handle);
+        self.objects.len() != before
+    }
+
     /// How many objects are open.
     #[must_use]
     pub fn len(&self) -> usize {
@@ -245,6 +275,12 @@ pub struct Dispatched {
     /// makes [`wanted_contents`] work: a rehearsal against an empty
     /// [`MessageView`] still reports what it *would* have read.
     pub contents_folders: Vec<u64>,
+    /// The messages this buffer opened, as `(folder id, MID)`.
+    ///
+    /// Same purpose and same rule: recorded during the rehearsal so the router
+    /// knows which bodies to fetch, and the folder each one names is loaded
+    /// first, because a MID can only be resolved inside its folder's rows.
+    pub opened_messages: Vec<(u64, u64)>,
 }
 
 /// The folders whose messages a buffer is about to read.
@@ -270,9 +306,9 @@ pub fn wanted_contents(
     folders: &FolderView,
     input: &RopBuffer,
     now: LogonTime,
-) -> Vec<u64> {
+) -> Wanted {
     let mut rehearsal = objects.clone();
-    dispatch(
+    let out = dispatch(
         ctx,
         prefix,
         &mut rehearsal,
@@ -280,8 +316,20 @@ pub fn wanted_contents(
         &MessageView::new(),
         input,
         now,
-    )
-    .contents_folders
+    );
+    Wanted {
+        folders: out.contents_folders,
+        messages: out.opened_messages,
+    }
+}
+
+/// What a rehearsal learned a buffer is about to read.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Wanted {
+    /// Folders whose message rows are needed.
+    pub folders: Vec<u64>,
+    /// Messages whose content is needed, as `(folder id, MID)`.
+    pub messages: Vec<(u64, u64)>,
 }
 
 /// Walks a ROP input buffer and answers each request in turn.
@@ -302,6 +350,7 @@ pub fn dispatch(
     let mut handles = input.handles.clone();
     let mut rest: &[u8] = &input.rops;
     let mut contents_folders: Vec<u64> = Vec::new();
+    let mut opened_messages: Vec<(u64, u64)> = Vec::new();
 
     while !rest.is_empty() {
         let Ok(header) = RopHeader::parse(rest) else {
@@ -312,6 +361,7 @@ pub fn dispatch(
                 handles,
                 complete: false,
                 contents_folders,
+                opened_messages,
             };
         };
 
@@ -328,6 +378,7 @@ pub fn dispatch(
                         handles,
                         complete: false,
                         contents_folders,
+                        opened_messages,
                     };
                 };
                 rest = tail;
@@ -413,6 +464,7 @@ pub fn dispatch(
                         handles,
                         complete: false,
                         contents_folders,
+                        opened_messages,
                     };
                 };
                 rest = tail;
@@ -475,6 +527,7 @@ pub fn dispatch(
                         handles,
                         complete: false,
                         contents_folders,
+                        opened_messages,
                     };
                 };
                 rest = tail;
@@ -526,6 +579,7 @@ pub fn dispatch(
                         handles,
                         complete: false,
                         contents_folders,
+                        opened_messages,
                     };
                 };
                 rest = tail;
@@ -596,6 +650,7 @@ pub fn dispatch(
                         handles,
                         complete: false,
                         contents_folders,
+                        opened_messages,
                     };
                 };
                 rest = tail;
@@ -640,6 +695,227 @@ pub fn dispatch(
                 responses.extend(set_columns_success(request.input_handle_index));
             }
 
+            ROP_OPEN_MESSAGE => {
+                let Ok((request, tail)) = OpenMessageRequest::parse(rest) else {
+                    responses.extend(failure(
+                        ROP_OPEN_MESSAGE,
+                        header.input_handle_index,
+                        error::INVALID_OBJECT,
+                    ));
+                    return Dispatched {
+                        responses,
+                        handles,
+                        complete: false,
+                        contents_folders,
+                        opened_messages,
+                    };
+                };
+                rest = tail;
+
+                // Opened through a **logon**, which is what makes the mailbox
+                // this reads from the authenticated one. The folder and message
+                // ids that follow are the client's; the account they are looked
+                // up in is not.
+                let opened = handles
+                    .get(usize::from(request.input_handle_index))
+                    .copied()
+                    .filter(|handle| *handle != crate::rop::HANDLE_UNSET)
+                    .and_then(|handle| objects.get(handle));
+                let Some(ServerObject::Logon { .. }) = opened else {
+                    responses.extend(failure(
+                        ROP_OPEN_MESSAGE,
+                        request.output_handle_index,
+                        error::INVALID_OBJECT,
+                    ));
+                    continue;
+                };
+
+                // The folder must be one this session's own tree has. A folder
+                // id naming nothing here is `ecNotFound`, the same answer a
+                // folder that genuinely does not exist gets — so a caller
+                // probing ids learns nothing from the difference.
+                if folders.get(request.folder_id).is_none() {
+                    responses.extend(failure(
+                        ROP_OPEN_MESSAGE,
+                        request.output_handle_index,
+                        error::NOT_FOUND,
+                    ));
+                    continue;
+                }
+
+                // Recorded for the rehearsal, whose whole job is to reach here
+                // with nothing loaded and report what it would have needed.
+                let wanted = (request.folder_id, request.message_id);
+                if !opened_messages.contains(&wanted) {
+                    opened_messages.push(wanted);
+                }
+
+                // The MID is resolved inside that folder's loaded rows — the
+                // only route from a client-supplied id to a stored message.
+                let Some(entry) = messages.entry(request.folder_id, request.message_id) else {
+                    // Either the folder was not loaded (the rehearsal) or the
+                    // MID names no message of this account's. Both are
+                    // `ecNotFound`: a message we cannot show is a message that
+                    // does not exist as far as this caller is concerned.
+                    responses.extend(failure(
+                        ROP_OPEN_MESSAGE,
+                        request.output_handle_index,
+                        error::NOT_FOUND,
+                    ));
+                    continue;
+                };
+                let subject = entry.subject.clone();
+
+                let handle = objects.insert(ServerObject::Message {
+                    folder_id: request.folder_id,
+                    mid: request.message_id,
+                });
+                let index = usize::from(request.output_handle_index);
+                if handles.len() <= index {
+                    handles.resize(index + 1, crate::rop::HANDLE_UNSET);
+                }
+                handles[index] = handle;
+
+                // No named properties: alo stores none. Saying so truthfully
+                // saves the client a `RopGetNamesFromPropertyIds` round trip.
+                let subject = if subject.is_empty() {
+                    None
+                } else {
+                    Some(subject.as_str())
+                };
+                responses.extend(open_message_success(
+                    request.output_handle_index,
+                    false,
+                    subject,
+                ));
+            }
+
+            ROP_GET_PROPERTIES_SPECIFIC => {
+                let Ok((request, tail)) = GetPropertiesRequest::parse(rest) else {
+                    responses.extend(failure(
+                        ROP_GET_PROPERTIES_SPECIFIC,
+                        header.input_handle_index,
+                        error::INVALID_OBJECT,
+                    ));
+                    return Dispatched {
+                        responses,
+                        handles,
+                        complete: false,
+                        contents_folders,
+                        opened_messages,
+                    };
+                };
+                rest = tail;
+
+                let opened = handles
+                    .get(usize::from(request.input_handle_index))
+                    .copied()
+                    .filter(|handle| *handle != crate::rop::HANDLE_UNSET)
+                    .and_then(|handle| objects.get(handle));
+                // Only a message answers properties so far. A folder and a
+                // logon have properties too, and they are a later stage; being
+                // asked for them is refused rather than answered with a row of
+                // invented values.
+                let Some(ServerObject::Message { folder_id, mid }) = opened else {
+                    responses.extend(failure(
+                        ROP_GET_PROPERTIES_SPECIFIC,
+                        request.input_handle_index,
+                        error::INVALID_OBJECT,
+                    ));
+                    continue;
+                };
+                let (folder_id, mid) = (*folder_id, *mid);
+
+                let (Some(entry), Some(body)) =
+                    (messages.entry(folder_id, mid), messages.body(mid))
+                else {
+                    // The message was opened but its content was never loaded.
+                    // Answering a blank row would show a client an empty
+                    // message, which is indistinguishable from mail that really
+                    // is empty.
+                    responses.extend(failure(
+                        ROP_GET_PROPERTIES_SPECIFIC,
+                        request.input_handle_index,
+                        error::NOT_FOUND,
+                    ));
+                    continue;
+                };
+
+                let answer = |tag: PropertyTag| -> Option<Value> {
+                    match tag.property_id {
+                        pid::MID => Some(Value::Integer64(entry.mid)),
+                        pid::SUBJECT => Some(Value::String(entry.subject.clone())),
+                        pid::SENDER_NAME => Some(Value::String(entry.sender.clone())),
+                        pid::MESSAGE_DELIVERY_TIME => Some(Value::Time(entry.delivery_time)),
+                        pid::MESSAGE_FLAGS => Some(Value::Integer32(entry.flags)),
+                        pid::MESSAGE_SIZE => Some(Value::Integer32(entry.size)),
+                        pid::HAS_ATTACHMENTS => Some(Value::Boolean(entry.has_attachment)),
+                        pid::MESSAGE_CLASS => Some(Value::String(MESSAGE_CLASS_NOTE.to_owned())),
+                        pid::BODY => Some(Value::String(body.text.clone())),
+                        pid::DISPLAY_TO => Some(Value::String(body.display_to.clone())),
+                        pid::DISPLAY_CC => Some(Value::String(body.display_cc.clone())),
+                        // A message with no `Date` header has no submit time,
+                        // and a zero here would date it to 1601. Refusing the
+                        // column is the honest answer.
+                        pid::CLIENT_SUBMIT_TIME => body.submit_time.map(Value::Time),
+                        pid::INTERNET_MESSAGE_ID => body
+                            .internet_message_id
+                            .as_ref()
+                            .map(|id| Value::String(id.clone())),
+                        _ => None,
+                    }
+                };
+
+                // The client's own ceiling on a value it will accept, honoured
+                // rather than ignored: a client that asked for at most 8 KB and
+                // is handed a 2 MB body has had its protection taken away.
+                let limit = usize::from(request.property_size_limit);
+                match crate::rows::property_row(&request.tags, &answer, limit) {
+                    Some(row) => {
+                        responses.extend(get_properties_success(request.input_handle_index, &row));
+                    }
+                    None => {
+                        responses.extend(failure(
+                            ROP_GET_PROPERTIES_SPECIFIC,
+                            request.input_handle_index,
+                            error::NOT_IMPLEMENTED,
+                        ));
+                    }
+                }
+            }
+
+            ROP_RELEASE => {
+                let Ok((request, tail)) = ReleaseRequest::parse(rest) else {
+                    responses.extend(failure(
+                        ROP_RELEASE,
+                        header.input_handle_index,
+                        error::INVALID_OBJECT,
+                    ));
+                    return Dispatched {
+                        responses,
+                        handles,
+                        complete: false,
+                        contents_folders,
+                        opened_messages,
+                    };
+                };
+                rest = tail;
+
+                // **No response, ever.** The specification defines a request
+                // buffer for this operation and no response buffer, so emitting
+                // anything here would shift every response after it — a fault
+                // that surfaces as a client rendering the wrong thing rather
+                // than as an error. Releasing a handle that names nothing is
+                // silently fine for the same reason: there is nowhere to say so.
+                if let Some(handle) = handles
+                    .get(usize::from(request.input_handle_index))
+                    .copied()
+                    .filter(|handle| *handle != crate::rop::HANDLE_UNSET)
+                {
+                    objects.remove(handle);
+                }
+            }
+
             ROP_QUERY_ROWS => {
                 let Ok((request, tail)) = QueryRowsRequest::parse(rest) else {
                     responses.extend(failure(
@@ -652,6 +928,7 @@ pub fn dispatch(
                         handles,
                         complete: false,
                         contents_folders,
+                        opened_messages,
                     };
                 };
                 rest = tail;
@@ -846,6 +1123,7 @@ pub fn dispatch(
                     handles,
                     complete: false,
                     contents_folders,
+                    opened_messages,
                 };
             }
         }
@@ -856,6 +1134,7 @@ pub fn dispatch(
         handles,
         complete: true,
         contents_folders,
+        opened_messages,
     }
 }
 
@@ -1596,8 +1875,11 @@ mod tests {
         let ctx = context("disan@alo.test");
         let mut objects = ObjectTable::new();
         let buffer = RopBuffer {
-            // RopRelease, then a logon that must NOT be reached.
-            rops: vec![0x01, 0x00, 0x00, ROP_LOGON, 0x00, 0x00],
+            // `RopGetPropertiesAll` (0x08), which is not built, then a logon
+            // that must NOT be reached. This was `RopRelease` until releasing
+            // became a real operation — the example has to be one we genuinely
+            // do not implement, or the test proves nothing about stopping.
+            rops: vec![0x08, 0x00, 0x00, ROP_LOGON, 0x00, 0x00],
             handles: vec![7],
         };
 
@@ -1612,7 +1894,7 @@ mod tests {
         );
         assert!(!out.complete, "claimed to have finished the list");
         assert_eq!(out.responses.len(), 6, "one failure, and nothing after it");
-        assert_eq!(out.responses[0], 0x01, "answered the operation it saw");
+        assert_eq!(out.responses[0], 0x08, "answered the operation it saw");
         assert_eq!(code_of(&out.responses), error::NOT_IMPLEMENTED);
         assert!(objects.is_empty(), "the unreached logon was performed");
     }
@@ -1921,7 +2203,8 @@ mod tests {
             &buffer,
             LogonTime::default(),
         );
-        assert_eq!(wanted, vec![inbox]);
+        assert_eq!(wanted.folders, vec![inbox]);
+        assert!(wanted.messages.is_empty(), "nothing was opened");
         // And the session's own table is untouched by the rehearsal.
         assert!(objects.is_empty());
     }
@@ -1950,6 +2233,7 @@ mod tests {
                 &buffer,
                 LogonTime::default(),
             )
+            .folders
             .is_empty()
         );
     }

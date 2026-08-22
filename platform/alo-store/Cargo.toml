@@ -7,6 +7,11 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
+# Reading stored mail: the display body and the attachment list out of a
+# raw RFC 5322 message. Lives here rather than in a protocol crate because
+# JMAP, IMAP and MAPI all serve the same stored bytes, and a second parser
+# would be a second answer to what a message says.
+mail-parser = { workspace = true }
 alo-sieve = { path = "../alo-sieve" }
 alo-auth-mail = { path = "../alo-auth-mail" }
 tokio = { workspace = true }

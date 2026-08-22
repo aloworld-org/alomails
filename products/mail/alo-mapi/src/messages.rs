@@ -112,6 +112,34 @@ impl MessageEntry {
     }
 }
 
+/// Everything a client needs from one **opened** message, beyond what its row
+/// in a contents table already said.
+///
+/// Loaded only for messages a request actually opens, and separately from the
+/// rows: a contents table lists a folder without reading a single body, and a
+/// body is the expensive part — a blob fetch and a MIME parse each.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct MessageBody {
+    /// The message body as plain text.
+    ///
+    /// alo serves the plain-text alternative. The HTML body is `PtypBinary`,
+    /// whose byte count is 16 bits inside a ROP buffer and 32 bits in the
+    /// MAPI/HTTP structures ([MS-OXCDATA] §2.11.1) — a discrepancy worth
+    /// resolving against a real client rather than guessing at, so HTML bodies
+    /// wait for the stage that can test them.
+    pub text: String,
+    /// The `To` line as a reader sees it, display names separated by
+    /// semicolons.
+    pub display_to: String,
+    /// The `Cc` line, likewise.
+    pub display_cc: String,
+    /// When the sender submitted it (the `Date` header), as a `FILETIME`, or
+    /// `None` when the message carries no `Date`.
+    pub submit_time: Option<u64>,
+    /// The `Message-ID` header, angle brackets included.
+    pub internet_message_id: Option<String>,
+}
+
 /// The messages loaded for this request, by folder.
 ///
 /// Empty by default: a request that reaches no contents table loads nothing,
@@ -119,6 +147,7 @@ impl MessageEntry {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct MessageView {
     folders: Vec<(u64, Vec<MessageEntry>)>,
+    bodies: Vec<(u64, MessageBody)>,
 }
 
 impl MessageView {
@@ -165,6 +194,38 @@ impl MessageView {
         folders
             .get(folder_id)
             .and_then(|entry| entry.mailbox.clone())
+    }
+
+    /// The entry for one message in a loaded folder, by its MID.
+    ///
+    /// This is the **only** route from a client-supplied MID to a store message
+    /// id, and it searches a list built from the authenticated account's own
+    /// mail. A MID naming somebody else's message is not found here, and there
+    /// is no other lookup for it to fall through to.
+    #[must_use]
+    pub fn entry(&self, folder_id: u64, mid: u64) -> Option<&MessageEntry> {
+        self.rows(folder_id)?.iter().find(|entry| entry.mid == mid)
+    }
+
+    /// Records the content of one opened message.
+    pub fn insert_body(&mut self, mid: u64, body: MessageBody) {
+        match self.bodies.iter_mut().find(|(stored, _)| *stored == mid) {
+            Some((_, existing)) => *existing = body,
+            None => self.bodies.push((mid, body)),
+        }
+    }
+
+    /// The content of an opened message, or `None` if it was not opened.
+    ///
+    /// As with [`MessageView::rows`], absence is not emptiness: a body nobody
+    /// loaded must not be answered as a blank message, which a client would
+    /// show as mail with nothing in it.
+    #[must_use]
+    pub fn body(&self, mid: u64) -> Option<&MessageBody> {
+        self.bodies
+            .iter()
+            .find(|(stored, _)| *stored == mid)
+            .map(|(_, body)| body)
     }
 }
 

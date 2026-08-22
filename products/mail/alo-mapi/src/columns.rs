@@ -59,6 +59,9 @@ pub struct PropertyTag {
 }
 
 impl PropertyTag {
+    /// How many bytes one tag occupies on the wire.
+    pub const LEN: usize = 4;
+
     /// The four bytes of this tag: **type first**, then id, both little-endian.
     #[must_use]
     pub fn to_bytes(self) -> [u8; 4] {

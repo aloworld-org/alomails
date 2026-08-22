@@ -275,6 +275,7 @@ dependencies = [
  "encoding_rs",
  "futures",
  "jiff",
+ "mail-parser",
  "object_store",
  "pdf-extract",
  "quick-xml",

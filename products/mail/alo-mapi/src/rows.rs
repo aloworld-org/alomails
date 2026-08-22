@@ -103,6 +103,19 @@ pub mod pid {
     pub const HAS_ATTACHMENTS: u16 = 0x0E1B;
     /// What kind of item it is — `PtypString` (§2.789).
     pub const MESSAGE_CLASS: u16 = 0x001A;
+
+    // ---- what an opened message adds --------------------------------------
+
+    /// The body as plain text — `PtypString` (§2.618).
+    pub const BODY: u16 = 0x1000;
+    /// The `To` line, display names separated by semicolons — `PtypString`.
+    pub const DISPLAY_TO: u16 = 0x0E04;
+    /// The `Cc` line, likewise — `PtypString`.
+    pub const DISPLAY_CC: u16 = 0x0E03;
+    /// When the sender submitted it — `PtypTime` (§2.628).
+    pub const CLIENT_SUBMIT_TIME: u16 = 0x0039;
+    /// The `Message-ID` header — `PtypString`.
+    pub const INTERNET_MESSAGE_ID: u16 = 0x1035;
 }
 
 /// `PidTagMessageFlags` bits ([MS-OXCMSG] §2.2.1.6).
@@ -262,6 +275,92 @@ pub fn standard_row(
             return None;
         }
         value.write(&mut out);
+    }
+    Some(out)
+}
+
+/// `PropertyRow` — every value is present and correct ([MS-OXCDATA] §2.8.1).
+pub const ROW_FLAG_STANDARD: u8 = 0x00;
+/// `PropertyRow` — some value is missing or in error.
+pub const ROW_FLAG_FLAGGED: u8 = 0x01;
+
+/// `FlaggedPropertyValue` — the value follows ([MS-OXCDATA] §2.11.5).
+pub const VALUE_FLAG_PRESENT: u8 = 0x00;
+/// `FlaggedPropertyValue` — the value is absent and **nothing follows**.
+pub const VALUE_FLAG_ABSENT: u8 = 0x01;
+
+/// Builds a `FlaggedPropertyRow` answering `tags` positionally.
+///
+/// Unlike [`standard_row`], one unanswerable property does not refuse the whole
+/// row. A client fetching a message asks for dozens of properties and fully
+/// expects some of them not to exist — refusing everything because one was
+/// absent would mean a message with no `Date` header could not be opened at
+/// all. So each value carries its own flag, and an absent one is marked absent.
+///
+/// `size_limit` is the client's own ceiling on a value it will accept, with
+/// zero meaning none. A value over it is marked **absent** rather than sent
+/// anyway or truncated:
+///
+/// * Sending it anyway ignores a limit the client set for its own protection.
+/// * Truncating produces a body that looks whole and is not — the one outcome
+///   nobody downstream can detect.
+///
+/// Marking it absent is the honest third option, and it is what leads a client
+/// to fetch the value as a stream instead. Until streams are served, a body
+/// over the client's limit is one it will not display — a real limit, and a
+/// visible one, rather than silent corruption.
+///
+/// Returns `None` only if a value's type disagrees with the tag that asked for
+/// it, which is our bug rather than the client's.
+#[must_use]
+pub fn property_row(
+    tags: &[PropertyTag],
+    value_of: &dyn Fn(PropertyTag) -> Option<Value>,
+    size_limit: usize,
+) -> Option<Vec<u8>> {
+    let mut values: Vec<(bool, Vec<u8>)> = Vec::with_capacity(tags.len());
+    let mut any_absent = false;
+    for tag in tags {
+        match value_of(*tag) {
+            Some(value) => {
+                if value.property_type() != tag.property_type {
+                    return None;
+                }
+                let mut bytes = Vec::new();
+                value.write(&mut bytes);
+                if size_limit > 0 && bytes.len() > size_limit {
+                    any_absent = true;
+                    values.push((false, Vec::new()));
+                } else {
+                    values.push((true, bytes));
+                }
+            }
+            None => {
+                any_absent = true;
+                values.push((false, Vec::new()));
+            }
+        }
+    }
+
+    // A row with nothing missing is written in the standard form, which is
+    // what a client parses fastest and what the tables already produce.
+    if !any_absent {
+        let mut out = vec![ROW_FLAG_STANDARD];
+        for (_, bytes) in &values {
+            out.extend_from_slice(bytes);
+        }
+        return Some(out);
+    }
+
+    let mut out = vec![ROW_FLAG_FLAGGED];
+    for (present, bytes) in &values {
+        if *present {
+            out.push(VALUE_FLAG_PRESENT);
+            out.extend_from_slice(bytes);
+        } else {
+            // Nothing follows an absent value — not a zero, not a placeholder.
+            out.push(VALUE_FLAG_ABSENT);
+        }
     }
     Some(out)
 }
