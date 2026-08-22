@@ -58,7 +58,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (rt === null) return Promise.resolve(null);
     const p = (async () => {
       const result = await oidcRefresh(rt);
-      if (result === null) return null;
+      if (result === null) {
+        // A refresh token is single-use and server-revocable. Once rejected it
+        // can never recover, so do not leave it behind to trigger another
+        // failed /oauth/token request on every page load.
+        clearSession();
+        setIdentity(null);
+        return null;
+      }
       applyResult(result, refreshTokenIsPersistent());
       return result.accessToken;
     })().finally(() => {
