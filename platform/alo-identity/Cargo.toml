@@ -33,6 +33,9 @@ name = "identityctl"
 path = "src/bin/identityctl.rs"
 
 [dev-dependencies]
+# The one place a suite learns which database it may use: it refuses
+# the database the product runs on (CLAUDE.md, one-database rule).
+alo-test-db = { path = "../../platform/alo-test-db" }
 tokio = { workspace = true }
 # Drive the OAuth router in-process (oneshot) without a socket.
 tower = { version = "0.5", features = ["util"] }

@@ -22,9 +22,12 @@ pub fn test_identity(store: Arc<Store>) -> Identity {
     Identity::new(store, IdentityConfig::new("https://id.test")).expect("identity")
 }
 
+/// The database this suite runs against.
+///
+/// Delegates to `alo_test_db`, which refuses the database the product
+/// runs on: suites create and drop their own, they never write into `alo`.
 pub fn database_url() -> String {
-    std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgres://alo:alo-dev-only@127.0.0.1:5433/alo".to_owned())
+    alo_test_db::url()
 }
 
 pub struct Harness {

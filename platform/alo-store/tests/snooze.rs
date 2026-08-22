@@ -9,9 +9,12 @@ use std::sync::Arc;
 use alo_store::{BlobStore, Store};
 use sqlx::postgres::PgPoolOptions;
 
+/// The database this suite runs against.
+///
+/// Delegates to `alo_test_db`, which refuses the database the product
+/// runs on: suites create and drop their own, they never write into `alo`.
 fn database_url() -> String {
-    std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgres://alo:alo@127.0.0.1:5455/alo".to_owned())
+    alo_test_db::url()
 }
 
 const RAW: &[u8] = b"From: a@sender.test\r\nTo: b@owner.test\r\nSubject: snooze me\r\n\r\nbody\r\n";

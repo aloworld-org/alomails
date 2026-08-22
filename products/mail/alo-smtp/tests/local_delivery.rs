@@ -18,9 +18,12 @@ use tokio::net::TcpStream;
 const HOSTNAME: &str = "mx.alo.test";
 const IO_TIMEOUT: Duration = Duration::from_secs(10);
 
+/// The database this suite runs against.
+///
+/// Delegates to `alo_test_db`, which refuses the database the product
+/// runs on: suites create and drop their own, they never write into `alo`.
 fn database_url() -> String {
-    std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgres://alo:alo-dev-only@127.0.0.1:5433/alo".to_owned())
+    alo_test_db::url()
 }
 
 /// A store shared between the SMTP server (delivery) and the test (asserts),

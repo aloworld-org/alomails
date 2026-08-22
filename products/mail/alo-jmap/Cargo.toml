@@ -57,6 +57,9 @@ webpki-roots = "0.26"
 mail-parser = { workspace = true }
 
 [dev-dependencies]
+# The one place a suite learns which database it may use: it refuses
+# the database the product runs on (CLAUDE.md, one-database rule).
+alo-test-db = { path = "../../../platform/alo-test-db" }
 # Reads our own PDF output back with an independent parser, so a rendering
 # test asserts what a reader sees rather than what we wrote (B1.17).
 pdf-extract = { workspace = true }

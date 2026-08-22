@@ -35,6 +35,9 @@ rcgen = { workspace = true }
 base64 = { workspace = true }
 
 [dev-dependencies]
+# The one place a suite learns which database it may use: it refuses
+# the database the product runs on (CLAUDE.md, one-database rule).
+alo-test-db = { path = "../../../platform/alo-test-db" }
 # The in-memory fixture DNS resolver, to verify a captured DKIM signature
 # against its published key in the per-tenant DKIM end-to-end test (ADR 0014).
 alo-auth-mail = { path = "../../../platform/alo-auth-mail", features = ["test-fixtures"] }

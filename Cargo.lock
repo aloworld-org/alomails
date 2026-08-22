@@ -85,6 +85,7 @@ name = "alo-identity"
 version = "0.0.1"
 dependencies = [
  "alo-store",
+ "alo-test-db",
  "argon2",
  "axum",
  "base64",
@@ -108,6 +109,7 @@ version = "0.0.1"
 dependencies = [
  "alo-identity",
  "alo-store",
+ "alo-test-db",
  "base64",
  "bytes",
  "rcgen",
@@ -129,11 +131,13 @@ dependencies = [
  "alo-ai",
  "alo-auth-mail",
  "alo-identity",
+ "alo-mapi",
  "alo-pdf",
  "alo-sieve",
  "alo-sites",
  "alo-smtp-client",
  "alo-store",
+ "alo-test-db",
  "axum",
  "base64",
  "bytes",
@@ -160,6 +164,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "alo-mapi"
+version = "0.0.1"
+dependencies = [
+ "alo-identity",
+ "alo-store",
+ "alo-test-db",
+ "axum",
+ "base64",
+ "bytes",
+ "ring",
+ "sqlx",
+ "thiserror",
+ "time",
+ "tokio",
+ "tower",
+ "tracing",
+]
+
+[[package]]
 name = "alo-migrate"
 version = "0.0.1"
 
@@ -180,6 +203,7 @@ version = "0.0.1"
 dependencies = [
  "alo-ai",
  "alo-store",
+ "alo-test-db",
  "axum",
  "bytes",
  "hmac",
@@ -205,6 +229,7 @@ dependencies = [
  "alo-sieve",
  "alo-smtp-client",
  "alo-store",
+ "alo-test-db",
  "base64",
  "flate2",
  "hickory-resolver",
@@ -243,6 +268,7 @@ version = "0.0.1"
 dependencies = [
  "alo-auth-mail",
  "alo-sieve",
+ "alo-test-db",
  "argon2",
  "base64",
  "bytes",
@@ -263,6 +289,10 @@ dependencies = [
  "tracing",
  "zip",
 ]
+
+[[package]]
+name = "alo-test-db"
+version = "0.0.1"
 
 [[package]]
 name = "android_system_properties"

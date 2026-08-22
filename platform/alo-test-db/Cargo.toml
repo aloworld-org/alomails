@@ -1,0 +1,10 @@
+[package]
+name = "alo-test-db"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# Deliberately dependency-free. This crate is compiled into every integration
+# suite in the workspace; anything it pulled in would be pulled in everywhere.
+[dependencies]
