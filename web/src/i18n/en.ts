@@ -4365,6 +4365,7 @@ export const en = {
   projectsCustomer: "Customer",
   projectsCustomerHint: "The customer this project's hours are billed to.",
   projectsCustomerPick: "Choose a customer…",
+  projectsNoCustomersAvailable: "No customers are available yet. Add one in Billing first.",
   projectsCustomerUnknown: "Unknown customer",
   projectsInternal: "Internal",
   projectsRate: "Hourly rate",

@@ -2487,6 +2487,7 @@ export const nl: Partial<Catalog> = {
   projectsCustomerHint:
     "De klant aan wie de uren van dit project worden gefactureerd.",
   projectsCustomerPick: "Kies een klant…",
+  projectsNoCustomersAvailable: "Er zijn nog geen klanten beschikbaar. Voeg er eerst een toe in Facturatie.",
   projectsCustomerUnknown: "Onbekende klant",
   projectsInternal: "Intern",
   projectsRate: "Uurtarief",

@@ -29,4 +29,13 @@ describe("the new project journey", () => {
 
     await waitFor(() => expect(create).toHaveBeenCalledWith({ name: "Website", customerId: "customer-1" }));
   });
+
+  test("explains when client work has no available customers", () => {
+    render(<NewProjectDialog customers={[]} onClose={() => undefined} onCreate={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("radio", { name: /A customer/ }));
+    fireEvent.click(screen.getByRole("combobox"));
+
+    expect(screen.getByText("No customers are available yet. Add one in Billing first.")).toBeTruthy();
+  });
 });

@@ -2528,6 +2528,7 @@ export const fr: Partial<Catalog> = {
   projectsCustomerHint:
     "Le client à qui les heures de ce projet sont facturées.",
   projectsCustomerPick: "Choisissez un client…",
+  projectsNoCustomersAvailable: "Aucun client n’est encore disponible. Ajoutez-en un dans Facturation.",
   projectsCustomerUnknown: "Client inconnu",
   projectsInternal: "Interne",
   projectsRate: "Taux horaire",
