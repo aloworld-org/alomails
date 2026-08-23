@@ -17,6 +17,7 @@
 //! translator over the one store ([ADR 0001](../../../docs/decisions/0001-jmap-native-core.md));
 //! a second source of truth is how this becomes unmaintainable.
 
+pub mod attachments;
 pub mod columns;
 pub mod connect;
 pub mod contents;
@@ -38,6 +39,7 @@ pub mod router;
 pub mod rows;
 pub mod rpc;
 pub mod session;
+pub mod stream;
 
 pub use connect::{ConnectError, ConnectRequest};
 pub use response::{MapiResponse, ResponseCode};

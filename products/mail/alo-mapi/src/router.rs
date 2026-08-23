@@ -37,7 +37,7 @@ use crate::dispatch::{dispatch, wanted_contents};
 use crate::execute::{ExecuteRequest, success_body as execute_success_body};
 use crate::folders::FolderView;
 use crate::logon_response::LogonTime;
-use crate::messages::{MessageBody, MessageView};
+use crate::messages::{AttachmentEntry, MessageBody, MessageView};
 use crate::response::{MapiResponse, ResponseCode};
 use crate::rop::RopBuffer;
 use crate::rpc::{read_extended_buffer, write_extended_buffer};
@@ -62,6 +62,14 @@ const MAX_FOLDERS: i64 = 10_000;
 /// rather than a folder. Mirrors [`crate::messages::MAX_MESSAGES`], as an
 /// `i64` because that is what a store page takes.
 const MAX_MESSAGES: i64 = crate::messages::MAX_MESSAGES as i64;
+
+/// How many times a buffer is rehearsed before it is dispatched for real.
+///
+/// Three, because that is the depth of the object graph a rehearsal walks:
+/// a folder's messages, then one message's content, then one attachment's
+/// bytes. Each pass can see one layer further than the last, and a fourth
+/// would have nothing new to find.
+const MAX_REHEARSALS: usize = 3;
 
 /// What the client is told about retrying, mirroring Exchange's own pacing.
 /// A client told to retry zero times gives up on the first hiccup.
@@ -406,60 +414,31 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
             // `RopOpenFolder`, `RopGetContentsTable`, `RopSetColumns` and
             // `RopQueryRows` together). So the buffer is rehearsed against a
             // copy of the object table, and only the folder list is kept.
-            let wanted = {
-                let Ok(objects) = context.objects.lock() else {
-                    tracing::error!("mapi: session object table is poisoned");
-                    return MapiResponse::new(
-                        request_type.as_str(),
-                        request_id,
-                        ResponseCode::UnknownFailure,
-                    )
-                    .with_client_info(client_info)
-                    .into_response();
-                };
-                wanted_contents(
-                    &context,
-                    &state.dn_prefix,
-                    &objects,
-                    &folders,
-                    &input,
-                    logon_time(now),
-                )
-            };
-
-            // One query per folder actually reached, as the caller's own
-            // account — the same door the folder tree came through, so a view
-            // of somebody else's mail is not something this code can produce.
+            // **Rehearse, load, repeat.** One pass is not enough, because what
+            // a buffer needs is discovered in layers: a rehearsal with nothing
+            // loaded sees the folder a contents table will read, but it cannot
+            // get past `RopOpenMessage` — with no messages loaded that
+            // operation fails, so no message object exists, so the
+            // `RopOpenAttachment` behind it is never reached and its file is
+            // never fetched. Loading the message and rehearsing again gets one
+            // layer further.
+            //
+            // The depth is fixed by the object graph — folder, then message,
+            // then attachment — so this converges in three passes and the loop
+            // is bounded at [`MAX_REHEARSALS`] rather than run to a fixed
+            // point. A buffer that somehow wanted a fourth layer gets the three
+            // it asked for and an honest `ecNotFound` for the rest, which is
+            // the same answer it would get for anything else we could not
+            // reach.
             let mut messages = MessageView::new();
-            // A message's own folder must be loaded before its MID can be
-            // resolved, so the two lists are read as one.
-            let folder_ids: Vec<u64> = wanted
-                .folders
-                .iter()
-                .copied()
-                .chain(wanted.messages.iter().map(|(folder, _)| *folder))
-                .collect();
             let mut seen: Vec<u64> = Vec::new();
-            for folder_id in folder_ids {
-                if seen.contains(&folder_id) {
-                    continue;
-                }
-                seen.push(folder_id);
-                let Some(mailbox) = MessageView::mailbox_of(&folders, folder_id) else {
-                    // A special folder with no alo mailbox behind it. It holds
-                    // nothing, and that is a measurement: the tree was read and
-                    // no mailbox stands there.
-                    messages.insert(folder_id, &[]);
-                    continue;
-                };
-                match account
-                    .mapi_mailbox_rows(&mailbox, alo_store::Page::first(MAX_MESSAGES))
-                    .await
-                {
-                    Ok(rows) => messages.insert(folder_id, &rows),
-                    Err(error) => {
-                        // No subjects, addresses or mailbox names in the log.
-                        tracing::warn!(%error, "mapi: could not read a folder's messages");
+            let mut loaded_messages: Vec<(u64, u64)> = Vec::new();
+            let mut loaded_attachments: Vec<(u64, u64, u32)> = Vec::new();
+
+            for _ in 0..MAX_REHEARSALS {
+                let wanted = {
+                    let Ok(objects) = context.objects.lock() else {
+                        tracing::error!("mapi: session object table is poisoned");
                         return MapiResponse::new(
                             request_type.as_str(),
                             request_id,
@@ -467,49 +446,165 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
                         )
                         .with_client_info(client_info)
                         .into_response();
+                    };
+                    wanted_contents(
+                        &context,
+                        &state.dn_prefix,
+                        &objects,
+                        &folders,
+                        &messages,
+                        &input,
+                        logon_time(now),
+                    )
+                };
+
+                // Nothing new to fetch: the rehearsal has stopped discovering,
+                // and another pass would read the same things again.
+                let fresh_folders: Vec<u64> = wanted
+                    .folders
+                    .iter()
+                    .copied()
+                    .chain(wanted.messages.iter().map(|(folder, _)| *folder))
+                    .filter(|folder| !seen.contains(folder))
+                    .collect();
+                let fresh_messages: Vec<(u64, u64)> = wanted
+                    .messages
+                    .iter()
+                    .copied()
+                    .filter(|it| !loaded_messages.contains(it))
+                    .collect();
+                let fresh_attachments: Vec<(u64, u64, u32)> = wanted
+                    .attachments
+                    .iter()
+                    .copied()
+                    .filter(|it| !loaded_attachments.contains(it))
+                    .collect();
+                if fresh_folders.is_empty()
+                    && fresh_messages.is_empty()
+                    && fresh_attachments.is_empty()
+                {
+                    break;
+                }
+
+                // One query per folder actually reached, as the caller's own
+                // account — the same door the folder tree came through, so a view
+                // of somebody else's mail is not something this code can produce.
+                for folder_id in fresh_folders {
+                    if seen.contains(&folder_id) {
+                        continue;
+                    }
+                    seen.push(folder_id);
+                    let Some(mailbox) = MessageView::mailbox_of(&folders, folder_id) else {
+                        // A special folder with no alo mailbox behind it. It holds
+                        // nothing, and that is a measurement: the tree was read and
+                        // no mailbox stands there.
+                        messages.insert(folder_id, &[]);
+                        continue;
+                    };
+                    match account
+                        .mapi_mailbox_rows(&mailbox, alo_store::Page::first(MAX_MESSAGES))
+                        .await
+                    {
+                        Ok(rows) => messages.insert(folder_id, &rows),
+                        Err(error) => {
+                            // No subjects, addresses or mailbox names in the log.
+                            tracing::warn!(%error, "mapi: could not read a folder's messages");
+                            return MapiResponse::new(
+                                request_type.as_str(),
+                                request_id,
+                                ResponseCode::UnknownFailure,
+                            )
+                            .with_client_info(client_info)
+                            .into_response();
+                        }
                     }
                 }
-            }
 
-            // The content of each message a buffer opens: one blob fetch and
-            // one MIME parse each, and only for messages actually opened.
-            for (folder_id, mid) in &wanted.messages {
-                let Some(entry) = messages.entry(*folder_id, *mid) else {
-                    // The MID names no message of this account's. Nothing is
-                    // loaded, and the dispatch answers `ecNotFound` — the same
-                    // answer a message that never existed gets.
-                    continue;
-                };
-                let id = entry.message.clone();
-                let (Ok(meta), Ok(raw)) =
-                    (account.message(&id).await, account.message_bytes(&id).await)
-                else {
-                    tracing::warn!("mapi: could not read a message this account owns");
-                    return MapiResponse::new(
-                        request_type.as_str(),
-                        request_id,
-                        ResponseCode::UnknownFailure,
-                    )
-                    .with_client_info(client_info)
-                    .into_response();
-                };
-                let parsed = alo_store::mime_read::parse(&raw);
-                messages.insert_body(
-                    *mid,
-                    MessageBody {
-                        // A message with no plain-text alternative reads as
-                        // an empty body rather than a refusal: the message
-                        // exists and opens, and what it has to show over this
-                        // protocol is nothing until HTML bodies are served.
-                        text: parsed.text.unwrap_or_default(),
-                        display_to: meta.to_addrs,
-                        display_cc: meta.cc_addrs,
-                        submit_time: meta
-                            .sent_at
-                            .map(|at| crate::rows::filetime_from_unix_secs(at.unix_timestamp())),
-                        internet_message_id: meta.message_id_hdr,
-                    },
-                );
+                // The content of each message a buffer opens: one blob fetch and
+                // one MIME parse each, and only for messages actually opened.
+                for (folder_id, mid) in &fresh_messages {
+                    loaded_messages.push((*folder_id, *mid));
+                    let Some(entry) = messages.entry(*folder_id, *mid) else {
+                        // The MID names no message of this account's. Nothing is
+                        // loaded, and the dispatch answers `ecNotFound` — the same
+                        // answer a message that never existed gets.
+                        continue;
+                    };
+                    let id = entry.message.clone();
+                    let (Ok(meta), Ok(raw)) =
+                        (account.message(&id).await, account.message_bytes(&id).await)
+                    else {
+                        tracing::warn!("mapi: could not read a message this account owns");
+                        return MapiResponse::new(
+                            request_type.as_str(),
+                            request_id,
+                            ResponseCode::UnknownFailure,
+                        )
+                        .with_client_info(client_info)
+                        .into_response();
+                    };
+                    let parsed = alo_store::mime_read::parse(&raw);
+                    // Names and sizes only. Decoding a file is what costs, and it
+                    // happens when somebody opens that file, not when they open
+                    // the message it came with.
+                    let attachments: Vec<AttachmentEntry> = parsed
+                        .attachments
+                        .iter()
+                        .map(|part| AttachmentEntry {
+                            number: u32::try_from(part.index).unwrap_or(u32::MAX),
+                            filename: part.name.clone(),
+                            mime_type: part.content_type.clone(),
+                            size: u32::try_from(part.size).unwrap_or(u32::MAX),
+                            data: None,
+                        })
+                        .collect();
+                    messages.insert_body(
+                        *mid,
+                        MessageBody {
+                            // A message with no plain-text alternative reads as
+                            // an empty body rather than a refusal: the message
+                            // exists and opens, and what it has to show over this
+                            // protocol is nothing until HTML bodies are served.
+                            text: parsed.text.unwrap_or_default(),
+                            display_to: meta.to_addrs,
+                            display_cc: meta.cc_addrs,
+                            submit_time: meta.sent_at.map(|at| {
+                                crate::rows::filetime_from_unix_secs(at.unix_timestamp())
+                            }),
+                            internet_message_id: meta.message_id_hdr,
+                            attachments,
+                        },
+                    );
+                }
+
+                // The bytes of each attachment a buffer actually opened. Decoded
+                // one at a time, and only these: a message with six files whose
+                // reader opened one costs one decode.
+                for (folder_id, mid, number) in &fresh_attachments {
+                    loaded_attachments.push((*folder_id, *mid, *number));
+                    let Some(entry) = messages.entry(*folder_id, *mid) else {
+                        continue;
+                    };
+                    let id = entry.message.clone();
+                    let Ok(raw) = account.message_bytes(&id).await else {
+                        tracing::warn!("mapi: could not read a message this account owns");
+                        return MapiResponse::new(
+                            request_type.as_str(),
+                            request_id,
+                            ResponseCode::UnknownFailure,
+                        )
+                        .with_client_info(client_info)
+                        .into_response();
+                    };
+                    let index = usize::try_from(*number).unwrap_or(usize::MAX);
+                    if let Some((bytes, _, _)) = alo_store::mime_read::attachment_bytes(&raw, index)
+                    {
+                        messages.insert_attachment_data(*mid, *number, bytes);
+                    }
+                    // An attachment number naming nothing loads nothing, and the
+                    // dispatch answers `ecNotFound` — the same answer a file that
+                    // never existed gets.
+                }
             }
 
             let dispatched = {

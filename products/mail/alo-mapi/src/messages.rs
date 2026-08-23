@@ -138,6 +138,27 @@ pub struct MessageBody {
     pub submit_time: Option<u64>,
     /// The `Message-ID` header, angle brackets included.
     pub internet_message_id: Option<String>,
+    /// The files hanging off this message, in the order the MIME lists them.
+    pub attachments: Vec<AttachmentEntry>,
+}
+
+/// One file hanging off a message, as a client sees it.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AttachmentEntry {
+    /// `PidTagAttachNumber` — the attachment's position in its message.
+    pub number: u32,
+    /// The filename a client shows and saves under.
+    pub filename: String,
+    /// The content type, as the message declared it.
+    pub mime_type: String,
+    /// Decoded size in bytes.
+    pub size: u32,
+    /// The decoded bytes, when they were loaded.
+    ///
+    /// Present only for attachments a request actually opened. Listing a
+    /// message's attachments reads names and sizes; fetching one file's
+    /// contents is what costs, and it happens when somebody asks for it.
+    pub data: Option<Vec<u8>>,
 }
 
 /// The messages loaded for this request, by folder.
@@ -212,6 +233,27 @@ impl MessageView {
         match self.bodies.iter_mut().find(|(stored, _)| *stored == mid) {
             Some((_, existing)) => *existing = body,
             None => self.bodies.push((mid, body)),
+        }
+    }
+
+    /// One attachment of an opened message, by its number.
+    #[must_use]
+    pub fn attachment(&self, mid: u64, number: u32) -> Option<&AttachmentEntry> {
+        self.body(mid)?
+            .attachments
+            .iter()
+            .find(|attachment| attachment.number == number)
+    }
+
+    /// Records the bytes of one attachment a request opened.
+    pub fn insert_attachment_data(&mut self, mid: u64, number: u32, data: Vec<u8>) {
+        if let Some((_, body)) = self.bodies.iter_mut().find(|(stored, _)| *stored == mid)
+            && let Some(attachment) = body
+                .attachments
+                .iter_mut()
+                .find(|attachment| attachment.number == number)
+        {
+            attachment.data = Some(data);
         }
     }
 

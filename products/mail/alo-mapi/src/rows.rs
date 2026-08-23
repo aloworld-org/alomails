@@ -116,6 +116,21 @@ pub mod pid {
     pub const CLIENT_SUBMIT_TIME: u16 = 0x0039;
     /// The `Message-ID` header — `PtypString`.
     pub const INTERNET_MESSAGE_ID: u16 = 0x1035;
+
+    // ---- one attachment ---------------------------------------------------
+
+    /// Its size in bytes — `PtypInteger32` (§2.573).
+    pub const ATTACH_SIZE: u16 = 0x0E20;
+    /// Its position within its message — `PtypInteger32` (§2.571).
+    pub const ATTACH_NUMBER: u16 = 0x0E21;
+    /// The bytes themselves — `PtypBinary` (§2.564).
+    pub const ATTACH_DATA_BINARY: u16 = 0x3701;
+    /// How the contents are reached — `PtypInteger32` (§2.601).
+    pub const ATTACH_METHOD: u16 = 0x3705;
+    /// Filename and extension — `PtypString` (§2.596).
+    pub const ATTACH_LONG_FILENAME: u16 = 0x3707;
+    /// Its content type — `PtypString` (§2.602).
+    pub const ATTACH_MIME_TAG: u16 = 0x370E;
 }
 
 /// `PidTagMessageFlags` bits ([MS-OXCMSG] §2.2.1.6).
