@@ -392,6 +392,259 @@ fn shared_prefix(left: &[u8; GLOBCNT_LEN], right: &[u8; GLOBCNT_LEN]) -> usize {
         .count()
 }
 
+/// The ICS state properties and meta-properties ([MS-OXCFXICS] §2.2.1.3,
+/// §2.2.4.1.5), as full 32-bit property tags.
+///
+/// Each constant's property id and declared type come from that property's own
+/// section; the type is not inferred from what the value looks like — except in
+/// the one documented case below, where the declared type cannot be encoded.
+pub mod meta {
+    /// `MetaTagIdsetGiven` — the ids the client already holds (id `0x4017`).
+    ///
+    /// **This tag deliberately does not match the declared type.**
+    /// [MS-OXCFXICS] §2.2.1.3 gives this property as `PtypInteger32` (`0x0003`)
+    /// while saying its value "contains a serialization of REPLGUID-based IDSET
+    /// structures" — which is variable-length.
+    ///
+    /// Those two statements cannot both hold in a FastTransfer stream. The
+    /// grammar in §2.2.4.1 is `propValue = fixedPropType propInfo
+    /// fixedSizeValue`: a fixed type carries **no length field**, so a reader
+    /// meeting `0x40170003` takes exactly four bytes and then resynchronises
+    /// onto the middle of the IDSET. Every element after it would be garbage.
+    ///
+    /// So we send it as `PtypBinary`, the only encoding the grammar admits, and
+    /// what its sibling state properties ([`CNSET_SEEN`] and the rest) are
+    /// declared as. Recorded in `docs/interop.md`; revisit if a client rejects
+    /// it.
+    pub const IDSET_GIVEN: u32 = 0x4017_0102;
+
+    /// The literal tag [MS-OXCFXICS] §2.2.1.3 declares, kept so a reader can
+    /// accept it if some client really sends it.
+    pub const IDSET_GIVEN_AS_DECLARED: u32 = 0x4017_0003;
+
+    /// `MetaTagCnsetSeen` — change numbers already communicated (id `0x6796`).
+    pub const CNSET_SEEN: u32 = 0x6796_0102;
+    /// `MetaTagCnsetSeenFAI` — the same, for folder-associated messages.
+    pub const CNSET_SEEN_FAI: u32 = 0x67DA_0102;
+    /// `MetaTagCnsetRead` — change numbers whose read state the client has.
+    pub const CNSET_READ: u32 = 0x67D2_0102;
+
+    /// `MetaTagIdsetDeleted` — ids deleted since the client's state.
+    pub const IDSET_DELETED: u32 = 0x67E5_0102;
+    /// `MetaTagIdsetNoLongerInScope` — ids that left the synchronisation scope.
+    pub const IDSET_NO_LONGER_IN_SCOPE: u32 = 0x4021_0102;
+    /// `MetaTagIdsetExpired` — ids whose retention expired.
+    pub const IDSET_EXPIRED: u32 = 0x6793_0102;
+    /// `MetaTagIdsetRead` — ids now marked read.
+    pub const IDSET_READ: u32 = 0x402D_0102;
+    /// `MetaTagIdsetUnread` — ids now marked unread.
+    pub const IDSET_UNREAD: u32 = 0x402E_0102;
+
+    /// `MetaTagFXDelProp` — properties absent from what follows are deleted.
+    pub const FX_DEL_PROP: u32 = 0x4016_0003;
+    /// `MetaTagEcWarning` — a non-fatal problem with the item that follows.
+    pub const EC_WARNING: u32 = 0x400F_0003;
+    /// `MetaTagNewFXFolder` — the folder's contents are not being sent.
+    pub const NEW_FX_FOLDER: u32 = 0x4011_0102;
+    /// `MetaTagIncrSyncGroupId` — which property group mapping applies.
+    pub const INCR_SYNC_GROUP_ID: u32 = 0x407C_0003;
+    /// `MetaTagIncrementalSyncMessagePartial` — a partial message change.
+    pub const INCREMENTAL_SYNC_MESSAGE_PARTIAL: u32 = 0x407A_0003;
+    /// `MetaTagDnPrefix` — a distinguished-name prefix to strip.
+    pub const DN_PREFIX: u32 = 0x4008_001E;
+}
+
+/// A `REPLGUID` is sixteen bytes.
+pub const REPLGUID_LEN: usize = 16;
+
+/// A bound on how many replica GUIDs one `IDSET` may name.
+///
+/// A mailbox has one replica; a client that has moved between servers may name
+/// a few. A large number means malformed or hostile input.
+pub const MAX_REPLICAS: usize = 256;
+
+/// One replica's contribution to an `IDSET`: whose ids, and which of them.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IdSetEntry {
+    /// The replica the ranges belong to.
+    pub replica: [u8; REPLGUID_LEN],
+    /// Which counter values of that replica are in the set.
+    pub ranges: Vec<GlobRange>,
+}
+
+/// A `REPLGUID`-based `IDSET` ([MS-OXCFXICS] §2.2.2.4.2).
+///
+/// Pairs of replica GUID and `GLOBSET`, laid end to end. Nothing separates one
+/// pair from the next: a `GLOBSET` ends with its own End command, and the next
+/// GUID begins immediately.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct IdSet {
+    /// One entry per replica.
+    pub entries: Vec<IdSetEntry>,
+}
+
+impl IdSet {
+    /// An empty set.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// A set naming a single replica's ranges.
+    #[must_use]
+    pub fn single(replica: [u8; REPLGUID_LEN], ranges: Vec<GlobRange>) -> Self {
+        Self {
+            entries: vec![IdSetEntry { replica, ranges }],
+        }
+    }
+
+    /// The ranges recorded for `replica`, if any.
+    #[must_use]
+    pub fn ranges_for(&self, replica: &[u8; REPLGUID_LEN]) -> &[GlobRange] {
+        self.entries
+            .iter()
+            .find(|entry| &entry.replica == replica)
+            .map_or(&[], |entry| entry.ranges.as_slice())
+    }
+
+    /// Whether the set contains `value` for `replica`.
+    #[must_use]
+    pub fn contains(&self, replica: &[u8; REPLGUID_LEN], value: u64) -> bool {
+        self.ranges_for(replica)
+            .iter()
+            .any(|range| range.contains(value))
+    }
+
+    /// Serialises the set ([MS-OXCFXICS] §3.1.5.4).
+    ///
+    /// Pairs are ordered by replica GUID ascending, "using byte-to-byte
+    /// comparison" as §2.2.2.4.2 requires — an ordering the specification makes
+    /// mandatory, not merely tidy.
+    #[must_use]
+    pub fn serialize(&self) -> Vec<u8> {
+        let mut entries: Vec<&IdSetEntry> = self
+            .entries
+            .iter()
+            .filter(|entry| !normalize(&entry.ranges).is_empty())
+            .collect();
+        entries.sort_by_key(|entry| entry.replica);
+
+        let mut out = Vec::new();
+        for entry in entries {
+            out.extend_from_slice(&entry.replica);
+            out.extend_from_slice(&serialize_globset(&entry.ranges));
+        }
+        out
+    }
+
+    /// Parses a serialised `IDSET`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IcsError`] if a GUID is truncated, a `GLOBSET` is malformed,
+    /// or the set names more than [`MAX_REPLICAS`] replicas.
+    pub fn parse(bytes: &[u8]) -> Result<Self, IcsError> {
+        let mut entries = Vec::new();
+        let mut at = 0_usize;
+
+        while at < bytes.len() {
+            let guid = bytes
+                .get(at..at + REPLGUID_LEN)
+                .ok_or(IcsError::Truncated { part: "REPLGUID" })?;
+            at += REPLGUID_LEN;
+
+            let mut replica = [0_u8; REPLGUID_LEN];
+            replica.copy_from_slice(guid);
+
+            // A GLOBSET ends at its own End command and the next pair starts
+            // straight after, so the parse has to report how far it read.
+            let (ranges, consumed) = parse_globset_at(&bytes[at..])?;
+            at += consumed;
+
+            if entries.len() >= MAX_REPLICAS {
+                return Err(IcsError::TooManyRanges);
+            }
+            entries.push(IdSetEntry { replica, ranges });
+        }
+
+        Ok(Self { entries })
+    }
+}
+
+/// Parses one `GLOBSET` and reports how many bytes it occupied.
+///
+/// [`parse_globset`] is the convenience form for a buffer holding exactly one
+/// set; an `IDSET` needs the length so it can find the next replica.
+///
+/// # Errors
+///
+/// Returns [`IcsError`] on any malformed command.
+pub fn parse_globset_at(bytes: &[u8]) -> Result<(Vec<GlobRange>, usize), IcsError> {
+    let end = globset_len(bytes)?;
+    let ranges = parse_globset(&bytes[..end])?;
+    Ok((ranges, end))
+}
+
+/// How many bytes the `GLOBSET` at the head of `bytes` occupies, End included.
+fn globset_len(bytes: &[u8]) -> Result<usize, IcsError> {
+    let mut stack = 0_usize;
+    let mut groups: Vec<usize> = Vec::new();
+    let mut at = 0_usize;
+
+    loop {
+        let Some(&command) = bytes.get(at) else {
+            // No End command: the set runs to the end of the buffer.
+            return Ok(bytes.len());
+        };
+        at += 1;
+
+        match command {
+            CMD_END => return Ok(at),
+            CMD_PUSH_MIN..=CMD_PUSH_MAX => {
+                let count = usize::from(command);
+                if stack + count > GLOBCNT_LEN {
+                    return Err(IcsError::Stack { depth: stack });
+                }
+                if at + count > bytes.len() {
+                    return Err(IcsError::Truncated { part: "Push bytes" });
+                }
+                at += count;
+                stack += count;
+                if stack == GLOBCNT_LEN {
+                    stack -= count;
+                } else {
+                    groups.push(count);
+                }
+            }
+            CMD_POP => {
+                let size = groups.pop().ok_or(IcsError::Stack { depth: 0 })?;
+                stack -= size;
+            }
+            CMD_BITMASK => {
+                if stack != BITMASK_STACK_DEPTH {
+                    return Err(IcsError::BitmaskStack { depth: stack });
+                }
+                if at + 2 > bytes.len() {
+                    return Err(IcsError::Truncated {
+                        part: "Bitmask field",
+                    });
+                }
+                at += 2;
+            }
+            CMD_RANGE => {
+                let width = (GLOBCNT_LEN - stack) * 2;
+                if at + width > bytes.len() {
+                    return Err(IcsError::Truncated {
+                        part: "Range value",
+                    });
+                }
+                at += width;
+            }
+            other => return Err(IcsError::UnknownCommand { command: other }),
+        }
+    }
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
@@ -612,5 +865,133 @@ mod tests {
         assert_eq!(serialize_globset(&[]), vec![CMD_END]);
         assert_eq!(parse_globset(&[CMD_END]).unwrap(), Vec::new());
         assert_eq!(parse_globset(&[]).unwrap(), Vec::new());
+    }
+
+    /// An IDSET lays replica GUID and GLOBSET end to end with no separator, so
+    /// the reader finds the next pair only by knowing where the GLOBSET ended.
+    /// Two replicas is the case that catches a length bug; one replica hides it.
+    #[test]
+    fn idset_round_trips_two_replicas() {
+        let first = [0x11_u8; REPLGUID_LEN];
+        let second = [0x22_u8; REPLGUID_LEN];
+        let set = IdSet {
+            entries: vec![
+                IdSetEntry {
+                    replica: first,
+                    ranges: vec![GlobRange::new(1, 4), GlobRange::single(9)],
+                },
+                IdSetEntry {
+                    replica: second,
+                    ranges: vec![GlobRange::new(0x1000, 0x1000)],
+                },
+            ],
+        };
+
+        let encoded = set.serialize();
+        let parsed = IdSet::parse(&encoded).unwrap();
+
+        assert_eq!(parsed.entries.len(), 2);
+        assert_eq!(
+            parsed.ranges_for(&first),
+            &[GlobRange::new(1, 4), GlobRange::single(9)]
+        );
+        assert_eq!(parsed.ranges_for(&second), &[GlobRange::single(0x1000)]);
+        assert!(parsed.contains(&first, 3));
+        assert!(!parsed.contains(&first, 5));
+        assert!(!parsed.contains(&second, 3));
+    }
+
+    /// §2.2.2.4.2 makes the ordering mandatory: pairs ascend by replica GUID,
+    /// byte by byte. Emitting them in insertion order would be a set a strict
+    /// reader may reject.
+    #[test]
+    fn idset_orders_replicas_by_guid() {
+        let high = [0xFF_u8; REPLGUID_LEN];
+        let low = [0x01_u8; REPLGUID_LEN];
+        let set = IdSet {
+            entries: vec![
+                IdSetEntry {
+                    replica: high,
+                    ranges: vec![GlobRange::single(1)],
+                },
+                IdSetEntry {
+                    replica: low,
+                    ranges: vec![GlobRange::single(2)],
+                },
+            ],
+        };
+
+        let encoded = set.serialize();
+        assert_eq!(
+            &encoded[..REPLGUID_LEN],
+            &low,
+            "the lower GUID must come first"
+        );
+        assert_eq!(IdSet::parse(&encoded).unwrap().entries[0].replica, low);
+    }
+
+    /// A replica with nothing in it contributes nothing — an empty GLOBSET
+    /// would still cost a GUID and an End byte, and says the same thing.
+    #[test]
+    fn idset_drops_replicas_with_no_ranges() {
+        let set = IdSet {
+            entries: vec![IdSetEntry {
+                replica: [0x33; REPLGUID_LEN],
+                ranges: Vec::new(),
+            }],
+        };
+        assert!(set.serialize().is_empty());
+        assert_eq!(IdSet::parse(&[]).unwrap(), IdSet::new());
+    }
+
+    /// A truncated GUID is refused rather than padded into a plausible replica.
+    #[test]
+    fn idset_refuses_a_truncated_replica_guid() {
+        assert_eq!(
+            IdSet::parse(&[0x11; 8]),
+            Err(IcsError::Truncated { part: "REPLGUID" })
+        );
+    }
+
+    /// The convenience constructor and the accessor agree with the long form.
+    #[test]
+    fn idset_single_matches_the_general_case() {
+        let replica = [0x44; REPLGUID_LEN];
+        let ranges = vec![GlobRange::new(7, 11)];
+        let set = IdSet::single(replica, ranges.clone());
+        assert_eq!(set.ranges_for(&replica), ranges.as_slice());
+        assert_eq!(set.ranges_for(&[0x55; REPLGUID_LEN]), &[]);
+        assert_eq!(IdSet::parse(&set.serialize()).unwrap(), set);
+    }
+
+    /// The state properties are binary, so their values carry a length. The one
+    /// the specification declares as PtypInteger32 cannot be, because a fixed
+    /// type has no length field — see [`meta::IDSET_GIVEN`].
+    #[test]
+    fn state_property_tags_are_binary_so_they_can_carry_a_length() {
+        for tag in [
+            meta::IDSET_GIVEN,
+            meta::CNSET_SEEN,
+            meta::CNSET_SEEN_FAI,
+            meta::CNSET_READ,
+            meta::IDSET_DELETED,
+            meta::IDSET_NO_LONGER_IN_SCOPE,
+            meta::IDSET_EXPIRED,
+            meta::IDSET_READ,
+            meta::IDSET_UNREAD,
+        ] {
+            assert_eq!(
+                tag & 0xFFFF,
+                0x0102,
+                "{tag:#010X} must be PtypBinary to hold a variable-length set"
+            );
+        }
+        // The declared form is kept for reading, and is the one that cannot work.
+        assert_eq!(meta::IDSET_GIVEN_AS_DECLARED & 0xFFFF, 0x0003);
+        assert_eq!(
+            meta::IDSET_GIVEN >> 16,
+            meta::IDSET_GIVEN_AS_DECLARED >> 16,
+            "both forms name property id 0x4017"
+        );
     }
 }
