@@ -44,6 +44,7 @@ pub mod rows;
 pub mod rpc;
 pub mod session;
 pub mod stream;
+pub mod sync;
 
 pub use connect::{ConnectError, ConnectRequest};
 pub use response::{MapiResponse, ResponseCode};
