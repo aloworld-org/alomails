@@ -27,6 +27,7 @@ pub mod dispatch;
 pub mod execute;
 pub mod fasttransfer;
 pub mod folders;
+pub mod getbuffer;
 pub mod hierarchy;
 pub mod ics;
 pub mod logon;
