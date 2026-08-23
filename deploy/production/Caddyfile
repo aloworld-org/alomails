@@ -114,6 +114,26 @@ https://alomails.com {
 	tls /certs/live/alomails.com/fullchain.pem /certs/live/alomails.com/privkey.pem
 	encode zstd gzip
 
+	# **Autodiscover, on the apex, because that is where Outlook looks first.**
+	#
+	# Setting up mail for somebody@alomails.com, Outlook tries
+	# https://alomails.com/autodiscover/autodiscover.xml before it tries
+	# autodiscover.alomails.com, an HTTP redirect, or an SRV record. The apex is
+	# the marketing site, so without this the first thing Outlook asks for is a
+	# static page, and it ends up asking a person for a server name — which is
+	# the whole thing ADR 0051 exists to remove.
+	#
+	# The `autodiscover.` hostname is deliberately *not* served: it resolves
+	# here, but the certificate covers alomails.com and www only, so answering
+	# on that name would need a certbot re-issue. Answering first is enough.
+	#
+	# Only these paths cross to the backend. The apex stays a static site for
+	# everything else, and none of the mailbox API is reachable on it.
+	@autodiscover path /autodiscover/* /Autodiscover/* /mail/config-v1.1.xml
+	handle @autodiscover {
+		reverse_proxy alo-jmap:8080
+	}
+
 	# The same installer downloads served on mail.alomails.com/download (one
 	# shared directory), so the landing page's buttons work on the apex too.
 	handle_path /download/* {
