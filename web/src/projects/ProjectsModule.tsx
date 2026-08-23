@@ -29,6 +29,7 @@ import { strings } from "../i18n";
 import { useJmapClient } from "../jmap";
 import { TasksModule } from "../tasks";
 import { ApprovalsView } from "./ApprovalsView";
+import { upsertProject } from "./collection";
 import { ClientDialog } from "./ClientDialog";
 import { EditProjectDialog } from "./EditProjectDialog";
 import { InvoiceHandoffDialog } from "./InvoiceHandoffDialog";
@@ -253,13 +254,17 @@ export function ProjectsModule() {
 
   async function createProject(draft: NewProjectDraft) {
     const project = await api.createProject(draft.name, draft.customerId);
-    await api.updateProject(project.id, {
+    const createdProject = await api.updateProject(project.id, {
       name: draft.name,
       description: draft.description,
       status: draft.status,
       startsOn: draft.startsOn,
       targetOn: draft.targetOn,
     });
+    // The module remains mounted between a project and All projects. Update
+    // its collection now so returning to the portfolio cannot show the stale
+    // pre-creation snapshot.
+    setProjects((current) => upsertProject(current, createdProject));
     setCreating(false);
     setError(null);
     navigate(`/projects/${encodeURIComponent(project.id)}/overview`);
