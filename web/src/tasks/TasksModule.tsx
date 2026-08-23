@@ -389,7 +389,7 @@ export function TasksModule({
         </header>
 
         {mode.type !== "proposals" && (
-          <div className="flex gap-2 overflow-x-auto border-b border-subtle bg-surface px-6 max-sm:px-4" role="tablist" aria-label={title}>
+          <div className="flex gap-3 overflow-x-auto border-b border-subtle bg-surface px-6 py-2 max-sm:gap-2 max-sm:px-4" role="tablist" aria-label={title}>
             {(
               [
                 { id: "overview", label: strings.taskOverview, Icon: LayoutDashboard },
@@ -405,7 +405,7 @@ export function TasksModule({
                 type="button"
                 role="tab"
                 aria-selected={view === t.id}
-                className={`mb-[-1px] inline-flex min-h-12 shrink-0 items-center gap-2.5 rounded-t-lg border-b-2 px-5 py-3 text-sm !no-underline transition-colors hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${view === t.id ? "border-accent bg-[var(--accent-soft)] font-semibold !text-accent" : "border-transparent bg-transparent font-medium !text-secondary hover:bg-raised hover:!text-primary"}`}
+                className={`inline-flex min-h-11 shrink-0 items-center gap-2.5 rounded-lg border-b-2 px-4 py-2.5 text-sm !no-underline transition-colors hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${view === t.id ? "border-accent bg-[var(--accent-soft)] font-semibold !text-accent" : "border-transparent bg-transparent font-medium !text-secondary hover:bg-raised hover:!text-primary"}`}
                 onClick={() => openView(t.id)}
               >
                 <t.Icon size={16} aria-hidden="true" />
@@ -464,15 +464,17 @@ export function TasksModule({
               onOpenInvoice={(id) => navigate(`/billing/invoices/${encodeURIComponent(id)}`)}
             />
           ) : tasks.length === 0 ? (
-            <div className="flex min-h-[28rem] flex-col items-center justify-center gap-3 px-6 py-12 text-center">
-              <span className="mb-2 inline-flex size-20 items-center justify-center rounded-full bg-[var(--accent-tint)] text-accent-hover">
-                <ClipboardList size={40} />
-              </span>
-              <h2 className="m-0 text-xl font-bold text-primary">{strings.taskEmptyTitle}</h2>
-              <p className="m-0 max-w-sm text-base leading-relaxed text-secondary">{strings.taskEmptyBody}</p>
-              <button type="button" className="mt-3 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-on-accent !no-underline shadow-sm transition-colors hover:bg-accent-hover hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2" onClick={() => openCreate()}>
-                <Plus size={17} /> {strings.taskCreateFirst}
-              </button>
+            <div className="p-6 max-sm:p-4">
+              <section className="flex min-h-[28rem] flex-col items-center justify-center gap-3 rounded-2xl border border-default bg-surface px-6 py-12 text-center shadow-sm">
+                <span className="mb-2 inline-flex size-20 items-center justify-center rounded-full bg-[var(--accent-tint)] text-accent-hover" aria-hidden="true">
+                  <ClipboardList size={40} />
+                </span>
+                <h2 className="m-0 text-xl font-bold text-primary">{strings.taskEmptyTitle}</h2>
+                <p className="m-0 max-w-sm text-base leading-relaxed text-secondary">{strings.taskEmptyBody}</p>
+                <button type="button" className="mt-3 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-on-accent !no-underline shadow-sm transition-colors hover:bg-accent-hover hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2" onClick={() => openCreate()}>
+                  <Plus size={17} /> {strings.taskCreateFirst}
+                </button>
+              </section>
             </div>
           ) : view === "overview" ? (
             <OverviewView

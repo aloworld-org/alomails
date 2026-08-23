@@ -119,14 +119,16 @@ export function FilesView({ projectId, onOpen, onCreate }: Props) {
   }
   if (tasks.length === 0) {
     return (
-      <div className="flex min-h-[26rem] flex-col items-center justify-center gap-3 px-6 text-center">
-        <span className="grid size-16 place-items-center rounded-2xl bg-accent-tint text-accent">
-          <Paperclip size={36} />
-        </span>
-        <p className="m-0 max-w-sm text-sm leading-6 text-secondary">{strings.taskFilesNeedTask}</p>
-        <button type="button" className="inline-flex min-h-10 items-center rounded-lg bg-accent px-5 py-2 text-sm font-semibold text-on-accent hover:bg-accent-hover" onClick={onCreate}>
-          {strings.taskCreateFirst}
-        </button>
+      <div className="p-6 max-sm:p-4">
+        <section className="flex min-h-[26rem] flex-col items-center justify-center gap-3 rounded-2xl border border-default bg-surface px-6 py-12 text-center shadow-sm">
+          <span className="grid size-16 place-items-center rounded-2xl bg-accent-tint text-accent" aria-hidden="true">
+            <Paperclip size={36} />
+          </span>
+          <p className="m-0 max-w-sm text-sm leading-6 text-secondary">{strings.taskFilesNeedTask}</p>
+          <button type="button" className="inline-flex min-h-11 items-center rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-on-accent !no-underline shadow-sm hover:bg-accent-hover hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2" onClick={onCreate}>
+            {strings.taskCreateFirst}
+          </button>
+        </section>
       </div>
     );
   }
