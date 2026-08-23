@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO mapi_id_counter (tenant_id, user_id, last_counter) VALUES ($1, $2, $3) ON CONFLICT (tenant_id, user_id) DO UPDATE SET last_counter = mapi_id_counter.last_counter + 1 RETURNING last_counter",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "last_counter",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "7deee73f27386c0ce31b8c081933e2f347d35235750d411762ac2afcb117bd28"
+}

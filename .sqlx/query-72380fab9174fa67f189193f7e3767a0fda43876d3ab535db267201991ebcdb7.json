@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM mapi_object_id WHERE tenant_id = $1 AND user_id = $2 AND kind = $3 AND store_id = $4",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "72380fab9174fa67f189193f7e3767a0fda43876d3ab535db267201991ebcdb7"
+}

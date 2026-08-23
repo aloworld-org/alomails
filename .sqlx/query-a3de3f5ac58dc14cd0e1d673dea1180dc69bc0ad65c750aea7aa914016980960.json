@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT counter, store_id FROM mapi_object_id WHERE tenant_id = $1 AND user_id = $2 AND kind = $3 AND counter = ANY($4)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "counter",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "store_id",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Int8Array"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "a3de3f5ac58dc14cd0e1d673dea1180dc69bc0ad65c750aea7aa914016980960"
+}

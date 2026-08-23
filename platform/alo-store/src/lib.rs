@@ -174,6 +174,7 @@ pub mod inv_stock_sale;
 pub mod inv_supplier_prices;
 pub mod inv_suppliers;
 pub mod maintenance;
+pub mod mapi_ids;
 pub mod meet;
 pub mod message;
 pub mod mime_read;
