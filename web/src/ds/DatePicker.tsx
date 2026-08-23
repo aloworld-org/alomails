@@ -91,6 +91,7 @@ interface Props {
    *  `DatePicker`s inside a `Field`. */
   id?: string | undefined;
   "aria-describedby"?: string | undefined;
+  "aria-invalid"?: boolean | undefined;
 }
 
 function ymd(d: Date): string {
@@ -126,6 +127,7 @@ export function DatePicker({
   icon = true,
   id,
   "aria-describedby": describedBy,
+  "aria-invalid": invalid,
 }: Props) {
   const locale = getLocale();
   const [open, setOpen] = useState(false);
@@ -191,6 +193,7 @@ export function DatePicker({
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="dialog"
         aria-expanded={open}
+        aria-invalid={invalid}
         {...(id === undefined ? {} : { id })}
         {...(describedBy === undefined
           ? {}

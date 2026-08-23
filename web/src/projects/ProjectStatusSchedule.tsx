@@ -1,9 +1,16 @@
 import { CalendarDays, Check, CircleDashed } from "lucide-react";
 
+import { DatePicker } from "../ds";
 import { strings } from "../i18n";
 import type { Project } from "./types";
 
-const statuses: Project["status"][] = ["planned", "active", "on_hold", "completed", "cancelled"];
+const statuses: Project["status"][] = [
+  "planned",
+  "active",
+  "on_hold",
+  "completed",
+  "cancelled",
+];
 
 function statusLabel(status: Project["status"]): string {
   return {
@@ -35,8 +42,14 @@ export function ProjectStatusSchedule({
   return (
     <section className="space-y-4 rounded-xl border border-subtle bg-raised/60 p-4">
       <fieldset className="m-0 border-0 p-0">
-        <legend className="mb-2.5 text-sm font-semibold text-primary">{strings.projectsStatus}</legend>
-        <div className="grid grid-cols-2 gap-1 rounded-lg bg-surface p-1 sm:grid-cols-5" role="group" aria-label={strings.projectsStatus}>
+        <legend className="mb-2.5 text-sm font-semibold text-primary">
+          {strings.projectsStatus}
+        </legend>
+        <div
+          className="grid grid-cols-2 gap-1 rounded-lg bg-surface p-1 sm:grid-cols-5"
+          role="group"
+          aria-label={strings.projectsStatus}
+        >
           {statuses.map((option) => {
             const selected = status === option;
             return (
@@ -51,7 +64,14 @@ export function ProjectStatusSchedule({
                 }`}
                 onClick={() => onStatusChange(option)}
               >
-                {selected ? <Check className="size-3.5 shrink-0" aria-hidden="true" /> : <CircleDashed className="size-3.5 shrink-0 opacity-50" aria-hidden="true" />}
+                {selected ? (
+                  <Check className="size-3.5 shrink-0" aria-hidden="true" />
+                ) : (
+                  <CircleDashed
+                    className="size-3.5 shrink-0 opacity-50"
+                    aria-hidden="true"
+                  />
+                )}
                 <span className="whitespace-nowrap">{statusLabel(option)}</span>
               </button>
             );
@@ -65,25 +85,31 @@ export function ProjectStatusSchedule({
           <span>{strings.projectsTabPlan}</span>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-secondary">{strings.projectsStartsOn}</span>
-            <input
-              type="date"
-              className="min-h-11 w-full rounded-lg border border-default bg-surface px-3.5 py-2 text-sm text-primary accent-accent hover:border-strong focus-visible:outline-2 focus-visible:outline-accent"
+          <label className="flex min-w-0 flex-col gap-1.5">
+            <span className="text-xs font-medium text-secondary">
+              {strings.projectsStartsOn}
+            </span>
+            <DatePicker
               value={startsOn}
-              onChange={(event) => onStartsOnChange(event.target.value)}
+              onChange={onStartsOnChange}
+              placeholder={strings.projectsStartsOn}
             />
           </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-secondary">{strings.projectsTargetOn}</span>
-            <input
-              type="date"
-              aria-invalid={!datesValid}
-              className={`min-h-11 w-full rounded-lg border bg-surface px-3.5 py-2 text-sm text-primary accent-accent focus-visible:outline-2 focus-visible:outline-accent ${datesValid ? "border-default hover:border-strong" : "border-danger"}`}
+          <label className="flex min-w-0 flex-col gap-1.5">
+            <span className="text-xs font-medium text-secondary">
+              {strings.projectsTargetOn}
+            </span>
+            <DatePicker
               value={targetOn}
-              onChange={(event) => onTargetOnChange(event.target.value)}
+              onChange={onTargetOnChange}
+              placeholder={strings.projectsTargetOn}
+              aria-invalid={!datesValid}
             />
-            {!datesValid && <span className="text-xs text-danger">{strings.projectsDatesInvalid}</span>}
+            {!datesValid && (
+              <span className="text-xs text-danger">
+                {strings.projectsDatesInvalid}
+              </span>
+            )}
           </label>
         </div>
       </div>
