@@ -26,6 +26,13 @@ use crate::attachments::{
 use crate::columns::{
     PropertyTag, ROP_SET_COLUMNS, SetColumnsRequest, success_body as set_columns_success,
 };
+use crate::compose::{
+    CreateMessageRequest, ModifyRecipientsRequest, ROP_CREATE_MESSAGE, ROP_MODIFY_RECIPIENTS,
+    ROP_SAVE_CHANGES_MESSAGE, ROP_SET_PROPERTIES, ROP_SUBMIT_MESSAGE, SaveChangesRequest,
+    SetPropertiesRequest, SubmitMessageRequest, create_success_body,
+    modify_recipients_success_body, save_success_body, set_properties_success_body,
+    submit_success_body,
+};
 use crate::contents::{
     ContentsTableRequest, ROP_GET_CONTENTS_TABLE, success_body as contents_table_success,
 };
@@ -113,6 +120,28 @@ pub enum ServerObject {
         /// A table has a cursor, and `RopQueryRows` advances it: a client that
         /// asks twice gets the next rows, not the same ones again.
         cursor: usize,
+    },
+    /// A message being composed, reached through a logon.
+    ///
+    /// Distinct from [`ServerObject::Message`], which is one that already
+    /// exists and is being read. A draft holds what the client has said about
+    /// it so far and nothing in the store: properties arrive one `Execute` at a
+    /// time, and writing each as it lands would leave a half-composed message
+    /// in somebody's Drafts folder every time Outlook paused.
+    Draft {
+        /// The folder it will be saved into.
+        folder_id: u64,
+        /// What the client has set, in the order it set it.
+        properties: Vec<(u16, Value)>,
+        /// Who it is addressed to.
+        recipients: Vec<crate::openmessage::RecipientEntry>,
+        /// The id the store gave it once saved, and the MID a client holds.
+        ///
+        /// `None` until `RopSaveChangesMessage` has been through the router.
+        /// A draft can be saved more than once — a client saves, edits and
+        /// saves again — so this is the identity of the stored copy rather
+        /// than a marker that saving happened.
+        saved: Option<(u64, String)>,
     },
     /// An open message, reached through a logon.
     Message {
@@ -433,6 +462,23 @@ fn failure(rop_id: u8, handle_index: u8, code: u32) -> Vec<u8> {
     out
 }
 
+/// Everything a dispatch reads, gathered before it starts.
+///
+/// Dispatch runs under a lock and awaits nothing, so every store read it needs
+/// has already happened by the time it is called. Grouping them says so: these
+/// are the three snapshots the router took, and none of them changes while the
+/// walk runs.
+#[derive(Clone, Copy)]
+pub struct Sources<'a> {
+    /// The tenant's folder tree.
+    pub folders: &'a FolderView,
+    /// The messages, bodies and attachments loaded for this buffer.
+    pub messages: &'a MessageView,
+    /// Drafts the router has written during this request, as
+    /// `(handle, MID, stored id)`.
+    pub written: &'a [(u32, u64, String)],
+}
+
 /// What a dispatch produced.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Dispatched {
@@ -461,6 +507,15 @@ pub struct Dispatched {
     /// magnitude: listing a message's attachments reads names and sizes out of
     /// a parse already done, and opening one means decoding a file.
     pub opened_attachments: Vec<(u64, u64, u32)>,
+    /// Drafts this buffer asked to save, by handle.
+    ///
+    /// The router does the writing: dispatch runs under a lock, touches no
+    /// store, and is **rehearsed** — anything it wrote itself would be written
+    /// twice. The handle is a stable key because the rehearsal clones the
+    /// object table, so the same buffer allocates the same handles both times.
+    pub saves: Vec<u32>,
+    /// Drafts this buffer asked to send, as `(handle, stored message id)`.
+    pub submits: Vec<(u32, String)>,
 }
 
 /// The folders whose messages a buffer is about to read.
@@ -488,22 +543,27 @@ pub fn wanted_contents(
     ctx: &SessionContext,
     prefix: &str,
     objects: &ObjectTable,
-    folders: &FolderView,
-    messages: &MessageView,
+    sources: Sources<'_>,
     input: &RopBuffer,
     now: LogonTime,
 ) -> Wanted {
     let mut rehearsal = objects.clone();
-    let out = dispatch(ctx, prefix, &mut rehearsal, folders, messages, input, now);
+    // `written` is what the router has stored *so far* in this request. It
+    // starts empty and grows: a draft cannot be sent until it has been saved,
+    // so the pass that discovers the send is the one after the save happened.
+    let out = dispatch(ctx, prefix, &mut rehearsal, sources, input, now);
     Wanted {
         folders: out.contents_folders,
         messages: out.opened_messages,
         attachments: out.opened_attachments,
+        saves: out.saves,
+        submits: out.submits,
+        rehearsed: rehearsal,
     }
 }
 
-/// What a rehearsal learned a buffer is about to read.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+/// What a rehearsal learned a buffer is about to do.
+#[derive(Debug, Clone, Default)]
 pub struct Wanted {
     /// Folders whose message rows are needed.
     pub folders: Vec<u64>,
@@ -511,6 +571,16 @@ pub struct Wanted {
     pub messages: Vec<(u64, u64)>,
     /// Attachments whose bytes are needed, as `(folder id, MID, number)`.
     pub attachments: Vec<(u64, u64, u32)>,
+    /// Drafts to write to the store, by handle.
+    pub saves: Vec<u32>,
+    /// Drafts to send, as `(handle, stored message id)`.
+    pub submits: Vec<(u32, String)>,
+    /// The rehearsal's own object table.
+    ///
+    /// Carried out because a draft's content only exists here: the client built
+    /// it up across this buffer, and the router needs it to write the message
+    /// before the real pass runs and answers with the id.
+    pub rehearsed: ObjectTable,
 }
 
 /// Walks a ROP input buffer and answers each request in turn.
@@ -522,17 +592,23 @@ pub fn dispatch(
     ctx: &SessionContext,
     prefix: &str,
     objects: &mut ObjectTable,
-    folders: &FolderView,
-    messages: &MessageView,
+    sources: Sources<'_>,
     input: &RopBuffer,
     now: LogonTime,
 ) -> Dispatched {
+    let Sources {
+        folders,
+        messages,
+        written,
+    } = sources;
     let mut responses = Vec::new();
     let mut handles = input.handles.clone();
     let mut rest: &[u8] = &input.rops;
     let mut contents_folders: Vec<u64> = Vec::new();
     let mut opened_messages: Vec<(u64, u64)> = Vec::new();
     let mut opened_attachments: Vec<(u64, u64, u32)> = Vec::new();
+    let mut saves: Vec<u32> = Vec::new();
+    let mut submits: Vec<(u32, String)> = Vec::new();
 
     while !rest.is_empty() {
         let Ok(header) = RopHeader::parse(rest) else {
@@ -545,6 +621,8 @@ pub fn dispatch(
                 contents_folders,
                 opened_messages,
                 opened_attachments,
+                saves,
+                submits,
             };
         };
 
@@ -563,6 +641,8 @@ pub fn dispatch(
                         contents_folders,
                         opened_messages,
                         opened_attachments,
+                        saves,
+                        submits,
                     };
                 };
                 rest = tail;
@@ -650,6 +730,8 @@ pub fn dispatch(
                         contents_folders,
                         opened_messages,
                         opened_attachments,
+                        saves,
+                        submits,
                     };
                 };
                 rest = tail;
@@ -714,6 +796,8 @@ pub fn dispatch(
                         contents_folders,
                         opened_messages,
                         opened_attachments,
+                        saves,
+                        submits,
                     };
                 };
                 rest = tail;
@@ -767,6 +851,8 @@ pub fn dispatch(
                         contents_folders,
                         opened_messages,
                         opened_attachments,
+                        saves,
+                        submits,
                     };
                 };
                 rest = tail;
@@ -839,6 +925,8 @@ pub fn dispatch(
                         contents_folders,
                         opened_messages,
                         opened_attachments,
+                        saves,
+                        submits,
                     };
                 };
                 rest = tail;
@@ -900,6 +988,8 @@ pub fn dispatch(
                         contents_folders,
                         opened_messages,
                         opened_attachments,
+                        saves,
+                        submits,
                     };
                 };
                 rest = tail;
@@ -1001,6 +1091,8 @@ pub fn dispatch(
                         contents_folders,
                         opened_messages,
                         opened_attachments,
+                        saves,
+                        submits,
                     };
                 };
                 rest = tail;
@@ -1061,6 +1153,302 @@ pub fn dispatch(
                 }
             }
 
+            ROP_CREATE_MESSAGE => {
+                let Ok((request, tail)) = CreateMessageRequest::parse(rest) else {
+                    responses.extend(failure(
+                        ROP_CREATE_MESSAGE,
+                        header.input_handle_index,
+                        error::INVALID_OBJECT,
+                    ));
+                    return Dispatched {
+                        responses,
+                        handles,
+                        complete: false,
+                        contents_folders,
+                        opened_messages,
+                        opened_attachments,
+                        saves,
+                        submits,
+                    };
+                };
+                rest = tail;
+
+                // Created through a logon, which is what binds the draft to the
+                // authenticated mailbox. The folder must be one this session's
+                // own tree has.
+                let opened = handles
+                    .get(usize::from(request.input_handle_index))
+                    .copied()
+                    .filter(|handle| *handle != crate::rop::HANDLE_UNSET)
+                    .and_then(|handle| objects.get(handle));
+                let Some(ServerObject::Logon { .. }) = opened else {
+                    responses.extend(failure(
+                        ROP_CREATE_MESSAGE,
+                        request.output_handle_index,
+                        error::INVALID_OBJECT,
+                    ));
+                    continue;
+                };
+                if folders.get(request.folder_id).is_none() {
+                    responses.extend(failure(
+                        ROP_CREATE_MESSAGE,
+                        request.output_handle_index,
+                        error::NOT_FOUND,
+                    ));
+                    continue;
+                }
+                // An FAI message is configuration, not mail. alo stores none,
+                // and accepting one would take a client's settings and lose
+                // them silently.
+                if request.associated {
+                    responses.extend(failure(
+                        ROP_CREATE_MESSAGE,
+                        request.output_handle_index,
+                        error::NOT_IMPLEMENTED,
+                    ));
+                    continue;
+                }
+
+                let handle = objects.insert(ServerObject::Draft {
+                    folder_id: request.folder_id,
+                    properties: Vec::new(),
+                    recipients: Vec::new(),
+                    saved: None,
+                });
+                let index = usize::from(request.output_handle_index);
+                if handles.len() <= index {
+                    handles.resize(index + 1, crate::rop::HANDLE_UNSET);
+                }
+                handles[index] = handle;
+                responses.extend(create_success_body(request.output_handle_index));
+            }
+
+            ROP_SET_PROPERTIES => {
+                let Ok((request, tail)) = SetPropertiesRequest::parse(rest) else {
+                    responses.extend(failure(
+                        ROP_SET_PROPERTIES,
+                        header.input_handle_index,
+                        error::INVALID_OBJECT,
+                    ));
+                    return Dispatched {
+                        responses,
+                        handles,
+                        complete: false,
+                        contents_folders,
+                        opened_messages,
+                        opened_attachments,
+                        saves,
+                        submits,
+                    };
+                };
+                rest = tail;
+
+                let handle = handles
+                    .get(usize::from(request.input_handle_index))
+                    .copied()
+                    .filter(|handle| *handle != crate::rop::HANDLE_UNSET);
+                // Only a draft accepts properties. Setting them on a stored
+                // message is editing mail that has already been delivered, and
+                // is a different operation with different rules.
+                let Some(ServerObject::Draft { properties, .. }) =
+                    handle.and_then(|handle| objects.get_mut(handle))
+                else {
+                    responses.extend(failure(
+                        ROP_SET_PROPERTIES,
+                        request.input_handle_index,
+                        error::INVALID_OBJECT,
+                    ));
+                    continue;
+                };
+                // Last write wins per property, as a client expects: it sets a
+                // subject, changes its mind, and sets it again.
+                for (tag, value) in request.values {
+                    properties.retain(|(id, _)| *id != tag.property_id);
+                    properties.push((tag.property_id, value));
+                }
+                responses.extend(set_properties_success_body(request.input_handle_index));
+            }
+
+            ROP_MODIFY_RECIPIENTS => {
+                let Ok((request, tail)) = ModifyRecipientsRequest::parse(rest) else {
+                    responses.extend(failure(
+                        ROP_MODIFY_RECIPIENTS,
+                        header.input_handle_index,
+                        error::INVALID_OBJECT,
+                    ));
+                    return Dispatched {
+                        responses,
+                        handles,
+                        complete: false,
+                        contents_folders,
+                        opened_messages,
+                        opened_attachments,
+                        saves,
+                        submits,
+                    };
+                };
+                rest = tail;
+
+                let handle = handles
+                    .get(usize::from(request.input_handle_index))
+                    .copied()
+                    .filter(|handle| *handle != crate::rop::HANDLE_UNSET);
+                let Some(ServerObject::Draft { recipients, .. }) =
+                    handle.and_then(|handle| objects.get_mut(handle))
+                else {
+                    responses.extend(failure(
+                        ROP_MODIFY_RECIPIENTS,
+                        request.input_handle_index,
+                        error::INVALID_OBJECT,
+                    ));
+                    continue;
+                };
+                // The operation replaces the list rather than adding to it:
+                // that is what "modify recipients" means to a client which has
+                // just removed somebody from the To line.
+                recipients.clone_from(&request.recipients);
+                responses.extend(modify_recipients_success_body(request.input_handle_index));
+            }
+
+            ROP_SAVE_CHANGES_MESSAGE => {
+                let Ok((request, tail)) = SaveChangesRequest::parse(rest) else {
+                    responses.extend(failure(
+                        ROP_SAVE_CHANGES_MESSAGE,
+                        header.input_handle_index,
+                        error::INVALID_OBJECT,
+                    ));
+                    return Dispatched {
+                        responses,
+                        handles,
+                        complete: false,
+                        contents_folders,
+                        opened_messages,
+                        opened_attachments,
+                        saves,
+                        submits,
+                    };
+                };
+                rest = tail;
+
+                let handle = handles
+                    .get(usize::from(request.input_handle_index))
+                    .copied()
+                    .filter(|handle| *handle != crate::rop::HANDLE_UNSET);
+                let Some(ServerObject::Draft { saved, .. }) =
+                    handle.and_then(|handle| objects.get(handle))
+                else {
+                    responses.extend(failure(
+                        ROP_SAVE_CHANGES_MESSAGE,
+                        request.response_handle_index,
+                        error::INVALID_OBJECT,
+                    ));
+                    continue;
+                };
+
+                // Recorded for the router, which does the writing. Dispatch
+                // holds a lock and touches no store — and it is rehearsed, so
+                // anything it did itself would happen twice.
+                if let Some(handle) = handle
+                    && !saves.contains(&handle)
+                {
+                    saves.push(handle);
+                }
+                // What the router wrote for *this* request, if anything, else
+                // whatever an earlier request already stored against this
+                // draft. A client may save, edit and save again across several
+                // `Execute`s, so both are real cases.
+                let written_now = handle.and_then(|handle| {
+                    written
+                        .iter()
+                        .find(|(stored, _, _)| *stored == handle)
+                        .map(|(_, mid, id)| (*mid, id.clone()))
+                });
+                let outcome = written_now.clone().or_else(|| saved.clone());
+                let Some((mid, id)) = outcome else {
+                    // The rehearsal, where nothing has been written yet. The
+                    // real pass has the id and answers with it.
+                    responses.extend(failure(
+                        ROP_SAVE_CHANGES_MESSAGE,
+                        request.response_handle_index,
+                        error::NOT_FOUND,
+                    ));
+                    continue;
+                };
+                // Recorded on the object so a later `Execute` can submit it.
+                if let Some(handle) = handle
+                    && let Some(ServerObject::Draft { saved, .. }) = objects.get_mut(handle)
+                {
+                    *saved = Some((mid, id));
+                }
+                responses.extend(save_success_body(request.response_handle_index, mid));
+            }
+
+            ROP_SUBMIT_MESSAGE => {
+                let Ok((request, tail)) = SubmitMessageRequest::parse(rest) else {
+                    responses.extend(failure(
+                        ROP_SUBMIT_MESSAGE,
+                        header.input_handle_index,
+                        error::INVALID_OBJECT,
+                    ));
+                    return Dispatched {
+                        responses,
+                        handles,
+                        complete: false,
+                        contents_folders,
+                        opened_messages,
+                        opened_attachments,
+                        saves,
+                        submits,
+                    };
+                };
+                rest = tail;
+
+                let handle = handles
+                    .get(usize::from(request.input_handle_index))
+                    .copied()
+                    .filter(|handle| *handle != crate::rop::HANDLE_UNSET);
+                let Some(ServerObject::Draft { saved, .. }) =
+                    handle.and_then(|handle| objects.get(handle))
+                else {
+                    responses.extend(failure(
+                        ROP_SUBMIT_MESSAGE,
+                        request.input_handle_index,
+                        error::INVALID_OBJECT,
+                    ));
+                    continue;
+                };
+
+                // A message is sent from what was stored, not from what is in
+                // this session: the bytes that go out are the bytes the sender
+                // can afterwards read in Sent. An unsaved draft has none.
+                let stored = handle
+                    .and_then(|handle| {
+                        written
+                            .iter()
+                            .find(|(existing, _, _)| *existing == handle)
+                            .map(|(_, _, id)| id.clone())
+                    })
+                    .or_else(|| saved.as_ref().map(|(_, id)| id.clone()));
+                let Some(stored) = stored else {
+                    responses.extend(failure(
+                        ROP_SUBMIT_MESSAGE,
+                        request.input_handle_index,
+                        error::NOT_FOUND,
+                    ));
+                    continue;
+                };
+                if let Some(handle) = handle
+                    && !submits.iter().any(|(existing, _)| *existing == handle)
+                {
+                    submits.push((handle, stored));
+                }
+                // The send itself happens in the router, after this walk. The
+                // response is optimistic in exactly one narrow sense: the
+                // router refuses the whole `Execute` if the send fails, so a
+                // client never sees this success beside a failed send.
+                responses.extend(submit_success_body(request.input_handle_index));
+            }
+
             ROP_GET_ATTACHMENT_TABLE => {
                 let Ok((request, tail)) = AttachmentTableRequest::parse(rest) else {
                     responses.extend(failure(
@@ -1075,6 +1463,8 @@ pub fn dispatch(
                         contents_folders,
                         opened_messages,
                         opened_attachments,
+                        saves,
+                        submits,
                     };
                 };
                 rest = tail;
@@ -1136,6 +1526,8 @@ pub fn dispatch(
                         contents_folders,
                         opened_messages,
                         opened_attachments,
+                        saves,
+                        submits,
                     };
                 };
                 rest = tail;
@@ -1205,6 +1597,8 @@ pub fn dispatch(
                         contents_folders,
                         opened_messages,
                         opened_attachments,
+                        saves,
+                        submits,
                     };
                 };
                 rest = tail;
@@ -1302,6 +1696,8 @@ pub fn dispatch(
                         contents_folders,
                         opened_messages,
                         opened_attachments,
+                        saves,
+                        submits,
                     };
                 };
                 rest = tail;
@@ -1377,6 +1773,8 @@ pub fn dispatch(
                         contents_folders,
                         opened_messages,
                         opened_attachments,
+                        saves,
+                        submits,
                     };
                 };
                 rest = tail;
@@ -1410,6 +1808,8 @@ pub fn dispatch(
                         contents_folders,
                         opened_messages,
                         opened_attachments,
+                        saves,
+                        submits,
                     };
                 };
                 rest = tail;
@@ -1653,6 +2053,8 @@ pub fn dispatch(
                     contents_folders,
                     opened_messages,
                     opened_attachments,
+                    saves,
+                    submits,
                 };
             }
         }
@@ -1665,6 +2067,8 @@ pub fn dispatch(
         contents_folders,
         opened_messages,
         opened_attachments,
+        saves,
+        submits,
     }
 }
 
@@ -1770,8 +2174,11 @@ mod tests {
             &ctx,
             "/o=alo",
             &mut objects,
-            &view(),
-            &MessageView::new(),
+            Sources {
+                folders: &view(),
+                messages: &MessageView::new(),
+                written: &[],
+            },
             &buffer,
             LogonTime::default(),
         );
@@ -1812,8 +2219,11 @@ mod tests {
             &ctx,
             "/o=alo",
             &mut objects,
-            &view(),
-            &MessageView::new(),
+            Sources {
+                folders: &view(),
+                messages: &MessageView::new(),
+                written: &[],
+            },
             &buffer,
             LogonTime::default(),
         );
@@ -1845,8 +2255,11 @@ mod tests {
                 &ctx,
                 "/o=alo",
                 &mut objects,
-                &view(),
-                &MessageView::new(),
+                Sources {
+                    folders: &view(),
+                    messages: &MessageView::new(),
+                    written: &[],
+                },
                 &buffer,
                 LogonTime::default(),
             );
@@ -1898,8 +2311,11 @@ mod tests {
             &ctx,
             "/o=alo",
             &mut objects,
-            &view(),
-            &MessageView::new(),
+            Sources {
+                folders: &view(),
+                messages: &MessageView::new(),
+                written: &[],
+            },
             &buffer,
             LogonTime::default(),
         );
@@ -1950,8 +2366,11 @@ mod tests {
             &ctx,
             "/o=alo",
             &mut objects,
-            &view(),
-            &MessageView::new(),
+            Sources {
+                folders: &view(),
+                messages: &MessageView::new(),
+                written: &[],
+            },
             &buffer,
             LogonTime::default(),
         );
@@ -1982,8 +2401,11 @@ mod tests {
             &ctx,
             "/o=alo",
             &mut objects,
-            &view(),
-            &MessageView::new(),
+            Sources {
+                folders: &view(),
+                messages: &MessageView::new(),
+                written: &[],
+            },
             &buffer,
             LogonTime::default(),
         );
@@ -2037,8 +2459,11 @@ mod tests {
             &ctx,
             "/o=alo",
             &mut objects,
-            &view(),
-            &MessageView::new(),
+            Sources {
+                folders: &view(),
+                messages: &MessageView::new(),
+                written: &[],
+            },
             &buffer,
             LogonTime::default(),
         );
@@ -2086,8 +2511,11 @@ mod tests {
             &ctx,
             "/o=alo",
             &mut objects,
-            &view(),
-            &MessageView::new(),
+            Sources {
+                folders: &view(),
+                messages: &MessageView::new(),
+                written: &[],
+            },
             &buffer,
             LogonTime::default(),
         );
@@ -2136,8 +2564,11 @@ mod tests {
             &ctx,
             "/o=alo",
             &mut objects,
-            &view(),
-            &MessageView::new(),
+            Sources {
+                folders: &view(),
+                messages: &MessageView::new(),
+                written: &[],
+            },
             &buffer,
             LogonTime::default(),
         );
@@ -2201,8 +2632,11 @@ mod tests {
             &ctx,
             "/o=alo",
             &mut objects,
-            &view(),
-            &MessageView::new(),
+            Sources {
+                folders: &view(),
+                messages: &MessageView::new(),
+                written: &[],
+            },
             &buffer,
             LogonTime::default(),
         );
@@ -2276,8 +2710,11 @@ mod tests {
             &ctx,
             "/o=alo",
             &mut objects,
-            &view(),
-            &MessageView::new(),
+            Sources {
+                folders: &view(),
+                messages: &MessageView::new(),
+                written: &[],
+            },
             &buffer,
             LogonTime::default(),
         );
@@ -2299,8 +2736,11 @@ mod tests {
             &ctx,
             "/o=alo",
             &mut objects,
-            &view(),
-            &MessageView::new(),
+            Sources {
+                folders: &view(),
+                messages: &MessageView::new(),
+                written: &[],
+            },
             &buffer,
             LogonTime::default(),
         );
@@ -2325,8 +2765,11 @@ mod tests {
             &ctx,
             "/o=alo",
             &mut objects,
-            &view(),
-            &MessageView::new(),
+            Sources {
+                folders: &view(),
+                messages: &MessageView::new(),
+                written: &[],
+            },
             &buffer,
             LogonTime::default(),
         );
@@ -2352,8 +2795,11 @@ mod tests {
                 &ctx,
                 "/o=alo",
                 &mut objects,
-                &view(),
-                &MessageView::new(),
+                Sources {
+                    folders: &view(),
+                    messages: &MessageView::new(),
+                    written: &[],
+                },
                 &buffer,
                 LogonTime::default(),
             );
@@ -2389,8 +2835,11 @@ mod tests {
             &ctx,
             "/o=alo",
             &mut objects,
-            &view(),
-            &MessageView::new(),
+            Sources {
+                folders: &view(),
+                messages: &MessageView::new(),
+                written: &[],
+            },
             &buffer,
             LogonTime::default(),
         );
@@ -2417,8 +2866,11 @@ mod tests {
             &ctx,
             "/o=alo",
             &mut objects,
-            &view(),
-            &MessageView::new(),
+            Sources {
+                folders: &view(),
+                messages: &MessageView::new(),
+                written: &[],
+            },
             &buffer,
             LogonTime::default(),
         );
@@ -2458,8 +2910,11 @@ mod tests {
             &ctx,
             "/o=alo",
             &mut objects,
-            &view(),
-            &MessageView::new(),
+            Sources {
+                folders: &view(),
+                messages: &MessageView::new(),
+                written: &[],
+            },
             &buffer,
             LogonTime::default(),
         );
@@ -2482,8 +2937,11 @@ mod tests {
             &ctx,
             "/o=alo",
             &mut objects,
-            &view(),
-            &MessageView::new(),
+            Sources {
+                folders: &view(),
+                messages: &MessageView::new(),
+                written: &[],
+            },
             &buffer,
             LogonTime::default(),
         );
@@ -2577,8 +3035,11 @@ mod tests {
             &ctx,
             "/o=alo",
             &mut objects,
-            &view(),
-            &messages,
+            Sources {
+                folders: &view(),
+                messages: &messages,
+                written: &[],
+            },
             &buffer,
             LogonTime::default(),
         );
@@ -2657,8 +3118,11 @@ mod tests {
             &ctx,
             "/o=alo",
             &mut objects,
-            &view(),
-            &MessageView::new(),
+            Sources {
+                folders: &view(),
+                messages: &MessageView::new(),
+                written: &[],
+            },
             &buffer,
             LogonTime::default(),
         );
@@ -2694,8 +3158,11 @@ mod tests {
             &ctx,
             "/o=alo",
             &mut objects,
-            &view(),
-            &MessageView::new(),
+            Sources {
+                folders: &view(),
+                messages: &MessageView::new(),
+                written: &[],
+            },
             &buffer,
             LogonTime::default(),
         );
@@ -2729,8 +3196,11 @@ mod tests {
             &ctx,
             "/o=alo",
             &objects,
-            &view(),
-            &MessageView::new(),
+            Sources {
+                folders: &view(),
+                messages: &MessageView::new(),
+                written: &[],
+            },
             &buffer,
             LogonTime::default(),
         );
@@ -2760,8 +3230,11 @@ mod tests {
                 &ctx,
                 "/o=alo",
                 &objects,
-                &view(),
-                &MessageView::new(),
+                Sources {
+                    folders: &view(),
+                    messages: &MessageView::new(),
+                    written: &[],
+                },
                 &buffer,
                 LogonTime::default(),
             )
@@ -2791,8 +3264,11 @@ mod tests {
             &ctx,
             "/o=alo",
             &mut objects,
-            &view(),
-            &MessageView::new(),
+            Sources {
+                folders: &view(),
+                messages: &MessageView::new(),
+                written: &[],
+            },
             &buffer,
             LogonTime::default(),
         );
@@ -2845,8 +3321,11 @@ mod tests {
             &ctx,
             "/o=alo",
             &mut objects,
-            &view(),
-            &messages,
+            Sources {
+                folders: &view(),
+                messages: &messages,
+                written: &[],
+            },
             &buffer,
             LogonTime::default(),
         );
@@ -2897,8 +3376,11 @@ mod tests {
             &ctx,
             "/o=alo",
             &mut objects,
-            &view(),
-            &messages,
+            Sources {
+                folders: &view(),
+                messages: &messages,
+                written: &[],
+            },
             &buffer,
             LogonTime::default(),
         );
@@ -2933,8 +3415,11 @@ mod tests {
             &ctx,
             "/o=alo",
             &mut objects,
-            &view(),
-            &messages,
+            Sources {
+                folders: &view(),
+                messages: &messages,
+                written: &[],
+            },
             &buffer,
             LogonTime::default(),
         );

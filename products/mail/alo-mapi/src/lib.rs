@@ -19,6 +19,7 @@
 
 pub mod attachments;
 pub mod columns;
+pub mod compose;
 pub mod connect;
 pub mod contents;
 pub mod direct2;

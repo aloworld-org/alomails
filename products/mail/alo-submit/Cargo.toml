@@ -1,0 +1,18 @@
+[package]
+name = "alo-submit"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "The one path a composed message takes out of alo"
+
+[dependencies]
+alo-store = { path = "../../../platform/alo-store" }
+# The same client the delivery path uses, so a message submitted here is
+# DKIM-signed and queued by the existing outbound path rather than a second one.
+alo-smtp-client = { path = "../alo-smtp-client" }
+tokio = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+alo-test-db = { path = "../../../platform/alo-test-db" }

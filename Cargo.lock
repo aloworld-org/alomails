@@ -137,6 +137,7 @@ dependencies = [
  "alo-sites",
  "alo-smtp-client",
  "alo-store",
+ "alo-submit",
  "alo-test-db",
  "axum",
  "base64",
@@ -169,6 +170,7 @@ version = "0.0.1"
 dependencies = [
  "alo-identity",
  "alo-store",
+ "alo-submit",
  "alo-test-db",
  "axum",
  "base64",
@@ -289,6 +291,17 @@ dependencies = [
  "tokio",
  "tracing",
  "zip",
+]
+
+[[package]]
+name = "alo-submit"
+version = "0.0.1"
+dependencies = [
+ "alo-smtp-client",
+ "alo-store",
+ "alo-test-db",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

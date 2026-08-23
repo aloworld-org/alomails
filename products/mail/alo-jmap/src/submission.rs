@@ -13,11 +13,30 @@
 
 use std::collections::HashSet;
 
-use alo_smtp_client::client::{OutboundSession, RcptOutcome};
-use alo_store::{MAX_PAGE, MessageId, Page};
+use alo_store::MessageId;
 use serde_json::{Map, Value, json};
 
 use crate::state::{Account, AppState, SendMode};
+
+// The send-as check, the `Bcc` strip, the hand-off to the submission listener
+// and the post-send filing all live in `alo-submit`, because MAPI composes mail
+// too and a second copy of any of them is a second place for one to be wrong.
+pub(crate) use alo_submit::{extract_from_addr, valid_addr};
+use alo_submit::{post_send, strip_bcc_header};
+
+/// Hands a message to the deployment's submission listener as this service.
+///
+/// A one-line wrapper so the service name travels with the crate that *is* the
+/// service, rather than being repeated at each of the several places inside it
+/// that send mail — a calendar reply, a password reset, a submitted draft.
+pub(crate) async fn submit(
+    addr: &str,
+    mail_from: &str,
+    rcpts: &[String],
+    message: &[u8],
+) -> Result<(), String> {
+    alo_submit::submit(addr, "alo-jmap", mail_from, rcpts, message).await
+}
 
 /// Maximum recipients accepted in one submission (anti-abuse; a per-user send
 /// rate quota is a tracked follow-up — see docs/design/security-audit-followups.md).
@@ -231,47 +250,6 @@ fn prepend_sender_header(bytes: &[u8], sender: &str) -> bytes::Bytes {
     bytes::Bytes::from(out)
 }
 
-/// One SMTP transaction to the internal listener via the shared client.
-/// Relays a message through the trusted internal submission listener (which
-/// DKIM-signs and queues it). Shared by interactive/scheduled `EmailSubmission`
-/// and the system-originated signup verification mail. Addresses are never
-/// logged (Law 1) — only the outcome class.
-pub(crate) async fn submit(
-    addr: &str,
-    mail_from: &str,
-    rcpts: &[String],
-    message: &[u8],
-) -> Result<(), String> {
-    let sockaddr = tokio::net::lookup_host(addr)
-        .await
-        .map_err(|e| format!("resolve: {e}"))?
-        .next()
-        .ok_or_else(|| "no address for submission host".to_owned())?;
-    // No pinned source address: this hop reaches the co-located submission
-    // listener inside the deployment. The egress address that matters is chosen
-    // where the message actually leaves for the internet — alo-smtp's outbound
-    // queue (ADR 0044 §1).
-    let mut session = OutboundSession::connect_addr(sockaddr, "alo-jmap", None)
-        .await
-        .map_err(|e| format!("connect: {e}"))?;
-    let outcomes = session
-        .deliver(Some(mail_from), rcpts, message)
-        .await
-        .map_err(|e| format!("transaction: {e}"))?;
-    session.quit().await;
-    // The message reaches DATA only once any recipient is accepted, so it is
-    // spooled the moment one is Delivered. Treat "any accepted" as success:
-    // erroring after a partial acceptance would make a client retry and
-    // double-send to the accepted recipients. Only a zero-acceptance result
-    // (the relay took nothing) is a send failure. Addresses are never logged
-    // (Law 1) — only the outcome class.
-    if outcomes.iter().any(|o| matches!(o, RcptOutcome::Delivered)) {
-        Ok(())
-    } else {
-        Err("the relay accepted no recipients".into())
-    }
-}
-
 /// Submit every scheduled send that is now due. Called on an interval by the
 /// background sweeper (see `main.rs`). Rows are **claimed** (deleted) up front by
 /// [`claim_due_sends`](alo_store::Store::claim_due_sends), so the schedule is
@@ -317,189 +295,6 @@ pub async fn run_due_scheduled(state: &AppState) {
     }
 }
 
-/// After a successful send: clear `$draft`, mark `$seen`, and file into Sent
-/// (removing it from Drafts and — for a scheduled send — Scheduled). Best-effort
-/// — the mail is already sent, so a filing hiccup is logged, never surfaced as a
-/// send failure. Takes the account store directly so both the interactive
-/// submission path and the background scheduled-send sweeper can call it.
-async fn post_send(acc: &alo_store::AccountStore, mid: &MessageId) {
-    if let Err(error) = acc.set_keyword(mid, "$draft", false).await {
-        tracing::warn!(%error, "post-send: could not clear $draft");
-    }
-    if let Err(error) = acc.set_keyword(mid, "$seen", true).await {
-        tracing::warn!(%error, "post-send: could not set $seen");
-    }
-    let boxes = match acc.mailboxes(Page::first(MAX_PAGE)).await {
-        Ok(boxes) => boxes,
-        Err(error) => {
-            tracing::warn!(%error, "post-send: mailbox list failed");
-            return;
-        }
-    };
-    let Some(sent) = boxes.iter().find(|m| m.role.as_deref() == Some("sent")) else {
-        return; // no Sent mailbox: leave the message where it is
-    };
-    if let Err(error) = acc.add_to_mailbox(mid, &sent.id).await {
-        tracing::warn!(%error, "post-send: could not file to Sent");
-        return;
-    }
-    for src in boxes
-        .iter()
-        .filter(|m| matches!(m.role.as_deref(), Some("drafts" | "scheduled")))
-    {
-        if let Err(error) = acc.remove_from_mailbox(mid, &src.id).await {
-            tracing::warn!(%error, "post-send: could not remove from source mailbox");
-        }
-    }
-}
-
 fn set_err(kind: &str, description: &str) -> Value {
     json!({ "type": kind, "description": description })
-}
-
-/// A safe addr-spec for an SMTP command: non-empty, has `@`, and contains no
-/// whitespace, control chars, or angle brackets (no SMTP-command injection).
-pub(crate) fn valid_addr(addr: &str) -> bool {
-    !addr.is_empty()
-        && addr.len() <= 320
-        && addr.contains('@')
-        && addr
-            .bytes()
-            .all(|b| b > 0x20 && b != b'<' && b != b'>' && b != 0x7f)
-}
-
-/// The lowercase addr-spec of a message's `From:` header (the address inside
-/// the last `<…>`, else the trimmed value), honoring folded continuation
-/// lines. `None` if absent or without an `@`. Used to bind the *visible*
-/// author to the authenticated account (defence against From spoofing).
-pub(crate) fn extract_from_addr(msg: &[u8]) -> Option<String> {
-    let end = msg
-        .windows(4)
-        .position(|w| w == b"\r\n\r\n")
-        .unwrap_or(msg.len());
-    let text = String::from_utf8_lossy(&msg[..end]);
-    let mut lines = text.split("\r\n").peekable();
-    let mut value: Option<String> = None;
-    while let Some(line) = lines.next() {
-        if line.len() >= 5
-            && line
-                .get(..5)
-                .is_some_and(|p| p.eq_ignore_ascii_case("from:"))
-        {
-            let mut v = line[5..].to_string();
-            while let Some(next) = lines.peek() {
-                if next.starts_with(' ') || next.starts_with('\t') {
-                    v.push(' ');
-                    v.push_str(next.trim_start());
-                    lines.next();
-                } else {
-                    break;
-                }
-            }
-            value = Some(v);
-            break;
-        }
-    }
-    let v = value?;
-    let addr = match (v.rfind('<'), v.rfind('>')) {
-        (Some(lt), Some(gt)) if lt < gt => v[lt + 1..gt].trim().to_string(),
-        _ => v.trim().to_string(),
-    };
-    if addr.contains('@') {
-        Some(addr.to_lowercase())
-    } else {
-        None
-    }
-}
-
-/// Removes any `Bcc:` header field (and its folded continuation lines) from a
-/// message's header block, leaving every other byte unchanged. This is the
-/// privacy guarantee for blind-carbon: the sender's stored copy keeps `Bcc:`,
-/// but the bytes transmitted to recipients must not. Only the header section is
-/// examined — a body line that happens to start with `Bcc:` is untouched.
-fn strip_bcc_header(raw: &[u8]) -> Vec<u8> {
-    let mut out = Vec::with_capacity(raw.len());
-    let mut i = 0;
-    let mut in_headers = true;
-    let mut skipping = false;
-    while i < raw.len() {
-        let end = raw[i..]
-            .iter()
-            .position(|&b| b == b'\n')
-            .map_or(raw.len(), |p| i + p + 1);
-        let line = &raw[i..end];
-        if in_headers {
-            if line == b"\r\n" || line == b"\n" {
-                // The blank line ends the header block; copy it and stop.
-                in_headers = false;
-                skipping = false;
-            } else if !matches!(line.first(), Some(b' ' | b'\t')) {
-                // A new header field: skip it (and its folds) iff it is Bcc.
-                skipping = line.len() >= 4 && line[..4].eq_ignore_ascii_case(b"bcc:");
-            }
-            if !skipping {
-                out.extend_from_slice(line);
-            }
-        } else {
-            out.extend_from_slice(line);
-        }
-        i = end;
-    }
-    out
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{extract_from_addr, strip_bcc_header, valid_addr};
-
-    #[test]
-    fn accepts_a_normal_address() {
-        assert!(valid_addr("alice@example.eu"));
-    }
-
-    #[test]
-    fn rejects_injection_and_malformed() {
-        assert!(!valid_addr("a@x.eu\r\nRCPT TO:<evil@x>"));
-        assert!(!valid_addr("a@x.eu evil@x"));
-        assert!(!valid_addr("<a@x.eu>"));
-        assert!(!valid_addr("noatsign"));
-        assert!(!valid_addr(""));
-    }
-
-    #[test]
-    fn extracts_from_addr_forms() {
-        assert_eq!(
-            extract_from_addr(b"From: \"Disan\" <Disan@Namel3ss.com>\r\nTo: x@y\r\n\r\nbody"),
-            Some("disan@namel3ss.com".to_owned())
-        );
-        assert_eq!(
-            extract_from_addr(b"Subject: hi\r\nfrom: bare@example.eu\r\n\r\nbody"),
-            Some("bare@example.eu".to_owned())
-        );
-        assert_eq!(extract_from_addr(b"To: x@y\r\n\r\nbody"), None);
-    }
-
-    #[test]
-    fn strips_bcc_from_the_wire_only() {
-        // A simple Bcc between other headers is removed; the rest is byte-exact.
-        let msg = b"From: a@x\r\nTo: b@y\r\nBcc: secret@z\r\nSubject: hi\r\n\r\nbody\r\n";
-        let out = strip_bcc_header(msg);
-        assert_eq!(out, b"From: a@x\r\nTo: b@y\r\nSubject: hi\r\n\r\nbody\r\n");
-        assert!(!out.windows(4).any(|w| w.eq_ignore_ascii_case(b"bcc:")));
-
-        // A FOLDED Bcc (continuation lines) is removed whole.
-        let folded = b"To: b@y\r\nBcc: one@z,\r\n two@z,\r\n\tthree@z\r\nSubject: s\r\n\r\nb";
-        assert_eq!(strip_bcc_header(folded), b"To: b@y\r\nSubject: s\r\n\r\nb");
-
-        // A body line that merely starts with 'Bcc:' is NOT touched.
-        let body_bcc = b"To: b@y\r\n\r\nBcc: this is body text\r\n";
-        assert_eq!(strip_bcc_header(body_bcc), body_bcc);
-
-        // Case-insensitive on the field name; no Bcc is a no-op.
-        assert_eq!(
-            strip_bcc_header(b"bCc: x@z\r\nTo: y@w\r\n\r\nb"),
-            b"To: y@w\r\n\r\nb"
-        );
-        assert_eq!(strip_bcc_header(b"To: y@w\r\n\r\nb"), b"To: y@w\r\n\r\nb");
-    }
 }

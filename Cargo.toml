@@ -10,6 +10,7 @@ members = [
     "platform/alo-test-db",
     "products/mail/alo-smtp",
     "products/mail/alo-smtp-client",
+    "products/mail/alo-submit",
     "products/mail/alo-imap",
     "products/mail/alo-jmap",
     "products/mail/alo-mapi",

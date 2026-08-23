@@ -250,7 +250,7 @@ fn angle(id: &str) -> String {
 
 /// An address as a header token: `email`, `"Display Name" <email>`, or with an
 /// RFC 2047 encoded phrase when the name is non-ASCII.
-pub(crate) fn format_addr(a: &Addr) -> String {
+pub fn format_addr(a: &Addr) -> String {
     let email = sanitize(&a.email);
     match &a.name {
         Some(name) if !name.trim().is_empty() => {
@@ -271,7 +271,7 @@ fn format_addr_list(list: &[Addr]) -> String {
 }
 
 /// An unstructured header value (Subject): raw when ASCII, else encoded-words.
-pub(crate) fn encode_unstructured(s: &str) -> String {
+pub fn encode_unstructured(s: &str) -> String {
     let s = sanitize(s);
     if is_ascii_clean(&s) {
         s

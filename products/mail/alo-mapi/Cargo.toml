@@ -7,6 +7,9 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
+# The one path a composed message takes out of alo: the send-as check, the Bcc
+# strip and the post-send filing, shared with JMAP so neither can drift.
+alo-submit = { path = "../alo-submit" }
 alo-store = { path = "../../../platform/alo-store" }
 alo-identity = { path = "../../../platform/alo-identity" }
 # The endpoints mount into the same axum router as the rest of the mail surface.

@@ -2390,6 +2390,9 @@ pub fn app_with_site_boundaries(
     // will never look anywhere else.
     if state.mapi_http {
         assembled.merge(alo_mapi::router(alo_mapi::MapiState {
+            // The same listener JMAP submits through: one deployment, one door
+            // out, whichever protocol composed the message.
+            submission_addr: state.submission_addr.clone(),
             // The folder tree a MAPI client reads comes from the same store
             // every other surface reads, through the same account door.
             store: Arc::clone(&state.store),

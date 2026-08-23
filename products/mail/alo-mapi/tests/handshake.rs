@@ -44,6 +44,11 @@ struct Harness {
 }
 
 async fn harness(tag: &str) -> Harness {
+    harness_with_submission(tag, None).await
+}
+
+/// A harness whose deployment may have a submission listener behind it.
+async fn harness_with_submission(tag: &str, submission_addr: Option<String>) -> Harness {
     let pool = PgPoolOptions::new()
         .max_connections(4)
         .connect(&database_url())
@@ -60,6 +65,7 @@ async fn harness(tag: &str) -> Harness {
         identity,
         sessions: Arc::new(SessionStore::new()),
         dn_prefix: "/o=alo".to_owned(),
+        submission_addr,
     });
     Harness {
         app,
@@ -2266,4 +2272,374 @@ async fn a_message_with_no_html_says_so_rather_than_returning_an_empty_one() {
     assert_eq!(props[6], 0x01, "a flagged row: something is missing");
     assert_eq!(props[7], 0x01, "the HTML body is absent, not empty");
     assert_eq!(props.len(), 8, "nothing follows an absent value");
+}
+
+// ---- stage 7: composing and sending --------------------------------------
+
+/// Encodes a null-terminated UTF-16LE string.
+fn utf16z_bytes(text: &str) -> Vec<u8> {
+    let mut out = Vec::new();
+    for unit in text.encode_utf16() {
+        out.extend_from_slice(&unit.to_le_bytes());
+    }
+    out.extend_from_slice(&[0, 0]);
+    out
+}
+
+/// A `RopSetProperties` naming a subject and a plain-text body.
+fn set_properties_rop(subject: &str, body: &str) -> Vec<u8> {
+    let mut values = 2u16.to_le_bytes().to_vec();
+    values.extend_from_slice(&[0x1F, 0x00, 0x37, 0x00]); // PidTagSubject
+    values.extend_from_slice(&utf16z_bytes(subject));
+    values.extend_from_slice(&[0x1F, 0x00, 0x00, 0x10]); // PidTagBody
+    values.extend_from_slice(&utf16z_bytes(body));
+
+    let mut out = vec![0x0A, 0x00, 0x01];
+    out.extend_from_slice(&u16::try_from(values.len()).unwrap().to_le_bytes());
+    out.extend_from_slice(&values);
+    out
+}
+
+/// A `RopModifyRecipients` carrying one SMTP recipient.
+fn modify_recipients_rop(kind: u8, email: &str, name: &str) -> Vec<u8> {
+    // SMTP | E | D | U
+    let flags: u16 = 0x0003 | 0x0008 | 0x0010 | 0x0200;
+    let mut row = flags.to_le_bytes().to_vec();
+    row.extend_from_slice(&utf16z_bytes(email));
+    row.extend_from_slice(&utf16z_bytes(name));
+    row.extend_from_slice(&0u16.to_le_bytes()); // RecipientColumnCount
+
+    let mut out = vec![0x0E, 0x00, 0x01];
+    out.extend_from_slice(&0u16.to_le_bytes()); // ColumnCount
+    out.extend_from_slice(&1u16.to_le_bytes()); // RowCount
+    out.extend_from_slice(&0u32.to_le_bytes()); // RowId
+    out.push(kind);
+    out.extend_from_slice(&u16::try_from(row.len()).unwrap().to_le_bytes());
+    out.extend_from_slice(&row);
+    out
+}
+
+/// **Stage 7 on the real wire.** A client creates a message in Drafts, sets its
+/// subject and body, addresses it, saves it, and sends it — and the message
+/// that leaves is the one that was stored.
+#[tokio::test]
+async fn a_client_composes_saves_and_sends_a_message() {
+    // A sink standing in for the deployment's submission listener, so the test
+    // reads the bytes that would actually have gone out.
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind");
+    let sink_addr = listener.local_addr().expect("addr").to_string();
+    let received = std::sync::Arc::new(tokio::sync::Mutex::new(Vec::<u8>::new()));
+    let sink = std::sync::Arc::clone(&received);
+    tokio::spawn(async move {
+        if let Ok((mut socket, _)) = listener.accept().await {
+            use tokio::io::{AsyncReadExt, AsyncWriteExt};
+            let _ = socket.write_all(b"220 sink\r\n").await;
+            let mut buf = [0u8; 4096];
+            let mut all = Vec::new();
+            let mut in_data = false;
+            while let Ok(n) = socket.read(&mut buf).await {
+                if n == 0 {
+                    break;
+                }
+                all.extend_from_slice(&buf[..n]);
+                // Published as it arrives, not at the end: the test waits for
+                // the DATA terminator to appear, and a buffer only written on
+                // close would never show it.
+                sink.lock().await.extend_from_slice(&buf[..n]);
+                let text = String::from_utf8_lossy(&buf[..n]).to_ascii_uppercase();
+                let reply: &[u8] = if in_data {
+                    if all.windows(5).any(|w| w == b"\r\n.\r\n") {
+                        in_data = false;
+                        b"250 queued\r\n"
+                    } else {
+                        continue;
+                    }
+                } else if text.starts_with("EHLO") || text.starts_with("HELO") {
+                    b"250-sink\r\n250 SIZE 0\r\n"
+                } else if text.starts_with("MAIL") || text.starts_with("RCPT") {
+                    b"250 ok\r\n"
+                } else if text.starts_with("DATA") {
+                    in_data = true;
+                    b"354 go\r\n"
+                } else if text.starts_with("QUIT") {
+                    let _ = socket.write_all(b"221 bye\r\n").await;
+                    break;
+                } else {
+                    b"250 ok\r\n"
+                };
+                let _ = socket.write_all(reply).await;
+            }
+            drop(all);
+        }
+    });
+
+    let h = harness_with_submission("compose", Some(sink_addr)).await;
+    let auth = basic(&h.email, &h.password);
+    h.account
+        .create_mailbox(None, "Drafts", Some("drafts"))
+        .await
+        .expect("drafts");
+    h.account
+        .create_mailbox(None, "Sent", Some("sent"))
+        .await
+        .expect("sent");
+
+    let (_, headers, _) = send(
+        &h.app,
+        "Connect",
+        Some(&auth),
+        None,
+        connect_body("/o=alo/cn=x"),
+    )
+    .await;
+    let cookie = format!("{SESSION_COOKIE}={}", session_cookie(&headers));
+
+    // Drafts is a real mailbox, so its folder id is the hashed kind.
+    let drafts = h.account.inbox().await.expect("inbox");
+    let _ = drafts;
+    let boxes = h
+        .account
+        .mailboxes(alo_store::Page::first(50))
+        .await
+        .expect("mailboxes");
+    let drafts_box = boxes
+        .iter()
+        .find(|m| m.role.as_deref() == Some("drafts"))
+        .expect("drafts mailbox");
+    let drafts_fid = alo_mapi::folders::fid(alo_mapi::folders::mailbox_counter(&drafts_box.id));
+
+    // ---- the whole arc, in one buffer -------------------------------------
+    let mut rops = Vec::new();
+    let logon = rop_logon("");
+    let rop_size = u16::from_le_bytes(logon[0..2].try_into().unwrap()) as usize;
+    rops.extend_from_slice(&logon[2..rop_size]);
+
+    // RopCreateMessage in Drafts -> handle index 1.
+    rops.push(0x06);
+    rops.extend_from_slice(&[0x00, 0x00, 0x01]);
+    rops.extend_from_slice(&0u16.to_le_bytes()); // CodePageId
+    rops.extend_from_slice(&drafts_fid.to_le_bytes());
+    rops.push(0x00); // not associated
+
+    rops.extend(set_properties_rop(
+        "Rechnung für August",
+        "Grüße aus Liège.",
+    ));
+    rops.extend(modify_recipients_rop(
+        0x01,
+        "anna@example.test",
+        "Anna Müller",
+    ));
+    // RopSaveChangesMessage: response slot 1, input slot 1.
+    rops.extend_from_slice(&[0x0C, 0x00, 0x01, 0x01, 0x0C]);
+    // RopSubmitMessage.
+    rops.extend_from_slice(&[0x32, 0x00, 0x01, 0x00]);
+
+    let responses = execute(&h, &auth, &cookie, &rops).await;
+
+    // The create response.
+    let create = &responses[166..];
+    assert_eq!(create[0], 0x06, "a RopCreateMessage response");
+    assert_eq!(
+        u32::from_le_bytes(create[2..6].try_into().unwrap()),
+        0,
+        "creating the message failed"
+    );
+    assert_eq!(create[6], 0x00, "no message id before it is saved");
+
+    let set = &create[7..];
+    assert_eq!(set[0], 0x0A, "a RopSetProperties response");
+    assert_eq!(u32::from_le_bytes(set[2..6].try_into().unwrap()), 0);
+
+    let modify = &set[8..];
+    assert_eq!(modify[0], 0x0E, "a RopModifyRecipients response");
+    assert_eq!(u32::from_le_bytes(modify[2..6].try_into().unwrap()), 0);
+
+    let save = &modify[6..];
+    assert_eq!(save[0], 0x0C, "a RopSaveChangesMessage response");
+    assert_eq!(
+        u32::from_le_bytes(save[2..6].try_into().unwrap()),
+        0,
+        "saving the draft failed"
+    );
+    let mid = u64::from_le_bytes(save[7..15].try_into().unwrap());
+    assert!(mid != 0, "the saved draft has no id");
+
+    let submit = &save[15..];
+    assert_eq!(submit[0], 0x32, "a RopSubmitMessage response");
+    assert_eq!(
+        u32::from_le_bytes(submit[2..6].try_into().unwrap()),
+        0,
+        "sending failed"
+    );
+
+    // ---- what actually went out -------------------------------------------
+    // Give the sink a moment to finish the transaction it is mid-way through.
+    for _ in 0..50 {
+        if received.lock().await.windows(5).any(|w| w == b"\r\n.\r\n") {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    }
+    let wire = String::from_utf8_lossy(&received.lock().await.clone()).into_owned();
+    assert!(
+        wire.contains("RCPT TO:<anna@example.test>"),
+        "the recipient never reached the envelope: {wire}"
+    );
+    assert!(
+        wire.contains(&format!("MAIL FROM:<{}>", h.email)),
+        "the envelope sender is not this account: {wire}"
+    );
+    // The display name carries a "ü", so the header is RFC 2047 encoded — the
+    // address beside it is not, and is the part that has to be exact.
+    assert!(
+        wire.contains("To:") && wire.contains("<anna@example.test>"),
+        "the To header is missing or wrong: {wire}"
+    );
+    assert!(
+        wire.contains("Subject:"),
+        "the message has no subject line: {wire}"
+    );
+    // The body may be transfer-encoded on the wire, so it is checked on the
+    // sender's own stored copy, where the parser decodes it — which is also
+    // the copy a reader would open in Sent.
+
+    // And the sender's own copy is in Sent, not Drafts.
+    let boxes = h
+        .account
+        .mailboxes(alo_store::Page::first(50))
+        .await
+        .expect("mailboxes");
+    let sent = boxes
+        .iter()
+        .find(|m| m.role.as_deref() == Some("sent"))
+        .expect("sent mailbox");
+    let in_sent = h
+        .account
+        .mapi_mailbox_rows(&sent.id, alo_store::Page::first(10))
+        .await
+        .expect("sent rows");
+    assert_eq!(in_sent.len(), 1, "the sent message is not filed in Sent");
+    assert_eq!(in_sent[0].subject, "Rechnung für August");
+    let stored = h
+        .account
+        .message_bytes(&in_sent[0].id)
+        .await
+        .expect("stored bytes");
+    let parsed = alo_store::mime_read::parse(&stored);
+    assert!(
+        parsed.text.unwrap_or_default().contains("Grüße aus Liège."),
+        "the body did not survive composition"
+    );
+    assert_eq!(parsed.recipients.len(), 1);
+    assert_eq!(parsed.recipients[0].email, "anna@example.test");
+    assert_eq!(parsed.recipients[0].display_name, "Anna Müller");
+    let still_draft = h
+        .account
+        .mapi_mailbox_rows(&drafts_box.id, alo_store::Page::first(10))
+        .await
+        .expect("draft rows");
+    assert!(
+        still_draft.is_empty(),
+        "the message is still sitting in Drafts"
+    );
+}
+
+/// A draft that has not been saved cannot be sent: the bytes that go out are
+/// the bytes the sender can afterwards read in Sent, and an unsaved draft has
+/// none.
+#[tokio::test]
+async fn an_unsaved_draft_cannot_be_submitted() {
+    let h = harness_with_submission("compose-unsaved", None).await;
+    let auth = basic(&h.email, &h.password);
+    h.account
+        .create_mailbox(None, "Drafts", Some("drafts"))
+        .await
+        .expect("drafts");
+
+    let (_, headers, _) = send(
+        &h.app,
+        "Connect",
+        Some(&auth),
+        None,
+        connect_body("/o=alo/cn=x"),
+    )
+    .await;
+    let cookie = format!("{SESSION_COOKIE}={}", session_cookie(&headers));
+
+    let boxes = h
+        .account
+        .mailboxes(alo_store::Page::first(50))
+        .await
+        .expect("mailboxes");
+    let drafts_box = boxes
+        .iter()
+        .find(|m| m.role.as_deref() == Some("drafts"))
+        .expect("drafts mailbox");
+    let drafts_fid = alo_mapi::folders::fid(alo_mapi::folders::mailbox_counter(&drafts_box.id));
+
+    let mut rops = Vec::new();
+    let logon = rop_logon("");
+    let rop_size = u16::from_le_bytes(logon[0..2].try_into().unwrap()) as usize;
+    rops.extend_from_slice(&logon[2..rop_size]);
+    rops.push(0x06);
+    rops.extend_from_slice(&[0x00, 0x00, 0x01]);
+    rops.extend_from_slice(&0u16.to_le_bytes());
+    rops.extend_from_slice(&drafts_fid.to_le_bytes());
+    rops.push(0x00);
+    rops.extend(set_properties_rop("kein Speichern", "Text"));
+    // Straight to submit, with no save in between.
+    rops.extend_from_slice(&[0x32, 0x00, 0x01, 0x00]);
+
+    let responses = execute(&h, &auth, &cookie, &rops).await;
+    let create = &responses[166..];
+    let set = &create[7..];
+    let submit = &set[8..];
+    assert_eq!(submit[0], 0x32);
+    assert_eq!(
+        u32::from_le_bytes(submit[2..6].try_into().unwrap()),
+        0x8004_010F,
+        "an unsaved draft was submitted"
+    );
+}
+
+/// A message cannot be composed into a folder this session's tree does not
+/// have — including one belonging to another tenant, whose folder ids look
+/// exactly the same.
+#[tokio::test]
+async fn a_draft_cannot_be_created_in_a_folder_this_session_does_not_have() {
+    let h = harness_with_submission("compose-foreign", None).await;
+    let auth = basic(&h.email, &h.password);
+
+    let (_, headers, _) = send(
+        &h.app,
+        "Connect",
+        Some(&auth),
+        None,
+        connect_body("/o=alo/cn=x"),
+    )
+    .await;
+    let cookie = format!("{SESSION_COOKIE}={}", session_cookie(&headers));
+
+    let mut rops = Vec::new();
+    let logon = rop_logon("");
+    let rop_size = u16::from_le_bytes(logon[0..2].try_into().unwrap()) as usize;
+    rops.extend_from_slice(&logon[2..rop_size]);
+    rops.push(0x06);
+    rops.extend_from_slice(&[0x00, 0x00, 0x01]);
+    rops.extend_from_slice(&0u16.to_le_bytes());
+    // A hashed folder id that belongs to no mailbox of this account's.
+    rops.extend_from_slice(&alo_mapi::folders::fid(999_999).to_le_bytes());
+    rops.push(0x00);
+
+    let responses = execute(&h, &auth, &cookie, &rops).await;
+    let create = &responses[166..];
+    assert_eq!(create[0], 0x06);
+    assert_eq!(
+        u32::from_le_bytes(create[2..6].try_into().unwrap()),
+        0x8004_010F,
+        "a draft was created in a folder this account does not have"
+    );
 }

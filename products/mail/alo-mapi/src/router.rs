@@ -33,7 +33,7 @@ use base64::engine::general_purpose::STANDARD as BASE64;
 use time::OffsetDateTime;
 
 use crate::connect::{ConnectRequest, MAX_CONNECT_BODY, success_body};
-use crate::dispatch::{dispatch, wanted_contents};
+use crate::dispatch::{Sources, dispatch, wanted_contents};
 use crate::execute::{ExecuteRequest, success_body as execute_success_body};
 use crate::folders::FolderView;
 use crate::logon_response::LogonTime;
@@ -114,6 +114,10 @@ pub struct MapiState {
     pub sessions: Arc<SessionStore>,
     /// The DN prefix handed to clients for building recipients.
     pub dn_prefix: String,
+    /// The deployment's trusted submission listener, when sending is
+    /// configured. `None` means this deployment does not send, and a client
+    /// that tries is refused rather than left waiting.
+    pub submission_addr: Option<String>,
 }
 
 /// The `/mapi/*` routes.
@@ -460,9 +464,15 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
             let mut seen: Vec<u64> = Vec::new();
             let mut loaded_messages: Vec<(u64, u64)> = Vec::new();
             let mut loaded_attachments: Vec<(u64, u64, u32)> = Vec::new();
+            // The last rehearsal's findings, kept past the loop: the writes
+            // below need the draft content it discovered, and only the final
+            // pass has seen the whole buffer.
+            let mut wanted = crate::dispatch::Wanted::default();
+            // Drafts already written in this request, and the ids they got.
+            let mut saved: Vec<(u32, u64, String)> = Vec::new();
 
             for _ in 0..MAX_REHEARSALS {
-                let wanted = {
+                wanted = {
                     let Ok(objects) = context.objects.lock() else {
                         tracing::error!("mapi: session object table is poisoned");
                         return MapiResponse::new(
@@ -477,8 +487,11 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
                         &context,
                         &state.dn_prefix,
                         &objects,
-                        &folders,
-                        &messages,
+                        Sources {
+                            folders: &folders,
+                            messages: &messages,
+                            written: &saved,
+                        },
                         &input,
                         logon_time(now),
                     )
@@ -505,11 +518,67 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
                     .copied()
                     .filter(|it| !loaded_attachments.contains(it))
                     .collect();
+                let fresh_saves: Vec<u32> = wanted
+                    .saves
+                    .iter()
+                    .copied()
+                    .filter(|handle| !saved.iter().any(|(done, _, _)| done == handle))
+                    .collect();
                 if fresh_folders.is_empty()
                     && fresh_messages.is_empty()
                     && fresh_attachments.is_empty()
+                    && fresh_saves.is_empty()
                 {
                     break;
+                }
+
+                // **The one write inside the loop.** A draft has to reach the
+                // store before the pass that discovers its send can happen —
+                // a message is sent from what was stored, so until it is
+                // stored there is nothing to send. Guarded by `saved`, so a
+                // later pass rehearsing the same buffer does not write twice.
+                for handle in fresh_saves {
+                    let Some(crate::dispatch::ServerObject::Draft {
+                        folder_id,
+                        properties,
+                        recipients,
+                        ..
+                    }) = wanted.rehearsed.get(handle)
+                    else {
+                        continue;
+                    };
+                    let Some(mailbox) = MessageView::mailbox_of(&folders, *folder_id) else {
+                        tracing::debug!("mapi: a draft named a folder with no mailbox behind it");
+                        continue;
+                    };
+                    let Some(from) = account_address(&state, &principal).await else {
+                        tracing::warn!("mapi: no address for the composing account");
+                        return MapiResponse::new(
+                            request_type.as_str(),
+                            request_id,
+                            ResponseCode::UnknownFailure,
+                        )
+                        .with_client_info(client_info)
+                        .into_response();
+                    };
+                    let outgoing =
+                        draft_to_outgoing(&from, properties, recipients, &state.dn_prefix);
+                    let raw = alo_store::mime_write::build(&outgoing);
+                    let Ok(id) = account.ingest(&mailbox, &raw).await else {
+                        tracing::warn!("mapi: could not save a draft");
+                        return MapiResponse::new(
+                            request_type.as_str(),
+                            request_id,
+                            ResponseCode::UnknownFailure,
+                        )
+                        .with_client_info(client_info)
+                        .into_response();
+                    };
+                    if let Err(error) = account.set_keyword(&id, "$draft", true).await {
+                        tracing::warn!(%error, "mapi: could not mark a draft");
+                    }
+                    let mid = crate::folders::fid(crate::messages::message_counter(&id));
+                    saved.push((handle, mid, id.as_str().to_owned()));
                 }
 
                 // One query per folder actually reached, as the caller's own
@@ -658,6 +727,47 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
                 }
             }
 
+            // **Sending.** The saves happened inside the rehearsal loop, because
+            // a draft has to be stored before the pass that discovers its send
+            // can run. Sending is different: nothing downstream depends on it,
+            // so it happens once, here, after the buffer is fully understood.
+            //
+            // The send-as check, the `Bcc` strip and the filing into
+            // Sent all live in `alo-submit`, which is the same code the JMAP
+            // path uses — a second copy of the check binding a message's
+            // visible `From:` to this account would be a second place for it to
+            // be wrong.
+            for (_, stored) in &wanted.submits {
+                let id = alo_store::MessageId::new(stored.clone());
+                let Ok(raw) = account.message_bytes(&id).await else {
+                    tracing::warn!("mapi: could not read a draft being sent");
+                    return MapiResponse::new(
+                        request_type.as_str(),
+                        request_id,
+                        ResponseCode::UnknownFailure,
+                    )
+                    .with_client_info(client_info)
+                    .into_response();
+                };
+                match send_draft(&state, &principal, &account, &id, &raw).await {
+                    Ok(()) => {}
+                    Err(reason) => {
+                        // No addresses and no subject in the log line, and the
+                        // client is told the `Execute` failed rather than why:
+                        // "you may not send as that person" is information a
+                        // caller probing identities would use.
+                        tracing::warn!(reason, "mapi: submission refused");
+                        return MapiResponse::new(
+                            request_type.as_str(),
+                            request_id,
+                            ResponseCode::UnknownFailure,
+                        )
+                        .with_client_info(client_info)
+                        .into_response();
+                    }
+                }
+            }
+
             let dispatched = {
                 // The lock is held only across the dispatch, which awaits
                 // nothing — a poisoned lock means another request panicked
@@ -677,8 +787,11 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
                     &context,
                     &state.dn_prefix,
                     &mut objects,
-                    &folders,
-                    &messages,
+                    Sources {
+                        folders: &folders,
+                        messages: &messages,
+                        written: &saved,
+                    },
                     &input,
                     logon_time(now),
                 )
@@ -782,6 +895,143 @@ fn disconnect_body() -> Vec<u8> {
     out.extend_from_slice(&0u32.to_le_bytes()); // ErrorCode.
     out.extend_from_slice(&0u32.to_le_bytes()); // AuxiliaryBufferSize.
     out
+}
+
+/// The canonical address of the account composing a message.
+async fn account_address(state: &MapiState, principal: &alo_identity::Principal) -> Option<String> {
+    state
+        .store
+        .for_tenant(principal.tenant.clone())
+        .email_of(&principal.user)
+        .await
+        .ok()
+        .flatten()
+}
+
+/// Turns a draft's accumulated properties and recipients into a message.
+///
+/// The `From` is the account's own canonical address and is **not** taken from
+/// anything the client set. A client may put whatever it likes in
+/// `PidTagSenderEmailAddress`; the address a recipient reads is decided here,
+/// and checked again by `alo-submit` before the message leaves. Two checks
+/// rather than one because this one is about what gets written and that one is
+/// about what gets sent, and they are reached by different paths.
+fn draft_to_outgoing(
+    from: &str,
+    properties: &[(u16, crate::rows::Value)],
+    recipients: &[crate::openmessage::RecipientEntry],
+    domain_hint: &str,
+) -> alo_store::mime_write::Outgoing {
+    let text_of = |id: u16| -> Option<String> {
+        properties.iter().find_map(|(pid, value)| {
+            if *pid != id {
+                return None;
+            }
+            match value {
+                crate::rows::Value::String(text) => Some(text.clone()),
+                crate::rows::Value::Binary(bytes) => {
+                    Some(String::from_utf8_lossy(bytes).into_owned())
+                }
+                _ => None,
+            }
+        })
+    };
+    let pick = |kind: u8| -> Vec<alo_store::mime_write::Addr> {
+        recipients
+            .iter()
+            .filter(|person| person.recipient_type == kind)
+            .map(|person| alo_store::mime_write::Addr {
+                name: Some(person.display_name.clone()),
+                email: person.email.clone(),
+            })
+            .collect()
+    };
+
+    alo_store::mime_write::Outgoing {
+        from: alo_store::mime_write::Addr {
+            name: None,
+            email: from.to_owned(),
+        },
+        to: pick(crate::openmessage::RECIPIENT_TYPE_TO),
+        cc: pick(crate::openmessage::RECIPIENT_TYPE_CC),
+        bcc: pick(crate::openmessage::RECIPIENT_TYPE_BCC),
+        subject: text_of(crate::rows::pid::SUBJECT).unwrap_or_default(),
+        in_reply_to: Vec::new(),
+        references: Vec::new(),
+        body_text: text_of(crate::rows::pid::BODY).unwrap_or_default(),
+        body_html: text_of(crate::rows::pid::HTML),
+        attachments: Vec::new(),
+        message_id_domain: from.rsplit('@').next().unwrap_or(domain_hint).to_owned(),
+        message_id_token: format!("mapi-{}", from.len()),
+    }
+}
+
+/// Sends a stored draft, through the same door JMAP sends through.
+///
+/// # Errors
+/// A short reason for the server's own log. Never returned to the client:
+/// distinguishing "you may not send as that person" from "the relay refused"
+/// tells a caller probing identities which addresses exist.
+async fn send_draft(
+    state: &MapiState,
+    principal: &alo_identity::Principal,
+    account: &alo_store::AccountStore,
+    id: &alo_store::MessageId,
+    raw: &[u8],
+) -> Result<(), &'static str> {
+    let Some(listener) = state.submission_addr.as_deref() else {
+        return Err("no submission listener is configured");
+    };
+
+    // The addresses this account may send as: its own, plus its aliases.
+    let ts = state.store.for_tenant(principal.tenant.clone());
+    let canonical = ts
+        .email_of(&principal.user)
+        .await
+        .map_err(|_| "sender lookup failed")?
+        .ok_or("no address for this account")?;
+    let mut permitted = vec![canonical.to_lowercase()];
+    if let Ok(aliases) = ts.aliases_of(&principal.user).await {
+        permitted.extend(aliases.into_iter().map(|alias| alias.to_lowercase()));
+    }
+
+    // **The anti-spoof check, on the header a recipient reads.** The envelope
+    // is not what anybody looks at, so binding only that would leave the
+    // visible author free.
+    let from = alo_submit::extract_from_addr(raw).ok_or("the draft has no From address")?;
+    if !permitted.contains(&from) {
+        return Err("the From address is not one this account owns");
+    }
+
+    let rcpts: Vec<String> = recipients_of(raw)
+        .into_iter()
+        .filter(|address| alo_submit::valid_addr(address))
+        .collect();
+    if rcpts.is_empty() {
+        return Err("the draft has no deliverable recipient");
+    }
+
+    // `Bcc:` is stripped from the bytes that travel; blind recipients are
+    // reached through the envelope above, and the stored copy keeps the header.
+    let wire = alo_submit::strip_bcc_header(raw);
+    alo_submit::submit(listener, "alo-mapi", &from, &rcpts, &wire)
+        .await
+        .map_err(|_| "the relay refused the message")?;
+    alo_submit::post_send(account, id).await;
+    Ok(())
+}
+
+/// Every address a stored draft is addressed to, from its own headers.
+///
+/// Read back out of the message rather than carried from the session, so the
+/// envelope and the message that was actually stored cannot disagree about who
+/// it is for.
+fn recipients_of(raw: &[u8]) -> Vec<String> {
+    alo_store::mime_read::parse(raw)
+        .recipients
+        .into_iter()
+        .map(|person| person.email)
+        .collect()
 }
 
 /// The address book endpoint (`/mapi/nspi`).

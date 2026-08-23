@@ -160,7 +160,10 @@ pub mod jtypes;
 pub mod junk_learn;
 pub mod meet_routes;
 pub mod meet_token;
-pub mod mime;
+// Writing outbound MIME moved down to `alo-store`, beside the reader and for
+// the same reason: MAPI composes messages too, and one message format written
+// two ways is two formats. Re-exported so `crate::mime::` still names it.
+pub use alo_store::mime_write as mime;
 // Reading stored MIME moved down to `alo-store`, where the messages are:
 // MAPI serves the same bytes JMAP does, and a copy of the parser in each
 // protocol crate would be two answers to what a message says. Re-exported

@@ -19,6 +19,9 @@ alo-pdf = { path = "../../../platform/alo-pdf" }
 # trusted internal submission listener using the same production client the
 # SMTP delivery path uses.
 alo-smtp-client = { path = "../alo-smtp-client" }
+# The one path a composed message takes out of alo: the send-as check,
+# the Bcc strip and the post-send filing, shared with MAPI.
+alo-submit = { path = "../alo-submit" }
 # The AI inference layer (ADR 0011) — the /ai/improve route bridges to it.
 alo-ai = { path = "../../../platform/alo-ai" }
 # The Sites render library (ADR 0036): the authenticated draft preview is
