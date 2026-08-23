@@ -121,13 +121,14 @@ impl MessageEntry {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct MessageBody {
     /// The message body as plain text.
-    ///
-    /// alo serves the plain-text alternative. The HTML body is `PtypBinary`,
-    /// whose byte count is 16 bits inside a ROP buffer and 32 bits in the
-    /// MAPI/HTTP structures ([MS-OXCDATA] §2.11.1) — a discrepancy worth
-    /// resolving against a real client rather than guessing at, so HTML bodies
-    /// wait for the stage that can test them.
     pub text: String,
+    /// The message body as HTML, when it has one.
+    ///
+    /// `PtypBinary` on the wire. Its byte count is 16 bits inside a ROP buffer
+    /// and 32 in the address book's own structures ([MS-OXCDATA] §2.11.1) —
+    /// see [`crate::rows::Value::Binary`], which settles that rather than
+    /// leaving it open.
+    pub html: Option<String>,
     /// The `To` line as a reader sees it, display names separated by
     /// semicolons.
     pub display_to: String,
@@ -140,6 +141,8 @@ pub struct MessageBody {
     pub internet_message_id: Option<String>,
     /// The files hanging off this message, in the order the MIME lists them.
     pub attachments: Vec<AttachmentEntry>,
+    /// Everyone the message was addressed to, in header order.
+    pub recipients: Vec<crate::openmessage::RecipientEntry>,
 }
 
 /// One file hanging off a message, as a client sees it.

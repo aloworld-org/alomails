@@ -40,18 +40,28 @@
 //! is not in them does not exist as far as this code is concerned. There is no
 //! path from a MID to the store that does not go through that list.
 //!
-//! ## Recipients are deliberately not here
+//! ## The recipient table
 //!
-//! `RecipientCount`, `ColumnCount` and `RowCount` are all zero, and the
-//! recipient table is empty. Building `OpenRecipientRow` structures properly
-//! means resolving every recipient to an address-book entry, which is stage 6's
-//! work — and a half-built recipient table would be worse than none, because a
-//! client would draw it.
+//! Each recipient is an `OpenRecipientRow`: `RecipientType` (1), `CodePageId`
+//! (2), `Reserved` (2), `RecipientRowSize` (2), then a `RecipientRow`
+//! ([MS-OXCDATA] §2.8.3.2) of that many bytes.
 //!
-//! The To and Cc lines a reader actually sees do **not** come from that table:
-//! they are `PidTagDisplayTo` and `PidTagDisplayCc`, plain strings answered by
-//! [`crate::properties`]. So a message opens with its recipients visible and
-//! its recipient *table* empty, which is the honest split.
+//! **A `RecipientRow` is a bitfield followed by exactly the fields the bitfield
+//! claims.** `RecipientFlags` says which optional fields follow, and there is
+//! no length to re-synchronise on — a flag set without its field, or a field
+//! written without its flag, silently shifts everything after it and the client
+//! reads one recipient's address as the next one's name. So the flags and the
+//! writes are built together in [`write_recipient_row`], from one description
+//! of the row, rather than in two places that have to agree.
+//!
+//! alo writes `SMTP` recipients: address type in the low three bits, plus `E`
+//! (an address follows), `D` (a display name follows) and `U` (both are
+//! UTF-16LE). Not `X500DN` — that type obliges an `AddressPrefixUsed`, a
+//! `DisplayType` and an X.500 distinguished name, and alo has no X.500
+//! namespace to name one in.
+//!
+//! `RecipientColumnCount` is zero and no extra property row follows: everything
+//! a client needs about these people is in the named fields above it.
 
 use crate::rop::RopError;
 
@@ -71,6 +81,78 @@ pub const STRING_TYPE_NONE: u8 = 0x00;
 pub const STRING_TYPE_EMPTY: u8 = 0x01;
 /// `StringType` — null-terminated Unicode, UTF-16LE, two zero bytes.
 pub const STRING_TYPE_UNICODE: u8 = 0x04;
+
+/// `RecipientType` — a primary (`To`) recipient ([MS-OXCMSG] §2.2.3.1.2).
+pub const RECIPIENT_TYPE_TO: u8 = 0x01;
+/// `RecipientType` — a carbon-copy recipient.
+pub const RECIPIENT_TYPE_CC: u8 = 0x02;
+/// `RecipientType` — a blind carbon-copy recipient.
+pub const RECIPIENT_TYPE_BCC: u8 = 0x03;
+
+/// `RecipientFlags` — the address type is SMTP ([MS-OXCDATA] §2.8.3.1).
+pub const RECIPIENT_FLAG_TYPE_SMTP: u16 = 0x0003;
+/// `RecipientFlags` `E` — an `EmailAddress` field follows.
+pub const RECIPIENT_FLAG_EMAIL: u16 = 0x0008;
+/// `RecipientFlags` `D` — a `DisplayName` field follows.
+pub const RECIPIENT_FLAG_DISPLAY_NAME: u16 = 0x0010;
+/// `RecipientFlags` `U` — the strings are UTF-16LE with a two-byte terminator.
+pub const RECIPIENT_FLAG_UNICODE: u16 = 0x0200;
+
+/// One addressee, as a row will carry them.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RecipientEntry {
+    /// Which header they came from.
+    pub recipient_type: u8,
+    /// What a reader sees.
+    pub display_name: String,
+    /// Where a message would go.
+    pub email: String,
+}
+
+/// Writes one `RecipientRow` ([MS-OXCDATA] §2.8.3.2).
+///
+/// The flags and the fields are produced together on purpose: the bitfield is
+/// the only thing that says what follows it, and a row whose flags and body
+/// disagree cannot be detected by the client — it just reads the next
+/// recipient's bytes as this one's.
+fn write_recipient_row(out: &mut Vec<u8>, entry: &RecipientEntry) {
+    let flags = RECIPIENT_FLAG_TYPE_SMTP
+        | RECIPIENT_FLAG_EMAIL
+        | RECIPIENT_FLAG_DISPLAY_NAME
+        | RECIPIENT_FLAG_UNICODE;
+    out.extend_from_slice(&flags.to_le_bytes());
+    // No `AddressPrefixUsed`, `DisplayType` or `X500DN`: those belong to the
+    // X500DN address type, which this is not. No `EntryId`/`SearchKey` either
+    // — those are the personal-distribution-list types.
+    write_utf16z(out, &entry.email); // because E is set
+    write_utf16z(out, &entry.display_name); // because D is set
+    out.extend_from_slice(&0u16.to_le_bytes()); // RecipientColumnCount
+}
+
+/// Writes one `OpenRecipientRow` ([MS-OXCROPS] §2.2.6.1.2.1).
+fn write_open_recipient_row(out: &mut Vec<u8>, entry: &RecipientEntry) {
+    out.push(entry.recipient_type);
+    // The code page for this recipient's strings. Zero, and honestly so: the
+    // `U` flag says they are Unicode, which carries no code page.
+    out.extend_from_slice(&0u16.to_le_bytes());
+    out.extend_from_slice(&0u16.to_le_bytes()); // Reserved, MUST be zero.
+
+    // The row is built first so its length can be written in front of it —
+    // the one field here that cannot be computed by counting the spec's
+    // columns, because the strings vary.
+    let mut row = Vec::new();
+    write_recipient_row(&mut row, entry);
+    out.extend_from_slice(&u16::try_from(row.len()).unwrap_or(u16::MAX).to_le_bytes());
+    out.extend_from_slice(&row);
+}
+
+/// Writes a null-terminated UTF-16LE string.
+fn write_utf16z(out: &mut Vec<u8>, text: &str) {
+    for unit in text.encode_utf16() {
+        out.extend_from_slice(&unit.to_le_bytes());
+    }
+    out.extend_from_slice(&[0, 0]);
+}
 
 /// A parsed `RopOpenMessage` request.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -165,19 +247,33 @@ pub fn success_body(
     output_handle_index: u8,
     has_named_properties: bool,
     normalized_subject: Option<&str>,
+    recipients: &[RecipientEntry],
 ) -> Vec<u8> {
-    let mut out = Vec::with_capacity(32);
+    let mut out = Vec::with_capacity(64);
     out.push(ROP_OPEN_MESSAGE);
     out.push(output_handle_index);
     out.extend_from_slice(&0u32.to_le_bytes()); // ReturnValue: success.
     out.push(u8::from(has_named_properties));
     write_typed_string(&mut out, None); // SubjectPrefix
     write_typed_string(&mut out, normalized_subject);
-    out.extend_from_slice(&0u16.to_le_bytes()); // RecipientCount
+
+    // `RowCount` is one byte, so at most 255 rows can be described however
+    // many recipients the message has. `RecipientCount` still reports the
+    // truth — the specification requires only that `RowCount` be no greater —
+    // so a client with a 300-address message is told there are 300 and handed
+    // the first 255, rather than being told a smaller number that is wrong.
+    let rows = recipients.len().min(usize::from(u8::MAX));
+    out.extend_from_slice(
+        &u16::try_from(recipients.len())
+            .unwrap_or(u16::MAX)
+            .to_le_bytes(),
+    );
     out.extend_from_slice(&0u16.to_le_bytes()); // ColumnCount
     // No RecipientColumns, because ColumnCount is zero.
-    out.push(0x00); // RowCount
-    // No RecipientRows, because RowCount is zero.
+    out.push(u8::try_from(rows).unwrap_or(u8::MAX)); // RowCount
+    for entry in &recipients[..rows] {
+        write_open_recipient_row(&mut out, entry);
+    }
     out
 }
 
@@ -186,8 +282,10 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::{
-        OpenMessageRequest, REQUEST_LEN, ROP_OPEN_MESSAGE, STRING_TYPE_EMPTY, STRING_TYPE_NONE,
-        STRING_TYPE_UNICODE, success_body, write_typed_string,
+        OpenMessageRequest, RECIPIENT_FLAG_DISPLAY_NAME, RECIPIENT_FLAG_EMAIL,
+        RECIPIENT_FLAG_TYPE_SMTP, RECIPIENT_FLAG_UNICODE, RECIPIENT_TYPE_BCC, RECIPIENT_TYPE_CC,
+        RECIPIENT_TYPE_TO, REQUEST_LEN, ROP_OPEN_MESSAGE, RecipientEntry, STRING_TYPE_EMPTY,
+        STRING_TYPE_NONE, STRING_TYPE_UNICODE, success_body, write_typed_string,
     };
 
     fn request_bytes(folder: u64, message: u64) -> Vec<u8> {
@@ -267,7 +365,7 @@ mod tests {
 
     #[test]
     fn the_response_has_no_recipient_table() {
-        let body = success_body(0x01, false, Some("Rechnung"));
+        let body = success_body(0x01, false, Some("Rechnung"), &[]);
         assert_eq!(body[0], ROP_OPEN_MESSAGE);
         assert_eq!(body[1], 0x01);
         assert_eq!(&body[2..6], &0u32.to_le_bytes());
@@ -293,8 +391,157 @@ mod tests {
 
     #[test]
     fn a_message_with_no_subject_is_absent_not_empty() {
-        let body = success_body(0x01, false, None);
+        let body = success_body(0x01, false, None, &[]);
         assert_eq!(body[7], STRING_TYPE_NONE, "SubjectPrefix");
         assert_eq!(body[8], STRING_TYPE_NONE, "NormalizedSubject");
+    }
+
+    fn to(name: &str, email: &str) -> RecipientEntry {
+        RecipientEntry {
+            recipient_type: RECIPIENT_TYPE_TO,
+            display_name: name.to_owned(),
+            email: email.to_owned(),
+        }
+    }
+
+    /// The row's flags and its fields have to agree, and nothing in the wire
+    /// format can detect it when they do not — the client simply reads the next
+    /// recipient's bytes as this one's. So this walks the row the way a client
+    /// would: read the flags, then read exactly what they promise.
+    #[test]
+    fn a_recipient_row_carries_exactly_what_its_flags_promise() {
+        let body = success_body(0x01, false, Some("Hallo"), &[to("Anna Müller", "a@x.test")]);
+
+        // Past the header, the flag byte and the two typed strings.
+        let mut at = 7; // RopId, index, ReturnValue, HasNamedProperties
+        assert_eq!(body[at], STRING_TYPE_NONE, "SubjectPrefix");
+        at += 1;
+        assert_eq!(body[at], STRING_TYPE_UNICODE, "NormalizedSubject");
+        at += 1 + "Hallo".encode_utf16().count() * 2 + 2;
+
+        assert_eq!(
+            u16::from_le_bytes(body[at..at + 2].try_into().unwrap()),
+            1,
+            "RecipientCount"
+        );
+        assert_eq!(
+            u16::from_le_bytes(body[at + 2..at + 4].try_into().unwrap()),
+            0,
+            "ColumnCount"
+        );
+        assert_eq!(body[at + 4], 1, "RowCount");
+        at += 5;
+
+        // The OpenRecipientRow.
+        assert_eq!(body[at], RECIPIENT_TYPE_TO);
+        assert_eq!(
+            u16::from_le_bytes(body[at + 1..at + 3].try_into().unwrap()),
+            0,
+            "CodePageId"
+        );
+        assert_eq!(
+            u16::from_le_bytes(body[at + 3..at + 5].try_into().unwrap()),
+            0,
+            "Reserved MUST be zero"
+        );
+        let row_size = usize::from(u16::from_le_bytes(body[at + 5..at + 7].try_into().unwrap()));
+        at += 7;
+        let row = &body[at..at + row_size];
+        assert_eq!(
+            body.len(),
+            at + row_size,
+            "the declared row size is the truth"
+        );
+
+        // The RecipientRow, read as a client reads it.
+        let flags = u16::from_le_bytes(row[0..2].try_into().unwrap());
+        assert_eq!(flags & 0x0007, RECIPIENT_FLAG_TYPE_SMTP, "address type");
+        assert_ne!(flags & RECIPIENT_FLAG_EMAIL, 0);
+        assert_ne!(flags & RECIPIENT_FLAG_DISPLAY_NAME, 0);
+        assert_ne!(flags & RECIPIENT_FLAG_UNICODE, 0);
+        // No X500DN type, so none of its obligatory fields are here.
+        assert_eq!(flags & 0x8000, 0, "the O flag would add an AddressType");
+
+        let mut at = 2;
+        assert_eq!(read_utf16z(row, &mut at), "a@x.test", "EmailAddress");
+        assert_eq!(read_utf16z(row, &mut at), "Anna Müller", "DisplayName");
+        assert_eq!(
+            u16::from_le_bytes(row[at..at + 2].try_into().unwrap()),
+            0,
+            "RecipientColumnCount"
+        );
+        assert_eq!(at + 2, row.len(), "nothing unaccounted for in the row");
+    }
+
+    /// Reads a null-terminated UTF-16LE string, advancing `at` past it.
+    fn read_utf16z(bytes: &[u8], at: &mut usize) -> String {
+        let start = *at;
+        while bytes[*at] != 0 || bytes[*at + 1] != 0 {
+            *at += 2;
+        }
+        let units: Vec<u16> = bytes[start..*at]
+            .chunks_exact(2)
+            .map(|c| u16::from_le_bytes([c[0], c[1]]))
+            .collect();
+        *at += 2;
+        String::from_utf16(&units).expect("utf-16")
+    }
+
+    #[test]
+    fn every_recipient_kind_keeps_its_own_type_byte() {
+        // To, Cc and Bcc are 0x01/0x02/0x03. Confusing them puts somebody in
+        // the wrong line of a message a reader is looking at.
+        let people = [
+            to("A", "a@x.test"),
+            RecipientEntry {
+                recipient_type: RECIPIENT_TYPE_CC,
+                display_name: "B".to_owned(),
+                email: "b@x.test".to_owned(),
+            },
+            RecipientEntry {
+                recipient_type: RECIPIENT_TYPE_BCC,
+                display_name: "C".to_owned(),
+                email: "c@x.test".to_owned(),
+            },
+        ];
+        let body = success_body(0x01, false, None, &people);
+        // Header, no prefix, no subject, then counts.
+        let mut at = 7 + 1 + 1;
+        assert_eq!(u16::from_le_bytes(body[at..at + 2].try_into().unwrap()), 3);
+        assert_eq!(body[at + 4], 3, "RowCount");
+        at += 5;
+        for expected in [RECIPIENT_TYPE_TO, RECIPIENT_TYPE_CC, RECIPIENT_TYPE_BCC] {
+            assert_eq!(body[at], expected);
+            let size = usize::from(u16::from_le_bytes(body[at + 5..at + 7].try_into().unwrap()));
+            at += 7 + size;
+        }
+        assert_eq!(at, body.len());
+    }
+
+    /// `RowCount` is one byte. A message with more recipients than it can
+    /// describe reports the true `RecipientCount` and hands back as many rows
+    /// as the field allows — a smaller count would be a number that is wrong.
+    #[test]
+    fn more_recipients_than_a_row_count_can_hold_still_counts_them_truthfully() {
+        let people: Vec<RecipientEntry> = (0..300)
+            .map(|n| to(&format!("P{n}"), &format!("p{n}@x.test")))
+            .collect();
+        let body = success_body(0x01, false, None, &people);
+        let at = 7 + 1 + 1;
+        assert_eq!(
+            u16::from_le_bytes(body[at..at + 2].try_into().unwrap()),
+            300,
+            "RecipientCount tells the truth"
+        );
+        assert_eq!(body[at + 4], 255, "RowCount is what one byte can hold");
+    }
+
+    #[test]
+    fn a_message_with_no_recipients_writes_no_rows() {
+        let body = success_body(0x01, false, None, &[]);
+        let at = 7 + 1 + 1;
+        assert_eq!(u16::from_le_bytes(body[at..at + 2].try_into().unwrap()), 0);
+        assert_eq!(body[at + 4], 0);
+        assert_eq!(body.len(), at + 5, "nothing follows");
     }
 }

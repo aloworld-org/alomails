@@ -588,10 +588,16 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
                         *mid,
                         MessageBody {
                             // A message with no plain-text alternative reads as
-                            // an empty body rather than a refusal: the message
-                            // exists and opens, and what it has to show over this
-                            // protocol is nothing until HTML bodies are served.
+                            // an empty plain body. No longer a gap: the HTML
+                            // alternative beside it is served too, and a client
+                            // asks for whichever of the two it prefers.
                             text: parsed.text.unwrap_or_default(),
+                            // Only a body the sender actually sent. The
+                            // parser renders HTML for a plain-text message,
+                            // and offering that to a client which prefers HTML
+                            // would show generated markup in place of what was
+                            // written.
+                            html: parsed.html.filter(|_| parsed.html_is_original),
                             display_to: meta.to_addrs,
                             display_cc: meta.cc_addrs,
                             submit_time: meta.sent_at.map(|at| {
@@ -599,6 +605,25 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
                             }),
                             internet_message_id: meta.message_id_hdr,
                             attachments,
+                            recipients: parsed
+                                .recipients
+                                .iter()
+                                .map(|person| crate::openmessage::RecipientEntry {
+                                    recipient_type: match person.kind {
+                                        alo_store::mime_read::RecipientKind::To => {
+                                            crate::openmessage::RECIPIENT_TYPE_TO
+                                        }
+                                        alo_store::mime_read::RecipientKind::Cc => {
+                                            crate::openmessage::RECIPIENT_TYPE_CC
+                                        }
+                                        alo_store::mime_read::RecipientKind::Bcc => {
+                                            crate::openmessage::RECIPIENT_TYPE_BCC
+                                        }
+                                    },
+                                    display_name: person.display_name.clone(),
+                                    email: person.email.clone(),
+                                })
+                                .collect(),
                         },
                     );
                 }

@@ -316,6 +316,13 @@ fn message_value(
         pid::HAS_ATTACHMENTS => Some(Value::Boolean(entry.has_attachment)),
         pid::MESSAGE_CLASS => Some(Value::String(MESSAGE_CLASS_NOTE.to_owned())),
         pid::BODY => Some(Value::String(body.text.clone())),
+        // Absent rather than empty when the message has no HTML alternative:
+        // a blank HTML body would have a client render nothing where it would
+        // otherwise have fallen back to the plain text.
+        pid::HTML => body
+            .html
+            .as_ref()
+            .map(|html| Value::Binary(html.as_bytes().to_vec())),
         pid::DISPLAY_TO => Some(Value::String(body.display_to.clone())),
         pid::DISPLAY_CC => Some(Value::String(body.display_cc.clone())),
         // A message with no `Date` header has no submit time, and a zero here
@@ -950,6 +957,10 @@ pub fn dispatch(
                     continue;
                 };
                 let subject = entry.subject.clone();
+                let recipients = messages
+                    .body(request.message_id)
+                    .map(|body| body.recipients.clone())
+                    .unwrap_or_default();
 
                 let handle = objects.insert(ServerObject::Message {
                     folder_id: request.folder_id,
@@ -972,6 +983,7 @@ pub fn dispatch(
                     request.output_handle_index,
                     false,
                     subject,
+                    &recipients,
                 ));
             }
 

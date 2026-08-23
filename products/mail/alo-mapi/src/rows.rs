@@ -78,6 +78,9 @@ pub mod ptyp {
     pub const STRING8: u16 = 0x001E;
     /// 8 bytes; 100-nanosecond intervals since 1 January 1601 (a `FILETIME`).
     pub const TIME: u16 = 0x0040;
+    /// Variable; a `COUNT` field then that many bytes. See [`super::Value`]
+    /// for how wide that count is, which is the part worth reading.
+    pub const BINARY: u16 = 0x0102;
 }
 
 /// The property ids a folder or message row can answer ([MS-OXPROPS]).
@@ -122,6 +125,8 @@ pub mod pid {
     pub const CLIENT_SUBMIT_TIME: u16 = 0x0039;
     /// The `Message-ID` header — `PtypString`.
     pub const INTERNET_MESSAGE_ID: u16 = 0x1035;
+    /// The body as HTML — `PtypBinary` (§2.740).
+    pub const HTML: u16 = 0x1013;
 
     // ---- one attachment ---------------------------------------------------
 
@@ -216,6 +221,26 @@ pub enum Value {
     String(String),
     /// A time, written as a `FILETIME` — see [`filetime_from_unix_secs`].
     Time(u64),
+    /// Raw bytes, written with a **16-bit** count.
+    ///
+    /// The count width is the one thing about `PtypBinary` that has to be read
+    /// carefully, and [MS-OXCDATA] §2.11.1 does settle it: *"In the context of
+    /// ROP buffers … byte counts for `PtypBinary` property values are 16 bits
+    /// wide. However, in the context of extended rules … and in the context of
+    /// the MAPI extensions for HTTP, as specified in [MS-OXCMAPIHTTP] section
+    /// **2.2.5**, byte counts … are 32 bits wide."*
+    ///
+    /// [MS-OXCMAPIHTTP] §2.2.5 is the **address book endpoint's** request
+    /// types. It is not "anything carried over HTTP" — a ROP buffer is a ROP
+    /// buffer whether it travelled over RPC or over `/mapi/emsmdb`. So this is
+    /// 16 bits here, and the address book's own structures, which are the only
+    /// things in §2.2.5, would use 32 if they ever carried binary. They do not:
+    /// [`crate::nspi`] returns strings only.
+    ///
+    /// A value longer than a 16-bit count can express cannot be written here
+    /// at all, which is what [`property_row`]'s size limit already handles by
+    /// sending the client to a stream.
+    Binary(Vec<u8>),
 }
 
 impl Value {
@@ -228,6 +253,7 @@ impl Value {
             Self::Boolean(_) => ptyp::BOOLEAN,
             Self::String(_) => ptyp::STRING,
             Self::Time(_) => ptyp::TIME,
+            Self::Binary(_) => ptyp::BINARY,
         }
     }
 
@@ -247,6 +273,11 @@ impl Value {
             // Eight bytes little-endian, exactly like an Integer64 — the type
             // differs, the encoding does not.
             Self::Time(value) => out.extend_from_slice(&value.to_le_bytes()),
+            Self::Binary(bytes) => {
+                let count = u16::try_from(bytes.len()).unwrap_or(u16::MAX);
+                out.extend_from_slice(&count.to_le_bytes());
+                out.extend_from_slice(&bytes[..usize::from(count)]);
+            }
         }
     }
 }

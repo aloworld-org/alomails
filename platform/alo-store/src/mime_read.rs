@@ -23,13 +23,55 @@ pub struct Attachment {
     pub inline: bool,
 }
 
+/// Which header a recipient came from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RecipientKind {
+    /// `To`.
+    To,
+    /// `Cc`.
+    Cc,
+    /// `Bcc` — present only on the sender's own copy.
+    Bcc,
+}
+
+/// One addressee, with the display name separated from the address.
+///
+/// Split by the parser rather than by hand: `"Müller, Anna" <a@x.test>` is one
+/// address whose display name contains a comma, and a hand-rolled split on
+/// commas turns it into two people who do not exist.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Recipient {
+    /// Which header it came from.
+    pub kind: RecipientKind,
+    /// What a reader sees; falls back to the address when there is no name.
+    pub display_name: String,
+    /// The address itself.
+    pub email: String,
+}
+
 /// The reading view of a parsed message.
 pub struct Parsed {
     pub text: Option<String>,
+    /// The HTML body — **which may have been generated from the plain text.**
+    ///
+    /// `mail-parser` renders a `text/html` view for a message that has none,
+    /// so a plain-text message comes back with
+    /// `<html><body>…<br/></body></html>` here. That is useful for a reading
+    /// surface, and wrong for anything that has to say what the *sender* sent:
+    /// see [`Parsed::html_is_original`].
     pub html: Option<String>,
+    /// Whether [`Parsed::html`] came from a real `text/html` part.
+    ///
+    /// `false` means the parser generated it. A protocol that offers a client a
+    /// choice of bodies has to know the difference — otherwise every plain-text
+    /// message is displayed as generated markup, because a client that is
+    /// offered HTML prefers it.
+    pub html_is_original: bool,
     pub attachments: Vec<Attachment>,
     /// The message's List-Unsubscribe options, if it carries any.
     pub unsubscribe: Option<Unsubscribe>,
+    /// Everyone the message was addressed to, in header order.
+    pub recipients: Vec<Recipient>,
 }
 
 /// A message's unsubscribe options (RFC 2369 `List-Unsubscribe`, plus RFC 8058
@@ -124,12 +166,21 @@ pub fn parse(raw: &[u8]) -> Parsed {
         return Parsed {
             text: None,
             html: None,
+            html_is_original: false,
             attachments: Vec::new(),
             unsubscribe: None,
+            recipients: Vec::new(),
         };
     };
     let text = message.body_text(0).map(|c| c.into_owned());
     let html = message.body_html(0).map(|c| c.into_owned());
+    // Whether any part actually declared itself HTML, rather than the parser
+    // having rendered one for us.
+    let html_is_original = message.parts.iter().any(|part| {
+        matches!(part.content_type(), Some(ct)
+            if ct.ctype().eq_ignore_ascii_case("text")
+                && ct.subtype().is_some_and(|sub| sub.eq_ignore_ascii_case("html")))
+    });
     let attachments = message
         .attachments()
         .enumerate()
@@ -143,11 +194,51 @@ pub fn parse(raw: &[u8]) -> Parsed {
         })
         .collect();
     let unsubscribe = parse_unsubscribe(&message);
+    let mut recipients = Vec::new();
+    collect_recipients(message.to(), RecipientKind::To, &mut recipients);
+    collect_recipients(message.cc(), RecipientKind::Cc, &mut recipients);
+    collect_recipients(message.bcc(), RecipientKind::Bcc, &mut recipients);
     Parsed {
         text,
         html,
+        html_is_original,
         attachments,
         unsubscribe,
+        recipients,
+    }
+}
+
+/// Adds one header's addresses to `out`.
+///
+/// An entry with no address at all is skipped: a display name nobody can send
+/// to is not a recipient, and showing one implies a message could reach them.
+fn collect_recipients(
+    header: Option<&mail_parser::Address<'_>>,
+    kind: RecipientKind,
+    out: &mut Vec<Recipient>,
+) {
+    let Some(header) = header else {
+        return;
+    };
+    for address in header.iter() {
+        let Some(email) = address.address() else {
+            continue;
+        };
+        let email = email.trim();
+        if email.is_empty() {
+            continue;
+        }
+        let display_name = address
+            .name()
+            .map(str::trim)
+            .filter(|name| !name.is_empty())
+            .unwrap_or(email)
+            .to_owned();
+        out.push(Recipient {
+            kind,
+            display_name,
+            email: email.to_owned(),
+        });
     }
 }
 

@@ -868,6 +868,35 @@ async fn a_client_reads_the_messages_in_a_folder_over_http() {
     }
 }
 
+/// The offset just past a `RopOpenMessage` response, given the responses that
+/// begin with one.
+///
+/// Walks it the way a client must: the typed subject strings are
+/// variable-length, and so is the recipient table behind them. Tests used to
+/// assume the table was empty and add a constant; that stopped being true the
+/// moment recipients were served, which is why this exists.
+fn past_open_message(open: &[u8]) -> usize {
+    // RopId, OutputHandleIndex, ReturnValue(4), HasNamedProperties.
+    let mut at = 7;
+    for _ in 0..2 {
+        match open[at] {
+            0x00 | 0x01 => at += 1, // absent or empty: nothing follows
+            0x04 => {
+                at += 1;
+                let _ = read_utf16(open, &mut at);
+            }
+            other => panic!("unexpected StringType {other:#04x}"),
+        }
+    }
+    let rows = open[at + 4];
+    at += 5;
+    for _ in 0..rows {
+        let size = usize::from(u16::from_le_bytes(open[at + 5..at + 7].try_into().unwrap()));
+        at += 7 + size;
+    }
+    at
+}
+
 /// Reads a UTF-16LE null-terminated string, advancing `at` past its terminator.
 fn read_utf16(bytes: &[u8], at: &mut usize) -> String {
     let start = *at;
@@ -1112,20 +1141,23 @@ async fn a_client_opens_and_reads_a_message_over_http() {
     let mut at = 9;
     let subject = read_utf16(open, &mut at);
     assert_eq!(subject, "Rechnung für August");
+    // The recipient table is served now, so this message reports the people it
+    // was addressed to rather than none. `ColumnCount` stays zero: the rows
+    // carry named fields, not an extra property row.
     assert_eq!(
         u16::from_le_bytes(open[at..at + 2].try_into().unwrap()),
-        0,
-        "RecipientCount"
+        2,
+        "RecipientCount: the To address and the Cc one"
     );
     assert_eq!(
         u16::from_le_bytes(open[at + 2..at + 4].try_into().unwrap()),
         0,
         "ColumnCount"
     );
-    assert_eq!(open[at + 4], 0, "RowCount");
+    assert_eq!(open[at + 4], 2, "RowCount");
 
     // Then the properties.
-    let props = &open[at + 5..];
+    let props = &open[past_open_message(open)..];
     assert_eq!(props[0], 0x07, "a RopGetPropertiesSpecific response");
     assert_eq!(
         u32::from_le_bytes(props[2..6].try_into().unwrap()),
@@ -1358,9 +1390,7 @@ async fn a_long_body_comes_back_through_a_stream() {
         0,
         "opening failed"
     );
-    let mut at = 9;
-    let _ = read_utf16(open, &mut at);
-    let props = &open[at + 5..];
+    let props = &open[past_open_message(open)..];
     assert_eq!(props[0], 0x07);
     assert_eq!(props[6], 0x01, "a flagged row: something was withheld");
     assert_eq!(
@@ -1396,9 +1426,7 @@ async fn a_long_body_comes_back_through_a_stream() {
     let responses = execute(&h, &auth, &cookie, &rops).await;
     let open = &responses[166..];
     assert_eq!(open[0], 0x03);
-    let mut at = 9;
-    let _ = read_utf16(open, &mut at);
-    let stream = &open[at + 5..];
+    let stream = &open[past_open_message(open)..];
     assert_eq!(stream[0], 0x2B, "a RopOpenStream response");
     assert_eq!(
         u32::from_le_bytes(stream[2..6].try_into().unwrap()),
@@ -1503,9 +1531,7 @@ async fn a_writable_stream_is_refused_rather_than_opened_read_only() {
 
     let responses = execute(&h, &auth, &cookie, &rops).await;
     let open = &responses[166..];
-    let mut at = 9;
-    let _ = read_utf16(open, &mut at);
-    let stream = &open[at + 5..];
+    let stream = &open[past_open_message(open)..];
     assert_eq!(stream[0], 0x2B);
     assert_eq!(
         u32::from_le_bytes(stream[2..6].try_into().unwrap()),
@@ -1596,9 +1622,7 @@ async fn a_client_lists_and_reads_an_attachment_over_http() {
     let responses = execute(&h, &auth, &cookie, &rops).await;
     let open = &responses[166..];
     assert_eq!(open[0], 0x03);
-    let mut at = 9;
-    let _ = read_utf16(open, &mut at);
-    let table = &open[at + 5..];
+    let table = &open[past_open_message(open)..];
     assert_eq!(table[0], 0x21, "a RopGetAttachmentTable response");
     assert_eq!(
         u32::from_le_bytes(table[2..6].try_into().unwrap()),
@@ -1665,9 +1689,7 @@ async fn a_client_lists_and_reads_an_attachment_over_http() {
 
     let responses = execute(&h, &auth, &cookie, &rops).await;
     let open = &responses[166..];
-    let mut at = 9;
-    let _ = read_utf16(open, &mut at);
-    let attach = &open[at + 5..];
+    let attach = &open[past_open_message(open)..];
     assert_eq!(attach[0], 0x22, "a RopOpenAttachment response");
     assert_eq!(
         u32::from_le_bytes(attach[2..6].try_into().unwrap()),
@@ -1751,9 +1773,7 @@ async fn an_attachment_that_is_not_there_is_not_found() {
 
     let responses = execute(&h, &auth, &cookie, &rops).await;
     let open = &responses[166..];
-    let mut at = 9;
-    let _ = read_utf16(open, &mut at);
-    let attach = &open[at + 5..];
+    let attach = &open[past_open_message(open)..];
     assert_eq!(attach[0], 0x22);
     assert_eq!(
         u32::from_le_bytes(attach[2..6].try_into().unwrap()),
@@ -2006,4 +2026,244 @@ async fn an_unserved_address_book_request_refuses_honestly() {
         ResponseCode::InvalidRequestType.code(),
         "an unknown request type"
     );
+}
+
+/// A message opens with its **recipients** and its **HTML body**, both of which
+/// were the gaps stage 5 left behind.
+///
+/// The recipient table is the part with no safety net: `RecipientFlags` is the
+/// only thing that says which fields follow it, so this decodes the row the way
+/// a client does — read the flags, then read exactly what they promise — and
+/// asserts nothing is left over.
+#[tokio::test]
+async fn a_message_opens_with_its_recipients_and_its_html_body() {
+    let h = harness("recipients").await;
+    let auth = basic(&h.email, &h.password);
+    h.account
+        .create_mailbox(None, "Inbox", Some("inbox"))
+        .await
+        .expect("inbox");
+
+    // A display name containing a comma: the case a hand-rolled split on
+    // commas turns into two people who do not exist.
+    let raw = format!(
+        "From: Absender <s@example.test>\r\n\
+         To: \"Müller, Anna\" <anna@example.test>, {to}\r\n\
+         Cc: Liège Office <office@example.test>\r\n\
+         Subject: Mit Empfängern\r\n\
+         Content-Type: multipart/alternative; boundary=ALT\r\n\r\n\
+         --ALT\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n\
+         Nur Text.\r\n\
+         --ALT\r\nContent-Type: text/html; charset=utf-8\r\n\r\n\
+         <p>Grüße aus <b>Liège</b>.</p>\r\n--ALT--\r\n",
+        to = h.email
+    );
+    h.account.deliver(raw.as_bytes()).await.expect("deliver");
+
+    let (_, headers, _) = send(
+        &h.app,
+        "Connect",
+        Some(&auth),
+        None,
+        connect_body("/o=alo/cn=x"),
+    )
+    .await;
+    let cookie = format!("{SESSION_COOKIE}={}", session_cookie(&headers));
+
+    let inbox = h.account.inbox().await.expect("inbox id");
+    let rows = h
+        .account
+        .mapi_mailbox_rows(&inbox, alo_store::Page::first(10))
+        .await
+        .expect("rows");
+    let mid = alo_mapi::folders::fid(alo_mapi::messages::message_counter(&rows[0].id));
+    let inbox_fid = {
+        let mut fid = [0u8; 8];
+        fid[0..2].copy_from_slice(&1u16.to_le_bytes());
+        fid[2..8].copy_from_slice(&5u64.to_le_bytes()[0..6]);
+        u64::from_le_bytes(fid)
+    };
+
+    let mut rops = Vec::new();
+    let logon = rop_logon("");
+    let rop_size = u16::from_le_bytes(logon[0..2].try_into().unwrap()) as usize;
+    rops.extend_from_slice(&logon[2..rop_size]);
+    rops.push(0x03);
+    rops.extend_from_slice(&[0x00, 0x00, 0x01]);
+    rops.extend_from_slice(&0u16.to_le_bytes());
+    rops.extend_from_slice(&inbox_fid.to_le_bytes());
+    rops.push(0x00);
+    rops.extend_from_slice(&mid.to_le_bytes());
+    // Ask for the HTML body alongside the plain one.
+    rops.push(0x07);
+    rops.extend_from_slice(&[0x00, 0x01]);
+    rops.extend_from_slice(&0u16.to_le_bytes()); // no size limit
+    rops.extend_from_slice(&1u16.to_le_bytes()); // WantUnicode
+    rops.extend_from_slice(&2u16.to_le_bytes());
+    rops.extend_from_slice(&[0x1F, 0x00, 0x00, 0x10]); // PidTagBody
+    rops.extend_from_slice(&[0x02, 0x01, 0x13, 0x10]); // PidTagHtml, PtypBinary
+
+    let responses = execute(&h, &auth, &cookie, &rops).await;
+    let open = &responses[166..];
+    assert_eq!(open[0], 0x03);
+    assert_eq!(
+        u32::from_le_bytes(open[2..6].try_into().unwrap()),
+        0,
+        "opening the message failed"
+    );
+
+    let mut at = 9;
+    let subject = read_utf16(open, &mut at);
+    assert_eq!(subject, "Mit Empfängern");
+
+    // ---- the recipient table ---------------------------------------------
+    let count = u16::from_le_bytes(open[at..at + 2].try_into().unwrap());
+    assert_eq!(count, 3, "two To and one Cc");
+    assert_eq!(
+        u16::from_le_bytes(open[at + 2..at + 4].try_into().unwrap()),
+        0,
+        "ColumnCount"
+    );
+    let rows_written = open[at + 4];
+    assert_eq!(rows_written, 3);
+    at += 5;
+
+    let mut seen: Vec<(u8, String, String)> = Vec::new();
+    for _ in 0..rows_written {
+        let recipient_type = open[at];
+        assert_eq!(
+            u16::from_le_bytes(open[at + 3..at + 5].try_into().unwrap()),
+            0,
+            "Reserved MUST be zero"
+        );
+        let size = usize::from(u16::from_le_bytes(open[at + 5..at + 7].try_into().unwrap()));
+        let row = &open[at + 7..at + 7 + size];
+        at += 7 + size;
+
+        // Read the row exactly as its flags promise.
+        let flags = u16::from_le_bytes(row[0..2].try_into().unwrap());
+        assert_eq!(flags & 0x0007, 0x0003, "SMTP address type");
+        assert_ne!(flags & 0x0008, 0, "E: an address follows");
+        assert_ne!(flags & 0x0010, 0, "D: a display name follows");
+        assert_ne!(flags & 0x0200, 0, "U: the strings are Unicode");
+        let mut ra = 2;
+        let email = read_utf16(row, &mut ra);
+        let display = read_utf16(row, &mut ra);
+        assert_eq!(
+            u16::from_le_bytes(row[ra..ra + 2].try_into().unwrap()),
+            0,
+            "RecipientColumnCount"
+        );
+        assert_eq!(ra + 2, row.len(), "the row's declared size was exact");
+        seen.push((recipient_type, display, email));
+    }
+
+    // The display name with a comma in it survived as one person.
+    assert!(
+        seen.iter().any(|(kind, name, mail)| *kind == 0x01
+            && name == "Müller, Anna"
+            && mail == "anna@example.test"),
+        "{seen:?}"
+    );
+    assert!(
+        seen.iter()
+            .any(|(kind, _, mail)| *kind == 0x02 && mail == "office@example.test"),
+        "the Cc recipient is missing or misfiled: {seen:?}"
+    );
+
+    // ---- the HTML body ----------------------------------------------------
+    let props = &open[at..];
+    assert_eq!(props[0], 0x07, "a RopGetPropertiesSpecific response");
+    assert_eq!(
+        u32::from_le_bytes(props[2..6].try_into().unwrap()),
+        0,
+        "reading the properties failed"
+    );
+    assert_eq!(props[6], 0x00, "a standard row: both bodies present");
+    let mut pa = 7;
+    let text = read_utf16(props, &mut pa);
+    assert!(text.contains("Nur Text"), "{text:?}");
+
+    // PtypBinary in a ROP buffer: a 16-bit count, then that many bytes.
+    let html_len = usize::from(u16::from_le_bytes(props[pa..pa + 2].try_into().unwrap()));
+    pa += 2;
+    let html = String::from_utf8(props[pa..pa + html_len].to_vec()).expect("utf-8");
+    assert!(
+        html.contains("<b>Liège</b>"),
+        "the HTML body came back wrong: {html:?}"
+    );
+    assert_eq!(
+        pa + html_len,
+        props.len(),
+        "the declared byte count was exact"
+    );
+}
+
+/// A message with no HTML alternative reports that property **absent** rather
+/// than empty: a blank HTML body would have a client render nothing where it
+/// would otherwise have fallen back to the plain text.
+#[tokio::test]
+async fn a_message_with_no_html_says_so_rather_than_returning_an_empty_one() {
+    let h = harness("no-html").await;
+    let auth = basic(&h.email, &h.password);
+    h.account
+        .create_mailbox(None, "Inbox", Some("inbox"))
+        .await
+        .expect("inbox");
+    h.account
+        .deliver(
+            b"From: s@example.test\r\nTo: o@example.test\r\nSubject: nur Text\r\n\
+              Content-Type: text/plain; charset=utf-8\r\n\r\nNur Text.\r\n",
+        )
+        .await
+        .expect("deliver");
+
+    let (_, headers, _) = send(
+        &h.app,
+        "Connect",
+        Some(&auth),
+        None,
+        connect_body("/o=alo/cn=x"),
+    )
+    .await;
+    let cookie = format!("{SESSION_COOKIE}={}", session_cookie(&headers));
+
+    let inbox = h.account.inbox().await.expect("inbox id");
+    let rows = h
+        .account
+        .mapi_mailbox_rows(&inbox, alo_store::Page::first(10))
+        .await
+        .expect("rows");
+    let mid = alo_mapi::folders::fid(alo_mapi::messages::message_counter(&rows[0].id));
+    let inbox_fid = {
+        let mut fid = [0u8; 8];
+        fid[0..2].copy_from_slice(&1u16.to_le_bytes());
+        fid[2..8].copy_from_slice(&5u64.to_le_bytes()[0..6]);
+        u64::from_le_bytes(fid)
+    };
+
+    let mut rops = Vec::new();
+    let logon = rop_logon("");
+    let rop_size = u16::from_le_bytes(logon[0..2].try_into().unwrap()) as usize;
+    rops.extend_from_slice(&logon[2..rop_size]);
+    rops.push(0x03);
+    rops.extend_from_slice(&[0x00, 0x00, 0x01]);
+    rops.extend_from_slice(&0u16.to_le_bytes());
+    rops.extend_from_slice(&inbox_fid.to_le_bytes());
+    rops.push(0x00);
+    rops.extend_from_slice(&mid.to_le_bytes());
+    rops.push(0x07);
+    rops.extend_from_slice(&[0x00, 0x01]);
+    rops.extend_from_slice(&0u16.to_le_bytes());
+    rops.extend_from_slice(&1u16.to_le_bytes());
+    rops.extend_from_slice(&1u16.to_le_bytes());
+    rops.extend_from_slice(&[0x02, 0x01, 0x13, 0x10]); // PidTagHtml
+
+    let responses = execute(&h, &auth, &cookie, &rops).await;
+    let open = &responses[166..];
+    let props = &open[past_open_message(open)..];
+    assert_eq!(props[0], 0x07);
+    assert_eq!(props[6], 0x01, "a flagged row: something is missing");
+    assert_eq!(props[7], 0x01, "the HTML body is absent, not empty");
+    assert_eq!(props.len(), 8, "nothing follows an absent value");
 }
