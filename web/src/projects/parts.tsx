@@ -3,7 +3,7 @@
 // visibly the same module family as Billing and CRM, whose parts these mirror.
 // Presentational only: no data loading, no rules, no arithmetic.
 import type { FormEvent, ReactNode } from "react";
-import { X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { Button } from "../ds";
@@ -37,17 +37,19 @@ export function EmptyState({
   onCta?: () => void;
 }) {
   return (
-    <section className="flex min-h-80 flex-col items-center justify-center rounded-2xl border border-subtle bg-surface px-6 py-12 text-center shadow-sm">
+    <section className="flex min-h-[26rem] flex-col items-center justify-center rounded-2xl border border-default bg-surface px-6 py-12 text-center shadow-sm max-sm:min-h-[22rem] max-sm:px-5">
       <span
-        className="flex size-14 items-center justify-center rounded-2xl bg-[var(--accent-soft)] text-accent"
+        className="flex size-20 items-center justify-center rounded-full bg-accent-tint text-accent"
         aria-hidden="true"
       >
-        <Icon size={26} />
+        <Icon size={36} strokeWidth={1.8} />
       </span>
-      <h2 className="m-0 mt-4 text-lg font-semibold text-primary">{title}</h2>
-      <p className="m-0 mt-2 max-w-[46ch] text-sm leading-6 text-secondary">{body}</p>
+      <h2 className="m-0 mt-5 text-xl font-bold tracking-tight text-primary">{title}</h2>
+      <p className="m-0 mt-2 max-w-[42ch] text-base leading-7 text-secondary">{body}</p>
       {cta !== undefined && onCta !== undefined && (
-        <Button className="mt-5" onClick={onCta}>{cta}</Button>
+        <Button className="mt-6" icon={<Plus aria-hidden="true" />} onClick={onCta}>
+          {cta}
+        </Button>
       )}
     </section>
   );

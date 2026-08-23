@@ -41,6 +41,7 @@ import { Avatar, DueChip, PriorityChip } from "./parts";
 import { DEFAULT_CONFIG, filterTasks, type ViewConfig } from "./viewConfig";
 import { projectsMessage, useProjectsApi } from "../projects/api";
 import { EditProjectDialog } from "../projects/EditProjectDialog";
+import { EmptyState } from "../projects/parts";
 import type { Project, ProjectDraft, ProjectPlan } from "../projects/types";
 
 type View = "overview" | "list" | "board" | "timeline" | "calendar" | "files";
@@ -465,16 +466,13 @@ export function TasksModule({
             />
           ) : tasks.length === 0 ? (
             <div className="p-6 max-sm:p-4">
-              <section className="flex min-h-[28rem] flex-col items-center justify-center gap-3 rounded-2xl border border-default bg-surface px-6 py-12 text-center shadow-sm">
-                <span className="mb-2 inline-flex size-20 items-center justify-center rounded-full bg-[var(--accent-tint)] text-accent-hover" aria-hidden="true">
-                  <ClipboardList size={40} />
-                </span>
-                <h2 className="m-0 text-xl font-bold text-primary">{strings.taskEmptyTitle}</h2>
-                <p className="m-0 max-w-sm text-base leading-relaxed text-secondary">{strings.taskEmptyBody}</p>
-                <button type="button" className="mt-3 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-on-accent !no-underline shadow-sm transition-colors hover:bg-accent-hover hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2" onClick={() => openCreate()}>
-                  <Plus size={17} /> {strings.taskCreateFirst}
-                </button>
-              </section>
+              <EmptyState
+                Icon={ClipboardList}
+                title={strings.taskEmptyTitle}
+                body={strings.taskEmptyBody}
+                cta={strings.taskCreateFirst}
+                onCta={() => openCreate()}
+              />
             </div>
           ) : view === "overview" ? (
             <OverviewView
