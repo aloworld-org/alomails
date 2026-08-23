@@ -25,6 +25,7 @@ pub mod contents;
 pub mod direct2;
 pub mod dispatch;
 pub mod execute;
+pub mod fasttransfer;
 pub mod folders;
 pub mod hierarchy;
 pub mod logon;
