@@ -155,15 +155,34 @@ const MAPI_HTTP_VERSION: u32 = 1;
 ///   not serve is worse than staying quiet: an Outlook told to speak MAPI/HTTP
 ///   does not quietly fall back to the IMAP block below it, so advertising
 ///   before the endpoint exists breaks the mail that works today.
-/// * **The client must have asked**, by sending `X-MapiHttpCapability` with a
-///   version above zero ([MS-OXDSCLI] §3.1.5.1.1). The `Version` we answer must
-///   be at least one and no greater than what the client offered, so we answer
-///   the lower of theirs and ours — never assume a client understands the
-///   version we happen to implement.
+/// * **The client must have asked**, by sending `X-MapiHttpCapability`
+///   ([MS-OXDSCLI] §2.2.2.1), whose value "MUST be an integer value greater
+///   than zero". The header is *optional*, so its absence is a client that
+///   cannot speak MAPI/HTTP, not an error. Per §3.2.5.1 an invalid value is
+///   answered "as if the X-MapiHttpCapability header was not present" — hence
+///   `0` and unparseable values fall through to silence rather than a fault.
+///
+/// The `Version` we answer is the highest we support that is no greater than
+/// what the client offered (§3.2.5.1 step 1) — so, the lower of theirs and
+/// ours. Never assume a client understands the version we happen to implement.
+/// The child elements are fixed by the version table in §3.2.5.1: version 1 is
+/// `MailStore` and `AddressBook`, each with at least one child.
+///
+/// §3.2.5.1 step 3 also forbids a `Protocol` whose `Type` is `EXCH` or `EXPR`
+/// in the same response. We emit neither; the IMAP and SMTP blocks alongside
+/// this one are neither, and they stay so a client that cannot use MAPI/HTTP
+/// still configures.
 ///
 /// Note the shape: `Type` is an **attribute** here, where the IMAP and SMTP
 /// blocks spell it as a child element. The asymmetry is the specification's,
 /// not ours, and getting it wrong yields a document Outlook ignores in silence.
+///
+/// If a real Outlook ever reaches us *without* the header, the sanctioned
+/// escape hatch is in §3.2.5.1: a server may instead "deduce the client's
+/// MapiHttp capability based on the user agent header". We do not, because
+/// guessing from `User-Agent` with no real client to test against trades a
+/// silence we understand for a guess we do not. Record the client and version
+/// in `docs/interop.md` before reaching for it.
 ///
 /// `host` arrives already XML-escaped; nothing else here is caller-influenced.
 fn mapi_http_protocol(enabled: bool, capability: Option<&str>, host: &str) -> String {
