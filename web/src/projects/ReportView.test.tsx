@@ -63,6 +63,14 @@ const project: Project = {
   },
 };
 
+const internalProject: Project = {
+  ...project,
+  id: "internal-project",
+  name: "Internal operations",
+  kind: "internal",
+  client: null,
+};
+
 const report: ProfitabilityReport = {
   from: "2026-07-01",
   to: "2026-09-30",
@@ -117,6 +125,33 @@ afterEach(() => {
 });
 
 describe("ReportView invoice handoff", () => {
+  it("falls back to all client work when an internal project is in the URL", async () => {
+    profitability.mockResolvedValue({ ...report, projects: [] });
+
+    render(
+      <MemoryRouter
+        initialEntries={["/projects/reports?project=internal-project"]}
+      >
+        <ReportView
+          projects={[internalProject, project]}
+          projectsLoading={false}
+          customerName={() => "Atelier Dupont SARL"}
+          revision={0}
+          onCreateInvoice={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(profitability).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        undefined,
+      );
+    });
+    expect(screen.queryByText("Internal operations")).toBeNull();
+  });
+
   it("opens with the approved week and project carried through the URL", async () => {
     profitability.mockResolvedValue({
       ...report,

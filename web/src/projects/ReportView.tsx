@@ -16,7 +16,7 @@
 //
 // The period is applied on submit rather than on every keystroke, so a
 // half-typed date never becomes a request.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { PieChart } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 
@@ -75,10 +75,17 @@ export function ReportView({
   const api = useProjectsApi();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedProjectId = searchParams.get("project");
+  // Profitability belongs to client work. Keeping internal projects out of the
+  // scope picker also prevents a valid-looking selection from reaching the
+  // server route that intentionally rejects it.
+  const reportProjects = useMemo(
+    () => projects.filter((project) => project.client !== null),
+    [projects],
+  );
   const projectId = resolveProjectScope(
     requestedProjectId,
     projectsLoading,
-    projects,
+    reportProjects,
   );
   // The form opens on the quarter being lived through; the one being reviewed
   // is one click away.
@@ -117,6 +124,20 @@ export function ReportView({
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (projectsLoading || requestedProjectId === null || projectId !== null)
+      return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("project");
+    setSearchParams(next, { replace: true });
+  }, [
+    projectId,
+    projectsLoading,
+    requestedProjectId,
+    searchParams,
+    setSearchParams,
+  ]);
+
   /** Applies a period from a quick pick: the form and the request move
    *  together, so what is shown always matches what is written. */
   function pick(next: Period) {
@@ -142,17 +163,17 @@ export function ReportView({
   }
 
   return (
-    <div className="flex min-h-0 flex-col gap-4 overflow-auto px-5 py-4">
+    <div className="flex min-h-0 flex-col gap-5 overflow-auto px-6 py-5">
       <ProjectScopePicker
-        projects={projects}
+        projects={reportProjects}
         value={projectId}
         disabled={projectsLoading}
         description={
           projectId === null
             ? strings.projectsReportAllScope
             : strings.projectsReportProjectScope(
-                projects.find((project) => project.id === projectId)?.name ??
-                  "",
+                reportProjects.find((project) => project.id === projectId)
+                  ?.name ?? "",
               )
         }
         onChange={(nextProjectId) => {
@@ -163,56 +184,66 @@ export function ReportView({
         }}
       />
       <form
-        className="flex flex-wrap items-center gap-3"
+        className="rounded-2xl border border-subtle bg-surface p-4 shadow-sm"
         onSubmit={(e) => {
           e.preventDefault();
           setPeriod(form);
         }}
       >
-        <label className="inline-flex items-center gap-2 text-sm text-secondary">
-          {strings.projectsReportFrom}
-          <input
-            className="rounded-md border border-default bg-surface px-2.5 py-1.5 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent"
-            type="date"
-            value={form.from}
-            onChange={(e) => setForm({ ...form, from: e.target.value })}
-            required
-          />
-        </label>
-        <label className="inline-flex items-center gap-2 text-sm text-secondary">
-          {strings.projectsReportTo}
-          <input
-            className="rounded-md border border-default bg-surface px-2.5 py-1.5 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent"
-            type="date"
-            value={form.to}
-            onChange={(e) => setForm({ ...form, to: e.target.value })}
-            required
-          />
-        </label>
-        <Button type="submit">{strings.projectsReportShow}</Button>
-        <button
-          type="button"
-          className="p-0 text-sm text-link"
-          onClick={() => pick(quarterOf(new Date()))}
-        >
-          {strings.projectsReportThisQuarter}
-        </button>
-        <button
-          type="button"
-          className="p-0 text-sm text-link"
-          onClick={() => pick(previousQuarterOf(new Date()))}
-        >
-          {strings.projectsReportLastQuarter}
-        </button>
-        {(loading || downloading) && <Spinner size={16} />}
-        <span className="flex-1" />
-        <Button
-          variant="ghost"
-          onClick={() => void download()}
-          disabled={report === null || downloading}
-        >
-          {strings.projectsReportDownloadCsv}
-        </Button>
+        <div className="grid gap-4 lg:grid-cols-[minmax(13rem,1fr)_minmax(13rem,1fr)_auto] lg:items-end">
+          <label className="grid gap-2 text-sm font-semibold text-primary">
+            {strings.projectsReportFrom}
+            <input
+              className="min-h-11 w-full rounded-xl border border-default bg-surface px-4 py-2.5 text-base font-normal text-primary accent-accent focus-visible:outline-2 focus-visible:outline-accent"
+              type="date"
+              value={form.from}
+              onChange={(e) => setForm({ ...form, from: e.target.value })}
+              required
+            />
+          </label>
+          <label className="grid gap-2 text-sm font-semibold text-primary">
+            {strings.projectsReportTo}
+            <input
+              className="min-h-11 w-full rounded-xl border border-default bg-surface px-4 py-2.5 text-base font-normal text-primary accent-accent focus-visible:outline-2 focus-visible:outline-accent"
+              type="date"
+              value={form.to}
+              onChange={(e) => setForm({ ...form, to: e.target.value })}
+              required
+            />
+          </label>
+          <Button type="submit" className="w-full lg:w-auto">
+            {strings.projectsReportShow}
+          </Button>
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-subtle pt-4">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => pick(quarterOf(new Date()))}
+          >
+            {strings.projectsReportThisQuarter}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => pick(previousQuarterOf(new Date()))}
+          >
+            {strings.projectsReportLastQuarter}
+          </Button>
+          {(loading || downloading) && <Spinner size={16} />}
+          <span className="min-w-0 flex-1" />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => void download()}
+            disabled={report === null || downloading}
+          >
+            {strings.projectsReportDownloadCsv}
+          </Button>
+        </div>
       </form>
 
       {error !== null && <ErrorBanner message={error} />}
@@ -427,9 +458,10 @@ function ProjectRow({
       </td>
       <td className="whitespace-nowrap text-right tabular-nums">
         {sourceProject !== null && hasUnbilledValue ? (
-          <button
+          <Button
             type="button"
-            className="inline-flex min-h-9 items-center rounded-lg px-3 py-1.5 font-semibold text-accent !no-underline transition-colors hover:bg-[var(--accent-soft)] hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            variant="ghost"
+            size="sm"
             aria-label={`${strings.projectsCreateInvoice}: ${project.projectName}`}
             title={strings.projectsCreateInvoice}
             onClick={() => onCreateInvoice(sourceProject)}
@@ -439,7 +471,7 @@ function ProjectRow({
               pick={(row) => row.unbilledNetCents}
               locale={locale}
             />
-          </button>
+          </Button>
         ) : (
           <Money
             rows={project.byCurrency}
