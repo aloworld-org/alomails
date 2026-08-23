@@ -962,7 +962,7 @@ fn draft_to_outgoing(
         body_html: text_of(crate::rows::pid::HTML),
         attachments: Vec::new(),
         message_id_domain: from.rsplit('@').next().unwrap_or(domain_hint).to_owned(),
-        message_id_token: format!("mapi-{}", from.len()),
+        message_id_token: alo_store::mime_write::new_message_id_token(),
     }
 }
 

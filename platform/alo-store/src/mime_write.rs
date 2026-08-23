@@ -55,7 +55,32 @@ pub struct Outgoing {
     /// pipeline does not add one. (It does — this is a belt-and-braces seed.)
     pub message_id_domain: String,
     /// A unique token seeding the `Message-ID` local part.
+    ///
+    /// Produce it with [`new_message_id_token`]. Anything derived from the
+    /// sender, the subject or the time alone is not unique enough — see that
+    /// function for what goes wrong.
     pub message_id_token: String,
+}
+
+/// A token for one message's `Message-ID`, unique across every message alo
+/// ever sends.
+///
+/// RFC 5322 §3.6.4 requires a globally unique `Message-ID`, and receiving
+/// servers and clients **deduplicate on it**. A token that repeats does not
+/// produce a visible error: the second message is quietly discarded or threaded
+/// into the first, which is silent mail loss — the worst thing this product can
+/// do.
+///
+/// So it is random, from the same CSPRNG the store's ids use, with a timestamp
+/// in front for readability in a header somebody may one day be reading while
+/// debugging. The randomness is what makes it unique; the timestamp only makes
+/// it legible, and two messages in the same nanosecond still differ.
+#[must_use]
+pub fn new_message_id_token() -> String {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |since| since.as_nanos());
+    format!("{nanos:x}.{}", crate::id::MessageId::generate().as_str())
 }
 
 /// Builds the full RFC 5322 message bytes (CRLF line endings).
@@ -385,6 +410,23 @@ fn fold(header: &str) -> String {
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+
+    /// Two messages must never share a `Message-ID`: receiving servers
+    /// deduplicate on it, so a repeat is silent mail loss. A token derived from
+    /// the sender or the subject looks fine in one message and collides in the
+    /// second — this is what caught exactly that.
+    #[test]
+    fn message_id_tokens_never_repeat() {
+        let tokens: std::collections::HashSet<String> =
+            (0..256).map(|_| new_message_id_token()).collect();
+        assert_eq!(tokens.len(), 256, "tokens repeated within one run");
+
+        let seeded = tokens.iter().next().unwrap();
+        assert!(
+            !seeded.is_empty() && !seeded.contains(['<', '>', '@', ' ']),
+            "token {seeded} is not safe in a Message-ID local part"
+        );
+    }
 
     fn addr(name: Option<&str>, email: &str) -> Addr {
         Addr {

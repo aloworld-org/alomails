@@ -1316,14 +1316,14 @@ pub(crate) fn domain_of(email: &str) -> String {
     }
 }
 
-/// A unique-enough local part for a generated `Message-ID`.
+/// The local part for a generated `Message-ID`.
+///
+/// Delegates to the store, which owns the field: one generator means a second
+/// caller cannot invent a weaker one. A timestamp alone was not enough — two
+/// messages in the same nanosecond would collide, and receiving servers
+/// deduplicate on `Message-ID`.
 pub(crate) fn new_message_token() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_nanos())
-        .unwrap_or(0);
-    format!("{nanos:x}")
+    alo_store::mime_write::new_message_id_token()
 }
 
 /// Whether `patch` touches mailbox membership at all (full replacement
