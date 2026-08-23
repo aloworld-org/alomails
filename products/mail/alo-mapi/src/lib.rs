@@ -29,6 +29,7 @@ pub mod hierarchy;
 pub mod logon;
 pub mod logon_response;
 pub mod messages;
+pub mod nspi;
 pub mod openfolder;
 pub mod openmessage;
 pub mod properties;
@@ -62,6 +63,18 @@ pub enum RequestType {
     Disconnect,
     /// Hold open for server-initiated notifications (a later stage).
     NotificationWait,
+
+    // ---- the address book endpoint ---------------------------------------
+    //
+    // These arrive on `/mapi/nspi` and are a different protocol from the three
+    // above: their bodies carry no ROP layer at all. Only the envelope is
+    // shared.
+    /// Open an address book session.
+    Bind,
+    /// Close one.
+    Unbind,
+    /// Turn typed strings into recipients.
+    ResolveNames,
 }
 
 impl RequestType {
@@ -73,6 +86,9 @@ impl RequestType {
             "execute" => Some(Self::Execute),
             "disconnect" => Some(Self::Disconnect),
             "notificationwait" => Some(Self::NotificationWait),
+            "bind" => Some(Self::Bind),
+            "unbind" => Some(Self::Unbind),
+            "resolvenames" => Some(Self::ResolveNames),
             _ => None,
         }
     }
@@ -85,6 +101,9 @@ impl RequestType {
             Self::Execute => "Execute",
             Self::Disconnect => "Disconnect",
             Self::NotificationWait => "NotificationWait",
+            Self::Bind => "Bind",
+            Self::Unbind => "Unbind",
+            Self::ResolveNames => "ResolveNames",
         }
     }
 
@@ -95,7 +114,15 @@ impl RequestType {
     /// it states exactly which are open today.
     #[must_use]
     pub const fn is_implemented(self) -> bool {
-        matches!(self, Self::Connect | Self::Disconnect | Self::Execute)
+        matches!(
+            self,
+            Self::Connect
+                | Self::Disconnect
+                | Self::Execute
+                | Self::Bind
+                | Self::Unbind
+                | Self::ResolveNames
+        )
     }
 }
 
@@ -114,6 +141,11 @@ mod tests {
             RequestType::parse("NotificationWait"),
             Some(RequestType::NotificationWait)
         );
+        assert_eq!(
+            RequestType::parse("ResolveNames"),
+            Some(RequestType::ResolveNames)
+        );
+        assert_eq!(RequestType::parse("bind"), Some(RequestType::Bind));
         assert_eq!(RequestType::parse("nonsense"), None);
         assert_eq!(RequestType::parse(""), None);
     }
@@ -133,6 +165,9 @@ mod tests {
         assert!(RequestType::Connect.is_implemented());
         assert!(RequestType::Disconnect.is_implemented());
         assert!(RequestType::Execute.is_implemented());
+        assert!(RequestType::Bind.is_implemented());
+        assert!(RequestType::Unbind.is_implemented());
+        assert!(RequestType::ResolveNames.is_implemented());
         assert!(!RequestType::NotificationWait.is_implemented());
     }
 }

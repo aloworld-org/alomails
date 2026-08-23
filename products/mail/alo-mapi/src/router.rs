@@ -38,8 +38,10 @@ use crate::execute::{ExecuteRequest, success_body as execute_success_body};
 use crate::folders::FolderView;
 use crate::logon_response::LogonTime;
 use crate::messages::{AttachmentEntry, MessageBody, MessageView};
+use crate::nspi;
 use crate::response::{MapiResponse, ResponseCode};
 use crate::rop::RopBuffer;
+use crate::rows::Value;
 use crate::rpc::{read_extended_buffer, write_extended_buffer};
 use crate::session::{SEQUENCE_COOKIE, SESSION_COOKIE, SessionStore, cookie_value, set_cookie};
 use crate::{RequestType, session};
@@ -70,6 +72,30 @@ const MAX_MESSAGES: i64 = crate::messages::MAX_MESSAGES as i64;
 /// bytes. Each pass can see one layer further than the last, and a fourth
 /// would have nothing new to find.
 const MAX_REHEARSALS: usize = 3;
+
+/// The largest address book request body accepted.
+///
+/// These bodies carry a handful of typed names and a short property list; a
+/// megabyte of them is not a client we need to serve.
+const MAX_ADDRESS_BOOK_BODY: usize = 256 * 1024;
+
+/// The most directory entries one typed name may match before it is called
+/// ambiguous.
+///
+/// Two is enough to know a name is ambiguous, but a slightly larger number
+/// keeps the query's cost visible in one place and leaves room for a later
+/// stage to *show* the choices rather than only report that there are some.
+const MAX_RESOLVE_MATCHES: i64 = 16;
+
+/// The GUID this deployment's address book answers `Bind` with.
+///
+/// A Minimal Entry ID is only meaningful against the server GUID that issued
+/// it ([MS-OXNSPI] §2.2.9.1), so this is the value that scopes them. Fixed
+/// rather than generated per process: a client caches entry ids, and a GUID
+/// that changed on restart would silently invalidate every one of them.
+const ADDRESS_BOOK_GUID: [u8; 16] = [
+    0x61, 0x6C, 0x6F, 0x61, 0x64, 0x64, 0x72, 0x62, 0x6F, 0x6F, 0x6B, 0x00, 0x00, 0x00, 0x00, 0x01,
+];
 
 /// What the client is told about retrying, mirroring Exchange's own pacing.
 /// A client told to retry zero times gives up on the first hiccup.
@@ -687,7 +713,16 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
         // Recognised, authenticated, and honestly refused. Answering it with an
         // empty success would have Outlook wait on notifications that never
         // come — a worse failure than a refusal it can report.
-        RequestType::NotificationWait => MapiResponse::new(
+        //
+        // The address book's request types belong to the *other* endpoint. A
+        // client that sent one here has the wrong URL, and refusing beats
+        // answering: the two endpoints hold different session state, and a
+        // `Bind` answered from the mailbox endpoint would leave the client
+        // holding an address book session this endpoint knows nothing about.
+        RequestType::NotificationWait
+        | RequestType::Bind
+        | RequestType::Unbind
+        | RequestType::ResolveNames => MapiResponse::new(
             request_type.as_str(),
             request_id,
             ResponseCode::EndpointDisabled,
@@ -724,17 +759,193 @@ fn disconnect_body() -> Vec<u8> {
     out
 }
 
-/// The address book endpoint (`/mapi/nspi`) — a later stage.
+/// The address book endpoint (`/mapi/nspi`).
 ///
-/// It answers rather than 404s because Autodiscover names it: a client that
-/// finds nothing here would retry until it timed out, where a stated refusal is
-/// something it can report at once.
-async fn nspi(headers: HeaderMap) -> Response {
+/// Serves `Bind`, `Unbind` and `ResolveNames`: enough for somebody to type a
+/// colleague's name into the To line and have it become an address. Browsing
+/// the directory is a later stage and is refused rather than half-answered,
+/// because a client shown a truncated directory cannot tell it is truncated.
+///
+/// **Authenticated exactly as the mailbox endpoint is**, and for the same
+/// reason: this reads the tenant's own people and the caller's own contacts, so
+/// it is somebody's data and not a public list.
+async fn nspi(State(state): State<MapiState>, headers: HeaderMap, body: Bytes) -> Response {
     let request_id = header_str(&headers, "X-RequestId").unwrap_or_default();
-    let request_type = header_str(&headers, "X-RequestType").unwrap_or_default();
-    MapiResponse::new(request_type, request_id, ResponseCode::EndpointDisabled)
-        .with_client_info(header_str(&headers, "X-ClientInfo"))
-        .into_response()
+    let client_info = header_str(&headers, "X-ClientInfo");
+
+    let Some(raw_type) = header_str(&headers, "X-RequestType") else {
+        return MapiResponse::new("", request_id, ResponseCode::MissingHeader)
+            .with_client_info(client_info)
+            .into_response();
+    };
+    let Some(request_type) = RequestType::parse(raw_type) else {
+        return MapiResponse::new("", request_id, ResponseCode::InvalidRequestType)
+            .with_client_info(client_info)
+            .into_response();
+    };
+
+    // Credentials before the body is read, exactly as the mailbox endpoint
+    // does: an unauthenticated caller learns nothing about what we would have
+    // done with it, and above all learns nobody's name.
+    let Some((username, password)) = basic_credentials(&headers) else {
+        return unauthorized();
+    };
+    let principal = match state
+        .identity
+        .authenticate_legacy(&username, &password)
+        .await
+    {
+        Ok(Some(principal)) => principal,
+        Ok(None) => return unauthorized(),
+        Err(error) => {
+            tracing::warn!(%error, "mapi: credential lookup failed");
+            return MapiResponse::new(
+                request_type.as_str(),
+                request_id,
+                ResponseCode::UnknownFailure,
+            )
+            .with_client_info(client_info)
+            .into_response();
+        }
+    };
+
+    if body.len() > MAX_ADDRESS_BOOK_BODY {
+        return MapiResponse::new(request_type.as_str(), request_id, ResponseCode::TooLarge)
+            .with_client_info(client_info)
+            .into_response();
+    }
+
+    match request_type {
+        // A bind carries no state worth keeping: this endpoint holds no
+        // per-session table position, because it serves no table to page
+        // through. The GUID is the deployment's, and it is what makes the
+        // Minimal Entry IDs this server issues recognisably its own.
+        RequestType::Bind => {
+            if nspi::BindRequest::parse(&body).is_err() {
+                return MapiResponse::new(
+                    request_type.as_str(),
+                    request_id,
+                    ResponseCode::InvalidRequestBody,
+                )
+                .with_client_info(client_info)
+                .into_response();
+            }
+            MapiResponse::new(request_type.as_str(), request_id, ResponseCode::Success)
+                .with_client_info(client_info)
+                .with_body(nspi::bind_success_body(ADDRESS_BOOK_GUID))
+                .into_response()
+        }
+
+        RequestType::Unbind => {
+            if nspi::UnbindRequest::parse(&body).is_err() {
+                return MapiResponse::new(
+                    request_type.as_str(),
+                    request_id,
+                    ResponseCode::InvalidRequestBody,
+                )
+                .with_client_info(client_info)
+                .into_response();
+            }
+            MapiResponse::new(request_type.as_str(), request_id, ResponseCode::Success)
+                .with_client_info(client_info)
+                .with_body(nspi::unbind_success_body())
+                .into_response()
+        }
+
+        RequestType::ResolveNames => {
+            let Ok(request) = nspi::ResolveNamesRequest::parse(&body) else {
+                return MapiResponse::new(
+                    request_type.as_str(),
+                    request_id,
+                    ResponseCode::InvalidRequestBody,
+                )
+                .with_client_info(client_info)
+                .into_response();
+            };
+
+            // Every lookup goes through the caller's own account door, so a
+            // name can only resolve to somebody in their tenant or in their own
+            // contacts. There is no unscoped directory to reach.
+            let account = state
+                .store
+                .for_account(principal.tenant.clone(), principal.user.clone());
+
+            let mut outcomes = Vec::with_capacity(request.names.len());
+            for name in &request.names {
+                let matches = match account.mapi_resolve(name, MAX_RESOLVE_MATCHES).await {
+                    Ok(matches) => matches,
+                    Err(error) => {
+                        // No names and no addresses in the log line.
+                        tracing::warn!(%error, "mapi: address book lookup failed");
+                        return MapiResponse::new(
+                            request_type.as_str(),
+                            request_id,
+                            ResponseCode::UnknownFailure,
+                        )
+                        .with_client_info(client_info)
+                        .into_response();
+                    }
+                };
+                outcomes.push(match matches.len() {
+                    0 => nspi::Resolution::Unresolved,
+                    1 => {
+                        let found = &matches[0];
+                        nspi::Resolution::Resolved(Box::new(nspi::Entry {
+                            display_name: found.display_name.clone(),
+                            email: found.email.clone(),
+                        }))
+                    }
+                    // More than one, and none is chosen. Picking would put a
+                    // colleague's address on a message somebody believed was
+                    // going elsewhere.
+                    _ => nspi::Resolution::Ambiguous,
+                });
+            }
+
+            let body = nspi::resolve_names_success_body(
+                &request.property_tags,
+                &outcomes,
+                &address_book_value,
+            );
+            MapiResponse::new(request_type.as_str(), request_id, ResponseCode::Success)
+                .with_client_info(client_info)
+                .with_body(body)
+                .into_response()
+        }
+
+        // Everything else this endpoint might be asked — browsing the
+        // directory, fetching a template, comparing positions — is a later
+        // stage, and the mailbox endpoint's own request types do not belong
+        // here at all.
+        _ => MapiResponse::new(
+            request_type.as_str(),
+            request_id,
+            ResponseCode::EndpointDisabled,
+        )
+        .with_client_info(client_info)
+        .into_response(),
+    }
+}
+
+/// One property of one directory entry.
+///
+/// Deliberately few: a display name, the address in the two spellings a client
+/// asks for it, and the address type. Everything else Outlook might ask of a
+/// directory entry — a phone number, an office, a manager, a display type —
+/// alo does not know about a colleague, and a blank string in a field somebody
+/// reads as fact is worse than the field being absent. The flagged row carries
+/// the absence honestly.
+fn address_book_value(entry: &nspi::Entry, tag: crate::columns::PropertyTag) -> Option<Value> {
+    match tag.property_id {
+        crate::rows::pid::DISPLAY_NAME => Some(Value::String(entry.display_name.clone())),
+        crate::rows::pid::EMAIL_ADDRESS | crate::rows::pid::SMTP_ADDRESS => {
+            Some(Value::String(entry.email.clone()))
+        }
+        crate::rows::pid::ADDRESS_TYPE => {
+            Some(Value::String(crate::rows::ADDRESS_TYPE_SMTP.to_owned()))
+        }
+        _ => None,
+    }
 }
 
 #[cfg(test)]

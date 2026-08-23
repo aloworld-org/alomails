@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT display_name, email FROM ( SELECT u.email AS display_name, u.email AS email, 0 AS rank FROM users u WHERE u.tenant_id = $1 AND lower(u.email) LIKE $2 UNION SELECT c.display_name AS display_name, (c.emails -> 0 ->> 'email') AS email, 1 AS rank FROM contacts c WHERE c.tenant_id = $1 AND c.user_id = $3 AND (lower(c.display_name) LIKE $2 OR lower(coalesce(c.emails -> 0 ->> 'email', '')) LIKE $2) ) matches WHERE email IS NOT NULL AND email <> '' ORDER BY rank, display_name LIMIT $4",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "display_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "email",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "b475814b8dc5cfa935ba871697db23a6daf28d2a27cb2e1df9002ef506507754"
+}

@@ -58,7 +58,74 @@ pub struct MapiMessageRow {
     pub has_attachment: bool,
 }
 
+/// One directory entry a typed name resolved to.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MapiDirectoryEntry {
+    /// What a client displays.
+    pub display_name: String,
+    /// The address a message would be sent to.
+    pub email: String,
+}
+
 impl AccountStore {
+    /// Directory entries whose name or address matches `needle`, bounded.
+    ///
+    /// Two sources, and both are scoped by construction:
+    ///
+    /// * **The tenant's own people**, matched on their address. alo has no
+    ///   display-name column on a user, so a colleague's display name *is*
+    ///   their address — which is truthful, where a name invented by
+    ///   prettifying the local part would not be.
+    /// * **This account's contacts**, matched on display name or address.
+    ///   These are where the names somebody actually types live.
+    ///
+    /// The match is a case-insensitive substring, which is what ambiguous name
+    /// resolution means to a person: they type three letters and expect the
+    /// colleague. It is deliberately not a prefix match — "müller" should find
+    /// "Anna Müller".
+    ///
+    /// # Errors
+    /// [`crate::StoreError::Db`] on failure.
+    pub async fn mapi_resolve(&self, needle: &str, limit: i64) -> Result<Vec<MapiDirectoryEntry>> {
+        // An empty needle would match the whole directory, which is a browse
+        // rather than a resolve, and browsing has its own operations.
+        if needle.trim().is_empty() {
+            return Ok(Vec::new());
+        }
+        let pattern = format!("%{}%", needle.trim().to_lowercase());
+        let rows = sqlx::query!(
+            "SELECT display_name, email FROM ( \
+               SELECT u.email AS display_name, u.email AS email, 0 AS rank \
+                 FROM users u \
+                WHERE u.tenant_id = $1 AND lower(u.email) LIKE $2 \
+               UNION \
+               SELECT c.display_name AS display_name, \
+                      (c.emails -> 0 ->> 'email') AS email, 1 AS rank \
+                 FROM contacts c \
+                WHERE c.tenant_id = $1 AND c.user_id = $3 \
+                  AND (lower(c.display_name) LIKE $2 \
+                       OR lower(coalesce(c.emails -> 0 ->> 'email', '')) LIKE $2) \
+             ) matches \
+             WHERE email IS NOT NULL AND email <> '' \
+             ORDER BY rank, display_name LIMIT $4",
+            self.tenant().as_str(),
+            pattern,
+            self.user().as_str(),
+            limit
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .filter_map(|row| {
+                Some(MapiDirectoryEntry {
+                    display_name: row.display_name?,
+                    email: row.email?,
+                })
+            })
+            .collect())
+    }
+
     /// A bounded, newest-first page of one of this account's mailboxes, with
     /// everything a MAPI contents-table row carries. A foreign mailbox yields
     /// an empty list.

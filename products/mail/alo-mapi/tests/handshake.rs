@@ -39,6 +39,8 @@ struct Harness {
     password: String,
     /// The caller's own account, for tests that create real folders.
     account: alo_store::AccountStore,
+    /// The store behind it, for tests that need a second person in the tenant.
+    store: Arc<Store>,
 }
 
 async fn harness(tag: &str) -> Harness {
@@ -65,6 +67,7 @@ async fn harness(tag: &str) -> Harness {
         email,
         password,
         account,
+        store,
     }
 }
 
@@ -677,8 +680,13 @@ async fn the_unbuilt_request_types_refuse_honestly() {
 
 /// The address book endpoint answers rather than 404s: Autodiscover names it,
 /// and a client that found nothing would retry until it timed out.
+///
+/// It now **challenges** an unauthenticated caller rather than refusing the
+/// request type. That is what the endpoint becoming real changed: it reads the
+/// tenant's own people, so a caller says who they are before it says anything
+/// at all — and the challenge is what makes Outlook prompt.
 #[tokio::test]
-async fn the_address_book_endpoint_refuses_instead_of_vanishing() {
+async fn the_address_book_endpoint_challenges_instead_of_vanishing() {
     let h = harness("nspi").await;
     let response = h
         .app
@@ -694,10 +702,12 @@ async fn the_address_book_endpoint_refuses_instead_of_vanishing() {
         )
         .await
         .unwrap();
-    assert_eq!(response.status(), StatusCode::OK);
-    assert_eq!(
-        response_code(response.headers()),
-        ResponseCode::EndpointDisabled.code()
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert!(
+        response
+            .headers()
+            .contains_key(axum::http::header::WWW_AUTHENTICATE),
+        "no challenge, so a client has nothing to prompt with"
     );
 }
 
@@ -1749,5 +1759,251 @@ async fn an_attachment_that_is_not_there_is_not_found() {
         u32::from_le_bytes(attach[2..6].try_into().unwrap()),
         0x8004_010F,
         "an attachment that does not exist was opened"
+    );
+}
+
+// ---- stage 6: the address book ------------------------------------------
+
+/// Builds a `ResolveNames` request body for the given names.
+fn resolve_body(names: &[&str], tags: &[[u8; 4]]) -> Vec<u8> {
+    let mut body = 0u32.to_le_bytes().to_vec(); // Reserved
+    body.push(0x00); // HasState
+    body.push(0x01); // HasPropertyTags
+    body.extend_from_slice(&u32::try_from(tags.len()).unwrap().to_le_bytes());
+    for tag in tags {
+        body.extend_from_slice(tag);
+    }
+    body.push(0x01); // HasNames
+    body.extend_from_slice(&u32::try_from(names.len()).unwrap().to_le_bytes());
+    for name in names {
+        for unit in name.encode_utf16() {
+            body.extend_from_slice(&unit.to_le_bytes());
+        }
+        body.extend_from_slice(&[0, 0]);
+    }
+    body.extend_from_slice(&0u32.to_le_bytes()); // AuxiliaryBufferSize
+    body
+}
+
+/// Sends one address book request and returns its response body.
+async fn nspi_send(
+    h: &Harness,
+    auth: &str,
+    request_type: &str,
+    body: Vec<u8>,
+) -> (StatusCode, u32, Vec<u8>) {
+    let mut request = axum::http::Request::builder()
+        .method("POST")
+        .uri("/mapi/nspi")
+        .header("X-RequestType", request_type)
+        .header("X-RequestId", "ab-1")
+        .header("authorization", auth);
+    request = request.header("content-type", "application/mapi-http");
+    let response = h
+        .app
+        .clone()
+        .oneshot(request.body(axum::body::Body::from(body)).unwrap())
+        .await
+        .unwrap();
+    let status = response.status();
+    let code = response_code(response.headers());
+    let bytes = axum::body::to_bytes(response.into_body(), 8 * 1024 * 1024)
+        .await
+        .unwrap()
+        .to_vec();
+    let split = bytes
+        .windows(4)
+        .position(|w| w == BLANK_LINE)
+        .expect("framing");
+    (status, code, bytes[split + 4..].to_vec())
+}
+
+/// **Stage 6 on the real wire.** A client binds to the address book, types a
+/// colleague's address, and gets a recipient back — then unbinds.
+#[tokio::test]
+async fn a_client_resolves_a_colleague_into_a_recipient() {
+    let h = harness("nspi-resolve").await;
+    let auth = basic(&h.email, &h.password);
+
+    // A second person in the same tenant, so there is somebody to resolve to
+    // who is not the caller.
+    let ts = h.store.for_tenant(h.tenant.clone());
+    let colleague = format!("anna-{}@example.test", h.tenant);
+    ts.create_user(&colleague).await.expect("colleague");
+
+    // ---- Bind -------------------------------------------------------------
+    let mut bind = 0u32.to_le_bytes().to_vec(); // Flags
+    bind.push(0x00); // HasState
+    bind.extend_from_slice(&0u32.to_le_bytes()); // AuxiliaryBufferSize
+    let (status, code, body) = nspi_send(&h, &auth, "Bind", bind).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(code, ResponseCode::Success.code());
+    assert_eq!(&body[0..4], &0u32.to_le_bytes(), "StatusCode");
+    assert_eq!(&body[4..8], &0u32.to_le_bytes(), "ErrorCode: success");
+    assert_eq!(body.len(), 28, "server GUID and an empty auxiliary buffer");
+
+    // ---- ResolveNames -----------------------------------------------------
+    let tags = [
+        [0x1F, 0x00, 0x01, 0x30], // PidTagDisplayName
+        [0x1F, 0x00, 0xFE, 0x39], // PidTagSmtpAddress
+    ];
+    // One name that resolves, one that matches nobody.
+    let body = resolve_body(&[&colleague, "nobody-at-all"], &tags);
+    let (status, code, body) = nspi_send(&h, &auth, "ResolveNames", body).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(code, ResponseCode::Success.code());
+
+    assert_eq!(&body[0..4], &0u32.to_le_bytes(), "StatusCode");
+    assert_eq!(&body[4..8], &0u32.to_le_bytes(), "ErrorCode");
+    assert_eq!(
+        u32::from_le_bytes(body[8..12].try_into().unwrap()),
+        1200,
+        "CodePage: Unicode"
+    );
+    assert_eq!(body[12], 0xFF, "HasMinimalIds");
+    assert_eq!(
+        u32::from_le_bytes(body[13..17].try_into().unwrap()),
+        2,
+        "one outcome per name"
+    );
+    assert_eq!(
+        u32::from_le_bytes(body[17..21].try_into().unwrap()),
+        2,
+        "MID_RESOLVED for the colleague"
+    );
+    assert_eq!(
+        u32::from_le_bytes(body[21..25].try_into().unwrap()),
+        0,
+        "MID_UNRESOLVED for the name that matches nobody"
+    );
+
+    assert_eq!(body[25], 0xFF, "HasRowsAndCols");
+    assert_eq!(u32::from_le_bytes(body[26..30].try_into().unwrap()), 2);
+    let after_tags = 30 + 8;
+    assert_eq!(
+        u32::from_le_bytes(body[after_tags..after_tags + 4].try_into().unwrap()),
+        1,
+        "one row, for the one name that resolved"
+    );
+
+    // The row: flag byte, then each string behind its own HasValue byte.
+    let row = &body[after_tags + 4..];
+    assert_eq!(row[0], 0x00, "every value present");
+    assert_eq!(row[1], 0xFF, "HasValue before the display name");
+    let mut at = 2;
+    let display = read_utf16(row, &mut at);
+    assert_eq!(display, colleague, "the display name alo knows");
+    assert_eq!(row[at], 0xFF, "HasValue before the address");
+    at += 1;
+    let smtp = read_utf16(row, &mut at);
+    assert_eq!(smtp, colleague, "the address a message would go to");
+
+    // ---- Unbind -----------------------------------------------------------
+    let mut unbind = 0u32.to_le_bytes().to_vec();
+    unbind.extend_from_slice(&0u32.to_le_bytes());
+    let (status, code, body) = nspi_send(&h, &auth, "Unbind", unbind).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(code, ResponseCode::Success.code());
+    assert_eq!(body.len(), 12);
+}
+
+/// A name matching two people resolves to neither. Picking one would put a
+/// colleague's address on a message somebody believed was going elsewhere.
+#[tokio::test]
+async fn an_ambiguous_name_resolves_to_nobody() {
+    let h = harness("nspi-ambiguous").await;
+    let auth = basic(&h.email, &h.password);
+
+    let ts = h.store.for_tenant(h.tenant.clone());
+    ts.create_user(&format!("mueller-anna-{}@example.test", h.tenant))
+        .await
+        .expect("first");
+    ts.create_user(&format!("mueller-jan-{}@example.test", h.tenant))
+        .await
+        .expect("second");
+
+    let tags = [[0x1F, 0x00, 0x01, 0x30]];
+    let body = resolve_body(&["mueller"], &tags);
+    let (_, code, body) = nspi_send(&h, &auth, "ResolveNames", body).await;
+    assert_eq!(code, ResponseCode::Success.code());
+    assert_eq!(
+        u32::from_le_bytes(body[17..21].try_into().unwrap()),
+        1,
+        "MID_AMBIGUOUS"
+    );
+    let after_tags = 25 + 1 + 4 + 4;
+    assert_eq!(
+        u32::from_le_bytes(body[after_tags..after_tags + 4].try_into().unwrap()),
+        0,
+        "a row was returned for an ambiguous name"
+    );
+}
+
+/// The address book is somebody's data, not a public list: one tenant's names
+/// never resolve for another, and an unauthenticated caller is challenged
+/// before any lookup happens at all.
+#[tokio::test]
+async fn the_address_book_does_not_cross_tenants() {
+    let victim = harness("nspi-victim").await;
+    let ts = victim.store.for_tenant(victim.tenant.clone());
+    let secret = format!("geheim-{}@example.test", victim.tenant);
+    ts.create_user(&secret).await.expect("colleague");
+
+    // Another tenant asks for that exact address.
+    let other = harness("nspi-other").await;
+    let auth = basic(&other.email, &other.password);
+    let tags = [[0x1F, 0x00, 0x01, 0x30]];
+    let body = resolve_body(&[&secret], &tags);
+    let (_, code, body) = nspi_send(&other, &auth, "ResolveNames", body).await;
+    assert_eq!(code, ResponseCode::Success.code());
+    assert_eq!(
+        u32::from_le_bytes(body[17..21].try_into().unwrap()),
+        0,
+        "another tenant's colleague was resolved"
+    );
+    let text = String::from_utf8_lossy(&body);
+    assert!(
+        !text.contains("geheim"),
+        "the address leaked into the answer"
+    );
+
+    // And with no credentials at all, a challenge rather than a lookup.
+    let request = axum::http::Request::builder()
+        .method("POST")
+        .uri("/mapi/nspi")
+        .header("X-RequestType", "ResolveNames")
+        .header("X-RequestId", "ab-2")
+        .body(axum::body::Body::from(resolve_body(&[&secret], &tags)))
+        .unwrap();
+    let response = other.app.clone().oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+/// A malformed body is refused by code rather than parsed optimistically.
+#[tokio::test]
+async fn a_malformed_address_book_body_is_refused() {
+    let h = harness("nspi-malformed").await;
+    let auth = basic(&h.email, &h.password);
+
+    // A Bind whose auxiliary buffer claims more bytes than the body holds.
+    let mut bind = 0u32.to_le_bytes().to_vec();
+    bind.push(0x00);
+    bind.extend_from_slice(&9_999u32.to_le_bytes());
+    let (status, code, _) = nspi_send(&h, &auth, "Bind", bind).await;
+    assert_eq!(status, StatusCode::OK, "a code, not an HTTP failure");
+    assert_eq!(code, ResponseCode::InvalidRequestBody.code());
+}
+
+/// A request type this endpoint does not serve says so rather than pretending.
+#[tokio::test]
+async fn an_unserved_address_book_request_refuses_honestly() {
+    let h = harness("nspi-unserved").await;
+    let auth = basic(&h.email, &h.password);
+    let (status, code, _) = nspi_send(&h, &auth, "GetSpecialTable", Vec::new()).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        code,
+        ResponseCode::InvalidRequestType.code(),
+        "an unknown request type"
     );
 }

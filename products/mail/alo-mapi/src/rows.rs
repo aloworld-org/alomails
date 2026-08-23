@@ -70,6 +70,12 @@ pub mod ptyp {
     pub const INTEGER64: u16 = 0x0014;
     /// Variable; UTF-16LE with a terminating null and no length prefix.
     pub const STRING: u16 = 0x001F;
+    /// Variable; 8-bit characters in an externally specified encoding, with a
+    /// single zero byte terminating. alo never *writes* one — everything it
+    /// returns is Unicode — but a client may ask for one by tag, and the
+    /// address book has to recognise the type to know a value needs its
+    /// `HasValue` byte.
+    pub const STRING8: u16 = 0x001E;
     /// 8 bytes; 100-nanosecond intervals since 1 January 1601 (a `FILETIME`).
     pub const TIME: u16 = 0x0040;
 }
@@ -131,7 +137,25 @@ pub mod pid {
     pub const ATTACH_LONG_FILENAME: u16 = 0x3707;
     /// Its content type — `PtypString` (§2.602).
     pub const ATTACH_MIME_TAG: u16 = 0x370E;
+
+    // ---- one address book entry -------------------------------------------
+
+    /// The address a message goes to — `PtypString` (§2.682).
+    pub const EMAIL_ADDRESS: u16 = 0x3003;
+    /// The same address, spelled as SMTP — `PtypString` (§2.1022).
+    pub const SMTP_ADDRESS: u16 = 0x39FE;
+    /// Which kind of address the one above is — `PtypString` (§2.576).
+    pub const ADDRESS_TYPE: u16 = 0x3002;
 }
+
+/// The address type alo declares for a directory entry ([MS-OXOABK] §2.2.3.13).
+///
+/// `SMTP`, not `EX`. An `EX` entry means an X.500 address that resolves inside
+/// an Exchange organisation, and alo has no such namespace — issuing one would
+/// be inventing a directory structure that nothing behind us implements. Every
+/// person alo knows about has a real internet address, and saying so is both
+/// truthful and what any client already handles.
+pub const ADDRESS_TYPE_SMTP: &str = "SMTP";
 
 /// `PidTagMessageFlags` bits ([MS-OXCMSG] §2.2.1.6).
 ///
