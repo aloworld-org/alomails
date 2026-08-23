@@ -46,6 +46,7 @@ pub mod rpc;
 pub mod session;
 pub mod stream;
 pub mod sync;
+pub mod upload;
 
 pub use connect::{ConnectError, ConnectRequest};
 pub use response::{MapiResponse, ResponseCode};
