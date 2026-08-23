@@ -454,6 +454,211 @@ fn utf16_with_null(value: &str) -> Vec<u8> {
     out
 }
 
+/// Where a FastTransfer stream may legally be cut.
+///
+/// [MS-OXCFXICS] §2.2.4.1: "If a split is required, the stream MUST be split
+/// either between two atoms or at any point inside a `varSizeValue` lexeme. A
+/// stream MUST NOT be split within a single atom."
+///
+/// An atom is a marker, a `propDef`, a fixed-size value, or a length. So the
+/// gaps between elements are always legal, and the interior of a variable-size
+/// value is legal too — which matters, because a single attachment can be
+/// larger than the 64 KiB a response buffer can carry, and only the second rule
+/// lets it move at all.
+/// Where the chunk starting at `from` may end, taking at most `limit` bytes.
+///
+/// Returns an absolute offset into `stream`, always **greater than `from`**
+/// whenever any legal cut exists, so a caller walking the stream cannot stall.
+///
+/// `from` is required rather than implied by slicing, because a chunk may end
+/// *inside* a value: the remainder is then a run of raw bytes with no element
+/// header, and re-scanning it as if it were a fresh stream would read the
+/// message's own contents as property tags. Only a scan from the true start
+/// knows where the structure is.
+///
+/// Returns `from` itself when nothing legal fits — the caller must treat that
+/// as "this element cannot travel in a buffer this small" and fail the
+/// download, not as an empty chunk, because handing back zero bytes forever is
+/// how a client hangs instead of erroring.
+///
+/// # Errors
+///
+/// Returns [`FtError`] if the stream is not well formed, since a scanner that
+/// guessed at a malformed stream would cut inside an atom and produce a chunk
+/// the client silently misreads.
+pub fn safe_split(stream: &[u8], from: usize, limit: usize) -> Result<usize, FtError> {
+    let ceiling = from.saturating_add(limit).min(stream.len());
+    if ceiling >= stream.len() {
+        return Ok(stream.len());
+    }
+
+    let mut best = from;
+    let mut at = 0_usize;
+
+    while at < stream.len() {
+        if at > ceiling {
+            break;
+        }
+        // The gap before this element is a legal cut, if it is ahead of us.
+        if at > best {
+            best = at;
+        }
+
+        let element = measure(stream, at)?;
+        if let Some((start, end)) = element.value_span {
+            // Inside a variable-size value every offset is legal, so take the
+            // ceiling itself — this is the rule that lets one attachment
+            // larger than a whole buffer move at all.
+            if start <= ceiling && ceiling <= end && ceiling > from {
+                return Ok(ceiling);
+            }
+        }
+        at = element.end;
+    }
+
+    if at <= ceiling && at > best {
+        best = at;
+    }
+    Ok(best)
+}
+
+/// One element's extent, and where its variable-size value lies if it has one.
+struct Element {
+    /// One past the element's last byte.
+    end: usize,
+    /// The half-open range of the raw value bytes, for a variable-size value.
+    value_span: Option<(usize, usize)>,
+}
+
+/// Measures the element beginning at `at`.
+fn measure(stream: &[u8], at: usize) -> Result<Element, FtError> {
+    let tag = read_u32(stream, at, "element tag")?;
+    if marker::is_marker(tag) {
+        return Ok(Element {
+            end: at + 4,
+            value_span: None,
+        });
+    }
+
+    let (property_type, property_id) = split_tag(tag);
+    let mut cursor = at + 4;
+
+    // A named property carries its set and member before the value; skipping it
+    // wrongly would make the value bytes start in the wrong place.
+    if property_id >= NAMED_PROP_ID_FLOOR {
+        cursor += 16; // the property set GUID
+        let kind = *stream.get(cursor).ok_or(FtError::Truncated {
+            part: "namedPropInfo kind",
+        })?;
+        cursor += 1;
+        match kind {
+            0x00 => cursor += 4, // dispid
+            0x01 => cursor = utf16z_end(stream, cursor)?,
+            _ => {
+                return Err(FtError::Malformed {
+                    part: "namedPropInfo kind",
+                });
+            }
+        }
+    }
+
+    if let Some(width) = fixed_width(property_type) {
+        return Ok(Element {
+            end: cursor + width,
+            value_span: None,
+        });
+    }
+
+    if is_multi_valued(property_type) {
+        let count = read_u32(stream, cursor, "multi-value count")? as usize;
+        cursor += 4;
+        let element_type = property_type & 0x0FFF;
+        for _ in 0..count {
+            if let Some(width) = fixed_width(element_type) {
+                cursor += width;
+            } else {
+                let len = read_u32(stream, cursor, "multi-value element length")? as usize;
+                cursor = cursor
+                    .checked_add(4 + len)
+                    .ok_or(FtError::Malformed { part: "length" })?;
+            }
+        }
+        // The interior of a multi-valued property is a sequence of atoms and
+        // values rather than one value, so only its ends are offered here.
+        return Ok(Element {
+            end: cursor,
+            value_span: None,
+        });
+    }
+
+    // A plain variable-size value: length, then that many bytes.
+    let len = read_u32(stream, cursor, "value length")? as usize;
+    let start = cursor + 4;
+    let end = start
+        .checked_add(len)
+        .ok_or(FtError::Malformed { part: "length" })?;
+    if end > stream.len() {
+        return Err(FtError::Truncated { part: "value" });
+    }
+    Ok(Element {
+        end,
+        value_span: Some((start, end)),
+    })
+}
+
+/// The size of a fixed-width value, or `None` if the type is variable.
+fn fixed_width(property_type: u16) -> Option<usize> {
+    match property_type {
+        ptyp::INTEGER16 => Some(2),
+        // A boolean is two bytes in a FastTransfer stream, not one.
+        ptyp::BOOLEAN => Some(2),
+        ptyp::INTEGER32 => Some(4),
+        ptyp::INTEGER64 | ptyp::TIME => Some(8),
+        ptyp::GUID => Some(16),
+        _ => None,
+    }
+}
+
+/// Whether the type is one of the multi-valued families.
+fn is_multi_valued(property_type: u16) -> bool {
+    property_type & 0x1000 != 0
+}
+
+/// Reads a little-endian `u32`.
+fn read_u32(stream: &[u8], at: usize, part: &'static str) -> Result<u32, FtError> {
+    let bytes = stream.get(at..at + 4).ok_or(FtError::Truncated { part })?;
+    Ok(u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]))
+}
+
+/// One past the terminating null of a UTF-16 string.
+fn utf16z_end(stream: &[u8], mut at: usize) -> Result<usize, FtError> {
+    loop {
+        let pair = stream.get(at..at + 2).ok_or(FtError::Truncated {
+            part: "named property name",
+        })?;
+        at += 2;
+        if pair == [0x00, 0x00] {
+            return Ok(at);
+        }
+    }
+}
+
+/// What can go wrong scanning a stream.
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+pub enum FtError {
+    /// The stream ended inside an element.
+    #[error("FastTransfer stream truncated in {part}")]
+    Truncated {
+        /// Which part ran out.
+        part: &'static str,
+    },
+    /// The stream is structurally impossible.
+    #[error("FastTransfer stream malformed at {part}")]
+    Malformed {
+        /// Which part did not make sense.
+        part: &'static str,
+    },
+}
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
@@ -627,5 +832,147 @@ mod tests {
         assert_eq!(split_tag(0x0037_001F), (0x001F, 0x0037));
         assert_eq!(join_tag(0x001F, 0x0037), 0x0037_001F);
         assert_eq!(split_tag(marker::START_TOP_FLD), (0x0003, 0x4009));
+    }
+
+    /// A limit past the end takes the whole stream.
+    #[test]
+    fn a_limit_beyond_the_stream_takes_all_of_it() {
+        let mut w = Writer::new();
+        w.marker(marker::START_MESSAGE);
+        w.int32(0x0E07, 1);
+        let stream = w.finish();
+        assert_eq!(
+            safe_split(&stream, 0, stream.len() + 100).unwrap(),
+            stream.len()
+        );
+        assert_eq!(safe_split(&stream, 0, stream.len()).unwrap(), stream.len());
+    }
+
+    /// A cut must land between elements, never inside a marker or a fixed value
+    /// — an atom split leaves the client reading a property that is not there.
+    #[test]
+    fn a_cut_lands_between_elements_not_inside_an_atom() {
+        let mut w = Writer::new();
+        w.marker(marker::START_MESSAGE); // 4 bytes: 0..4
+        w.int32(0x0E07, 1); // 8 bytes: 4..12
+        w.marker(marker::END_MESSAGE); // 4 bytes: 12..16
+        let stream = w.finish();
+        assert_eq!(stream.len(), 16);
+
+        // Mid-marker and mid-value limits fall back to the last clean boundary.
+        assert_eq!(safe_split(&stream, 0, 2).unwrap(), 0);
+        assert_eq!(safe_split(&stream, 0, 4).unwrap(), 4);
+        assert_eq!(safe_split(&stream, 0, 7).unwrap(), 4, "cut inside an int32");
+        assert_eq!(safe_split(&stream, 0, 11).unwrap(), 4);
+        assert_eq!(safe_split(&stream, 0, 12).unwrap(), 12);
+        assert_eq!(
+            safe_split(&stream, 0, 15).unwrap(),
+            12,
+            "cut inside a marker"
+        );
+    }
+
+    /// The rule that makes large attachments possible: inside a variable-size
+    /// value, any offset is legal, so the cut is taken exactly at the limit.
+    #[test]
+    fn a_cut_inside_a_variable_size_value_is_taken_at_the_limit() {
+        let mut w = Writer::new();
+        w.binary(0x3701, &vec![0xAB; 1000]);
+        let stream = w.finish();
+        // 2 type + 2 id + 4 length = 8 bytes of header, then 1000 bytes.
+        assert_eq!(stream.len(), 1008);
+
+        // Inside the header, fall back to the start.
+        assert_eq!(safe_split(&stream, 0, 5).unwrap(), 0);
+        // Anywhere in the value itself is legal.
+        assert_eq!(safe_split(&stream, 0, 8).unwrap(), 8);
+        assert_eq!(safe_split(&stream, 0, 500).unwrap(), 500);
+        assert_eq!(safe_split(&stream, 0, 1007).unwrap(), 1007);
+    }
+
+    /// A value far larger than any single buffer must still be able to move,
+    /// which is the whole reason the second split rule exists.
+    #[test]
+    fn an_attachment_larger_than_a_buffer_still_moves() {
+        let mut w = Writer::new();
+        w.binary(0x3701, &vec![0x5A; 200_000]);
+        let stream = w.finish();
+
+        // Walk it out in 64 KiB bites, exactly as GetBuffer would.
+        let mut sent = 0_usize;
+        let mut rounds = 0;
+        while sent < stream.len() {
+            let next = safe_split(&stream, sent, 65_535).unwrap();
+            assert!(next > sent, "made no progress at offset {sent}");
+            sent = next;
+            rounds += 1;
+            assert!(rounds < 100, "did not converge");
+        }
+        assert_eq!(sent, stream.len());
+    }
+
+    /// A string's bytes are a variable-size value too, so the same rule holds.
+    #[test]
+    fn a_string_value_splits_like_any_other_variable_value() {
+        let mut w = Writer::new();
+        w.string(0x0037, "Grüße aus Liège");
+        let stream = w.finish();
+        assert_eq!(safe_split(&stream, 0, 10).unwrap(), 10);
+        assert_eq!(safe_split(&stream, 0, 3).unwrap(), 0);
+    }
+
+    /// Multi-valued properties are a sequence of atoms, so only their ends are
+    /// offered — cutting inside one would leave a half-read element count.
+    #[test]
+    fn a_multi_valued_property_is_cut_only_at_its_ends() {
+        let mut w = Writer::new();
+        w.marker(marker::START_RECIP);
+        w.multi_int32(0x1014, &[1, 2, 3]);
+        w.marker(marker::END_TO_RECIP);
+        let stream = w.finish();
+
+        // 4 (marker) + 8 (header+count) + 12 (three values) = 24, then 4.
+        assert_eq!(stream.len(), 28);
+        assert_eq!(safe_split(&stream, 0, 4).unwrap(), 4);
+        assert_eq!(
+            safe_split(&stream, 0, 14).unwrap(),
+            4,
+            "inside the value list"
+        );
+        assert_eq!(safe_split(&stream, 0, 24).unwrap(), 24);
+    }
+
+    /// A named property's set and member sit between the tag and the value, so
+    /// a scanner that skipped them would mistake the GUID for a length.
+    #[test]
+    fn a_named_property_is_measured_past_its_set_and_member() {
+        let named = NamedProp {
+            property_set: [0x77; 16],
+            kind: NamedPropKind::Dispatch(0x8205),
+        };
+        let mut w = Writer::new();
+        w.named_string(0x8001, &named, "hello");
+        w.marker(marker::END_MESSAGE);
+        let stream = w.finish();
+
+        // The last element is a 4-byte marker, so the boundary before it is
+        // len - 4. A scanner that lost its place could not find it.
+        let boundary = stream.len() - 4;
+        assert_eq!(safe_split(&stream, 0, boundary).unwrap(), boundary);
+        assert_eq!(safe_split(&stream, 0, stream.len() - 1).unwrap(), boundary);
+    }
+
+    /// A malformed stream is refused rather than cut at a guess — a wrong cut
+    /// produces a chunk the client misreads without any error.
+    #[test]
+    fn a_malformed_stream_is_refused() {
+        // A binary property whose length runs past the buffer.
+        let mut bad = vec![0x02, 0x01, 0x01, 0x37];
+        bad.extend_from_slice(&9999u32.to_le_bytes());
+        bad.extend_from_slice(&[0x01, 0x02]);
+        assert!(safe_split(&bad, 0, 4).is_err());
+
+        // A tag that stops halfway.
+        assert!(safe_split(&[0x02, 0x01], 0, 1).is_err());
     }
 }
