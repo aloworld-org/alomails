@@ -28,6 +28,7 @@ pub mod execute;
 pub mod fasttransfer;
 pub mod folders;
 pub mod hierarchy;
+pub mod ics;
 pub mod logon;
 pub mod logon_response;
 pub mod messages;
