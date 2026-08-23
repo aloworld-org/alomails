@@ -464,16 +464,6 @@ export function TasksModule({
               onEditProject={() => setEditingProject(true)}
               onOpenInvoice={(id) => navigate(`/billing/invoices/${encodeURIComponent(id)}`)}
             />
-          ) : tasks.length === 0 ? (
-            <div className="p-6 max-sm:p-4">
-              <EmptyState
-                Icon={ClipboardList}
-                title={strings.taskEmptyTitle}
-                body={strings.taskEmptyBody}
-                cta={strings.taskCreateFirst}
-                onCta={() => openCreate()}
-              />
-            </div>
           ) : view === "overview" ? (
             <OverviewView
               tasks={tasks}
@@ -503,6 +493,16 @@ export function TasksModule({
               onOpen={setSelected}
               onCreate={() => openCreate()}
             />
+          ) : tasks.length === 0 ? (
+            <div className="p-6 max-sm:p-4">
+              <EmptyState
+                Icon={ClipboardList}
+                title={strings.taskEmptyTitle}
+                body={strings.taskEmptyBody}
+                cta={strings.taskCreateFirst}
+                onCta={() => openCreate()}
+              />
+            </div>
           ) : (
             <ListView
               tasks={tasks}
