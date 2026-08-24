@@ -39,6 +39,8 @@
 //! `TransferBufferSize` is 16 bits, so no single chunk can exceed 64 KiB — a
 //! ceiling the whole chunking design exists to live within.
 
+use std::sync::Arc;
+
 use crate::fasttransfer::{FtError, safe_split};
 use crate::rop::RopError;
 
@@ -169,9 +171,18 @@ impl GetBufferRequest {
 /// Holds the whole serialised stream and how far the client has taken. The
 /// position is absolute so that [`safe_split`] can see the structure from the
 /// beginning even when the previous chunk stopped inside a value.
+///
+/// **The bytes are shared and the position is not.** A download lives in the
+/// session's object table, which the router *clones* before rehearsing a ROP
+/// buffer — up to three times per request. Copying a mailbox-sized stream that
+/// often would dominate the cost of every synchronising request, so the stream
+/// sits behind an [`Arc`] and only the cursor is duplicated. That is also the
+/// behaviour the rehearsal needs: the clone advances, the original does not,
+/// and the real dispatch afterwards starts from where the client actually left
+/// off.
 #[derive(Debug, Clone)]
 pub struct Download {
-    stream: Vec<u8>,
+    stream: Arc<[u8]>,
     sent: usize,
     /// How many items the stream describes, for the progress fields.
     total_steps: u16,
@@ -184,9 +195,23 @@ impl Download {
     #[must_use]
     pub fn new(stream: Vec<u8>, total_steps: u16) -> Self {
         Self {
-            stream,
+            stream: Arc::from(stream.into_boxed_slice()),
             sent: 0,
             total_steps,
+            steps_done: 0,
+        }
+    }
+
+    /// A download sharing another's bytes, from the beginning.
+    ///
+    /// Used when a client configures the same scope twice: the stream is
+    /// already built, and rebuilding it would read the whole folder again.
+    #[must_use]
+    pub fn restart(&self) -> Self {
+        Self {
+            stream: Arc::clone(&self.stream),
+            sent: 0,
+            total_steps: self.total_steps,
             steps_done: 0,
         }
     }
@@ -451,5 +476,69 @@ mod tests {
         let buf = vec![0x4F, 0x00, 0x01, 0x00, 0x40];
         assert!(GetBufferRequest::parse(&buf).is_err());
         assert!(GetBufferRequest::parse(&[]).is_err());
+    }
+
+    /// The property the whole rehearsal depends on: a clone advances on its
+    /// own and leaves the original where it was.
+    ///
+    /// The router clones the object table, rehearses a ROP buffer against the
+    /// clone to learn what it needs to load, then throws the clone away and
+    /// dispatches for real. If a rehearsal's chunk advanced the true cursor,
+    /// the client would silently lose that many bytes out of the middle of its
+    /// mailbox — no error, just a gap.
+    #[test]
+    fn a_clone_advances_without_moving_the_original() {
+        let mut w = Writer::new();
+        w.binary(0x3701, &vec![0x2C; 40_000]);
+        let original = Download::new(w.finish(), 1);
+
+        let mut rehearsal = original.clone();
+        let (chunk, status) = rehearsal.next_chunk(1024).unwrap();
+        assert_eq!(chunk.len(), 1024);
+        assert_eq!(status, TransferStatus::Partial);
+
+        assert_eq!(
+            original.remaining(),
+            original.remaining(),
+            "sanity: remaining is stable"
+        );
+        assert!(
+            rehearsal.remaining() < original.remaining(),
+            "the clone did not advance"
+        );
+        assert_eq!(
+            original.remaining(),
+            rehearsal.remaining() + 1024,
+            "the rehearsal moved the original's cursor"
+        );
+
+        // And the real dispatch afterwards starts from the beginning.
+        let mut real = original.clone();
+        let (first, _) = real.next_chunk(1024).unwrap();
+        assert_eq!(
+            first, chunk,
+            "the real chunk differs from the rehearsed one"
+        );
+    }
+
+    /// Restarting shares the bytes but rewinds the cursor, so re-configuring
+    /// the same scope does not re-read the folder.
+    #[test]
+    fn restart_rewinds_without_rebuilding() {
+        let mut w = Writer::new();
+        w.marker(marker::START_MESSAGE);
+        w.string(0x0037, "Rechnung");
+        w.marker(marker::END_MESSAGE);
+        let mut download = Download::new(w.finish(), 1);
+
+        let (whole, status) = download.next_chunk(4096).unwrap();
+        assert_eq!(status, TransferStatus::Done);
+        assert!(download.is_finished());
+
+        let mut again = download.restart();
+        assert!(!again.is_finished());
+        let (repeat, status) = again.next_chunk(4096).unwrap();
+        assert_eq!(repeat, whole, "restart produced a different stream");
+        assert_eq!(status, TransferStatus::Done);
     }
 }
