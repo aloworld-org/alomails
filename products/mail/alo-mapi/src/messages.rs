@@ -66,6 +66,12 @@ pub struct MessageEntry {
     pub size: u32,
     /// Whether it carries an attachment.
     pub has_attachment: bool,
+    /// The change number: the account modseq at which this message last
+    /// changed (ADR 0051, stage 8).
+    ///
+    /// A synchronising client is told "everything above what you have seen",
+    /// so this is what decides whether a message is sent at all.
+    pub change_number: u64,
 }
 
 /// The counter part of a message id, derived from the store's own id.
@@ -108,6 +114,10 @@ impl MessageEntry {
             flags,
             size: u32::try_from(row.size).unwrap_or(u32::MAX),
             has_attachment: row.has_attachment,
+            // Negative is unreachable — the counter only ever climbs — but a
+            // wrapped value would place the message impossibly far in the
+            // future of every set, so it clamps to zero instead.
+            change_number: u64::try_from(row.change_number).unwrap_or(0),
         }
     }
 }
@@ -295,6 +305,7 @@ mod tests {
             size: 4096,
             seen,
             has_attachment: attachment,
+            change_number: 0,
         }
     }
 

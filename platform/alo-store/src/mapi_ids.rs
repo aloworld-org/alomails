@@ -27,7 +27,7 @@
 use std::collections::HashMap;
 
 use crate::account::AccountStore;
-use crate::error::Result;
+use crate::error::{Result, StoreError};
 
 /// The object kinds a MAPI id can name.
 ///
@@ -57,6 +57,9 @@ impl MapiKind {
 /// Below this sits the band the special folders occupy at fixed values a client
 /// expects to find, so an allocated id can never take one of theirs.
 pub const FIRST_ALLOCATABLE: i64 = 1024;
+
+/// A store GUID is sixteen bytes.
+pub const REPLGUID_LEN: usize = 16;
 
 impl AccountStore {
     /// The counter a MAPI client knows this object by, allocating one if this
@@ -223,6 +226,59 @@ impl AccountStore {
             .collect())
     }
 
+    /// The store GUID this mailbox presents to MAPI clients.
+    ///
+    /// Allocated on first use and stable thereafter. A client caches it inside
+    /// every identifier it holds — `PidTagSourceKey`, `PidTagChangeKey`, the
+    /// `REPLGUID` of every set it sends back — so changing it invalidates that
+    /// client's entire replica and it re-downloads the mailbox.
+    ///
+    /// The sixteen bytes are the GUID's canonical (RFC 4122) order, taken from
+    /// its text form rather than from a driver's native type. [MS-OXCDATA]
+    /// §2.11.1 describes a GUID as `Data1`/`Data2`/`Data3` in little-endian
+    /// order, but nothing on either side parses those fields: the value is
+    /// emitted, compared and echoed as one unit, so what matters is that the
+    /// same bytes come out every time — which reading a fixed textual form
+    /// guarantees, and a driver's byte order would not necessarily.
+    ///
+    /// # Errors
+    ///
+    /// Returns a store error if the query fails, or if the stored value is not
+    /// a GUID — which would mean the column had been written by something other
+    /// than this code.
+    pub async fn mapi_replica_guid(&self) -> Result<[u8; REPLGUID_LEN]> {
+        // The allocator row may not exist yet — a client can log on before it
+        // has been given a single id — so this creates it. `DO NOTHING` then a
+        // read, rather than `DO UPDATE ... RETURNING`, because there is nothing
+        // to update: the point is to observe the value, not to advance it.
+        sqlx::query!(
+            "INSERT INTO mapi_id_counter (tenant_id, user_id) VALUES ($1, $2) \
+             ON CONFLICT (tenant_id, user_id) DO NOTHING",
+            self.tenant.as_str(),
+            self.user.as_str()
+        )
+        .execute(&self.pool)
+        .await?;
+
+        // Read as text: the alternative is sqlx's `uuid` feature and the crate
+        // behind it, for one column whose bytes we never interpret.
+        let row = sqlx::query!(
+            "SELECT replica_guid::text AS \"replica_guid!: String\" \
+             FROM mapi_id_counter WHERE tenant_id = $1 AND user_id = $2",
+            self.tenant.as_str(),
+            self.user.as_str()
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        guid_bytes(&row.replica_guid).ok_or_else(|| {
+            StoreError::Validation(format!(
+                "mapi_id_counter.replica_guid is not a GUID: {} characters",
+                row.replica_guid.len()
+            ))
+        })
+    }
+
     /// Forgets an object's id, for when the object itself is gone.
     ///
     /// The counter is **not** returned to the allocator: a client may still be
@@ -245,6 +301,30 @@ impl AccountStore {
         .await?;
         Ok(())
     }
+}
+
+/// The sixteen bytes of a GUID written in its canonical text form.
+///
+/// Accepts the 36-character hyphenated form Postgres renders, and takes the
+/// hex digits in the order they are written — so the same stored value always
+/// yields the same bytes, which is the only property anything here depends on.
+/// Returns `None` for anything that is not that form, rather than padding or
+/// truncating into a plausible-looking identifier.
+fn guid_bytes(text: &str) -> Option<[u8; REPLGUID_LEN]> {
+    let mut out = [0_u8; REPLGUID_LEN];
+    let mut digits = text.chars().filter(|c| *c != '-');
+    for byte in &mut out {
+        let high = digits.next()?.to_digit(16)?;
+        let low = digits.next()?.to_digit(16)?;
+        // Both digits are one hex character, so the value cannot exceed 0xFF.
+        *byte = u8::try_from(high * 16 + low).ok()?;
+    }
+    // A longer string would have filled the array and still had digits left,
+    // which is a different value wearing the right prefix.
+    if digits.next().is_some() {
+        return None;
+    }
+    Some(out)
 }
 
 #[cfg(test)]

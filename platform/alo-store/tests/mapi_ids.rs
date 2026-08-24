@@ -227,3 +227,67 @@ async fn a_forgotten_counter_is_never_reissued() {
         .unwrap();
     assert_ne!(next, gone, "a released counter was handed to a new message");
 }
+
+/// A client caches the store GUID inside every identifier it holds, so a value
+/// that moved would invalidate its whole replica.
+#[tokio::test]
+async fn a_mailboxs_guid_is_stable() {
+    let store = common::test_store().await;
+    let (acc, _user, _inbox) = common::fresh_account(&store, "mapi-guid").await;
+
+    let first = acc.mapi_replica_guid().await.unwrap();
+    let again = acc.mapi_replica_guid().await.unwrap();
+    assert_eq!(first, again, "the mailbox changed its identity");
+    assert_ne!(first, [0_u8; 16], "an all-zero GUID names no store");
+
+    // Allocating ids must not disturb it — they share a row.
+    let _ = acc
+        .mapi_counter_for(MapiKind::Message, "m-1")
+        .await
+        .unwrap();
+    assert_eq!(acc.mapi_replica_guid().await.unwrap(), first);
+}
+
+/// The failure the column exists to prevent: two mailboxes drawing identifiers
+/// from one namespace. Their counters start at the same value, so a shared GUID
+/// would make the same 22 bytes name a different message in each — and a client
+/// holding both accounts could never converge.
+#[tokio::test]
+async fn two_mailboxes_never_share_a_namespace() {
+    let store = common::test_store().await;
+    let (a, _ua, _ia) = common::fresh_account(&store, "mapi-guid-a").await;
+    let (b, _ub, _ib) = common::fresh_account(&store, "mapi-guid-b").await;
+
+    let guid_a = a.mapi_replica_guid().await.unwrap();
+    let guid_b = b.mapi_replica_guid().await.unwrap();
+    assert_ne!(
+        guid_a, guid_b,
+        "two mailboxes claim the same store identity"
+    );
+
+    // ...even though their counters do collide, which is the whole point.
+    let counter_a = a.mapi_counter_for(MapiKind::Message, "m-1").await.unwrap();
+    let counter_b = b.mapi_counter_for(MapiKind::Message, "m-1").await.unwrap();
+    assert_eq!(
+        counter_a, counter_b,
+        "each account numbers from the same start, so only the GUID separates them"
+    );
+}
+
+/// The GUID is asked for before any id has been allocated — a client logs on
+/// long before it opens anything — so the row has to appear on demand.
+#[tokio::test]
+async fn the_guid_is_available_before_any_id_is_issued() {
+    let store = common::test_store().await;
+    let (acc, _user, _inbox) = common::fresh_account(&store, "mapi-guid-first").await;
+
+    let guid = acc.mapi_replica_guid().await.unwrap();
+    assert_ne!(guid, [0_u8; 16]);
+
+    // And the allocator still starts where it should, unmoved by that read.
+    let first = acc
+        .mapi_counter_for(MapiKind::Message, "m-1")
+        .await
+        .unwrap();
+    assert_eq!(first, FIRST_ALLOCATABLE);
+}

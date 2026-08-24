@@ -3071,6 +3071,7 @@ mod tests {
             size: 2048,
             seen,
             has_attachment: attachment,
+            change_number: 0,
         }
     }
 

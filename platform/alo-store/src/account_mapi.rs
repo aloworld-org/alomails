@@ -56,6 +56,20 @@ pub struct MapiMessageRow {
     /// paperclip on a message that does not, which sends somebody looking for
     /// a file that was never there.
     pub has_attachment: bool,
+    /// The account modseq at which this message last changed.
+    ///
+    /// This is what MAPI calls a change number (ADR 0051, stage 8): a value
+    /// that advances whenever the object is touched, so a synchronising client
+    /// can be told "everything above what you have seen". alo already keeps
+    /// exactly that for JMAP — a per-account monotonic counter and a change log
+    /// — so the two protocols share one notion of *when* rather than growing a
+    /// second one that could disagree.
+    ///
+    /// `0` for a message that predates change tracking. Several messages
+    /// sharing a change number is normal and not a defect: one mutation bumps
+    /// the counter once and stamps every object it touched, which is precisely
+    /// what "these changed together" means.
+    pub change_number: i64,
 }
 
 /// One directory entry a typed name resolved to.
@@ -140,6 +154,7 @@ impl AccountStore {
         let rows = sqlx::query!(
             "SELECT m.id, m.subject, m.from_addr, m.received_at, m.size, \
                     COALESCE(m.has_attachment, false) AS \"has_attachment!: bool\", \
+                    COALESCE(oc.modseq, 0) AS \"change_number!: i64\", \
                     EXISTS ( \
                       SELECT 1 FROM message_keywords k \
                       WHERE k.tenant_id = m.tenant_id AND k.message_id = m.id \
@@ -147,6 +162,8 @@ impl AccountStore {
                     ) AS \"seen!: bool\" \
              FROM mailbox_messages mm \
              JOIN messages m ON m.id = mm.message_id AND m.tenant_id = mm.tenant_id \
+             LEFT JOIN object_changes oc \
+                    ON oc.tenant_id = m.tenant_id AND oc.type = 'Email' AND oc.id = m.id \
              WHERE mm.tenant_id = $1 AND mm.mailbox_id = $2 AND m.user_id = $3 \
              ORDER BY mm.added_at DESC LIMIT $4 OFFSET $5",
             self.tenant().as_str(),
@@ -168,6 +185,7 @@ impl AccountStore {
                 size: row.size,
                 seen: row.seen,
                 has_attachment: row.has_attachment,
+                change_number: row.change_number,
             })
             .collect())
     }
