@@ -186,6 +186,7 @@ fn configure(
         request: Box::new(request),
         download,
         upload: None,
+        state: crate::upload::SyncState::default(),
     });
     assign(handles, output_handle_index, handle);
 
@@ -370,7 +371,8 @@ fn upload_end(
     let consumed = rest.len() - tail.len();
     let index = request.input_handle_index;
 
-    let Some(ServerObject::SyncContext { upload, .. }) = resolve_mut(objects, handles, index)
+    let Some(ServerObject::SyncContext { upload, state, .. }) =
+        resolve_mut(objects, handles, index)
     else {
         return refuse(ROP_UPLOAD_STATE_END, index, error::INVALID_OBJECT, consumed);
     };
@@ -379,12 +381,11 @@ fn upload_end(
         return refuse(ROP_UPLOAD_STATE_END, index, error::INVALID_OBJECT, consumed);
     };
 
-    // The parsed state is not kept yet: nothing reads it until the producers
-    // narrow their output by it, and storing a set no code consults would be a
-    // claim this adapter does not honour. It is still parsed, so a malformed
-    // one is refused here rather than at the moment it first matters.
-    let mut parsed = crate::upload::SyncState::default();
-    match active.finish(&mut parsed) {
+    // Kept, not discarded: the router reads this off the rehearsed table to
+    // decide what the client still needs. A malformed set leaves the state as
+    // it was rather than half-applied, so a client that garbles one property
+    // does not silently lose the ones it got right.
+    match active.finish(state) {
         Ok(_) => SyncOutcome {
             response: upload_success_body(ROP_UPLOAD_STATE_END, index),
             consumed,

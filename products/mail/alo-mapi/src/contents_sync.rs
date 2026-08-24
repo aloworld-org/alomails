@@ -71,7 +71,11 @@
 //! confirmed against a real client.
 
 use crate::fasttransfer::{Writer, marker};
+use crate::folders::counter_of;
+use crate::ics::GlobRange;
 use crate::ics::{IdSet, globcnt_to_bytes, meta};
+use crate::messages::MessageEntry;
+use crate::rows::pid;
 use crate::sync::SyncConfigureRequest;
 
 /// `PidTagSourceKey` ([MS-OXPROPS] §2.1024) — the object's own identifier.
@@ -298,8 +302,124 @@ fn write_header(w: &mut Writer, request: &SyncConfigureRequest, change: &Message
     }
 }
 
+/// Builds the stream for a folder from the rows already loaded for it.
+///
+/// Returns the bytes and how many messages they describe, which is what the
+/// progress fields count.
+///
+/// ## What is left out, and why that is the whole point
+///
+/// A message whose change number the client has already seen is **not sent**.
+/// That is the difference between incremental synchronisation and downloading
+/// the mailbox again every time a client connects, and it is the only reason
+/// the state a client uploads is worth reading.
+///
+/// The comparison is against change numbers rather than ids: a message the
+/// client holds may still have changed since, and it is the change that decides
+/// whether it travels, not the identity.
+#[must_use]
+pub fn from_entries(
+    request: &SyncConfigureRequest,
+    replica: [u8; 16],
+    entries: &[MessageEntry],
+    seen: &IdSet,
+) -> (Vec<u8>, u16) {
+    let mut changes = Vec::new();
+    let mut given = Vec::new();
+    let mut numbers = Vec::new();
+
+    for entry in entries {
+        // A message with no counter is one whose id we could not read; sending
+        // it under a made-up identifier is worse than leaving it out, because
+        // the client would cache the wrong one.
+        let Some(counter) = counter_of(entry.mid) else {
+            continue;
+        };
+
+        // Every message in scope belongs in the final state, whether or not it
+        // travels: the state describes what the client will hold afterwards,
+        // and a message it already has is still one it holds.
+        given.push(GlobRange::single(counter));
+        if entry.change_number > 0 {
+            numbers.push(GlobRange::single(entry.change_number));
+        }
+
+        if seen.contains(&replica, entry.change_number) {
+            continue;
+        }
+
+        let change_key = Xid::for_counter(replica, entry.change_number);
+        changes.push(MessageChange {
+            source_key: Xid::for_counter(replica, counter),
+            last_modified: entry.delivery_time,
+            // The last change was ours, so the key is an XID built from the
+            // change number ([MS-OXCFXICS] §2.2.1.2.7).
+            change_key: change_key.clone(),
+            // One entry, being the change that produced this version. A longer
+            // list only arises once a client imports changes of its own, which
+            // is upload — not built yet, and an invented history would be a
+            // claim about conflicts that never happened.
+            predecessors: vec![change_key],
+            associated: false,
+            mid: entry.mid,
+            message_size: entry.size,
+            change_number: entry.change_number,
+            content: content_of(entry),
+            // Recipients come from a message's parsed body, which a contents
+            // listing has not read. They arrive with the slice that opens each
+            // message rather than being guessed from the display line.
+            recipients: Vec::new(),
+        });
+    }
+
+    let state = FinalState {
+        idset_given: IdSet::single(replica, given),
+        cnset_seen: IdSet::single(replica, numbers),
+        cnset_seen_fai: IdSet::new(),
+        cnset_read: IdSet::new(),
+    };
+
+    let steps = u16::try_from(changes.len()).unwrap_or(u16::MAX);
+    let stream = build(
+        request,
+        &changes,
+        &IdSet::new(),
+        &IdSet::new(),
+        &IdSet::new(),
+        &state,
+    );
+    (stream, steps)
+}
+
+/// The properties a client needs to show a message in a list, serialised as a
+/// `propList`.
+///
+/// The same set a contents table carries, for the same reason: this is what a
+/// folder view is drawn from. A body is not here — it belongs to opening the
+/// message, and putting every body in the folder's stream would make the first
+/// synchronisation the size of the mailbox.
+fn content_of(entry: &MessageEntry) -> Vec<u8> {
+    let mut w = Writer::new();
+    w.string(pid::SUBJECT, &entry.subject);
+    w.string(pid::SENDER_NAME, &entry.sender);
+    w.time(pid::MESSAGE_DELIVERY_TIME, entry.delivery_time);
+    w.int32(
+        pid::MESSAGE_FLAGS,
+        i32::from_le_bytes(entry.flags.to_le_bytes()),
+    );
+    w.int32(
+        pid::MESSAGE_SIZE,
+        i32::try_from(entry.size).unwrap_or(i32::MAX),
+    );
+    w.boolean(pid::HAS_ATTACHMENTS, entry.has_attachment);
+    // Without this a client has no idea what kind of item it is holding and
+    // will not render it as mail.
+    w.string(pid::MESSAGE_CLASS, "IPM.Note");
+    w.finish()
+}
+
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::fasttransfer::{element_end, safe_split, split_tag};
@@ -600,5 +720,143 @@ mod tests {
             sent = next;
         }
         assert_eq!(rebuilt, stream);
+    }
+
+    fn entry(counter: u64, change_number: u64, subject: &str) -> MessageEntry {
+        MessageEntry {
+            mid: crate::folders::fid(counter),
+            message: alo_store::MessageId::new(format!("m-{counter}")),
+            subject: subject.to_owned(),
+            sender: "Müller <m@example.test>".to_owned(),
+            delivery_time: 132_000_000_000_000_000,
+            flags: 0,
+            size: 2048,
+            has_attachment: false,
+            change_number,
+        }
+    }
+
+    /// A first synchronisation: the client holds nothing, so everything travels
+    /// and the final state names all of it.
+    #[test]
+    fn a_client_that_holds_nothing_is_sent_everything() {
+        let request = configure(sync_flags::NORMAL, extra_flags::CN);
+        let entries = vec![
+            entry(1024, 7, "Rechnung"),
+            entry(1025, 8, "Angebot"),
+            entry(1026, 9, "Liefertermin"),
+        ];
+
+        let (stream, steps) = from_entries(&request, REPLICA, &entries, &IdSet::new());
+        assert_eq!(steps, 3);
+        assert_eq!(
+            markers_of(&stream)
+                .iter()
+                .filter(|m| **m == marker::INCR_SYNC_CHG)
+                .count(),
+            3
+        );
+    }
+
+    /// The point of the whole exercise: a message whose change the client has
+    /// already seen does not travel again.
+    ///
+    /// Without this, every connection re-downloads the mailbox and the state a
+    /// client uploads is decoration.
+    #[test]
+    fn a_change_the_client_has_seen_is_not_sent_again() {
+        let request = configure(sync_flags::NORMAL, extra_flags::CN);
+        let entries = vec![
+            entry(1024, 7, "Rechnung"),
+            entry(1025, 8, "Angebot"),
+            entry(1026, 9, "Liefertermin"),
+        ];
+
+        // The client reports having seen changes 7 and 8.
+        let seen = IdSet::single(REPLICA, vec![GlobRange::new(7, 8)]);
+        let (stream, steps) = from_entries(&request, REPLICA, &entries, &seen);
+
+        assert_eq!(steps, 1, "only the unseen change should travel");
+        assert_eq!(
+            markers_of(&stream)
+                .iter()
+                .filter(|m| **m == marker::INCR_SYNC_CHG)
+                .count(),
+            1
+        );
+
+        // ...and it is the right one.
+        let text: Vec<u16> = "Liefertermin".encode_utf16().collect();
+        let needle: Vec<u8> = text.iter().flat_map(|u| u.to_le_bytes()).collect();
+        assert!(
+            stream.windows(needle.len()).any(|w| w == needle),
+            "the message that changed was not the one sent"
+        );
+    }
+
+    /// A message that does not travel is still part of what the client will
+    /// hold, so the final state has to name it — otherwise the next
+    /// synchronisation would think the client had lost it.
+    #[test]
+    fn the_final_state_names_messages_that_did_not_travel() {
+        let request = configure(sync_flags::NORMAL, extra_flags::CN);
+        let entries = vec![entry(1024, 7, "Rechnung"), entry(1025, 8, "Angebot")];
+        let seen = IdSet::single(REPLICA, vec![GlobRange::single(7)]);
+
+        let (stream, steps) = from_entries(&request, REPLICA, &entries, &seen);
+        assert_eq!(steps, 1);
+
+        // The state must name *both* messages, not just the one that travelled.
+        // Walk to `MetaTagIdsetGiven` and decode the set it carries, rather
+        // than hunting for bytes: an id set is compressed, so the run
+        // 1024..=1025 does not appear literally anywhere in the stream.
+        let mut at = 0_usize;
+        let mut given: Option<IdSet> = None;
+        while at < stream.len() {
+            let tag =
+                u32::from_le_bytes([stream[at], stream[at + 1], stream[at + 2], stream[at + 3]]);
+            if tag == meta::IDSET_GIVEN {
+                // type, id, then a 32-bit length, then the set.
+                let len = u32::from_le_bytes([
+                    stream[at + 4],
+                    stream[at + 5],
+                    stream[at + 6],
+                    stream[at + 7],
+                ]) as usize;
+                given = Some(IdSet::parse(&stream[at + 8..at + 8 + len]).unwrap());
+                break;
+            }
+            at = element_end(&stream, at).unwrap();
+        }
+
+        let given = given.expect("the stream carried no MetaTagIdsetGiven");
+        assert!(
+            given.contains(&REPLICA, 1024),
+            "the message that did travel is missing from the state"
+        );
+        assert!(
+            given.contains(&REPLICA, 1025),
+            "a message the client already had was dropped from the state, so the \
+             next synchronisation would think it had been lost"
+        );
+    }
+
+    /// Everything the builder produces must survive the chunker, or the two
+    /// halves of stage 8 disagree about the format.
+    #[test]
+    fn a_built_stream_still_chunks() {
+        let request = configure(sync_flags::NORMAL, extra_flags::EID | extra_flags::CN);
+        let entries: Vec<MessageEntry> = (0..12)
+            .map(|n| entry(1024 + n, 100 + n, "Rechnung für August"))
+            .collect();
+
+        let (stream, _) = from_entries(&request, REPLICA, &entries, &IdSet::new());
+        let mut sent = 0_usize;
+        while sent < stream.len() {
+            let next = safe_split(&stream, sent, 96).unwrap();
+            assert!(next > sent, "chunking stalled at {sent}");
+            sent = next;
+        }
+        assert_eq!(sent, stream.len());
     }
 }

@@ -110,6 +110,13 @@ pub enum ServerObject {
         download: Option<crate::getbuffer::Download>,
         /// A state upload part-way through, if the client has begun one.
         upload: Option<crate::upload::StateUpload>,
+        /// What the client has said its replica already holds.
+        ///
+        /// Read by the router off the *rehearsed* table, the same way a draft's
+        /// content is: the client uploads its state and asks for a buffer in
+        /// one pipelined request, so by the end of the rehearsal this is what
+        /// the stream must be narrowed by. Empty means a first synchronisation.
+        state: crate::upload::SyncState,
     },
     /// A logon: an open mailbox, and the root of everything else a client does.
     Logon {
@@ -274,6 +281,15 @@ impl ObjectTable {
     }
 
     /// The object a handle names, mutably, if this session has one.
+    /// Every object in the table, in the order they were opened.
+    ///
+    /// The router needs this to find what a rehearsal built — a draft's
+    /// content, or a synchronisation context's request and state — none of
+    /// which it holds a handle for, because the handles belong to the client.
+    pub fn iter(&self) -> impl Iterator<Item = &ServerObject> {
+        self.objects.iter().map(|(_, object)| object)
+    }
+
     pub fn get_mut(&mut self, handle: u32) -> Option<&mut ServerObject> {
         self.objects
             .iter_mut()

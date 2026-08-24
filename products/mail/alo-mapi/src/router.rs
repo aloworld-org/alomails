@@ -495,14 +495,11 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
             let mut wanted = crate::dispatch::Wanted::default();
             // Drafts already written in this request, and the ids they got.
             let mut saved: Vec<(u32, u64, String)> = Vec::new();
-            // Synchronisation streams built for this request (ADR 0051, stage
-            // 8). Empty for now, and truthfully so: a folder is only offered
-            // for synchronisation once a message carries a change number, and
-            // a stream built without one would look like it worked and then
-            // never show the client an update. So a configure opens a context
-            // and the first GetBuffer answers Done — a complete conversation
-            // about nothing, rather than a half-built one about something.
-            let sync_streams = crate::dispatch_sync::SyncStreams::new();
+            // Synchronisation streams built for this request (ADR 0051,
+            // stage 8), and the folders already built for, so a later
+            // rehearsal does not build the same one twice.
+            let mut sync_streams = crate::dispatch_sync::SyncStreams::new();
+            let mut synced: Vec<crate::dispatch_sync::SyncWant> = Vec::new();
 
             for _ in 0..MAX_REHEARSALS {
                 wanted = {
@@ -538,6 +535,11 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
                     .iter()
                     .copied()
                     .chain(wanted.messages.iter().map(|(folder, _)| *folder))
+                    // A folder being synchronised needs its rows loaded for the
+                    // same reason a contents table does: the stream is built
+                    // from them. Without this the configure would discover the
+                    // folder and then find nothing to describe.
+                    .chain(wanted.sync_wanted.iter().map(|want| want.folder_id))
                     .filter(|folder| !seen.contains(folder))
                     .collect();
                 let fresh_messages: Vec<(u64, u64)> = wanted
@@ -558,10 +560,17 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
                     .copied()
                     .filter(|handle| !saved.iter().any(|(done, _, _)| done == handle))
                     .collect();
+                let fresh_syncs: Vec<crate::dispatch_sync::SyncWant> = wanted
+                    .sync_wanted
+                    .iter()
+                    .copied()
+                    .filter(|want| !synced.contains(want))
+                    .collect();
                 if fresh_folders.is_empty()
                     && fresh_messages.is_empty()
                     && fresh_attachments.is_empty()
                     && fresh_saves.is_empty()
+                    && fresh_syncs.is_empty()
                 {
                     break;
                 }
@@ -647,6 +656,45 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
                             .into_response();
                         }
                     }
+                }
+
+                // A folder's stream, built from the rows just loaded. This
+                // runs after the folder loop so the rows exist, and before the
+                // next rehearsal so the pass that matters can serve them.
+                //
+                // Both the client's request and the state it uploaded are read
+                // off the *rehearsed* table, the same way a draft's content is:
+                // a client configures, uploads its state and asks for a buffer
+                // in one pipelined request, so the rehearsal is where those
+                // three facts first exist together.
+                for want in fresh_syncs {
+                    synced.push(want);
+                    if !matches!(want.sync_type, crate::sync::SyncType::Contents) {
+                        // Hierarchy synchronisation is not built. Nothing is
+                        // offered for it rather than a contents stream being
+                        // passed off as one, which a client would file as its
+                        // folder list.
+                        continue;
+                    }
+                    let Some(crate::dispatch::ServerObject::SyncContext { request, state, .. }) =
+                        wanted.rehearsed.iter().find(|object| {
+                            matches!(
+                                object,
+                                crate::dispatch::ServerObject::SyncContext { folder_id, .. }
+                                    if *folder_id == want.folder_id
+                            )
+                        })
+                    else {
+                        continue;
+                    };
+                    let rows = messages.rows(want.folder_id).unwrap_or(&[]);
+                    let (stream, steps) = crate::contents_sync::from_entries(
+                        request.as_ref(),
+                        context.replica_guid,
+                        rows,
+                        &state.cnset_seen,
+                    );
+                    sync_streams.insert(want, crate::getbuffer::Download::new(stream, steps));
                 }
 
                 // The content of each message a buffer opens: one blob fetch and
