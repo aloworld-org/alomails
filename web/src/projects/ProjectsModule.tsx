@@ -308,7 +308,7 @@ export function ProjectsModule() {
           <h1 className="m-0 text-2xl font-bold text-primary">{strings.moduleProjects}</h1>
           {loading && <Spinner size={16} />}
         </div>
-        <nav className="mt-3 flex min-w-0 gap-1 overflow-x-auto" aria-label={strings.moduleProjects}>
+        <nav className="mt-4 flex min-w-0 gap-2 overflow-x-auto pb-px" aria-label={strings.moduleProjects}>
           <NavLink
             to="/projects/list"
             className={projectTabClass}
