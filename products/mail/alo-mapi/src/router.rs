@@ -470,6 +470,14 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
             let mut wanted = crate::dispatch::Wanted::default();
             // Drafts already written in this request, and the ids they got.
             let mut saved: Vec<(u32, u64, String)> = Vec::new();
+            // Synchronisation streams built for this request (ADR 0051, stage
+            // 8). Empty for now, and truthfully so: a folder is only offered
+            // for synchronisation once a message carries a change number, and
+            // a stream built without one would look like it worked and then
+            // never show the client an update. So a configure opens a context
+            // and the first GetBuffer answers Done — a complete conversation
+            // about nothing, rather than a half-built one about something.
+            let sync_streams = crate::dispatch_sync::SyncStreams::new();
 
             for _ in 0..MAX_REHEARSALS {
                 wanted = {
@@ -491,6 +499,7 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
                             folders: &folders,
                             messages: &messages,
                             written: &saved,
+                            sync_streams: Some(&sync_streams),
                         },
                         &input,
                         logon_time(now),
@@ -791,6 +800,7 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
                         folders: &folders,
                         messages: &messages,
                         written: &saved,
+                        sync_streams: Some(&sync_streams),
                     },
                     &input,
                     logon_time(now),

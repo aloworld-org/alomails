@@ -260,7 +260,7 @@ pub struct SyncState {
 }
 
 /// One property's upload, in progress.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StateUpload {
     property: StateProperty,
     declared: usize,

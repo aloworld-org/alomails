@@ -93,6 +93,24 @@ pub const REPLICA_ID: u16 = 1;
 /// A server object a client holds a handle to.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ServerObject {
+    /// A synchronisation context, opened on a folder (ADR 0051, stage 8).
+    ///
+    /// Holds the download the client is drawing from and any state upload in
+    /// flight. The download is absent during a rehearsal — the router has not
+    /// built the stream yet — and a context in that state answers its first
+    /// `RopFastTransferSourceGetBuffer` as finished rather than failing, so the
+    /// rehearsal reaches the operations behind it.
+    SyncContext {
+        /// The folder being synchronised.
+        folder_id: u64,
+        /// What the client asked for. Boxed: it is much the largest thing a
+        /// server object can hold, and every other variant would pay for it.
+        request: Box<crate::sync::SyncConfigureRequest>,
+        /// The stream being handed over, once there is one.
+        download: Option<crate::getbuffer::Download>,
+        /// A state upload part-way through, if the client has begun one.
+        upload: Option<crate::upload::StateUpload>,
+    },
     /// A logon: an open mailbox, and the root of everything else a client does.
     Logon {
         /// The id the client asked this logon be known by.
@@ -477,6 +495,12 @@ pub struct Sources<'a> {
     /// Drafts the router has written during this request, as
     /// `(handle, MID, stored id)`.
     pub written: &'a [(u32, u64, String)],
+    /// The synchronisation streams the router built for this request.
+    ///
+    /// `None` during a rehearsal, which is the point: a configure still
+    /// succeeds and records what it wanted, so the walk reaches the operations
+    /// behind it (ADR 0051, stage 8).
+    pub sync_streams: Option<&'a crate::dispatch_sync::SyncStreams>,
 }
 
 /// What a dispatch produced.
@@ -507,6 +531,12 @@ pub struct Dispatched {
     /// magnitude: listing a message's attachments reads names and sizes out of
     /// a parse already done, and opening one means decoding a file.
     pub opened_attachments: Vec<(u64, u64, u32)>,
+    /// The synchronisation streams this buffer needed.
+    ///
+    /// Recorded during the rehearsal whether or not the stream existed, on the
+    /// same principle as `contents_folders`: the router learns what to build by
+    /// watching a walk that could not have succeeded.
+    pub sync_wanted: Vec<crate::dispatch_sync::SyncWant>,
     /// Drafts this buffer asked to save, by handle.
     ///
     /// The router does the writing: dispatch runs under a lock, touches no
@@ -558,6 +588,7 @@ pub fn wanted_contents(
         attachments: out.opened_attachments,
         saves: out.saves,
         submits: out.submits,
+        sync_wanted: out.sync_wanted,
         rehearsed: rehearsal,
     }
 }
@@ -575,6 +606,9 @@ pub struct Wanted {
     pub saves: Vec<u32>,
     /// Drafts to send, as `(handle, stored message id)`.
     pub submits: Vec<(u32, String)>,
+    /// Synchronisation streams to build, so the pass that matters can serve
+    /// them (ADR 0051, stage 8).
+    pub sync_wanted: Vec<crate::dispatch_sync::SyncWant>,
     /// The rehearsal's own object table.
     ///
     /// Carried out because a draft's content only exists here: the client built
@@ -600,6 +634,7 @@ pub fn dispatch(
         folders,
         messages,
         written,
+        sync_streams,
     } = sources;
     let mut responses = Vec::new();
     let mut handles = input.handles.clone();
@@ -609,6 +644,7 @@ pub fn dispatch(
     let mut opened_attachments: Vec<(u64, u64, u32)> = Vec::new();
     let mut saves: Vec<u32> = Vec::new();
     let mut submits: Vec<(u32, String)> = Vec::new();
+    let mut sync_wanted: Vec<crate::dispatch_sync::SyncWant> = Vec::new();
 
     while !rest.is_empty() {
         let Ok(header) = RopHeader::parse(rest) else {
@@ -623,6 +659,7 @@ pub fn dispatch(
                 opened_attachments,
                 saves,
                 submits,
+                sync_wanted,
             };
         };
 
@@ -643,6 +680,7 @@ pub fn dispatch(
                         opened_attachments,
                         saves,
                         submits,
+                        sync_wanted,
                     };
                 };
                 rest = tail;
@@ -732,6 +770,7 @@ pub fn dispatch(
                         opened_attachments,
                         saves,
                         submits,
+                        sync_wanted,
                     };
                 };
                 rest = tail;
@@ -798,6 +837,7 @@ pub fn dispatch(
                         opened_attachments,
                         saves,
                         submits,
+                        sync_wanted,
                     };
                 };
                 rest = tail;
@@ -853,6 +893,7 @@ pub fn dispatch(
                         opened_attachments,
                         saves,
                         submits,
+                        sync_wanted,
                     };
                 };
                 rest = tail;
@@ -927,6 +968,7 @@ pub fn dispatch(
                         opened_attachments,
                         saves,
                         submits,
+                        sync_wanted,
                     };
                 };
                 rest = tail;
@@ -990,6 +1032,7 @@ pub fn dispatch(
                         opened_attachments,
                         saves,
                         submits,
+                        sync_wanted,
                     };
                 };
                 rest = tail;
@@ -1093,6 +1136,7 @@ pub fn dispatch(
                         opened_attachments,
                         saves,
                         submits,
+                        sync_wanted,
                     };
                 };
                 rest = tail;
@@ -1169,6 +1213,7 @@ pub fn dispatch(
                         opened_attachments,
                         saves,
                         submits,
+                        sync_wanted,
                     };
                 };
                 rest = tail;
@@ -1239,6 +1284,7 @@ pub fn dispatch(
                         opened_attachments,
                         saves,
                         submits,
+                        sync_wanted,
                     };
                 };
                 rest = tail;
@@ -1285,6 +1331,7 @@ pub fn dispatch(
                         opened_attachments,
                         saves,
                         submits,
+                        sync_wanted,
                     };
                 };
                 rest = tail;
@@ -1326,6 +1373,7 @@ pub fn dispatch(
                         opened_attachments,
                         saves,
                         submits,
+                        sync_wanted,
                     };
                 };
                 rest = tail;
@@ -1399,6 +1447,7 @@ pub fn dispatch(
                         opened_attachments,
                         saves,
                         submits,
+                        sync_wanted,
                     };
                 };
                 rest = tail;
@@ -1465,6 +1514,7 @@ pub fn dispatch(
                         opened_attachments,
                         saves,
                         submits,
+                        sync_wanted,
                     };
                 };
                 rest = tail;
@@ -1528,6 +1578,7 @@ pub fn dispatch(
                         opened_attachments,
                         saves,
                         submits,
+                        sync_wanted,
                     };
                 };
                 rest = tail;
@@ -1599,6 +1650,7 @@ pub fn dispatch(
                         opened_attachments,
                         saves,
                         submits,
+                        sync_wanted,
                     };
                 };
                 rest = tail;
@@ -1698,6 +1750,7 @@ pub fn dispatch(
                         opened_attachments,
                         saves,
                         submits,
+                        sync_wanted,
                     };
                 };
                 rest = tail;
@@ -1775,6 +1828,7 @@ pub fn dispatch(
                         opened_attachments,
                         saves,
                         submits,
+                        sync_wanted,
                     };
                 };
                 rest = tail;
@@ -1810,6 +1864,7 @@ pub fn dispatch(
                         opened_attachments,
                         saves,
                         submits,
+                        sync_wanted,
                     };
                 };
                 rest = tail;
@@ -2036,6 +2091,34 @@ pub fn dispatch(
                 ));
             }
 
+            // The synchronisation operations live in their own module; ask
+            // it before concluding we cannot answer. It claims five opcodes and
+            // declines everything else, so an operation it does not recognise
+            // falls through to the honest refusal below.
+            other
+                if {
+                    let empty = crate::dispatch_sync::SyncStreams::new();
+                    let streams = sync_streams.unwrap_or(&empty);
+                    match crate::dispatch_sync::try_dispatch(
+                        &header,
+                        rest,
+                        objects,
+                        &mut handles,
+                        streams,
+                        &mut sync_wanted,
+                    ) {
+                        Some(outcome) => {
+                            responses.extend(outcome.response);
+                            rest = &rest[outcome.consumed..];
+                            true
+                        }
+                        None => false,
+                    }
+                } =>
+            {
+                let _ = other;
+            }
+
             // An operation we do not implement. We answer it honestly and stop:
             // its body length is unknown, so whatever follows cannot be found
             // without guessing, and a guess would have us act on a misread
@@ -2055,6 +2138,7 @@ pub fn dispatch(
                     opened_attachments,
                     saves,
                     submits,
+                    sync_wanted,
                 };
             }
         }
@@ -2069,6 +2153,7 @@ pub fn dispatch(
         opened_attachments,
         saves,
         submits,
+        sync_wanted,
     }
 }
 
@@ -2178,6 +2263,7 @@ mod tests {
                 folders: &view(),
                 messages: &MessageView::new(),
                 written: &[],
+                sync_streams: None,
             },
             &buffer,
             LogonTime::default(),
@@ -2223,6 +2309,7 @@ mod tests {
                 folders: &view(),
                 messages: &MessageView::new(),
                 written: &[],
+                sync_streams: None,
             },
             &buffer,
             LogonTime::default(),
@@ -2259,6 +2346,7 @@ mod tests {
                     folders: &view(),
                     messages: &MessageView::new(),
                     written: &[],
+                    sync_streams: None,
                 },
                 &buffer,
                 LogonTime::default(),
@@ -2315,6 +2403,7 @@ mod tests {
                 folders: &view(),
                 messages: &MessageView::new(),
                 written: &[],
+                sync_streams: None,
             },
             &buffer,
             LogonTime::default(),
@@ -2370,6 +2459,7 @@ mod tests {
                 folders: &view(),
                 messages: &MessageView::new(),
                 written: &[],
+                sync_streams: None,
             },
             &buffer,
             LogonTime::default(),
@@ -2405,6 +2495,7 @@ mod tests {
                 folders: &view(),
                 messages: &MessageView::new(),
                 written: &[],
+                sync_streams: None,
             },
             &buffer,
             LogonTime::default(),
@@ -2463,6 +2554,7 @@ mod tests {
                 folders: &view(),
                 messages: &MessageView::new(),
                 written: &[],
+                sync_streams: None,
             },
             &buffer,
             LogonTime::default(),
@@ -2515,6 +2607,7 @@ mod tests {
                 folders: &view(),
                 messages: &MessageView::new(),
                 written: &[],
+                sync_streams: None,
             },
             &buffer,
             LogonTime::default(),
@@ -2568,6 +2661,7 @@ mod tests {
                 folders: &view(),
                 messages: &MessageView::new(),
                 written: &[],
+                sync_streams: None,
             },
             &buffer,
             LogonTime::default(),
@@ -2636,6 +2730,7 @@ mod tests {
                 folders: &view(),
                 messages: &MessageView::new(),
                 written: &[],
+                sync_streams: None,
             },
             &buffer,
             LogonTime::default(),
@@ -2714,6 +2809,7 @@ mod tests {
                 folders: &view(),
                 messages: &MessageView::new(),
                 written: &[],
+                sync_streams: None,
             },
             &buffer,
             LogonTime::default(),
@@ -2740,6 +2836,7 @@ mod tests {
                 folders: &view(),
                 messages: &MessageView::new(),
                 written: &[],
+                sync_streams: None,
             },
             &buffer,
             LogonTime::default(),
@@ -2769,6 +2866,7 @@ mod tests {
                 folders: &view(),
                 messages: &MessageView::new(),
                 written: &[],
+                sync_streams: None,
             },
             &buffer,
             LogonTime::default(),
@@ -2799,6 +2897,7 @@ mod tests {
                     folders: &view(),
                     messages: &MessageView::new(),
                     written: &[],
+                    sync_streams: None,
                 },
                 &buffer,
                 LogonTime::default(),
@@ -2839,6 +2938,7 @@ mod tests {
                 folders: &view(),
                 messages: &MessageView::new(),
                 written: &[],
+                sync_streams: None,
             },
             &buffer,
             LogonTime::default(),
@@ -2870,6 +2970,7 @@ mod tests {
                 folders: &view(),
                 messages: &MessageView::new(),
                 written: &[],
+                sync_streams: None,
             },
             &buffer,
             LogonTime::default(),
@@ -2914,6 +3015,7 @@ mod tests {
                 folders: &view(),
                 messages: &MessageView::new(),
                 written: &[],
+                sync_streams: None,
             },
             &buffer,
             LogonTime::default(),
@@ -2941,6 +3043,7 @@ mod tests {
                 folders: &view(),
                 messages: &MessageView::new(),
                 written: &[],
+                sync_streams: None,
             },
             &buffer,
             LogonTime::default(),
@@ -3039,6 +3142,7 @@ mod tests {
                 folders: &view(),
                 messages: &messages,
                 written: &[],
+                sync_streams: None,
             },
             &buffer,
             LogonTime::default(),
@@ -3122,6 +3226,7 @@ mod tests {
                 folders: &view(),
                 messages: &MessageView::new(),
                 written: &[],
+                sync_streams: None,
             },
             &buffer,
             LogonTime::default(),
@@ -3162,6 +3267,7 @@ mod tests {
                 folders: &view(),
                 messages: &MessageView::new(),
                 written: &[],
+                sync_streams: None,
             },
             &buffer,
             LogonTime::default(),
@@ -3200,6 +3306,7 @@ mod tests {
                 folders: &view(),
                 messages: &MessageView::new(),
                 written: &[],
+                sync_streams: None,
             },
             &buffer,
             LogonTime::default(),
@@ -3234,6 +3341,7 @@ mod tests {
                     folders: &view(),
                     messages: &MessageView::new(),
                     written: &[],
+                    sync_streams: None,
                 },
                 &buffer,
                 LogonTime::default(),
@@ -3268,6 +3376,7 @@ mod tests {
                 folders: &view(),
                 messages: &MessageView::new(),
                 written: &[],
+                sync_streams: None,
             },
             &buffer,
             LogonTime::default(),
@@ -3325,6 +3434,7 @@ mod tests {
                 folders: &view(),
                 messages: &messages,
                 written: &[],
+                sync_streams: None,
             },
             &buffer,
             LogonTime::default(),
@@ -3380,6 +3490,7 @@ mod tests {
                 folders: &view(),
                 messages: &messages,
                 written: &[],
+                sync_streams: None,
             },
             &buffer,
             LogonTime::default(),
@@ -3419,6 +3530,7 @@ mod tests {
                 folders: &view(),
                 messages: &messages,
                 written: &[],
+                sync_streams: None,
             },
             &buffer,
             LogonTime::default(),
@@ -3431,5 +3543,161 @@ mod tests {
             Some(ServerObject::ContentsTable { .. })
         ));
         assert_eq!(objects.len(), 4, "logon, folder, and two tables");
+    }
+
+    /// The point of the whole slice: a client can reach the synchronisation
+    /// operations through the ordinary dispatch, in one pipelined buffer.
+    ///
+    /// Before this, `RopSynchronizationConfigure` fell through to the
+    /// unknown-operation arm, which answers `ecNotImplemented` **and stops
+    /// walking** — so everything a real Outlook pipelines behind it was
+    /// silently unanswered too.
+    #[test]
+    fn a_client_reaches_the_synchronisation_operations() {
+        let ctx = context("disan@alo.test");
+        let mut objects = ObjectTable::new();
+
+        let mut rops = logon_buffer("", LOGON_PRIVATE, 0).rops;
+        rops.extend(open_folder_rop(fid_of(SpecialFolder::Inbox)));
+        // RopSynchronizationConfigure on the folder in slot 1, output to 2.
+        rops.extend_from_slice(&[
+            crate::sync::ROP_SYNCHRONIZATION_CONFIGURE,
+            0x00, // LogonId
+            0x01, // InputHandleIndex: the folder
+            0x02, // OutputHandleIndex
+            0x01, // SynchronizationType: Contents
+            crate::sync::send_options::UNICODE,
+        ]);
+        rops.extend_from_slice(
+            &(crate::sync::sync_flags::UNICODE | crate::sync::sync_flags::NORMAL).to_le_bytes(),
+        );
+        rops.extend_from_slice(&0u16.to_le_bytes()); // RestrictionDataSize
+        rops.extend_from_slice(&0u32.to_le_bytes()); // SynchronizationExtraFlags
+        rops.extend_from_slice(&0u16.to_le_bytes()); // PropertyTagCount
+        // ...and a GetBuffer behind it, which only arrives if the walk went on.
+        rops.extend_from_slice(&[
+            crate::getbuffer::ROP_FAST_TRANSFER_SOURCE_GET_BUFFER,
+            0x00,
+            0x02, // the context we just opened
+        ]);
+        rops.extend_from_slice(&4096u16.to_le_bytes());
+
+        let buffer = RopBuffer {
+            rops,
+            handles: vec![
+                crate::rop::HANDLE_UNSET,
+                crate::rop::HANDLE_UNSET,
+                crate::rop::HANDLE_UNSET,
+            ],
+        };
+
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            Sources {
+                folders: &view(),
+                messages: &MessageView::new(),
+                written: &[],
+                sync_streams: None,
+            },
+            &buffer,
+            LogonTime::default(),
+        );
+
+        assert!(
+            out.complete,
+            "the walk stopped at a synchronisation operation"
+        );
+
+        // Logon (166) + open folder (8) + configure (6), then the GetBuffer.
+        let configure = &out.responses[174..180];
+        assert_eq!(configure[0], crate::sync::ROP_SYNCHRONIZATION_CONFIGURE);
+        assert_eq!(
+            u32::from_le_bytes(configure[2..6].try_into().unwrap()),
+            error::SUCCESS,
+            "configure was refused"
+        );
+
+        let get_buffer = &out.responses[180..];
+        assert_eq!(
+            get_buffer[0],
+            crate::getbuffer::ROP_FAST_TRANSFER_SOURCE_GET_BUFFER
+        );
+        assert_eq!(
+            u32::from_le_bytes(get_buffer[2..6].try_into().unwrap()),
+            error::SUCCESS
+        );
+
+        // The context exists and was put in the slot the client named.
+        assert!(matches!(
+            objects.get(out.handles[2]),
+            Some(ServerObject::SyncContext { .. })
+        ));
+
+        // And the rehearsal reported what it would have needed, which is how
+        // the router will learn what to build.
+        assert_eq!(
+            out.sync_wanted,
+            vec![crate::dispatch_sync::SyncWant {
+                folder_id: fid_of(SpecialFolder::Inbox),
+                sync_type: crate::sync::SyncType::Contents,
+            }]
+        );
+    }
+
+    /// A synchronisation context may only be opened on a folder. Answering a
+    /// logon handle would hand back a context describing nothing, which the
+    /// client would then synchronise from and cache as an empty mailbox.
+    #[test]
+    fn a_synchronisation_context_needs_a_folder() {
+        let ctx = context("disan@alo.test");
+        let mut objects = ObjectTable::new();
+
+        let mut rops = logon_buffer("", LOGON_PRIVATE, 0).rops;
+        rops.extend_from_slice(&[
+            crate::sync::ROP_SYNCHRONIZATION_CONFIGURE,
+            0x00,
+            0x00, // InputHandleIndex: the *logon*, not a folder
+            0x01,
+            0x01,
+            crate::sync::send_options::UNICODE,
+        ]);
+        rops.extend_from_slice(
+            &(crate::sync::sync_flags::UNICODE | crate::sync::sync_flags::NORMAL).to_le_bytes(),
+        );
+        rops.extend_from_slice(&0u16.to_le_bytes());
+        rops.extend_from_slice(&0u32.to_le_bytes());
+        rops.extend_from_slice(&0u16.to_le_bytes());
+
+        let buffer = RopBuffer {
+            rops,
+            handles: vec![crate::rop::HANDLE_UNSET, crate::rop::HANDLE_UNSET],
+        };
+
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            Sources {
+                folders: &view(),
+                messages: &MessageView::new(),
+                written: &[],
+                sync_streams: None,
+            },
+            &buffer,
+            LogonTime::default(),
+        );
+
+        let configure = &out.responses[166..172];
+        assert_eq!(
+            u32::from_le_bytes(configure[2..6].try_into().unwrap()),
+            error::INVALID_OBJECT,
+            "a logon was accepted as a synchronisation scope"
+        );
+        assert!(
+            out.sync_wanted.is_empty(),
+            "a refused configure still asked for a stream"
+        );
     }
 }

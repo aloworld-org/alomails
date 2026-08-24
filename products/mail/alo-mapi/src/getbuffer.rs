@@ -180,7 +180,7 @@ impl GetBufferRequest {
 /// behaviour the rehearsal needs: the clone advances, the original does not,
 /// and the real dispatch afterwards starts from where the client actually left
 /// off.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Download {
     stream: Arc<[u8]>,
     sent: usize,

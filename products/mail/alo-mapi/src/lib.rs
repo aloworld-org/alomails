@@ -25,6 +25,7 @@ pub mod contents;
 pub mod contents_sync;
 pub mod direct2;
 pub mod dispatch;
+pub mod dispatch_sync;
 pub mod execute;
 pub mod fasttransfer;
 pub mod folders;
