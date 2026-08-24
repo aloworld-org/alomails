@@ -127,6 +127,9 @@ export default defineConfig(({ command }) => ({
     include: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
   },
   server: {
+    // A second checkout on 5173 must stop startup, not make Vite quietly pick
+    // 5174 while the browser keeps talking to somebody else's frontend.
+    strictPort: true,
     proxy: devProxy,
   },
   test: {

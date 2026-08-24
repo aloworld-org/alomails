@@ -180,6 +180,7 @@ pub mod projects_time;
 pub mod projects_updates;
 pub mod projects_weeks;
 pub mod push;
+pub mod readiness;
 pub mod reset_route;
 pub mod schedule;
 pub mod scoped_roles;

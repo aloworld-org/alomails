@@ -33,12 +33,12 @@ use crate::{
     inventory_so_invoice, inventory_stock, inventory_supplier_prices, inventory_suppliers,
     invite_route, meet_routes, module_access, projects_clients, projects_invoices, projects_plan,
     projects_reports, projects_templates, projects_time, projects_updates, projects_weeks, push,
-    reset_route, schedule, scoped_roles, security, session, settings, share, signup_route,
-    site_protection, site_schedule, site_version_preview, site_versions, sites, sites_attribution,
-    sites_bookings, sites_catalogs, sites_chat, sites_conversions, sites_domain_purchases,
-    sites_heatmap, sites_knowledge, sites_orders, sites_palette, sites_shop_config,
-    sites_shop_items, sites_shop_settings, sites_templates, sites_tickets, snooze, spaces, tasks,
-    unsubscribe, wopi, workspace_search,
+    readiness, reset_route, schedule, scoped_roles, security, session, settings, share,
+    signup_route, site_protection, site_schedule, site_version_preview, site_versions, sites,
+    sites_attribution, sites_bookings, sites_catalogs, sites_chat, sites_conversions,
+    sites_domain_purchases, sites_heatmap, sites_knowledge, sites_orders, sites_palette,
+    sites_shop_config, sites_shop_items, sites_shop_settings, sites_templates, sites_tickets,
+    snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -75,6 +75,7 @@ pub fn app_with_site_boundaries(
     let request_limit = state.limits.max_size_request;
     let identity_routes = alo_identity::router(state.identity.clone());
     let jmap = Router::new()
+        .route("/health/ready", get(readiness::ready))
         .route("/.well-known/jmap", get(session::session))
         // The API route caps at maxSizeRequestObject; uploads get the
         // larger ceiling from the global layer below.

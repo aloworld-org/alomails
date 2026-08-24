@@ -74,6 +74,24 @@ impl Store {
         Ok(())
     }
 
+    /// The newest successfully applied schema migration.
+    ///
+    /// This is process-level operational metadata, not tenant data. Readiness
+    /// uses it to prove that the binary and database agree before traffic is
+    /// sent to the service.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] if the migration ledger cannot be read.
+    pub async fn migration_version(&self) -> Result<i64> {
+        let version = sqlx::query_scalar::<_, i64>(
+            "SELECT COALESCE(MAX(version), 0)::BIGINT \
+             FROM _sqlx_migrations WHERE success = TRUE",
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(version)
+    }
+
     /// Creates a tenant, returning its opaque id.
     ///
     /// # Errors
