@@ -19,19 +19,22 @@
 //! much later and looks nothing like the cause: mail with no folders in it,
 //! blamed on the mail code, when the real fault was a connection string.
 //!
-//! The constitution's rule is that a machine has exactly one alo database,
-//! named `alo`, and that suites do not write into it. A rule enforced in
-//! thirty-six places is enforced in none of them, because the thirty-seventh
-//! suite is written by copying a neighbour. So it is enforced here.
+//! The constitution's rule is that a machine has exactly one alo database and
+//! that suites do not write into it. A rule enforced in thirty-six places is
+//! enforced in none of them, because the thirty-seventh suite is written by
+//! copying a neighbour. So it is enforced here — for every name the product
+//! runs under, not only the one a developer happens to see.
 
 /// The connection string for a suite, refusing the database the product runs on.
 ///
 /// Reads `DATABASE_URL`, falling back to a local scratch database. Panics if
-/// the URL names `alo`, whether it came from the environment or not.
+/// the URL names a database the product runs on, whether it came from the
+/// environment or not.
 ///
 /// # Panics
 ///
-/// If the database named is `alo`. That is the point: see [`deny_shared`].
+/// If the database named is one of [`PRODUCT_DATABASES`]. That is the point:
+/// see [`deny_shared`].
 ///
 /// ```ignore
 /// let pool = PgPool::connect(&alo_test_db::url()).await?;
@@ -61,20 +64,37 @@ const FALLBACK: &str = "postgres://alo:alo-dev-only@127.0.0.1:5432/alo_scratch";
 ///
 /// If `url`'s database name is `alo`.
 pub fn deny_shared(url: &str) {
+    let name = database_name(url);
     assert!(
-        database_name(url) != "alo",
-        "tests must not run against the shared `alo` database (CLAUDE.md, \
-         one-database rule). Point DATABASE_URL at a scratch database — one \
-         the suite may create, fill and drop, such as `alo_scratch`."
+        !PRODUCT_DATABASES.contains(&name),
+        "tests must not run against `{name}`, a database the product runs on \
+         (CLAUDE.md, one-database rule). Point DATABASE_URL at a scratch \
+         database — one the suite may create, fill and drop, such as \
+         `alo_scratch`."
     );
 }
+
+/// The databases the product itself runs on, which a suite must never touch.
+///
+/// **More than one name, because the environments do not agree.** A developer
+/// machine calls it `alo`; the deployment calls it `ficina`. For a long time
+/// this guard knew only the first, which made it exactly no protection against
+/// the case that actually matters: a `DATABASE_URL` still pointing at
+/// production. The suites would have run, created their thousands of tenants,
+/// and dropped them again — in somebody's live mailbox store.
+///
+/// A name is added here the day a deployment starts using it. The cost of a
+/// name listed in error is one developer setting one environment variable; the
+/// cost of one missing is a customer's data.
+const PRODUCT_DATABASES: [&str; 2] = ["alo", "ficina"];
 
 /// The database name in a postgres URL: the last path segment, without any
 /// query string.
 ///
-/// Deliberately not a URL parser. It answers one question — "is this `alo`?" —
-/// and a wrong answer errs toward refusing, which costs a developer one
-/// environment variable, while the opposite error costs somebody their mail.
+/// Deliberately not a URL parser. It answers one question — "is this one of
+/// the product's own databases?" — and a wrong answer errs toward refusing,
+/// which costs a developer one environment variable, while the opposite error
+/// costs somebody their mail.
 fn database_name(url: &str) -> &str {
     let tail = url.rsplit('/').next().unwrap_or_default();
     tail.split('?').next().unwrap_or(tail)
@@ -123,5 +143,43 @@ mod tests {
         // The failure this whole crate exists to prevent: a fallback that,
         // through an innocent-looking edit, comes to name `alo` again.
         deny_shared(super::FALLBACK);
+    }
+
+    /// The case the guard was blind to until 2026-08-24: a `DATABASE_URL` left
+    /// pointing at the deployment. The suites would have run against live
+    /// customer data, created their thousands of tenants, and dropped them.
+    #[test]
+    #[should_panic(expected = "a database the product runs on")]
+    fn the_deployments_database_is_refused() {
+        deny_shared("postgres://ficina:pw@127.0.0.1:5432/ficina");
+    }
+
+    /// And behind a query string, the same way the local one is checked.
+    #[test]
+    #[should_panic(expected = "a database the product runs on")]
+    fn the_deployments_database_is_refused_behind_query_parameters() {
+        deny_shared("postgres://ficina:pw@db.internal:5432/ficina?sslmode=require");
+    }
+
+    /// Every name the product runs under is refused, so adding one to the list
+    /// is all it takes — nobody has to remember to add a matching test.
+    #[test]
+    fn every_product_database_is_refused() {
+        for name in super::PRODUCT_DATABASES {
+            let url = format!("postgres://u:pw@127.0.0.1:5432/{name}");
+            assert!(
+                std::panic::catch_unwind(|| deny_shared(&url)).is_err(),
+                "{name} is listed as a product database but was allowed"
+            );
+        }
+    }
+
+    /// A name that merely *contains* a product name is a different database and
+    /// must still be usable — `ficina_scratch` is somebody's throwaway.
+    #[test]
+    fn a_name_that_only_resembles_a_product_database_is_allowed() {
+        deny_shared("postgres://u:pw@127.0.0.1:5432/ficina_scratch");
+        deny_shared("postgres://u:pw@127.0.0.1:5432/ficina_test");
+        deny_shared("postgres://u:pw@127.0.0.1:5432/not_alo");
     }
 }
