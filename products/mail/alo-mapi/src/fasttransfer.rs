@@ -522,6 +522,20 @@ pub fn safe_split(stream: &[u8], from: usize, limit: usize) -> Result<usize, FtE
     Ok(best)
 }
 
+/// One past the last byte of the element beginning at `at`.
+///
+/// Walks a stream element by element. [`safe_split`] answers a different
+/// question — "where may I cut, given a budget" — and with an unbounded budget
+/// it answers "at the end", which is right for chunking and useless for
+/// stepping. A reader that needs each element in turn wants this.
+///
+/// # Errors
+///
+/// Returns [`FtError`] if the element is malformed or runs past the buffer.
+pub fn element_end(stream: &[u8], at: usize) -> Result<usize, FtError> {
+    Ok(measure(stream, at)?.end)
+}
+
 /// One element's extent, and where its variable-size value lies if it has one.
 struct Element {
     /// One past the element's last byte.

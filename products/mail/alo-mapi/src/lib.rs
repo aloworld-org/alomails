@@ -22,6 +22,7 @@ pub mod columns;
 pub mod compose;
 pub mod connect;
 pub mod contents;
+pub mod contents_sync;
 pub mod direct2;
 pub mod dispatch;
 pub mod execute;
