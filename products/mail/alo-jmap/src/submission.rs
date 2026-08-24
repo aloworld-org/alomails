@@ -21,6 +21,7 @@ use crate::state::{Account, AppState, SendMode};
 // The send-as check, the `Bcc` strip, the hand-off to the submission listener
 // and the post-send filing all live in `alo-submit`, because MAPI composes mail
 // too and a second copy of any of them is a second place for one to be wrong.
+use alo_submit::envelope_recipients;
 pub(crate) use alo_submit::{extract_from_addr, valid_addr};
 use alo_submit::{post_send, strip_bcc_header};
 
@@ -198,6 +199,15 @@ pub(crate) async fn validate_and_prepare(
             "mailFrom is not an address of this account",
         ));
     }
+    // RFC 8621 §7 makes `envelope` `Envelope|null` with a default of **null**,
+    // so a client that omits it is asking us to work the recipients out from
+    // the message itself — and most clients do. alo's own web app is the
+    // unusual one for always sending an explicit envelope, which is why this
+    // was invisible: the UI worked while every standards-following client was
+    // told its message had no recipients.
+    //
+    // An envelope that *is* supplied still wins, because a client may
+    // legitimately send somewhere the headers do not name.
     let rcpts: Vec<String> = env
         .and_then(|e| e.get("rcptTo"))
         .and_then(Value::as_array)
@@ -208,7 +218,7 @@ pub(crate) async fn validate_and_prepare(
                 .map(str::to_owned)
                 .collect()
         })
-        .unwrap_or_default();
+        .unwrap_or_else(|| envelope_recipients(bytes.as_ref()));
     if rcpts.is_empty() {
         return Err(set_err(
             "noRecipients",

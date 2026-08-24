@@ -174,6 +174,39 @@ pub fn extract_from_addr(msg: &[u8]) -> Option<String> {
     }
 }
 
+/// The envelope recipients of a message, taken from its own header fields.
+///
+/// RFC 8621 §7 makes `EmailSubmission`'s `envelope` property `Envelope|null`
+/// with a **default of null**, and a client that omits it is asking the server
+/// to work the recipients out from the message. Most clients do exactly that —
+/// alo's own web app is the unusual one for always sending an explicit
+/// envelope — so a server that cannot derive them refuses to send for every
+/// standards-following client while looking perfectly healthy to its own UI.
+///
+/// **`Bcc` is included, and that is the point.** Blind carbon is delivered to
+/// but not disclosed: the address has to reach the envelope or the recipient
+/// never gets the message, and it has to leave the header or the other
+/// recipients learn who they are. [`strip_bcc_header`] is the other half of
+/// that pair, and the two must be used together.
+///
+/// Addresses are lowercased and de-duplicated, so somebody named in both `To`
+/// and `Cc` is sent one copy rather than two. Anything [`valid_addr`] rejects
+/// is dropped rather than passed to the SMTP listener, which would fail the
+/// whole submission over one malformed entry.
+#[must_use]
+pub fn envelope_recipients(msg: &[u8]) -> Vec<String> {
+    let parsed = alo_store::mime_read::parse(msg);
+    let mut out: Vec<String> = Vec::new();
+    for recipient in parsed.recipients {
+        let address = recipient.email.trim().to_lowercase();
+        if !valid_addr(&address) || out.contains(&address) {
+            continue;
+        }
+        out.push(address);
+    }
+    out
+}
+
 /// Removes any `Bcc:` header field (and its folded continuation lines) from a
 /// message's header block, leaving every other byte unchanged. This is the
 /// privacy guarantee for blind-carbon: the sender's stored copy keeps `Bcc:`,
@@ -214,7 +247,7 @@ pub fn strip_bcc_header(raw: &[u8]) -> Vec<u8> {
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-    use super::{extract_from_addr, strip_bcc_header, valid_addr};
+    use super::{envelope_recipients, extract_from_addr, strip_bcc_header, valid_addr};
 
     /// Builds a message from lines joined with CRLF, as a message actually is.
     ///
@@ -306,5 +339,95 @@ mod tests {
         let raw = message(&["To: a@x.eu", "", "Bcc: this is prose"]);
         let text = String::from_utf8(strip_bcc_header(&raw)).unwrap();
         assert!(text.contains("Bcc: this is prose"), "{text:?}");
+    }
+
+    /// The bug this function exists for: a client that omits the envelope, as
+    /// RFC 8621 §7 lets it, must still have its message reach somebody.
+    #[test]
+    fn recipients_are_taken_from_the_headers() {
+        let raw = message(&[
+            "From: disan@alomails.com",
+            "To: Anna Müller <anna@example.test>",
+            "Subject: Rechnung",
+            "",
+            "Grüße.",
+        ]);
+        assert_eq!(envelope_recipients(&raw), vec!["anna@example.test"]);
+    }
+
+    /// `To`, `Cc` and `Bcc` all reach the envelope. Bcc especially: it is
+    /// delivered to and not disclosed, so an address that never reaches the
+    /// envelope is a message that silently never arrives.
+    #[test]
+    fn to_cc_and_bcc_all_reach_the_envelope() {
+        let raw = message(&[
+            "From: disan@alomails.com",
+            "To: anna@example.test",
+            "Cc: bob@example.test",
+            "Bcc: carol@example.test",
+            "Subject: Angebot",
+            "",
+            "Text.",
+        ]);
+        let rcpts = envelope_recipients(&raw);
+        assert!(rcpts.contains(&"anna@example.test".to_owned()));
+        assert!(rcpts.contains(&"bob@example.test".to_owned()));
+        assert!(
+            rcpts.contains(&"carol@example.test".to_owned()),
+            "a blind-carbon recipient was dropped, so they would never receive it"
+        );
+        assert_eq!(rcpts.len(), 3);
+    }
+
+    /// Several addresses in one header, and the display names left behind.
+    #[test]
+    fn a_header_may_name_several_people() {
+        let raw = message(&[
+            "From: disan@alomails.com",
+            "To: Anna Müller <anna@example.test>, bob@example.test",
+            "Subject: Liefertermin",
+            "",
+            "Text.",
+        ]);
+        assert_eq!(
+            envelope_recipients(&raw),
+            vec!["anna@example.test", "bob@example.test"]
+        );
+    }
+
+    /// Somebody named twice gets one copy, not two.
+    #[test]
+    fn a_repeated_address_is_sent_once() {
+        let raw = message(&[
+            "From: disan@alomails.com",
+            "To: Anna <ANNA@example.test>",
+            "Cc: anna@example.test",
+            "Subject: Rechnung",
+            "",
+            "Text.",
+        ]);
+        assert_eq!(envelope_recipients(&raw), vec!["anna@example.test"]);
+    }
+
+    /// One malformed entry must not cost the whole submission — the listener
+    /// would reject the batch, and the other recipients would lose the message.
+    #[test]
+    fn a_malformed_address_is_dropped_not_fatal() {
+        let raw = message(&[
+            "From: disan@alomails.com",
+            "To: anna@example.test, not-an-address",
+            "Subject: Rechnung",
+            "",
+            "Text.",
+        ]);
+        assert_eq!(envelope_recipients(&raw), vec!["anna@example.test"]);
+    }
+
+    /// A message addressed to nobody yields nothing, so the caller can refuse
+    /// rather than hand an empty recipient list to SMTP.
+    #[test]
+    fn a_message_addressed_to_nobody_yields_nothing() {
+        let raw = message(&["From: disan@alomails.com", "Subject: Rechnung", "", "Text."]);
+        assert!(envelope_recipients(&raw).is_empty());
     }
 }
