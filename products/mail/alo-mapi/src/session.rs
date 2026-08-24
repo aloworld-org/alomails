@@ -49,6 +49,13 @@ pub struct SessionContext {
     pub user_dn: String,
     /// The address the caller authenticated as. **This is the identity.**
     pub login: String,
+    /// The GUID this mailbox presents as its store identity (ADR 0051).
+    ///
+    /// Read once when the context is established rather than per request: a
+    /// client caches it inside every identifier it holds, so it cannot change
+    /// within a session — and re-reading it on each call would be a database
+    /// round trip to learn something that cannot have moved.
+    pub replica_guid: [u8; 16],
     /// When this context stops being valid unless used again.
     pub expires_at: OffsetDateTime,
     /// The server objects this session holds — logons, and later the folders
@@ -106,6 +113,7 @@ impl SessionStore {
         user: UserId,
         user_dn: String,
         login: String,
+        replica_guid: [u8; 16],
         now: OffsetDateTime,
     ) -> Option<String> {
         let mut contexts = self.contexts.lock().ok()?;
@@ -123,6 +131,7 @@ impl SessionStore {
                 user,
                 user_dn,
                 login,
+                replica_guid,
                 expires_at: now + CONTEXT_LIFETIME,
                 objects: Arc::new(Mutex::new(crate::dispatch::ObjectTable::new())),
             },
@@ -211,6 +220,7 @@ mod tests {
                 user,
                 "/o=alo/cn=x".to_owned(),
                 "x@alo.test".to_owned(),
+                [0x5A; 16],
                 now,
             )
             .expect("established");
@@ -243,6 +253,7 @@ mod tests {
                     user.clone(),
                     "/o=alo/cn=x".to_owned(),
                     "x@alo.test".to_owned(),
+                    [0x5A; 16],
                     now,
                 )
                 .expect("established");
@@ -270,6 +281,7 @@ mod tests {
                 user_a.clone(),
                 "a".to_owned(),
                 "a@alo.test".to_owned(),
+                [0x5A; 16],
                 now,
             )
             .unwrap();
@@ -279,6 +291,7 @@ mod tests {
                 user_b,
                 "b".to_owned(),
                 "b@alo.test".to_owned(),
+                [0x5A; 16],
                 now,
             )
             .unwrap();
@@ -298,7 +311,14 @@ mod tests {
         let (tenant, user) = ids();
         let now = OffsetDateTime::UNIX_EPOCH;
         let token = store
-            .establish(tenant, user, "x".to_owned(), "x@alo.test".to_owned(), now)
+            .establish(
+                tenant,
+                user,
+                "x".to_owned(),
+                "x@alo.test".to_owned(),
+                [0x5A; 16],
+                now,
+            )
             .expect("established");
 
         store.end(&token);

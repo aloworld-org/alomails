@@ -245,11 +245,36 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
                 }
             };
 
+            // Read once, here, because a client caches this GUID inside every
+            // identifier it will ever hold: it cannot change while the session
+            // lives, so re-reading it per request would be a round trip to
+            // learn something that cannot have moved.
+            let account = state
+                .store
+                .for_account(principal.tenant.clone(), principal.user.clone());
+            let replica_guid = match account.mapi_replica_guid().await {
+                Ok(guid) => guid,
+                Err(error) => {
+                    // Without it every identifier we hand out would be drawn
+                    // from a namespace shared with every other mailbox, so a
+                    // session is refused rather than started on a wrong one.
+                    tracing::warn!(%error, "mapi: no store identity for the account");
+                    return MapiResponse::new(
+                        request_type.as_str(),
+                        request_id,
+                        ResponseCode::UnknownFailure,
+                    )
+                    .with_client_info(client_info)
+                    .into_response();
+                }
+            };
+
             let Some(token) = state.sessions.establish(
                 principal.tenant.clone(),
                 principal.user.clone(),
                 request.user_dn.clone(),
                 username.clone(),
+                replica_guid,
                 now,
             ) else {
                 // The table is full, or the CSPRNG failed. Either way we do not

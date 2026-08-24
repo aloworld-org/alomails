@@ -745,9 +745,14 @@ pub fn dispatch(
                     logon_flags: request.logon_flags,
                     folder_ids,
                     response_flags: RESPONSE_OWNER_RIGHT | RESPONSE_SEND_AS_RIGHT,
-                    mailbox_guid: [0; 16],
+                    // The mailbox and its replica are the same thing here:
+                    // alo has one copy of a mailbox, so the store a client is
+                    // talking to and the replica it is synchronising from do
+                    // not differ. Two mailboxes never share this value — see
+                    // migration 0803.
+                    mailbox_guid: ctx.replica_guid,
                     replica_id: REPLICA_ID,
-                    replica_guid: [0; 16],
+                    replica_guid: ctx.replica_guid,
                     logon_time: now,
                     gwart_time: 0,
                 };
@@ -2167,12 +2172,17 @@ mod tests {
     use alo_store::{TenantId, UserId};
     use time::OffsetDateTime;
 
+    /// A GUID a test can recognise, and deliberately not all zeros — the
+    /// value the logon used to answer with regardless of the mailbox.
+    const TEST_GUID: [u8; 16] = [0x5A; 16];
+
     fn context(login: &str) -> SessionContext {
         SessionContext {
             tenant: TenantId::generate(),
             user: UserId::generate(),
             user_dn: "/o=alo/cn=whatever-they-claimed".to_owned(),
             login: login.to_owned(),
+            replica_guid: TEST_GUID,
             expires_at: OffsetDateTime::UNIX_EPOCH,
             objects: std::sync::Arc::new(std::sync::Mutex::new(ObjectTable::new())),
         }
@@ -3700,5 +3710,51 @@ mod tests {
             out.sync_wanted.is_empty(),
             "a refused configure still asked for a stream"
         );
+    }
+
+    /// The logon tells the client which store it is talking to, and that has to
+    /// be *this* mailbox's identity.
+    ///
+    /// It used to be sixteen zero bytes for every account. Nothing noticed while
+    /// a client could only read; once it keeps a replica, two alo accounts in
+    /// one Outlook profile would draw identifiers from the same namespace and
+    /// the same counter range, so the same bytes would name a different message
+    /// in each.
+    #[test]
+    fn the_logon_advertises_this_mailboxs_own_store_identity() {
+        let ctx = context("disan@alo.test");
+        let mut objects = ObjectTable::new();
+        let buffer = logon_buffer("", LOGON_PRIVATE, 0);
+
+        let out = dispatch(
+            &ctx,
+            "/o=alo",
+            &mut objects,
+            Sources {
+                folders: &view(),
+                messages: &MessageView::new(),
+                written: &[],
+                sync_streams: None,
+            },
+            &buffer,
+            LogonTime::default(),
+        );
+
+        // The response carries the GUID twice: alo keeps one copy of a mailbox,
+        // so the store and the replica are the same thing.
+        let found = out
+            .responses
+            .windows(TEST_GUID.len())
+            .filter(|window| *window == TEST_GUID)
+            .count();
+        assert_eq!(
+            found, 2,
+            "the logon did not carry the mailbox's GUID as both store and replica"
+        );
+        // Deliberately *not* "no sixteen zero bytes appear anywhere": a logon
+        // response legitimately contains such runs — folder ids this mailbox
+        // does not have, and `gwart_time` — so that check fails for the wrong
+        // reason. Finding this mailbox's own GUID in both places is the claim
+        // that matters, and it is the one the old constant could not satisfy.
     }
 }
