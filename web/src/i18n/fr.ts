@@ -2562,6 +2562,7 @@ export const fr: Partial<Catalog> = {
   projectsUpdatesEmptyBody: "Publiez la première actualité pour conserver l'histoire de ce projet.",
   projectsUpdatesLoadFailed: "Les actualités du projet n'ont pas pu être chargées.",
   projectsUpdateSaveFailed: "L'actualité n'a pas pu être publiée.",
+  projectsRemoveAttachment: "Supprimer la pièce jointe",
   projectsSomeone: "Quelqu'un",
   projectsBlockedTasks: (count: number) => count === 1 ? "1 tâche bloquée" : `${count} tâches bloquées`,
   projectsOverdueTasks: (count: number) => count === 1 ? "1 tâche en retard" : `${count} tâches en retard`,

@@ -93,6 +93,13 @@ export interface ProjectUpdate {
   authorId: string;
   authorEmail: string;
   createdAt: string;
+  attachments?: ProjectUpdateAttachment[];
+}
+
+export interface ProjectUpdateAttachment {
+  blobId: string;
+  filename: string;
+  size: number;
 }
 
 export interface UnbilledTimeGroup {

@@ -574,7 +574,9 @@ pub use project_milestones::{
 pub use project_templates::{
     PROJECT_NAME_MAX, ProjectTemplate, TEMPLATE_TASKS_MAX, TemplateCopy, TemplateInstance,
 };
-pub use project_updates::{ProjectUpdate, ProjectUpdateState, UPDATE_BODY_MAX, UPDATE_LIST_MAX};
+pub use project_updates::{
+    ProjectUpdate, ProjectUpdateAttachment, ProjectUpdateState, UPDATE_BODY_MAX, UPDATE_LIST_MAX,
+};
 pub use reset::PendingReset;
 pub use schedule::DueSend;
 pub use search::SearchHit;

@@ -1,12 +1,12 @@
-import { ArrowRight, BarChart3, CalendarDays, CheckCircle2, CircleAlert, Clock3, Flag, ListTodo, MessageSquareText, PencilLine, ReceiptText, Send } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
+import { ArrowRight, BarChart3, CalendarDays, CheckCircle2, CircleAlert, Clock3, Download, File, Flag, ListTodo, MessageSquareText, Paperclip, PencilLine, ReceiptText, Send, X } from "lucide-react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import { strings } from "../i18n";
-import type { Task, TaskDepEdgeDto } from "../jmap";
+import { useJmapClient, type Task, type TaskDepEdgeDto } from "../jmap";
 import { InvoiceHandoffDialog } from "../projects/InvoiceHandoffDialog";
 import { durationLabel } from "../projects/format";
 import { projectsMessage, useProjectsApi } from "../projects/api";
-import type { Project, ProjectPlan, ProjectUpdate, ProjectUpdateState } from "../projects/types";
+import type { Project, ProjectPlan, ProjectUpdate, ProjectUpdateAttachment, ProjectUpdateState } from "../projects/types";
 
 interface Props {
   project: Project;
@@ -65,12 +65,16 @@ export function ProjectOverviewView({
   onOpenInvoice,
 }: Props) {
   const api = useProjectsApi();
+  const jmap = useJmapClient();
+  const updateFileRef = useRef<HTMLInputElement>(null);
   const [updates, setUpdates] = useState<ProjectUpdate[]>([]);
   const [updateState, setUpdateState] = useState<ProjectUpdateState>("on_track");
   const [updateBody, setUpdateBody] = useState("");
   const [updatesLoading, setUpdatesLoading] = useState(true);
   const [updateSaving, setUpdateSaving] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
+  const [updateAttachments, setUpdateAttachments] = useState<ProjectUpdateAttachment[]>([]);
+  const [attachmentUploading, setAttachmentUploading] = useState(false);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const nextStep = projectNextStep(project, tasks.length);
   const workflowLabels = project.client === null
@@ -106,14 +110,42 @@ export function ProjectOverviewView({
     setUpdateSaving(true);
     setUpdateError(null);
     try {
-      const created = await api.createProjectUpdate(project.id, updateState, body);
+      const created = await api.createProjectUpdate(project.id, updateState, body, updateAttachments);
       setUpdates((current) => [created, ...current]);
       setUpdateBody("");
+      setUpdateAttachments([]);
     } catch (error) {
       setUpdateError(projectsMessage(error, strings.projectsUpdateSaveFailed));
     } finally {
       setUpdateSaving(false);
     }
+  }
+
+  async function addUpdateFiles(files: FileList) {
+    setAttachmentUploading(true);
+    setUpdateError(null);
+    try {
+      const uploaded = await Promise.all(Array.from(files).map(async (file) => {
+        const result = await jmap.uploadFile(file);
+        return { blobId: result.blobId, filename: file.name, size: result.size };
+      }));
+      setUpdateAttachments((current) => [...current, ...uploaded].slice(0, 8));
+    } catch (error) {
+      setUpdateError(projectsMessage(error, strings.taskFilesUploadError));
+    } finally {
+      setAttachmentUploading(false);
+      if (updateFileRef.current !== null) updateFileRef.current.value = "";
+    }
+  }
+
+  async function downloadUpdateAttachment(attachment: ProjectUpdateAttachment) {
+    const blob = await jmap.downloadAttachment(attachment.blobId, attachment.filename);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = attachment.filename;
+    link.click();
+    URL.revokeObjectURL(url);
   }
   const done = tasks.filter((task) => task.status === "done").length;
   const open = tasks.length - done;
@@ -454,6 +486,21 @@ export function ProjectOverviewView({
           <textarea className="mt-3 min-h-24 w-full resize-y rounded-xl border border-subtle bg-surface px-4 py-3 text-sm leading-6 text-primary placeholder:text-secondary focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
             maxLength={4000} placeholder={strings.projectsUpdatePlaceholder} value={updateBody}
             onChange={(event) => setUpdateBody(event.target.value)} />
+          <input ref={updateFileRef} type="file" multiple className="sr-only" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip" onChange={(event) => {
+            if (event.target.files !== null) void addUpdateFiles(event.target.files);
+          }} />
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button type="button" className="rounded-lg border border-default bg-surface text-xs font-semibold text-secondary shadow-sm transition-colors hover:bg-raised hover:text-accent disabled:opacity-50" disabled={attachmentUploading || updateAttachments.length >= 8} onClick={() => updateFileRef.current?.click()}>
+              <span className="flex min-h-9 items-center gap-2 px-3"><Paperclip size={14} />{attachmentUploading ? strings.taskUploading : strings.taskAddAttachment}</span>
+            </button>
+            {updateAttachments.map((attachment, index) => (
+              <span key={`${attachment.blobId}-${index}`} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-subtle bg-surface px-3 text-xs font-medium text-primary shadow-sm">
+                <File size={14} className="text-accent" />
+                <span className="max-w-48 truncate">{attachment.filename}</span>
+                <button type="button" className="text-tertiary hover:text-danger" aria-label={`${strings.projectsRemoveAttachment}: ${attachment.filename}`} onClick={() => setUpdateAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))}><X size={13} /></button>
+              </span>
+            ))}
+          </div>
           <div className="mt-3 flex items-center justify-between gap-4">
             <p className="text-xs text-secondary">{strings.projectsUpdateHint}</p>
             <button type="button"
@@ -481,6 +528,15 @@ export function ProjectOverviewView({
                   <time className="text-xs text-secondary" dateTime={update.createdAt}>{friendlyDateTime(update.createdAt)}</time>
                 </div>
                 <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-primary">{update.body}</p>
+                {(update.attachments ?? []).length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {(update.attachments ?? []).map((attachment, index) => (
+                      <button key={`${attachment.blobId}-${index}`} type="button" className="rounded-lg border border-subtle bg-raised text-xs font-medium text-primary transition-colors hover:border-default hover:text-accent" onClick={() => void downloadUpdateAttachment(attachment)}>
+                        <span className="flex min-h-9 items-center gap-2 px-3"><Download size={14} />{attachment.filename}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </li>
             ))}
           </ol>

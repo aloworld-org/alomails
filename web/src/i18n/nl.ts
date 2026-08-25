@@ -2521,6 +2521,7 @@ export const nl: Partial<Catalog> = {
   projectsUpdatesEmptyBody: "Publiceer de eerste update om dit project een blijvend verhaal te geven.",
   projectsUpdatesLoadFailed: "De projectupdates konden niet worden geladen.",
   projectsUpdateSaveFailed: "De update kon niet worden gepubliceerd.",
+  projectsRemoveAttachment: "Bijlage verwijderen",
   projectsSomeone: "Iemand",
   projectsBlockedTasks: (count: number) => count === 1 ? "1 geblokkeerde taak" : `${count} geblokkeerde taken`,
   projectsOverdueTasks: (count: number) => count === 1 ? "1 achterstallige taak" : `${count} achterstallige taken`,

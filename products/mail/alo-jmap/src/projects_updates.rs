@@ -6,7 +6,7 @@ use axum::http::{HeaderMap, StatusCode};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
-use alo_store::{ProjectId, ProjectUpdate, ProjectUpdateState};
+use alo_store::{ProjectId, ProjectUpdate, ProjectUpdateAttachment, ProjectUpdateState};
 
 use crate::billing::{iso, map_store_err, parse_body};
 use crate::error::Problem;
@@ -21,6 +21,7 @@ fn update_json(update: &ProjectUpdate) -> Value {
         "authorId": update.author_id,
         "authorEmail": update.author_email,
         "createdAt": iso(update.created_at),
+        "attachments": update.attachments,
     })
 }
 
@@ -39,6 +40,8 @@ struct NewUpdateBody {
     state: Option<String>,
     #[serde(default)]
     body: Option<String>,
+    #[serde(default)]
+    attachments: Vec<ProjectUpdateAttachment>,
 }
 
 fn required(name: &str, value: Option<&str>) -> Result<String, Problem> {
@@ -79,11 +82,28 @@ pub async fn create_update(
     let account = authenticate(&state, &headers).await?;
     let req: NewUpdateBody = parse_body(&body)?;
     let project = ProjectId::new(required("projectId", req.project_id.as_deref())?);
+    if req.attachments.len() > 8
+        || req.attachments.iter().any(|attachment| {
+            attachment.blob_id.trim().is_empty()
+                || attachment.filename.trim().is_empty()
+                || attachment.size < 0
+        })
+    {
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "up to 8 valid attachments are allowed",
+        ));
+    }
     let state = ProjectUpdateState::parse(&required("state", req.state.as_deref())?)
         .map_err(map_store_err)?;
     let update = account
         .acc
-        .create_project_update(&project, state, &required("body", req.body.as_deref())?)
+        .create_project_update(
+            &project,
+            state,
+            &required("body", req.body.as_deref())?,
+            &req.attachments,
+        )
         .await
         .map_err(map_store_err)?;
     Ok((

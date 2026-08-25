@@ -4400,6 +4400,7 @@ export const en = {
   projectsUpdatesEmptyBody: "Publish the first update to give this project a durable narrative.",
   projectsUpdatesLoadFailed: "The project updates could not be loaded.",
   projectsUpdateSaveFailed: "The update could not be published.",
+  projectsRemoveAttachment: "Remove attachment",
   projectsSomeone: "Someone",
   projectsBlockedTasks: (count: number) => count === 1 ? "1 blocked task" : `${count} blocked tasks`,
   projectsOverdueTasks: (count: number) => count === 1 ? "1 overdue task" : `${count} overdue tasks`,

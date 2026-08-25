@@ -134,9 +134,9 @@ export class ProjectsApi {
       .then((r) => r.updates);
   }
 
-  createProjectUpdate(projectId: string, state: ProjectUpdateState, body: string): Promise<ProjectUpdate> {
+  createProjectUpdate(projectId: string, state: ProjectUpdateState, body: string, attachments: NonNullable<ProjectUpdate["attachments"]> = []): Promise<ProjectUpdate> {
     return this.#write<{ update: ProjectUpdate }>("POST", "/projects/updates", {
-      projectId, state, body,
+      projectId, state, body, attachments,
     }).then((r) => r.update);
   }
 
