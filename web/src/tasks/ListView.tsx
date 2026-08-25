@@ -159,11 +159,13 @@ export function ListView({
               className="flex min-h-14 w-full items-center gap-3 py-3 pl-8 pr-6 text-left text-secondary transition-colors hover:bg-raised max-sm:pl-7 max-sm:pr-5"
               onClick={() => toggleGroup(group.key)}
             >
-              {isCollapsed ? (
-                <ChevronRight size={16} />
-              ) : (
-                <ChevronDown size={16} />
-              )}
+              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-raised text-secondary" aria-hidden="true">
+                {isCollapsed ? (
+                  <ChevronRight size={16} />
+                ) : (
+                  <ChevronDown size={16} />
+                )}
+              </span>
               {group.status !== undefined && (
                 <span
                   className="size-2.5 shrink-0 rounded-full"
@@ -253,7 +255,7 @@ export function ListView({
                 {onAdd !== undefined && group.status !== undefined && (
                   <button
                     type="button"
-                    className="flex min-h-12 w-full items-center gap-3 border-t border-subtle py-3 pl-8 pr-6 text-left text-sm font-medium text-tertiary transition-colors hover:bg-[var(--accent-soft)] hover:text-accent max-sm:pl-7 max-sm:pr-5"
+                    className="mx-5 my-3 flex min-h-11 w-[calc(100%-2.5rem)] items-center gap-3 rounded-xl border border-transparent bg-raised px-4 py-2.5 text-left text-sm font-medium text-secondary transition-colors hover:border-accent/30 hover:bg-[var(--accent-soft)] hover:text-accent max-sm:mx-4 max-sm:w-[calc(100%-2rem)]"
                     onClick={() => onAdd(group.status as string)}
                   >
                     <Plus size={15} /> {strings.taskAdd}
