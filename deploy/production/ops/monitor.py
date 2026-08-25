@@ -169,6 +169,24 @@ def check_backup():
     age_h = (datetime.now(timezone.utc) - snap_dt).total_seconds() / 3600
     if age_h > max_hours:
         problems.append(("backup", f"latest backup is {round(age_h)}h old (expected under {max_hours}h)"))
+
+    # A fresh backup on the same disk as the data is not a backup against
+    # losing that disk, and the product description promises customers two
+    # locations. Reported so the gap has to be closed or consciously accepted,
+    # rather than sitting behind a green backup check that says "fine".
+    offsite = ""
+    backup_env = Path("/root/.config/alo/backup.env")
+    if backup_env.exists():
+        for line in backup_env.read_text().splitlines():
+            line = line.strip()
+            if line.startswith("OFFSITE_REPOSITORY=") and not line.startswith("#"):
+                offsite = line.split("=", 1)[1].strip().strip("\"'")
+    if not offsite:
+        problems.append((
+            "backup:offsite",
+            "backups exist only on the machine they protect — no OFFSITE_REPOSITORY "
+            "is set, so losing this disk loses the data and every copy of it",
+        ))
     return problems
 
 

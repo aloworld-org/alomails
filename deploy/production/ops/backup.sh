@@ -42,3 +42,33 @@ restic backup --tag alo \
 
 # 4. Retention: daily for a week, weekly for a month; prune the rest.
 restic forget --tag alo --keep-daily 7 --keep-weekly 4 --prune
+
+# 5. Off-site copy.
+#
+# THE REPOSITORY ABOVE IS ON THE SAME FILESYSTEM AS THE DATA IT PROTECTS. It
+# defends against a bad migration, a wrong DELETE, a broken deploy — every
+# failure that leaves the machine standing. It defends against nothing that
+# takes the disk with it, because then the data and every copy of it go
+# together. `docs/alo-product-description.md` promises customers replication
+# across two EU locations; one filesystem is not two locations.
+#
+# Set OFFSITE_REPOSITORY (and OFFSITE_PASSWORD_FILE, if it differs) in
+# /root/.config/alo/backup.env and this pushes there after every run. restic
+# copy sends only what the destination lacks, so a nightly run costs the day's
+# changes rather than the whole repository.
+#
+# Unset, it says so and exits clean rather than failing: a deployment that has
+# not chosen a destination yet is not a broken backup, and a nightly red alert
+# nobody can act on is how real alerts get ignored. The monitor reports the
+# absence separately.
+[ -f /root/.config/alo/backup.env ] && . /root/.config/alo/backup.env
+
+if [ -n "${OFFSITE_REPOSITORY:-}" ]; then
+	echo "backup: copying to the off-site repository"
+	restic copy --tag alo \
+		--repo2 "$OFFSITE_REPOSITORY" \
+		--password-file2 "${OFFSITE_PASSWORD_FILE:-$RESTIC_PASSWORD_FILE}"
+	echo "backup: off-site copy complete"
+else
+	echo "backup: no OFFSITE_REPOSITORY set — this backup exists only on the machine it protects"
+fi
