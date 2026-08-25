@@ -131,7 +131,6 @@ dependencies = [
  "alo-ai",
  "alo-auth-mail",
  "alo-identity",
- "alo-mapi",
  "alo-pdf",
  "alo-sieve",
  "alo-sites",
@@ -162,26 +161,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "webpki-roots 0.26.11",
-]
-
-[[package]]
-name = "alo-mapi"
-version = "0.0.1"
-dependencies = [
- "alo-identity",
- "alo-store",
- "alo-submit",
- "alo-test-db",
- "axum",
- "base64",
- "bytes",
- "ring",
- "sqlx",
- "thiserror",
- "time",
- "tokio",
- "tower",
- "tracing",
 ]
 
 [[package]]

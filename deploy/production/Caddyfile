@@ -39,6 +39,12 @@ https://{$DOMAIN} {
 	# endpoint (discovery, authorize, token, userinfo, jwks, revoke). Everything
 	# else is the web app. `/auth/token` is backend; `/auth/callback` is a client
 	# route (falls through to the SPA).
+	#
+	# `/mapi/*` stays in this list although the adapter is retired (ADR 0056).
+	# It is not dead config: without it the path falls through to the web app,
+	# and a client still configured for MAPI would be handed HTML with a 200
+	# instead of a plain 404. Proxied, the backend answers "no such route",
+	# which is the truth and the thing a client can act on.
 	@backend path /api/* /jmap/* /mapi/* /oauth/* /auth/token /.well-known/* /dav /dav/* /autodiscover/* /Autodiscover/* /mail/config-v1.1.xml /wopi/* /signup/* /reset/*
 	handle @backend {
 		reverse_proxy alo-jmap:8080

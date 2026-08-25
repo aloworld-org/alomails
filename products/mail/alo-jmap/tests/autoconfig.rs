@@ -105,17 +105,20 @@ async fn outlook_autodiscover_echoes_escaped_login() {
     );
 }
 
-/// Through the real router, with the deployment default: Autodiscover says
-/// nothing about MAPI/HTTP even to an Outlook that announces it can speak it.
+/// Through the real router: Autodiscover says nothing about MAPI/HTTP, even to
+/// an Outlook that announces it can speak it.
 ///
-/// This is the safety property of stage 1 (ADR 0051), and it is worth a wire
-/// test rather than only a unit one. Outlook that is handed a `mapiHttp` block
-/// does **not** fall back to the IMAP settings sitting beside it in the same
-/// document — so if this ever advertises by default before the endpoint
-/// answers, every Outlook that autodiscovers stops being able to set itself up,
-/// and the mail that works today breaks.
+/// This used to be a safety property with the adapter switched off. Since
+/// [ADR 0056] it is permanent — the adapter is gone and alo's own client over
+/// 443 is the product — and the test is kept because the failure it guards is
+/// silent and expensive. An Outlook handed a `mapiHttp` block does **not** fall
+/// back to the IMAP settings beside it in the same document: it goes to the URL
+/// it was given, finds the single-page app there, and reports a broken server.
+/// Advertising an endpoint we do not serve breaks the mail that works today.
+///
+/// [ADR 0056]: ../../../../docs/decisions/0056-our-own-client-on-443-is-the-product.md
 #[tokio::test]
-async fn outlook_autodiscover_is_silent_about_mapi_http_by_default() {
+async fn outlook_autodiscover_never_mentions_mapi_http() {
     let h = harness("autoconf-mapi-off").await;
     let req = Request::builder()
         .method("POST")
@@ -131,7 +134,7 @@ async fn outlook_autodiscover_is_silent_about_mapi_http_by_default() {
     assert_eq!(status, StatusCode::OK);
     assert!(
         !body.contains("mapiHttp"),
-        "advertised MAPI/HTTP with the adapter off: {body}"
+        "advertised MAPI/HTTP, which we do not serve: {body}"
     );
     assert!(!body.contains("/mapi/"), "leaked a MAPI endpoint: {body}");
     // ...and the settings that do work are still there, unharmed.

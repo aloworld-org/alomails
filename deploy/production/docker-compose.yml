@@ -365,20 +365,12 @@ services:
       ALO_JMAP_SESSION_ORIGINS: ${ALO_JMAP_SESSION_ORIGINS:-app.aloworkplace.com,app.alodrives.com}
       ALO_JMAP_ADDR: 0.0.0.0:8080
       # Where EmailSubmission/set sends: the SMTP trusted internal listener,
-      # reached over the private docker network (not the internet). MAPI sends
-      # through the same listener, so Outlook's mail is DKIM-signed and queued
-      # by the same outbound path as everything else.
+      # reached over the private docker network (not the internet).
       ALO_JMAP_SUBMISSION_ADDR: alo-smtp:2526
-      # Native Outlook over MAPI-over-HTTP (ADR 0051), on 443 beside the other
-      # routes. Off ⇒ `/mapi/*` is absent from the router entirely and
-      # Autodiscover stays silent about it.
-      #
-      # **Turning this on changes what Outlook is told to do.** Autodiscover
-      # answers a MAPI-capable Outlook with a `mapiHttp` block, and an Outlook
-      # told to speak MAPI/HTTP does not quietly fall back to the IMAP block
-      # underneath it. Clients that never send `X-MapiHttpCapability` — every
-      # phone, Thunderbird, Apple Mail — are unaffected either way.
-      ALO_MAPI_HTTP_ENABLED: ${ALO_MAPI_HTTP_ENABLED:-}
+      # ALO_MAPI_HTTP_ENABLED is gone with the MAPI adapter (ADR 0056). Setting
+      # it now does nothing; `/mapi/*` is not a route any more and Autodiscover
+      # offers IMAP and SMTP only. Remove it from any deployment `.env` that
+      # still carries it.
       # Junk training: moving mail into/out of Junk teaches the spam
       # filter (rspamd controller learnspam/learnham, private network).
       ALO_JMAP_RSPAMD_URL: http://rspamd:11334

@@ -2377,36 +2377,10 @@ pub fn app_with_site_boundaries(
     let under_api = jmap.clone();
     let assembled = jmap.merge(identity_routes).nest("/api", under_api);
 
-    // MAPI-over-HTTP (ADR 0051), mounted only when the deployment serves it.
-    //
-    // Off by default and absent from the router entirely rather than present
-    // and refusing: a path that does not exist cannot be probed, and a stage
-    // that is not finished should not be reachable by accident. `/mapi` is a
-    // protocol path like `/jmap` and `/dav` — Autodiscover tells Outlook about
-    // it by name — so it is *not* moved under `/api`, and it collides with no
-    // page in the app.
-    //
-    // Deliberately not nested under `/api`: the URL in the Autodiscover
-    // document is the contract, and a client that was told `/mapi/emsmdb/`
-    // will never look anywhere else.
-    if state.mapi_http {
-        assembled.merge(alo_mapi::router(alo_mapi::MapiState {
-            // The same listener JMAP submits through: one deployment, one door
-            // out, whichever protocol composed the message.
-            submission_addr: state.submission_addr.clone(),
-            // The folder tree a MAPI client reads comes from the same store
-            // every other surface reads, through the same account door.
-            store: Arc::clone(&state.store),
-            identity: state.identity.clone(),
-            sessions: Arc::clone(&state.mapi_sessions),
-            // The prefix clients build recipient DNs from. One organisation per
-            // deployment for now; per-tenant prefixes are a later stage's
-            // problem, and inventing the shape now would be a guess.
-            dn_prefix: "/o=alo".to_owned(),
-        }))
-    } else {
-        assembled
-    }
+    // `/mapi/*` was mounted here behind a deployment flag. It is gone with the
+    // adapter it served (ADR 0056): alo's own client over 443 is the product,
+    // and a protocol we have decided not to speak should not have a path.
+    assembled
 }
 
 /// A convenience [`AppState`] with default limits and a fresh push hub.
@@ -2429,9 +2403,6 @@ pub fn app_state(store: Arc<Store>, identity: Identity, base_url: impl Into<Stri
                     .collect()
             })
             .unwrap_or_default(),
-        mapi_http: std::env::var("ALO_MAPI_HTTP_ENABLED")
-            .is_ok_and(|v| matches!(v.trim(), "1" | "true" | "yes" | "on")),
-        mapi_sessions: Arc::new(alo_mapi::SessionStore::new()),
         junk_learner: crate::junk_learn::JunkLearner::from_env(),
         personal_domains: std::env::var("ALO_PERSONAL_DOMAINS")
             .ok()

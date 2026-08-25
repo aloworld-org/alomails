@@ -181,8 +181,6 @@ async fn bcc_stripped_on_wire_delivered_by_envelope_kept_in_sent() {
         // No extra front-end hosts in a harness: the session advertises the
         // configured base, which is what these tests assert against.
         session_origins: Vec::new(),
-        mapi_http: false,
-        mapi_sessions: Arc::new(alo_mapi::SessionStore::new()),
         junk_learner: None,
         personal_domains: Vec::new(),
         signup_limiter: alo_identity::ratelimit::RateLimiter::new(),
