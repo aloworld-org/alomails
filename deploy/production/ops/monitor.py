@@ -54,8 +54,14 @@ def run(cmd, timeout=30):
 
 def check_services():
     problems = []
+    # `--all`, because without it compose lists only *running* services: a
+    # container that has stopped or crashed is simply absent from the output,
+    # the loop below never sees it, and the monitor reports everything fine.
+    # That is the most ordinary failure there is, and it was invisible here
+    # until somebody stopped a container on purpose to check (2026-08-25).
+    # Running-but-unhealthy was caught; dead was not.
     rc, out, err = run(
-        ["docker", "compose", "ps", "--format", "json"], timeout=30
+        ["docker", "compose", "ps", "--all", "--format", "json"], timeout=30
     )
     if rc != 0:
         return [("docker", "docker compose ps failed — cannot read service health")]
