@@ -156,7 +156,7 @@ export function ListView({
           >
             <button
               type="button"
-              className="flex min-h-14 w-full items-center gap-3 px-6 py-3 text-left text-secondary transition-colors hover:bg-raised max-sm:px-5"
+              className="flex min-h-14 w-full items-center gap-3 py-3 pl-8 pr-6 text-left text-secondary transition-colors hover:bg-raised max-sm:pl-7 max-sm:pr-5"
               onClick={() => toggleGroup(group.key)}
             >
               {isCollapsed ? (
@@ -188,7 +188,7 @@ export function ListView({
                       key={t.id}
                       role="button"
                       tabIndex={0}
-                      className={`group grid cursor-pointer grid-cols-1 gap-2 border-t border-subtle px-6 transition-colors hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent max-sm:px-5 lg:grid-cols-[minmax(240px,2.4fr)_minmax(120px,1fr)_minmax(120px,1fr)_110px_120px] lg:items-center lg:gap-4 ${config.compact ? "py-2" : "py-3.5"} ${done ? "bg-raised/30" : ""}`}
+                      className={`group grid cursor-pointer grid-cols-1 gap-2 border-t border-subtle pl-8 pr-6 transition-colors hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent max-sm:pl-7 max-sm:pr-5 lg:grid-cols-[minmax(240px,2.4fr)_minmax(120px,1fr)_minmax(120px,1fr)_110px_120px] lg:items-center lg:gap-4 ${config.compact ? "py-2" : "py-3.5"} ${done ? "bg-raised/30" : ""}`}
                       onClick={() => onOpen(t.id)}
                       onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === " ") {
@@ -253,7 +253,7 @@ export function ListView({
                 {onAdd !== undefined && group.status !== undefined && (
                   <button
                     type="button"
-                    className="flex min-h-12 w-full items-center gap-2.5 border-t border-subtle px-6 py-3 text-left text-sm font-medium text-tertiary transition-colors hover:bg-[var(--accent-soft)] hover:text-accent max-sm:px-5"
+                    className="flex min-h-12 w-full items-center gap-3 border-t border-subtle py-3 pl-8 pr-6 text-left text-sm font-medium text-tertiary transition-colors hover:bg-[var(--accent-soft)] hover:text-accent max-sm:pl-7 max-sm:pr-5"
                     onClick={() => onAdd(group.status as string)}
                   >
                     <Plus size={15} /> {strings.taskAdd}

@@ -47,7 +47,7 @@ function Dropdown({
     <div className="relative" ref={ref}>
       <button
         type="button"
-        className={`relative inline-flex min-h-10 items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium !no-underline transition-colors hover:bg-raised hover:text-primary hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${active === true ? "text-accent" : "text-secondary"}`}
+        className={`relative inline-flex min-h-10 items-center gap-2 rounded-xl border border-subtle bg-app px-4 py-2 text-sm font-medium !no-underline shadow-sm transition-colors hover:border-default hover:bg-raised hover:text-primary hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${active === true ? "border-accent/40 text-accent" : "text-secondary"}`}
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
       >
@@ -105,7 +105,7 @@ export function TaskToolbar({ config, onChange }: Props) {
   }
 
   return (
-    <div className="mx-auto mt-4 flex w-[calc(100%-3rem)] max-w-[97rem] items-center gap-2 overflow-x-auto rounded-2xl border border-subtle bg-surface p-3 shadow-sm max-sm:w-[calc(100%-2rem)]">
+    <div className="mx-auto mt-4 flex w-[calc(100%-3rem)] max-w-[97rem] items-center gap-3 overflow-x-auto rounded-2xl border border-subtle bg-surface p-3 shadow-sm max-sm:w-[calc(100%-2rem)]">
       <Dropdown label={strings.taskFilter} icon={<ListFilter size={15} />} active={isFiltering(config)}>
         <div className="px-2 pb-0.5 pt-1.5 text-xs font-semibold uppercase tracking-wide text-tertiary">{strings.taskPriority}</div>
         {prios.map((p) => (
