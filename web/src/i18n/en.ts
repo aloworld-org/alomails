@@ -4615,8 +4615,8 @@ export const en = {
   // one screen and the basis line says so out loud: the work is the period's,
   // the budget is consumed by everything up to the period's last day.
   projectsReportTitle: "Profitability",
-  projectsReportAllScope: "Portfolio totals across every project you can access.",
-  projectsReportProjectScope: (project: string) => `Profitability for ${project} only.`,
+  projectsReportPortfolioTitle: "Portfolio report",
+  projectsReportAllScope: "All client projects you can access.",
   projectsReportFrom: "From",
   projectsReportTo: "To",
   projectsReportShow: "Show",

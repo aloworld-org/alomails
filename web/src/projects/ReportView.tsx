@@ -16,7 +16,7 @@
 //
 // The period is applied on submit rather than on every keystroke, so a
 // half-typed date never becomes a request.
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { PieChart } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 
@@ -30,10 +30,8 @@ import { Button, Spinner } from "../ds";
 import { strings, useLocale } from "../i18n";
 import { saveTextFile } from "../platform/download";
 import { projectsMessage, useProjectsApi } from "./api";
-import { resolveProjectScope } from "./scope";
 import { dayLabel, durationLabel } from "./format";
 import { BudgetBar, EmptyState, ErrorBanner } from "./parts";
-import { ProjectScopePicker } from "./ProjectScopePicker";
 import type {
   ProfitabilityCurrency,
   ProfitabilityReport,
@@ -43,7 +41,6 @@ import type {
 
 interface Props {
   projects: Project[];
-  projectsLoading: boolean;
   /** A customer's own name for an id, or `null` when this reader cannot see
    *  them — the row says "unknown" rather than printing a raw id at somebody. */
   customerName: (customerId: string) => string | null;
@@ -67,26 +64,12 @@ function isIsoDay(value: string | null): value is string {
 
 export function ReportView({
   projects,
-  projectsLoading,
   customerName,
   revision,
   onCreateInvoice,
 }: Props) {
   const api = useProjectsApi();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const requestedProjectId = searchParams.get("project");
-  // Profitability belongs to client work. Keeping internal projects out of the
-  // scope picker also prevents a valid-looking selection from reaching the
-  // server route that intentionally rejects it.
-  const reportProjects = useMemo(
-    () => projects.filter((project) => project.client !== null),
-    [projects],
-  );
-  const projectId = resolveProjectScope(
-    requestedProjectId,
-    projectsLoading,
-    reportProjects,
-  );
+  const [searchParams] = useSearchParams();
   // The form opens on the quarter being lived through; the one being reviewed
   // is one click away.
   const [period, setPeriod] = useState<Period>(() => {
@@ -103,12 +86,9 @@ export function ReportView({
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (projectsLoading) return;
     setLoading(true);
     try {
-      setReport(
-        await api.profitability(period.from, period.to, projectId ?? undefined),
-      );
+      setReport(await api.profitability(period.from, period.to));
       setError(null);
     } catch (err) {
       // The server's own sentence when it sent one — it names the rule that was
@@ -118,25 +98,11 @@ export function ReportView({
     } finally {
       setLoading(false);
     }
-  }, [api, period, projectId, projectsLoading, revision]);
+  }, [api, period, revision]);
 
   useEffect(() => {
     void load();
   }, [load]);
-
-  useEffect(() => {
-    if (projectsLoading || requestedProjectId === null || projectId !== null)
-      return;
-    const next = new URLSearchParams(searchParams);
-    next.delete("project");
-    setSearchParams(next, { replace: true });
-  }, [
-    projectId,
-    projectsLoading,
-    requestedProjectId,
-    searchParams,
-    setSearchParams,
-  ]);
 
   /** Applies a period from a quick pick: the form and the request move
    *  together, so what is shown always matches what is written. */
@@ -148,11 +114,7 @@ export function ReportView({
   async function download() {
     setDownloading(true);
     try {
-      const csv = await api.profitabilityCsv(
-        period.from,
-        period.to,
-        projectId ?? undefined,
-      );
+      const csv = await api.profitabilityCsv(period.from, period.to);
       saveTextFile(csv, fileName(period), "text/csv;charset=utf-8");
       setError(null);
     } catch (err) {
@@ -164,25 +126,19 @@ export function ReportView({
 
   return (
     <div className="flex min-h-0 flex-col gap-5 overflow-auto px-6 py-5">
-      <ProjectScopePicker
-        projects={reportProjects}
-        value={projectId}
-        disabled={projectsLoading}
-        description={
-          projectId === null
-            ? strings.projectsReportAllScope
-            : strings.projectsReportProjectScope(
-                reportProjects.find((project) => project.id === projectId)
-                  ?.name ?? "",
-              )
-        }
-        onChange={(nextProjectId) => {
-          const next = new URLSearchParams(searchParams);
-          if (nextProjectId === null) next.delete("project");
-          else next.set("project", nextProjectId);
-          setSearchParams(next);
-        }}
-      />
+      <div className="flex items-center gap-3 rounded-2xl border border-subtle bg-surface p-4 shadow-sm">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+          <PieChart size={20} aria-hidden="true" />
+        </span>
+        <div className="min-w-0">
+          <h2 className="m-0 text-sm font-semibold text-primary">
+            {strings.projectsReportPortfolioTitle}
+          </h2>
+          <p className="m-0 mt-0.5 text-sm text-secondary">
+            {strings.projectsReportAllScope}
+          </p>
+        </div>
+      </div>
       <form
         className="rounded-2xl border border-subtle bg-surface p-4 shadow-sm"
         onSubmit={(e) => {

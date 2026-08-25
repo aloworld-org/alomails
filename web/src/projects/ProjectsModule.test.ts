@@ -17,7 +17,7 @@ describe("projectContextId", () => {
   it("keeps project context in scoped time, plan, and report views", () => {
     expect(projectContextId("/projects/week", "project-1")).toBe("project-1");
     expect(projectContextId("/projects/timeline", "project-1")).toBe("project-1");
-    expect(projectContextId("/projects/reports", "project-1")).toBe("project-1");
+    expect(projectContextId("/projects/reports", "project-1")).toBeNull();
   });
 
   it("does not invent context for portfolio-level views", () => {
@@ -35,9 +35,7 @@ describe("projectScopedPath", () => {
     expect(projectScopedPath("timeline", "project-1")).toBe(
       "/projects/timeline?project=project-1",
     );
-    expect(projectScopedPath("reports", "project-1")).toBe(
-      "/projects/reports?project=project-1",
-    );
+    expect(projectScopedPath("reports", "project-1")).toBe("/projects/reports");
   });
 
   it("keeps portfolio routes free of an empty project query", () => {

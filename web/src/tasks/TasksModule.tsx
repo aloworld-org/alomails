@@ -460,7 +460,7 @@ export function TasksModule({
               onOpenTasks={() => openView("list")}
               onOpenTimesheet={() => navigate(`/projects/week?project=${encodeURIComponent(projectId)}`)}
               onOpenTimeline={() => navigate(`/projects/timeline?project=${encodeURIComponent(projectId)}`)}
-              onOpenReport={() => navigate(`/projects/reports?project=${encodeURIComponent(projectId)}`)}
+              onOpenReport={() => navigate("/projects/reports")}
               onEditProject={() => setEditingProject(true)}
               onOpenInvoice={(id) => navigate(`/billing/invoices/${encodeURIComponent(id)}`)}
             />

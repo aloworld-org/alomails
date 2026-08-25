@@ -2737,8 +2737,8 @@ export const nl: Partial<Catalog> = {
   // uur ons kost vraagt om een grootboek en een personeelsdossier die er geen
   // van beide zijn.
   projectsReportTitle: "Rentabiliteit",
-  projectsReportAllScope: "Portefeuilletotalen van alle projecten waartoe je toegang hebt.",
-  projectsReportProjectScope: (project: string) => `Alleen rentabiliteit voor ${project}.`,
+  projectsReportPortfolioTitle: "Portefeuillerapport",
+  projectsReportAllScope: "Alle klantprojecten waartoe je toegang hebt.",
   projectsReportFrom: "Van",
   projectsReportTo: "Tot",
   projectsReportShow: "Tonen",

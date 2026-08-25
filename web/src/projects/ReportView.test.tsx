@@ -125,7 +125,7 @@ afterEach(() => {
 });
 
 describe("ReportView invoice handoff", () => {
-  it("falls back to all client work when an internal project is in the URL", async () => {
+  it("always reads the full accessible client portfolio", async () => {
     profitability.mockResolvedValue({ ...report, projects: [] });
 
     render(
@@ -134,7 +134,6 @@ describe("ReportView invoice handoff", () => {
       >
         <ReportView
           projects={[internalProject, project]}
-          projectsLoading={false}
           customerName={() => "Atelier Dupont SARL"}
           revision={0}
           onCreateInvoice={vi.fn()}
@@ -146,13 +145,15 @@ describe("ReportView invoice handoff", () => {
       expect(profitability).toHaveBeenCalledWith(
         expect.any(String),
         expect.any(String),
-        undefined,
       );
     });
     expect(screen.queryByText("Internal operations")).toBeNull();
+    expect(screen.getByText("Portfolio report")).toBeTruthy();
+    expect(screen.getByText("All client projects you can access.")).toBeTruthy();
+    expect(screen.queryByRole("combobox")).toBeNull();
   });
 
-  it("opens with the approved week and project carried through the URL", async () => {
+  it("keeps the approved week but ignores project scope in the URL", async () => {
     profitability.mockResolvedValue({
       ...report,
       from: "2026-08-17",
@@ -167,7 +168,6 @@ describe("ReportView invoice handoff", () => {
       >
         <ReportView
           projects={[project]}
-          projectsLoading={false}
           customerName={() => "Atelier Dupont SARL"}
           revision={0}
           onCreateInvoice={vi.fn()}
@@ -179,7 +179,6 @@ describe("ReportView invoice handoff", () => {
       expect(profitability).toHaveBeenCalledWith(
         "2026-08-17",
         "2026-08-23",
-        "project-1",
       );
     });
   });
@@ -192,7 +191,6 @@ describe("ReportView invoice handoff", () => {
       <MemoryRouter>
         <ReportView
           projects={[project]}
-          projectsLoading={false}
           customerName={() => "Atelier Dupont SARL"}
           revision={0}
           onCreateInvoice={onCreateInvoice}
@@ -228,7 +226,6 @@ describe("ReportView invoice handoff", () => {
       <MemoryRouter>
         <ReportView
           projects={[project]}
-          projectsLoading={false}
           customerName={() => "Atelier Dupont SARL"}
           revision={0}
           onCreateInvoice={vi.fn()}

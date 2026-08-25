@@ -101,7 +101,7 @@ describe("ApprovalsView", () => {
       name: strings.projectsReadyToInvoice,
     });
     expect(reviewBilling.getAttribute("href")).toBe(
-      "/projects/reports?from=2026-08-17&to=2026-08-23&project=project-1",
+      "/projects/reports?from=2026-08-17&to=2026-08-23",
     );
   });
 });

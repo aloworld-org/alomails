@@ -399,7 +399,6 @@ export function ProjectsModule() {
           element={(
             <ReportView
               projects={projects}
-              projectsLoading={loading}
               customerName={customerName}
               revision={revision}
               onCreateInvoice={(project, cutoff) => setInvoiceHandoff({ project, cutoff })}

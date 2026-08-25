@@ -146,16 +146,6 @@ export function ApprovalsView({
                 search: new URLSearchParams({
                   from: approvedWeek.weekStart,
                   to: approvedWeek.weekEnd,
-                  ...(approvedWeek.projects.filter(
-                    (project) => project.billableMinutes > 0,
-                  ).length === 1
-                    ? {
-                        project:
-                          approvedWeek.projects.find(
-                            (project) => project.billableMinutes > 0,
-                          )?.projectId ?? "",
-                      }
-                    : {}),
                 }).toString(),
               }}
               className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-accent px-5 py-2 text-sm font-medium leading-none text-on-accent !no-underline transition-colors hover:bg-accent-hover hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"

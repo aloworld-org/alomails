@@ -2776,8 +2776,8 @@ export const fr: Partial<Catalog> = {
   // et ce qu’une heure nous coûte demande une comptabilité et un dossier
   // salarié qui n’existent ni l’une ni l’autre.
   projectsReportTitle: "Rentabilité",
-  projectsReportAllScope: "Totaux du portefeuille pour tous les projets auxquels vous avez accès.",
-  projectsReportProjectScope: (project: string) => `Rentabilité de ${project} uniquement.`,
+  projectsReportPortfolioTitle: "Rapport du portefeuille",
+  projectsReportAllScope: "Tous les projets clients auxquels vous avez accès.",
   projectsReportFrom: "Du",
   projectsReportTo: "Au",
   projectsReportShow: "Afficher",

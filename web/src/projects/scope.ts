@@ -11,8 +11,8 @@ const TOP_LEVEL_PROJECT_ROUTES = new Set([
 ]);
 
 /** Keep the engagement visible while somebody moves through its work, time,
- * plan, and financial views. The path owns workspace scope; the three
- * aggregate views carry the same scope in their `project` query parameter. */
+ * plan, and financial views. The path owns workspace scope; week and timeline
+ * carry it in their `project` query parameter, while reports is portfolio-wide. */
 export function projectContextId(pathname: string, projectQuery: string | null): string | null {
   const parts = pathname.split("/").filter(Boolean);
   if (parts[0] !== "projects") return null;
@@ -24,18 +24,20 @@ export function projectContextId(pathname: string, projectQuery: string | null):
       return segment;
     }
   }
-  if (segment === "week" || segment === "timeline" || segment === "reports") {
+  if (segment === "week" || segment === "timeline") {
     return projectQuery;
   }
   return null;
 }
 
-/** Builds the canonical route for a project-aware portfolio view. */
+/** Builds the canonical route for an aggregate view. Reports deliberately
+ * discard project scope because their figures always describe the portfolio. */
 export function projectScopedPath(
   view: "week" | "timeline" | "reports",
   projectId: string | null,
 ): string {
   const path = `/projects/${view}`;
+  if (view === "reports") return path;
   return projectId === null
     ? path
     : `${path}?project=${encodeURIComponent(projectId)}`;
