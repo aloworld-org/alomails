@@ -108,6 +108,20 @@
   gap: var(--space-3);
 }
 
+/* The two dates read as one range, so they sit side by side — apart they read
+   as two unrelated settings. They wrap to a second row on a narrow screen
+   rather than shrinking: a date input too small to show a whole date is worse
+   than a second row. */
+.oooDates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.oooDates > * {
+  flex: 1 1 12rem;
+}
+
 /* The switch is a `ds/Toggle` and the subject field a `ds/Input` in a
    `ds/Field`; the row they sat in went with them. */
 .textarea {

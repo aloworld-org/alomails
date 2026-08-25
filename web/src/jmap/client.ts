@@ -105,6 +105,18 @@ export interface DocsDto extends DocsSummaryDto {
   blocks: unknown[];
 }
 
+/** The out-of-office auto-reply and the days it applies on.
+ *
+ * Both days are inclusive and either may be null: no `from` means it is
+ * already in effect, no `to` means it runs until switched off by hand. */
+export interface OutOfOfficeSettings {
+  enabled: boolean;
+  subject: string;
+  message: string;
+  from: string | null;
+  to: string | null;
+}
+
 export class JmapClient {
   #fetch: AuthorizedFetch;
   #session: Session | null = null;
@@ -1123,16 +1135,21 @@ export class JmapClient {
   // ---- mail settings (signature + org footer) -------------------------
 
   /** The signed-in user's signature, the tenant's org footer, and the user's
-   * out-of-office state. */
+   * out-of-office state.
+   *
+   * `from` and `to` are the days the user is away, `YYYY-MM-DD`, inclusive at
+   * both ends and null when that end is open. They are the days as typed, not
+   * the instants stored: the server keeps an exclusive end and hands back the
+   * last day away, so a date input round-trips to itself. */
   async mailSettings(): Promise<{
     signature: string;
     orgFooter: string;
-    outOfOffice: { enabled: boolean; subject: string; message: string };
+    outOfOffice: OutOfOfficeSettings;
   }> {
     return (await this.#admin("/settings/mail", { method: "GET" })) as {
       signature: string;
       orgFooter: string;
-      outOfOffice: { enabled: boolean; subject: string; message: string };
+      outOfOffice: OutOfOfficeSettings;
     };
   }
 
@@ -1142,16 +1159,24 @@ export class JmapClient {
   }
 
   /** Set the caller's out-of-office auto-reply (a message is required to
-   * enable). */
+   * enable).
+   *
+   * `from`/`to` are the first and last day away as `YYYY-MM-DD`, or null for
+   * an open end — null `from` means it starts now, null `to` means it runs
+   * until switched off. */
   async setOutOfOffice(
     enabled: boolean,
     subject: string,
     message: string,
+    from: string | null,
+    to: string | null,
   ): Promise<void> {
     await this.#adminPost("/settings/out-of-office", {
       enabled,
       subject,
       message,
+      from,
+      to,
     });
   }
 

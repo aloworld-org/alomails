@@ -187,12 +187,12 @@ pub async fn block(
 /// single entry point both the filters and out-of-office paths call.
 pub async fn rebuild_managed_script(account: &Account) -> Result<(), Problem> {
     let rules = load_rules(account).await?;
-    let (ooo_on, ooo_subject, ooo_message) = account
+    let ooo = account
         .acc
         .out_of_office()
         .await
         .map_err(|_| Problem::server_error())?;
-    let script = generate_script(&rules, ooo_on, &ooo_subject, &ooo_message);
+    let script = generate_script(&rules, ooo.enabled, &ooo.subject, &ooo.message);
     match script {
         Some(text) => {
             account
@@ -372,8 +372,14 @@ fn generate_script(
         } else {
             format!(" :subject \"{}\"", esc(ooo_subject))
         };
+        // The handle is what delivery matches the date window against, and it
+        // has to be the store's own constant rather than the same string
+        // spelled again here: a copy that drifted would leave a reply that
+        // looks scheduled on the settings screen and answers every day of the
+        // year.
         out.push_str(&format!(
-            "vacation :days 7{subject_arg} \"{}\";\n",
+            "vacation :days 7 :handle \"{}\"{subject_arg} \"{}\";\n",
+            alo_store::OOO_HANDLE,
             esc(ooo_message)
         ));
     }
@@ -490,8 +496,25 @@ mod tests {
             .unwrap_or_else(|| panic!("expected a script"));
         alo_sieve::compile(&script, alo_sieve::Limits::default())
             .unwrap_or_else(|e| panic!("did not compile: {e}\n{script}"));
-        assert!(script.contains("vacation :days 7 :subject \"Away\" \"Back Monday\""));
+        assert!(script.contains(":subject \"Away\" \"Back Monday\""));
         assert!(script.contains("require [\"fileinto\", \"vacation\"]"));
+    }
+
+    #[test]
+    fn the_vacation_line_carries_the_handle_delivery_gates_on() {
+        // Without it the reply is just another `vacation`, and delivery has
+        // nothing to match the user's date window against: the window is
+        // stored, displayed on the settings screen, and gates nothing — the
+        // reply answers every day of the year. That failure is invisible from
+        // the screen, which is why it is pinned here.
+        let script = generate_script(&[], true, "Away", "Back Monday")
+            .unwrap_or_else(|| panic!("expected a script"));
+        assert!(
+            script.contains(&format!(":handle \"{}\"", alo_store::OOO_HANDLE)),
+            "the managed reply must be identifiable at delivery:\n{script}",
+        );
+        alo_sieve::compile(&script, alo_sieve::Limits::default())
+            .unwrap_or_else(|e| panic!("did not compile: {e}\n{script}"));
     }
 
     #[test]

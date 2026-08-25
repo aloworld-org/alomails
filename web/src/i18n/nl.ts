@@ -805,6 +805,12 @@ export const nl: Partial<Catalog> = {
     "bv. Ik ben afwezig tot maandag en antwoord bij mijn terugkeer.",
   settingsOooNeedsMessage:
     "Voeg een bericht toe om afwezigheid in te schakelen.",
+  settingsOooFrom: "Eerste dag afwezig",
+  settingsOooTo: "Laatste dag afwezig",
+  settingsOooDatesHint:
+    "Laat leeg om nu te beginnen en te antwoorden tot u het uitschakelt.",
+  settingsOooBadWindow:
+    "De laatste dag afwezig kan niet vóór de eerste liggen.",
   settingsSave: "Opslaan",
   settingsSaved: "Opgeslagen.",
   settingsSaveError: "Kon uw instellingen niet opslaan.",

@@ -9,6 +9,44 @@ use crate::account::AccountStore;
 use crate::error::{Result, StoreError};
 use crate::id::TenantId;
 use crate::store::Store;
+use time::OffsetDateTime;
+
+/// A user's out-of-office auto-reply, and when it applies.
+///
+/// The window is the whole point of the type: "on" and "off" were never how
+/// anybody uses this. You set it the evening before you leave and expect it to
+/// stop by itself.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OutOfOffice {
+    /// Whether the reply is switched on at all.
+    pub enabled: bool,
+    /// The reply's subject.
+    pub subject: String,
+    /// The reply's body.
+    pub message: String,
+    /// When it starts. `None` means it is already in effect.
+    pub from: Option<OffsetDateTime>,
+    /// When it stops. `None` means until switched off by hand.
+    pub to: Option<OffsetDateTime>,
+}
+
+impl OutOfOffice {
+    /// Whether a reply should be sent at `now`.
+    ///
+    /// Each bound is independent and either may be absent, which is what makes
+    /// the two familiar cases fall out of one rule: no `from` is "starting
+    /// now", no `to` is "until I say otherwise" — the behaviour before there
+    /// was a window at all.
+    ///
+    /// The end is exclusive. A holiday "to the 15th" that still replied on the
+    /// 15th would answer the colleague who waited for you to be back.
+    #[must_use]
+    pub fn active_at(&self, now: OffsetDateTime) -> bool {
+        self.enabled
+            && self.from.is_none_or(|start| now >= start)
+            && self.to.is_none_or(|end| now < end)
+    }
+}
 
 impl AccountStore {
     /// This user's mail signature (HTML), or empty if unset.
@@ -92,37 +130,80 @@ impl AccountStore {
         enabled: bool,
         subject: &str,
         message: &str,
+        from: Option<OffsetDateTime>,
+        to: Option<OffsetDateTime>,
     ) -> Result<()> {
+        // A window that ends before it starts never fires, and reads to the
+        // person who set it exactly like the feature being broken. The database
+        // refuses it too; this is the readable half of that pair.
+        if let (Some(start), Some(end)) = (from, to)
+            && start >= end
+        {
+            return Err(StoreError::Validation(
+                "the out-of-office end must be after its start".to_owned(),
+            ));
+        }
         sqlx::query(
-            "INSERT INTO user_settings (tenant_id, user_id, ooo_enabled, ooo_subject, ooo_message) \
-             VALUES ($1, $2, $3, $4, $5) \
+            "INSERT INTO user_settings \
+             (tenant_id, user_id, ooo_enabled, ooo_subject, ooo_message, ooo_from, ooo_to) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7) \
              ON CONFLICT (tenant_id, user_id) DO UPDATE \
-             SET ooo_enabled = $3, ooo_subject = $4, ooo_message = $5, updated_at = now()",
+             SET ooo_enabled = $3, ooo_subject = $4, ooo_message = $5, \
+                 ooo_from = $6, ooo_to = $7, updated_at = now()",
         )
         .bind(self.tenant.as_str())
         .bind(self.user.as_str())
         .bind(enabled)
         .bind(subject)
         .bind(message)
+        .bind(from)
+        .bind(to)
         .execute(&self.pool)
         .await?;
         Ok(())
     }
 
-    /// This user's out-of-office state: `(enabled, subject, message)`.
+    /// This user's out-of-office reply and the window it applies in.
+    ///
+    /// A user who has never opened the setting has no row, which reads as
+    /// "off" rather than as an error.
     ///
     /// # Errors
     /// [`StoreError::Db`] on failure.
-    pub async fn out_of_office(&self) -> Result<(bool, String, String)> {
-        let row = sqlx::query_as::<_, (bool, String, String)>(
-            "SELECT ooo_enabled, ooo_subject, ooo_message FROM user_settings \
-             WHERE tenant_id = $1 AND user_id = $2",
+    pub async fn out_of_office(&self) -> Result<OutOfOffice> {
+        let row = sqlx::query_as::<
+            _,
+            (
+                bool,
+                String,
+                String,
+                Option<OffsetDateTime>,
+                Option<OffsetDateTime>,
+            ),
+        >(
+            "SELECT ooo_enabled, ooo_subject, ooo_message, ooo_from, ooo_to \
+             FROM user_settings WHERE tenant_id = $1 AND user_id = $2",
         )
         .bind(self.tenant.as_str())
         .bind(self.user.as_str())
         .fetch_optional(&self.pool)
         .await?;
-        Ok(row.unwrap_or((false, String::new(), String::new())))
+        Ok(match row {
+            Some((enabled, subject, message, from, to)) => OutOfOffice {
+                enabled,
+                subject,
+                message,
+                from,
+                to,
+            },
+            None => OutOfOffice {
+                enabled: false,
+                subject: String::new(),
+                message: String::new(),
+                from: None,
+                to: None,
+            },
+        })
     }
 
     /// Sets the out-of-office auto-reply. When `enabled`, installs and activates
@@ -139,21 +220,18 @@ impl AccountStore {
         enabled: bool,
         subject: &str,
         message: &str,
+        from: Option<OffsetDateTime>,
+        to: Option<OffsetDateTime>,
     ) -> Result<()> {
-        sqlx::query(
-            "INSERT INTO user_settings (tenant_id, user_id, ooo_enabled, ooo_subject, ooo_message) \
-             VALUES ($1, $2, $3, $4, $5) \
-             ON CONFLICT (tenant_id, user_id) DO UPDATE \
-             SET ooo_enabled = $3, ooo_subject = $4, ooo_message = $5, updated_at = now()",
-        )
-        .bind(self.tenant.as_str())
-        .bind(self.user.as_str())
-        .bind(enabled)
-        .bind(subject)
-        .bind(message)
-        .execute(&self.pool)
-        .await?;
+        // One statement writes this row, in `set_out_of_office_state`. Two
+        // would be two things to keep in step about one fact.
+        self.set_out_of_office_state(enabled, subject, message, from, to)
+            .await?;
 
+        // The script is installed whenever the reply is switched on, including
+        // for a holiday that has not started yet: the window is read when a
+        // message arrives, so a future window needs nothing scheduled and
+        // nothing to be running on the day it opens.
         if enabled {
             self.put_sieve_script(OOO_SCRIPT, &ooo_script(subject, message))
                 .await?;
@@ -176,6 +254,14 @@ impl AccountStore {
 /// The name of the managed out-of-office Sieve script.
 const OOO_SCRIPT: &str = "out-of-office";
 
+/// The Sieve `:handle` the managed out-of-office reply carries.
+///
+/// It is what lets delivery tell *this* reply from one a user wrote themselves
+/// in their own Sieve script. Only the managed one is gated on the window in
+/// settings: someone who writes their own `vacation` rule means it to fire when
+/// their rule says, not when a settings screen they never opened says.
+pub const OOO_HANDLE: &str = "alo-out-of-office";
+
 /// Builds a `vacation` Sieve script from the user's subject + message, escaping
 /// the two characters special to a Sieve quoted string (`\` and `"`). A
 /// 7-day per-correspondent suppression window is used.
@@ -187,7 +273,7 @@ fn ooo_script(subject: &str, message: &str) -> String {
         format!(" :subject \"{}\"", esc(subject))
     };
     format!(
-        "require [\"vacation\"];\nvacation :days 7{subject_arg} \"{}\";",
+        "require [\"vacation\"];\nvacation :days 7 :handle \"{OOO_HANDLE}\"{subject_arg} \"{}\";",
         esc(message)
     )
 }
@@ -223,5 +309,82 @@ impl Store {
             return Err(StoreError::NotFound);
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::OutOfOffice;
+    use time::OffsetDateTime;
+    use time::macros::datetime;
+
+    /// A reply with the given window, switched on.
+    fn away(from: Option<OffsetDateTime>, to: Option<OffsetDateTime>) -> OutOfOffice {
+        OutOfOffice {
+            enabled: true,
+            subject: "Away".to_owned(),
+            message: "I am away".to_owned(),
+            from,
+            to,
+        }
+    }
+
+    const SEP_01: OffsetDateTime = datetime!(2026-09-01 00:00:00 UTC);
+    const SEP_08: OffsetDateTime = datetime!(2026-09-08 12:00:00 UTC);
+    const SEP_15: OffsetDateTime = datetime!(2026-09-15 00:00:00 UTC);
+
+    #[test]
+    fn switched_off_never_replies_whatever_the_window_says() {
+        let mut ooo = away(Some(SEP_01), Some(SEP_15));
+        ooo.enabled = false;
+        assert!(!ooo.active_at(SEP_08), "the switch outranks the window");
+    }
+
+    #[test]
+    fn no_window_is_the_behaviour_we_had_before() {
+        // Every row written before the window existed reads as (None, None),
+        // and must go on behaving exactly as it did: on means on.
+        assert!(away(None, None).active_at(SEP_08));
+    }
+
+    #[test]
+    fn a_holiday_set_in_advance_stays_quiet_until_it_starts() {
+        let ooo = away(Some(SEP_08), Some(SEP_15));
+        assert!(!ooo.active_at(SEP_01), "set on the 1st for the 8th");
+    }
+
+    #[test]
+    fn it_replies_inside_the_window() {
+        assert!(away(Some(SEP_01), Some(SEP_15)).active_at(SEP_08));
+    }
+
+    #[test]
+    fn the_start_is_inclusive() {
+        // "Away from the 1st" means the message arriving at one minute past
+        // midnight gets the reply — and so does the one arriving exactly at it.
+        assert!(away(Some(SEP_01), Some(SEP_15)).active_at(SEP_01));
+    }
+
+    #[test]
+    fn the_end_is_exclusive_so_the_day_you_are_back_is_yours() {
+        // The whole reason the end is exclusive: whoever writes on the morning
+        // you return should reach you, not a message saying you are away.
+        let ooo = away(Some(SEP_01), Some(SEP_15));
+        assert!(!ooo.active_at(SEP_15));
+        assert!(ooo.active_at(SEP_15 - time::Duration::seconds(1)));
+    }
+
+    #[test]
+    fn an_open_ended_window_runs_until_switched_off() {
+        let ooo = away(Some(SEP_01), None);
+        assert!(ooo.active_at(SEP_08));
+        assert!(ooo.active_at(SEP_15), "no end means no end");
+    }
+
+    #[test]
+    fn an_end_without_a_start_is_in_effect_immediately() {
+        let ooo = away(None, Some(SEP_15));
+        assert!(ooo.active_at(SEP_01));
+        assert!(!ooo.active_at(SEP_15));
     }
 }

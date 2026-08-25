@@ -824,6 +824,12 @@ export const fr: Partial<Catalog> = {
     "ex. Je suis absent jusqu’à lundi et vous répondrai à mon retour.",
   settingsOooNeedsMessage:
     "Ajoutez un message pour activer la réponse d’absence.",
+  settingsOooFrom: "Premier jour d’absence",
+  settingsOooTo: "Dernier jour d’absence",
+  settingsOooDatesHint:
+    "Laissez vide pour commencer maintenant et répondre jusqu’à la désactivation.",
+  settingsOooBadWindow:
+    "Le dernier jour d’absence ne peut pas précéder le premier.",
   settingsSave: "Enregistrer",
   settingsSaved: "Enregistré.",
   settingsSaveError: "Impossible d’enregistrer vos paramètres.",

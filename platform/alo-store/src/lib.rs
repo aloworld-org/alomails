@@ -578,6 +578,7 @@ pub use project_updates::{ProjectUpdate, ProjectUpdateState, UPDATE_BODY_MAX, UP
 pub use reset::PendingReset;
 pub use schedule::DueSend;
 pub use search::SearchHit;
+pub use settings::{OOO_HANDLE, OutOfOffice};
 pub use share::{ShareCreated, ShareTarget};
 pub use signup::PendingSignup;
 pub use site_agenda::SiteAvailabilitySource;

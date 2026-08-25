@@ -55,7 +55,13 @@ vi.mock("../jmap", () => ({
     mailSettings: async () => ({
       signature: "",
       orgFooter: "",
-      outOfOffice: { enabled: false, subject: "", message: "" },
+      outOfOffice: {
+        enabled: false,
+        subject: "",
+        message: "",
+        from: null,
+        to: null,
+      },
     }),
     filters: async () => state.rules,
     mailboxes: async () => [

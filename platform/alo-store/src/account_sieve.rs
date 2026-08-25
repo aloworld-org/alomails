@@ -8,6 +8,8 @@
 
 use alo_sieve::{Action, EvalContext, Limits, Message as SieveMsg};
 
+use time::OffsetDateTime;
+
 use crate::account::AccountStore;
 use crate::error::{Result, StoreError};
 use crate::id::MailboxId;
@@ -328,6 +330,26 @@ impl AccountStore {
                         .clone()
                         .unwrap_or_else(|| format!("auto:{:x}", fnv1a(v.reason.as_bytes())));
                     let days = v.days.unwrap_or(DEFAULT_VACATION_DAYS);
+
+                    // The managed out-of-office reply answers only inside the
+                    // window the user set. Checked here, where the reply is
+                    // decided, rather than by a timer that switches it on and
+                    // off: a timer is a second thing that can be down, and down
+                    // means either answering for somebody who is at their desk
+                    // or staying silent while they are away.
+                    //
+                    // A `vacation` from a hand-written script is not gated —
+                    // that rule fires when its author said it should.
+                    if handle == crate::settings::OOO_HANDLE {
+                        let ooo = self.out_of_office().await?;
+                        if !ooo.active_at(OffsetDateTime::now_utc()) {
+                            warnings.push(
+                                "vacation suppressed: outside the out-of-office window".to_owned(),
+                            );
+                            continue;
+                        }
+                    }
+
                     if self.vacation_should_send(&handle, &v.to, days).await? {
                         outbound.push(OutboundAction::Vacation {
                             to: v.to,

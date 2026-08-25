@@ -39,6 +39,9 @@ export function SettingsModal({ isAdmin, onClose }: SettingsModalProps) {
   const [oooEnabled, setOooEnabled] = useState(false);
   const [oooSubject, setOooSubject] = useState("");
   const [oooMessage, setOooMessage] = useState("");
+  // Days, `YYYY-MM-DD`, exactly as a date input holds them; "" is an open end.
+  const [oooFrom, setOooFrom] = useState("");
+  const [oooTo, setOooTo] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -54,6 +57,8 @@ export function SettingsModal({ isAdmin, onClose }: SettingsModalProps) {
         setOooEnabled(s.outOfOffice.enabled);
         setOooSubject(s.outOfOffice.subject);
         setOooMessage(s.outOfOffice.message);
+        setOooFrom(s.outOfOffice.from ?? "");
+        setOooTo(s.outOfOffice.to ?? "");
         setLoaded(true);
       })
       .catch(() => {
@@ -70,12 +75,26 @@ export function SettingsModal({ isAdmin, onClose }: SettingsModalProps) {
       setTab("general");
       return;
     }
+    // Caught here as well as on the server: a backwards window would be
+    // refused with a generic save error, and the person who typed it would be
+    // looking at the two fields that caused it without being told so.
+    if (oooFrom !== "" && oooTo !== "" && oooTo < oooFrom) {
+      setError(strings.settingsOooBadWindow);
+      setTab("general");
+      return;
+    }
     setBusy(true);
     setError(null);
     setNote(null);
     try {
       await client.setSignature(signature);
-      await client.setOutOfOffice(oooEnabled, oooSubject, oooMessage);
+      await client.setOutOfOffice(
+        oooEnabled,
+        oooSubject,
+        oooMessage,
+        oooFrom === "" ? null : oooFrom,
+        oooTo === "" ? null : oooTo,
+      );
       if (isAdmin) await client.setOrgFooter(orgFooter);
       setNote(strings.settingsSaved);
     } catch {
@@ -226,6 +245,40 @@ export function SettingsModal({ isAdmin, onClose }: SettingsModalProps) {
                             />
                           )}
                         </Field>
+                        {/* The dates are what makes this a schedule rather
+                              than a switch: you set it the evening before you
+                              leave, and it stops on its own. Both are
+                              optional, and blank keeps the old behaviour —
+                              on now, until you turn it off — so the hint says
+                              that rather than leaving it to be discovered. */}
+                        <div className={styles.oooDates}>
+                          <Field label={strings.settingsOooFrom}>
+                            {(control) => (
+                              <Input
+                                {...control}
+                                type="date"
+                                value={oooFrom}
+                                onChange={(e) => setOooFrom(e.target.value)}
+                              />
+                            )}
+                          </Field>
+                          <Field
+                            label={strings.settingsOooTo}
+                            // The browser rejects an end before the start
+                            // before a save is ever attempted.
+                            hint={strings.settingsOooDatesHint}
+                          >
+                            {(control) => (
+                              <Input
+                                {...control}
+                                type="date"
+                                min={oooFrom === "" ? undefined : oooFrom}
+                                value={oooTo}
+                                onChange={(e) => setOooTo(e.target.value)}
+                              />
+                            )}
+                          </Field>
+                        </div>
                       </>
                     )}
                   </div>

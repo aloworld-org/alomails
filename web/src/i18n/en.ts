@@ -863,6 +863,11 @@ export const en = {
   settingsOooMessagePlaceholder:
     "e.g. I'm away until Monday and will reply on my return.",
   settingsOooNeedsMessage: "Add a message to turn on out-of-office.",
+  settingsOooFrom: "First day away",
+  settingsOooTo: "Last day away",
+  settingsOooDatesHint:
+    "Leave these blank to start now and reply until you turn it off.",
+  settingsOooBadWindow: "The last day away can't be before the first.",
   settingsSave: "Save",
   settingsSaved: "Saved.",
   settingsSaveError: "Couldn't save your settings.",

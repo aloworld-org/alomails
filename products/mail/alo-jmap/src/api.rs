@@ -1727,18 +1727,58 @@ async fn quota_get(account: &Account, args: &Value) -> Result<Value, Value> {
     }))
 }
 
+/// A `UTCDate` as RFC 8621 §1.4 writes it: `YYYY-MM-DDTHH:MM:SSZ`.
+fn utc_date(at: time::OffsetDateTime) -> String {
+    let at = at.to_offset(time::UtcOffset::UTC);
+    format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
+        at.year(),
+        u8::from(at.month()),
+        at.day(),
+        at.hour(),
+        at.minute(),
+        at.second()
+    )
+}
+
+/// Reads a `UTCDate|null` out of a patch.
+///
+/// `Ok(None)` is an explicit null — the client clearing that bound — which is
+/// a different thing from the property being absent, and only the caller can
+/// tell those apart. `Err` is a value that is neither.
+fn parse_utc_date(value: &Value) -> Result<Option<time::OffsetDateTime>, ()> {
+    if value.is_null() {
+        return Ok(None);
+    }
+    let text = value.as_str().ok_or(())?;
+    // The format is fixed by the specification, so it is parsed rather than
+    // guessed at: a lenient reader here would accept a local time and silently
+    // move somebody's holiday by an hour.
+    let parsed = time::PrimitiveDateTime::parse(
+        text,
+        &time::macros::format_description!("[year]-[month]-[day]T[hour]:[minute]:[second]Z"),
+    )
+    .map_err(|_| ())?;
+    Ok(Some(parsed.assume_utc()))
+}
+
 /// `VacationResponse/get` (RFC 8621 §8): the singleton auto-reply, mapped from
-/// the account's stored out-of-office (enabled + subject + message). We store no
-/// date range, so `fromDate`/`toDate` are null.
+/// the account's stored out-of-office — the switch, the subject, the message,
+/// and the window it applies in. Either date may be null, which the standard
+/// gives a meaning to on each side independently: no start is "already in
+/// effect", no end is "until switched off".
 async fn vacation_get(account: &Account, args: &Value) -> Result<Value, Value> {
     check_account(args, account)?;
     let acct_state = account.acc.state().await.map_err(store_err)?;
-    let (enabled, subject, message) = account.acc.out_of_office().await.map_err(store_err)?;
+    let ooo = account.acc.out_of_office().await.map_err(store_err)?;
+    let (enabled, subject, message) = (ooo.enabled, ooo.subject.clone(), ooo.message.clone());
+    // Both dates were reported as null whatever the user had set, so a client
+    // that scheduled a holiday was told its own dates had not been stored.
     let obj = json!({
         "id": "singleton",
         "isEnabled": enabled,
-        "fromDate": Value::Null,
-        "toDate": Value::Null,
+        "fromDate": ooo.from.map_or(Value::Null, |t| json!(utc_date(t))),
+        "toDate": ooo.to.map_or(Value::Null, |t| json!(utc_date(t))),
         "subject": if subject.is_empty() { Value::Null } else { json!(subject) },
         "textBody": if message.is_empty() { Value::Null } else { json!(message) },
         "htmlBody": Value::Null,
@@ -1780,8 +1820,49 @@ async fn vacation_set(account: &Account, args: &Value) -> Result<Value, Value> {
                 not_updated.insert(id.clone(), method_error("notFound"));
                 continue;
             }
-            let (mut enabled, mut subject, mut message) =
-                account.acc.out_of_office().await.map_err(store_err)?;
+            let current = account.acc.out_of_office().await.map_err(store_err)?;
+            let (mut enabled, mut subject, mut message) = (
+                current.enabled,
+                current.subject.clone(),
+                current.message.clone(),
+            );
+            // A patch that names neither date leaves the window alone; one that
+            // names a date as null clears that bound, which is how RFC 8621 §8
+            // says "no start" and "no end".
+            let mut from = current.from;
+            let mut to = current.to;
+            let mut bad_date: Option<&str> = None;
+            if let Some(v) = patch.get("fromDate") {
+                match parse_utc_date(v) {
+                    Ok(parsed) => from = parsed,
+                    Err(()) => bad_date = Some("fromDate"),
+                }
+            }
+            if let Some(v) = patch.get("toDate") {
+                match parse_utc_date(v) {
+                    Ok(parsed) => to = parsed,
+                    Err(()) => bad_date = Some("toDate"),
+                }
+            }
+            if let Some(field) = bad_date {
+                not_updated.insert(
+                    id.clone(),
+                    method_error_desc(
+                        "invalidProperties",
+                        &format!("{field} must be a UTCDate or null"),
+                    ),
+                );
+                continue;
+            }
+            if let (Some(start), Some(end)) = (from, to)
+                && start >= end
+            {
+                not_updated.insert(
+                    id.clone(),
+                    method_error_desc("invalidProperties", "toDate must be after fromDate"),
+                );
+                continue;
+            }
             if let Some(v) = patch.get("isEnabled").and_then(Value::as_bool) {
                 enabled = v;
             }
@@ -1806,7 +1887,7 @@ async fn vacation_set(account: &Account, args: &Value) -> Result<Value, Value> {
             }
             if account
                 .acc
-                .set_out_of_office_state(enabled, subject.trim(), message.trim())
+                .set_out_of_office_state(enabled, subject.trim(), message.trim(), from, to)
                 .await
                 .is_err()
                 || crate::filters::rebuild_managed_script(account)
