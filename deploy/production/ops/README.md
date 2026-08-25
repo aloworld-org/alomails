@@ -26,6 +26,8 @@ procedure — is in [`docs/operations-runbook.md`](../../../docs/operations-runb
 | `restore-rehearsal.sh` | Restores the newest backup into a throwaway database and counts what came back. An untested backup is a hope; this is the test. |
 | `systemd/alo-restore-rehearsal.{service,timer}` | Runs the rehearsal weekly. |
 | `systemd/alo-restore-rehearsal-failed.service` | `OnFailure` hook: emails you when the backup cannot be restored. |
+| `pull-offsite.sh` | Run **from an operator machine**, not the server: pulls the encrypted repository down as a second copy. The server cannot push to a machine behind NAT, so the machine that wants the copy asks for it. Never stores the password. |
+| `backup.env.example` | Template for the off-site destination, and for acknowledging its absence with an end date. |
 | `systemd/alo-campaign-egress.service` | Rewrites the source address of campaign mail to the campaign IP (ADR 0044 §1). Only needed on a host with a second address; see below. |
 
 ## Install on the server (one time)

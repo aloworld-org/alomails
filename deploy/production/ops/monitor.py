@@ -174,18 +174,49 @@ def check_backup():
     # losing that disk, and the product description promises customers two
     # locations. Reported so the gap has to be closed or consciously accepted,
     # rather than sitting behind a green backup check that says "fine".
-    offsite = ""
+    #
+    # It can be acknowledged, but only with an end date. A problem nobody can
+    # fix today re-alerts every RE_ALERT_HOURS forever and teaches whoever
+    # reads these emails to ignore them, which costs more than the gap does.
+    # An acknowledgement that expires is a decision; one that does not is a
+    # way of forgetting. Set in /root/.config/alo/backup.env:
+    #
+    #   OFFSITE_ACKNOWLEDGED_UNTIL=2026-09-30   # then it speaks up again
+    settings = {}
     backup_env = Path("/root/.config/alo/backup.env")
     if backup_env.exists():
         for line in backup_env.read_text().splitlines():
             line = line.strip()
-            if line.startswith("OFFSITE_REPOSITORY=") and not line.startswith("#"):
-                offsite = line.split("=", 1)[1].strip().strip("\"'")
-    if not offsite:
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            settings[key.strip()] = value.strip().strip("\"'")
+
+    offsite = settings.get("OFFSITE_REPOSITORY", "")
+    acknowledged_until = settings.get("OFFSITE_ACKNOWLEDGED_UNTIL", "")
+    acknowledged = False
+    if acknowledged_until:
+        try:
+            until = datetime.strptime(acknowledged_until, "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
+            acknowledged = datetime.now(timezone.utc) < until
+        except ValueError:
+            problems.append((
+                "backup:offsite-ack",
+                f"OFFSITE_ACKNOWLEDGED_UNTIL is '{acknowledged_until}', which is not a "
+                "date (YYYY-MM-DD) — treating the gap as unacknowledged",
+            ))
+
+    if not offsite and not acknowledged:
         problems.append((
             "backup:offsite",
-            "backups exist only on the machine they protect — no OFFSITE_REPOSITORY "
-            "is set, so losing this disk loses the data and every copy of it",
+            "the server pushes its backup nowhere — no OFFSITE_REPOSITORY is set, so "
+            "the only copies this machine can vouch for are on the disk it is "
+            "protecting. An operator machine pulling a copy does not show up here; "
+            "if that is the arrangement, acknowledge it with a date "
+            "(OFFSITE_ACKNOWLEDGED_UNTIL in backup.env) rather than leaving this "
+            "alert to be ignored",
         ))
     return problems
 
