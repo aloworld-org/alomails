@@ -132,3 +132,12 @@ describe("the design system draws with tokens", () => {
     ).toEqual([]);
   });
 });
+
+describe("interface links do not underline", () => {
+  test("the global link states keep text decoration off", () => {
+    const globalCss = readFileSync(join(SRC, "ds", "global.css"), "utf8");
+    expect(globalCss).toMatch(
+      /a:hover,\s*a:focus-visible,\s*a:active,\s*a:visited\s*\{\s*text-decoration:\s*none;/,
+    );
+  });
+});

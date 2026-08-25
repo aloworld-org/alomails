@@ -582,7 +582,7 @@ export function WeekView({
                   <td>
                     {entry.taskId !== null && entry.taskTitle ? (
                       <Link
-                        className="inline-flex max-w-64 items-center rounded-md px-2 py-1 font-medium text-primary transition-colors hover:bg-raised hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                        className="inline-flex max-w-64 items-center rounded-md px-2 py-1 font-medium text-primary !no-underline transition-colors hover:bg-raised hover:text-accent hover:!no-underline focus:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                         to={`/projects/${encodeURIComponent(entry.projectId)}/list?open=${encodeURIComponent(entry.taskId)}`}
                       >
                         <span className="truncate">{entry.taskTitle}</span>

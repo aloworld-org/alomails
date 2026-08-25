@@ -85,8 +85,11 @@ a {
   text-decoration: none;
 }
 
-a:hover {
-  text-decoration: underline;
+a:hover,
+a:focus-visible,
+a:active,
+a:visited {
+  text-decoration: none;
 }
 
 ul,
