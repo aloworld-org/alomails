@@ -417,7 +417,11 @@ export function TasksModule({
         )}
 
         {mode.type !== "proposals" && view !== "overview" && view !== "files" && tasks.length > 0 && (
-          <TaskToolbar config={config} onChange={setConfig} />
+          <TaskToolbar
+            config={config}
+            onChange={setConfig}
+            connected={view === "list"}
+          />
         )}
 
         <div className="min-h-0 flex-1 overflow-auto">

@@ -116,9 +116,9 @@ export function ListView({
   }
 
   return (
-    <div className="mx-auto w-full max-w-[100rem] px-6 pb-8 pt-4 max-sm:px-4">
+    <div className="mx-auto w-full max-w-[100rem] px-6 pb-8 max-sm:px-4">
       <section
-        className="mb-5 flex flex-wrap items-center gap-2 rounded-2xl border border-subtle bg-surface p-3 shadow-sm"
+        className="mb-6 flex flex-wrap items-center gap-2 rounded-b-2xl border border-subtle border-t-0 bg-surface px-4 pb-4 pt-2 shadow-sm"
         aria-label={strings.taskOvProgress}
       >
         <span className="inline-flex items-center gap-2 rounded-xl bg-raised px-3 py-2 text-sm font-semibold text-primary">

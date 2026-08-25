@@ -13,6 +13,8 @@ import { isFiltering, type GroupKey, type SortKey, type ViewConfig } from "./vie
 interface Props {
   config: ViewConfig;
   onChange: (next: ViewConfig) => void;
+  /** Joins the toolbar to the list's workload summary below it. */
+  connected?: boolean;
 }
 
 function Dropdown({
@@ -75,7 +77,7 @@ function Choice({ on, label, onClick }: { on: boolean; label: string; onClick: (
   );
 }
 
-export function TaskToolbar({ config, onChange }: Props) {
+export function TaskToolbar({ config, onChange, connected = false }: Props) {
   const set = (patch: Partial<ViewConfig>) => onChange({ ...config, ...patch });
 
   const sortItems: { key: SortKey; label: string }[] = [
@@ -107,7 +109,9 @@ export function TaskToolbar({ config, onChange }: Props) {
   }
 
   return (
-    <div className="mx-auto mt-4 flex w-[calc(100%-3rem)] max-w-[97rem] items-center gap-3 overflow-x-auto rounded-2xl border border-subtle bg-surface p-3 shadow-sm max-sm:w-[calc(100%-2rem)]">
+    <div
+      className={`mx-auto mt-4 flex w-[calc(100%-3rem)] max-w-[97rem] items-center gap-3 overflow-x-auto border border-subtle bg-surface p-3 shadow-sm max-sm:w-[calc(100%-2rem)] ${connected ? "rounded-t-2xl border-b-0" : "rounded-2xl"}`}
+    >
       <Dropdown label={strings.taskFilter} icon={<ListFilter size={15} />} active={isFiltering(config)}>
         <div className="px-2 pb-0.5 pt-1.5 text-xs font-semibold uppercase tracking-wide text-tertiary">{strings.taskPriority}</div>
         {prios.map((p) => (
