@@ -450,7 +450,7 @@ export function TasksModule({
 
         {mode.type !== "proposals" && (
           <div
-            className="flex gap-1.5 overflow-x-auto border-b border-subtle bg-surface px-7 py-3 max-sm:px-4"
+            className="flex gap-2.5 overflow-x-auto border-b border-subtle bg-surface px-7 py-3.5 max-sm:gap-2 max-sm:px-4"
             role="tablist"
             aria-label={title}
           >
@@ -488,11 +488,13 @@ export function TasksModule({
                 type="button"
                 role="tab"
                 aria-selected={view === t.id}
-                className={`inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-sm !no-underline transition-colors hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${view === t.id ? "bg-[var(--accent-soft)] font-semibold !text-accent shadow-sm ring-1 ring-inset ring-accent/10" : "bg-transparent font-medium !text-secondary hover:bg-raised hover:!text-primary"}`}
+                className={`shrink-0 rounded-xl text-sm !no-underline transition-colors hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${view === t.id ? "bg-[var(--accent-soft)] font-semibold !text-accent shadow-sm ring-1 ring-inset ring-accent/10" : "bg-transparent font-medium !text-secondary hover:bg-raised hover:!text-primary"}`}
                 onClick={() => openView(t.id)}
               >
-                <t.Icon size={16} aria-hidden="true" />
-                <span>{t.label}</span>
+                <span className="inline-flex min-h-11 items-center gap-2.5 px-4 py-2.5">
+                  <t.Icon size={16} className="shrink-0" aria-hidden="true" />
+                  <span className="whitespace-nowrap">{t.label}</span>
+                </span>
               </button>
             ))}
           </div>
