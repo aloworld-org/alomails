@@ -159,7 +159,7 @@ export function ListView({
               className="flex min-h-14 w-full items-center gap-3 py-3 pl-8 pr-6 text-left text-secondary transition-colors hover:bg-raised max-sm:pl-7 max-sm:pr-5"
               onClick={() => toggleGroup(group.key)}
             >
-              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-raised text-secondary" aria-hidden="true">
+              <span className="ml-6 grid size-8 shrink-0 place-items-center rounded-lg bg-raised text-secondary max-sm:ml-5" aria-hidden="true">
                 {isCollapsed ? (
                   <ChevronRight size={16} />
                 ) : (

@@ -47,12 +47,14 @@ function Dropdown({
     <div className="relative" ref={ref}>
       <button
         type="button"
-        className={`relative inline-flex min-h-10 items-center gap-2 rounded-xl border border-subtle bg-app px-4 py-2 text-sm font-medium !no-underline shadow-sm transition-colors hover:border-default hover:bg-raised hover:text-primary hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${active === true ? "border-accent/40 text-accent" : "text-secondary"}`}
+        className={`relative inline-flex rounded-xl border border-subtle bg-app text-sm font-medium !no-underline shadow-sm transition-colors hover:border-default hover:bg-raised hover:text-primary hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${active === true ? "border-accent/40 text-accent" : "text-secondary"}`}
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
       >
-        {icon}
-        {label}
+        <span className="inline-flex min-h-10 items-center gap-2 px-4 py-2">
+          {icon}
+          {label}
+        </span>
         {active === true && <span className="absolute right-1 top-1 size-1.5 rounded-full bg-accent" aria-hidden />}
       </button>
       {open && (
