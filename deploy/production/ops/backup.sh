@@ -14,7 +14,20 @@ cd /opt/alo/deploy/production
 mkdir -p "$STAGING"
 
 # 1. Database (custom compressed dump).
-docker compose exec -T postgres pg_dump -U alo -d alo -Fc > "$STAGING/alo-db.dump"
+#
+# The role and database names are read from the deployment rather than written
+# here. They are not the same everywhere — a developer machine calls the
+# database `alo` and this deployment calls it `ficina` — and a backup script
+# that hardcodes either one fails on the other. It failed silently for
+# twenty-five days that way (2026-08-01 to 08-25): every night, `role "alo"
+# does not exist`, and the alarm that should have said so was broken by the
+# same migration.
+# Asked of the running container rather than parsed out of .env: it is the
+# same question with one fewer thing to get wrong, and the answer is what the
+# database is actually using rather than what a file says it should be.
+PGUSER=$(docker compose exec -T postgres printenv POSTGRES_USER | tr -d '\r\n')
+PGDB=$(docker compose exec -T postgres printenv POSTGRES_DB | tr -d '\r\n')
+docker compose exec -T postgres pg_dump -U "$PGUSER" -d "$PGDB" -Fc > "$STAGING/alo-db.dump"
 
 # 2. Docker volume paths (message bodies + TLS certs).
 BLOBS=$(docker volume inspect ficina_blobs -f "{{.Mountpoint}}")
