@@ -92,15 +92,27 @@ services:
   # official image serves clamd on TCP 3310 (private network only) and
   # runs freshclam alongside; signatures live on the volume so the
   # ~300 MB download happens once. Memory: clamd holds the signature DB
-  # resident (~1.2 GiB); the limit below caps the daily reload spike —
-  # if it trips, the container restarts and the MX defers (451) until
-  # healthy again, which is the fail-closed behavior we want anyway.
+  # resident (~950 MiB once loaded).
+  #
+  # **The limit below does not make this self-healing, and it was once
+  # assumed to.** When clamd exceeded it the cgroup killed *that process*,
+  # not the container: PID 1 kept running, `restart: unless-stopped` never
+  # fired, and the healthcheck went red and stayed red while nothing acted on
+  # it. Inbound mail deferred fail-closed for thirteen hours (2026-08-24)
+  # until somebody read the log. The reload that caused it is fixed in
+  # clamd.conf, but a red healthcheck here still needs a human or an
+  # autoheal sidecar — do not read this limit as a safety net.
   clamav:
     image: clamav/clamav:1.4.5
     restart: unless-stopped
     networks: [alo]
     volumes:
       - clamav_db:/var/lib/clamav
+      # Upstream's own configuration with one line changed — see the file.
+      # A concurrent reload holds two copies of the signature set and does not
+      # fit the limit below; it was OOM-killed on the daily update and inbound
+      # mail deferred, fail-closed, until somebody noticed.
+      - ./clamd.conf:/etc/clamav/clamd.conf:ro
     deploy:
       resources:
         limits:
