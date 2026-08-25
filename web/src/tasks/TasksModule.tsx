@@ -24,7 +24,12 @@ import {
 } from "lucide-react";
 
 import { strings } from "../i18n";
-import { useJmapClient, type Task, type TaskDepEdgeDto, type TaskProject } from "../jmap";
+import {
+  useJmapClient,
+  type Task,
+  type TaskDepEdgeDto,
+  type TaskProject,
+} from "../jmap";
 import { Spinner } from "../ds";
 import { useAuth } from "../auth";
 import { BoardView } from "./BoardView";
@@ -47,8 +52,14 @@ import type { Project, ProjectDraft, ProjectPlan } from "../projects/types";
 type View = "overview" | "list" | "board" | "timeline" | "calendar" | "files";
 
 function isView(value: string | undefined | null): value is View {
-  return value === "overview" || value === "list" || value === "board" ||
-    value === "timeline" || value === "calendar" || value === "files";
+  return (
+    value === "overview" ||
+    value === "list" ||
+    value === "board" ||
+    value === "timeline" ||
+    value === "calendar" ||
+    value === "files"
+  );
 }
 
 function projectStatusLabel(status: Project["status"]): string {
@@ -61,7 +72,8 @@ function projectStatusLabel(status: Project["status"]): string {
   }[status];
 }
 
-type Mode = { type: "project"; id: string } | { type: "plate" } | { type: "proposals" };
+type Mode =
+  { type: "project"; id: string } | { type: "plate" } | { type: "proposals" };
 
 export function TasksModule({
   projectId,
@@ -88,11 +100,16 @@ export function TasksModule({
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
   const [engagement, setEngagement] = useState<Project | null>(null);
-  const [engagementLoading, setEngagementLoading] = useState(projectId !== undefined);
+  const [engagementLoading, setEngagementLoading] = useState(
+    projectId !== undefined,
+  );
   const [engagementError, setEngagementError] = useState<string | null>(null);
   const [engagementRevision, setEngagementRevision] = useState(0);
   const [editingProject, setEditingProject] = useState(false);
-  const [projectPlan, setProjectPlan] = useState<ProjectPlan>({ milestones: [], placements: [] });
+  const [projectPlan, setProjectPlan] = useState<ProjectPlan>({
+    milestones: [],
+    placements: [],
+  });
 
   // Open a task arrived at from workspace search (?open=<taskId>).
   const [searchParams, setSearchParams] = useSearchParams();
@@ -105,13 +122,20 @@ export function TasksModule({
     setSelected(id);
   }, [searchParams, setSearchParams]);
   const [search, setSearch] = useState("");
-  const [creating, setCreating] = useState<{ status?: string; dueDate?: string } | null>(null);
+  const [creating, setCreating] = useState<{
+    status?: string;
+    dueDate?: string;
+  } | null>(null);
 
   // Projects links here with a stable project id. Keep the query in the URL so
   // refreshes and shared links reopen the same task workspace.
   useEffect(() => {
     const requested = projectId ?? searchParams.get("project");
-    if (requested === null || !projects.some((project) => project.id === requested)) return;
+    if (
+      requested === null ||
+      !projects.some((project) => project.id === requested)
+    )
+      return;
     setMode((current) =>
       current.type === "project" && current.id === requested
         ? current
@@ -230,23 +254,33 @@ export function TasksModule({
     void Promise.all([
       projectsApi.project(projectId),
       projectsApi.plan(projectId),
-    ]).then(([nextProject, nextPlan]) => {
-      if (!current) return;
-      setEngagement(nextProject);
-      setProjectPlan(nextPlan);
-    }).catch((error: unknown) => {
-      if (!current) return;
-      setEngagement(null);
-      setEngagementError(projectsMessage(error, strings.projectsWorkspaceLoadFailed));
-      setProjectPlan({ milestones: [], placements: [] });
-    }).finally(() => {
-      if (current) setEngagementLoading(false);
-    });
-    return () => { current = false; };
+    ])
+      .then(([nextProject, nextPlan]) => {
+        if (!current) return;
+        setEngagement(nextProject);
+        setProjectPlan(nextPlan);
+      })
+      .catch((error: unknown) => {
+        if (!current) return;
+        setEngagement(null);
+        setEngagementError(
+          projectsMessage(error, strings.projectsWorkspaceLoadFailed),
+        );
+        setProjectPlan({ milestones: [], placements: [] });
+      })
+      .finally(() => {
+        if (current) setEngagementLoading(false);
+      });
+    return () => {
+      current = false;
+    };
   }, [engagementRevision, projectId, projectsApi]);
 
   const activeProject = useMemo(
-    () => (mode.type === "project" ? projects.find((p) => p.id === mode.id) : undefined),
+    () =>
+      mode.type === "project"
+        ? projects.find((p) => p.id === mode.id)
+        : undefined,
     [mode, projects],
   );
 
@@ -260,7 +294,9 @@ export function TasksModule({
 
   /** Optimistic move: update local state instantly, then persist. */
   async function move(id: string, status: string, position: number) {
-    setTasks((ts) => ts.map((t) => (t.id === id ? { ...t, status, position } : t)));
+    setTasks((ts) =>
+      ts.map((t) => (t.id === id ? { ...t, status, position } : t)),
+    );
     try {
       await client.moveTask(id, status, position);
     } catch {
@@ -270,7 +306,9 @@ export function TasksModule({
 
   const title =
     mode.type === "plate"
-      ? (projectsContext ? strings.projectsTabMyWork : strings.taskMyPlate)
+      ? projectsContext
+        ? strings.projectsTabMyWork
+        : strings.taskMyPlate
       : mode.type === "proposals"
         ? strings.taskProposals
         : (engagement?.name ?? activeProject?.name ?? strings.moduleTasks);
@@ -284,7 +322,8 @@ export function TasksModule({
             className={`flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-primary !no-underline transition-colors hover:bg-raised hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${mode.type === "plate" ? "bg-selected font-medium" : ""}`}
             onClick={() => setMode({ type: "plate" })}
           >
-            <Sun size={16} /> {projectsContext ? strings.projectsTabMyWork : strings.taskMyPlate}
+            <Sun size={16} />{" "}
+            {projectsContext ? strings.projectsTabMyWork : strings.taskMyPlate}
           </button>
           <button
             type="button"
@@ -295,7 +334,11 @@ export function TasksModule({
             }}
           >
             <Sparkles size={16} /> {strings.taskProposals}
-            {proposals.length > 0 && <span className="ml-auto inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-semibold text-on-accent">{proposals.length}</span>}
+            {proposals.length > 0 && (
+              <span className="ml-auto inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-semibold text-on-accent">
+                {proposals.length}
+              </span>
+            )}
           </button>
 
           <div className="flex flex-col gap-1">
@@ -316,7 +359,9 @@ export function TasksModule({
                 key={p.id}
                 type="button"
                 className={`flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-primary !no-underline transition-colors hover:bg-raised hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                  mode.type === "project" && mode.id === p.id ? "bg-selected font-medium" : ""
+                  mode.type === "project" && mode.id === p.id
+                    ? "bg-selected font-medium"
+                    : ""
                 }`}
                 onClick={() => openProject(p.id)}
               >
@@ -333,46 +378,54 @@ export function TasksModule({
       )}
 
       <section className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-6 border-b border-subtle bg-surface px-6 py-5 max-lg:flex-wrap max-sm:px-4">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
+        <header className="flex items-center gap-6 border-b border-subtle bg-surface px-7 py-6 max-lg:flex-wrap max-sm:px-4 max-sm:py-5">
+          <div className="flex min-w-0 flex-1 items-center gap-4">
             {projectId !== undefined && (
               <button
                 type="button"
-                className="shrink-0 rounded-lg text-secondary !no-underline transition-colors hover:bg-raised hover:text-primary hover:!no-underline focus:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="shrink-0 rounded-xl border border-subtle bg-surface text-secondary !no-underline shadow-sm transition-colors hover:border-default hover:bg-raised hover:text-primary hover:!no-underline focus:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 onClick={() => navigate("/projects/list")}
                 aria-label={strings.projectsTabList}
               >
-                <span className="flex min-h-10 items-center gap-2 px-3">
+                <span className="flex min-h-11 items-center gap-2 px-4">
                   <ArrowLeft size={16} aria-hidden="true" />
-                  <span className="max-sm:hidden">{strings.projectsTabList}</span>
+                  <span className="max-sm:hidden">
+                    {strings.projectsTabList}
+                  </span>
                 </span>
               </button>
             )}
-            {projectId !== undefined && <span className="h-8 w-px shrink-0 bg-[var(--border-subtle)]" aria-hidden="true" />}
-            <div className="flex min-w-0 items-center gap-3">
+            <div className="flex min-w-0 items-center gap-3.5">
               {projectId !== undefined && (
-                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-tint)] text-accent" aria-hidden="true">
-                  <FolderKanban size={20} />
+                <span
+                  className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--accent-tint)] text-accent shadow-sm ring-1 ring-inset ring-accent/10"
+                  aria-hidden="true"
+                >
+                  <FolderKanban size={22} />
                 </span>
               )}
               <div className="min-w-0">
-                <h1 className="m-0 truncate text-2xl font-bold text-primary">{title}</h1>
-                {projectId !== undefined && engagement !== null && (
-                  <p className="mt-1 inline-flex items-center rounded-full bg-raised px-2.5 py-0.5 text-xs font-medium text-secondary">
-                    {projectStatusLabel(engagement.status)}
-                  </p>
-                )}
+                <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+                  <h1 className="m-0 truncate text-2xl font-bold tracking-tight text-primary">
+                    {title}
+                  </h1>
+                  {projectId !== undefined && engagement !== null && (
+                    <span className="inline-flex min-h-6 items-center rounded-full bg-raised px-2.5 text-xs font-semibold text-secondary ring-1 ring-inset ring-subtle">
+                      {projectStatusLabel(engagement.status)}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
           <form
-            className="flex h-10 w-full max-w-[28.75rem] items-center gap-2 rounded-full border border-default bg-app px-3 transition-shadow focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/15 max-lg:order-3 max-lg:max-w-none max-lg:basis-full"
+            className="flex h-11 w-full max-w-[26rem] items-center gap-2.5 rounded-xl border border-default bg-app px-4 shadow-sm transition-all focus-within:border-accent focus-within:bg-surface focus-within:ring-2 focus-within:ring-accent/15 max-lg:order-3 max-lg:max-w-none max-lg:basis-full"
             role="search"
             onSubmit={(e) => e.preventDefault()}
           >
             <Search size={16} className="shrink-0 text-tertiary" aria-hidden />
             <input
-              className="min-w-0 flex-1 border-0 bg-transparent text-base text-primary outline-none placeholder:text-tertiary"
+              className="min-w-0 flex-1 border-0 bg-transparent text-sm text-primary outline-none placeholder:text-tertiary"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={strings.taskSearchPlaceholder}
@@ -382,22 +435,51 @@ export function TasksModule({
           <div className="flex shrink-0 items-center gap-3">
             {loading && <Spinner size={16} />}
             {tasks.length > 0 && mode.type !== "proposals" && (
-              <button type="button" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent !no-underline shadow-sm transition-colors hover:bg-accent-hover hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2" onClick={() => openCreate()}>
-                <Plus size={16} /> {strings.taskNew}
+              <button
+                type="button"
+                className="rounded-xl bg-accent text-on-accent !no-underline shadow-sm transition-colors hover:bg-accent-hover hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                onClick={() => openCreate()}
+              >
+                <span className="inline-flex min-h-11 items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold">
+                  <Plus size={16} /> {strings.taskNew}
+                </span>
               </button>
             )}
           </div>
         </header>
 
         {mode.type !== "proposals" && (
-          <div className="flex gap-3 overflow-x-auto border-b border-subtle bg-surface px-6 py-3 max-sm:gap-2 max-sm:px-4" role="tablist" aria-label={title}>
+          <div
+            className="flex gap-1.5 overflow-x-auto border-b border-subtle bg-surface px-7 py-3 max-sm:px-4"
+            role="tablist"
+            aria-label={title}
+          >
             {(
               [
-                { id: "overview", label: strings.taskOverview, Icon: LayoutDashboard },
-                { id: "list", label: projectId !== undefined ? strings.projectsWorkspaceTasks : strings.taskList, Icon: List },
+                {
+                  id: "overview",
+                  label: strings.taskOverview,
+                  Icon: LayoutDashboard,
+                },
+                {
+                  id: "list",
+                  label:
+                    projectId !== undefined
+                      ? strings.projectsWorkspaceTasks
+                      : strings.taskList,
+                  Icon: List,
+                },
                 { id: "board", label: strings.taskBoard, Icon: LayoutGrid },
-                { id: "timeline", label: strings.taskTimeline, Icon: GanttChartSquare },
-                { id: "calendar", label: strings.taskCalendar, Icon: CalendarRange },
+                {
+                  id: "timeline",
+                  label: strings.taskTimeline,
+                  Icon: GanttChartSquare,
+                },
+                {
+                  id: "calendar",
+                  label: strings.taskCalendar,
+                  Icon: CalendarRange,
+                },
                 { id: "files", label: strings.taskFiles, Icon: Paperclip },
               ] as const
             ).map((t) => (
@@ -406,7 +488,7 @@ export function TasksModule({
                 type="button"
                 role="tab"
                 aria-selected={view === t.id}
-                className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border-b-2 px-4 py-2.5 text-sm !no-underline transition-colors hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${view === t.id ? "border-accent bg-[var(--accent-soft)] font-semibold !text-accent" : "border-transparent bg-transparent font-medium !text-secondary hover:bg-raised hover:!text-primary"}`}
+                className={`inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-sm !no-underline transition-colors hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${view === t.id ? "bg-[var(--accent-soft)] font-semibold !text-accent shadow-sm ring-1 ring-inset ring-accent/10" : "bg-transparent font-medium !text-secondary hover:bg-raised hover:!text-primary"}`}
                 onClick={() => openView(t.id)}
               >
                 <t.Icon size={16} aria-hidden="true" />
@@ -416,12 +498,13 @@ export function TasksModule({
           </div>
         )}
 
-        {mode.type !== "proposals" && view !== "overview" && view !== "files" && view !== "list" && tasks.length > 0 && (
-          <TaskToolbar
-            config={config}
-            onChange={setConfig}
-          />
-        )}
+        {mode.type !== "proposals" &&
+          view !== "overview" &&
+          view !== "files" &&
+          view !== "list" &&
+          tasks.length > 0 && (
+            <TaskToolbar config={config} onChange={setConfig} />
+          )}
 
         <div className="min-h-0 flex-1 overflow-auto">
           {mode.type === "proposals" ? (
@@ -433,16 +516,29 @@ export function TasksModule({
               }}
             />
           ) : projectId !== undefined && engagementLoading ? (
-            <div className="flex min-h-[28rem] items-center justify-center" role="status">
+            <div
+              className="flex min-h-[28rem] items-center justify-center"
+              role="status"
+            >
               <Spinner size={24} />
             </div>
           ) : projectId !== undefined && engagementError !== null ? (
             <section className="mx-auto flex min-h-[28rem] w-full max-w-2xl flex-col items-center justify-center px-6 py-12 text-center">
-              <span className="flex size-14 items-center justify-center rounded-2xl bg-[var(--danger-tint)] text-danger" aria-hidden="true">
+              <span
+                className="flex size-14 items-center justify-center rounded-2xl bg-[var(--danger-tint)] text-danger"
+                aria-hidden="true"
+              >
                 <CircleAlert size={26} />
               </span>
-              <h2 className="mt-4 text-lg font-semibold text-primary">{strings.projectsWorkspaceUnavailable}</h2>
-              <p className="mt-2 max-w-[46ch] text-sm leading-6 text-secondary" role="alert">{engagementError}</p>
+              <h2 className="mt-4 text-lg font-semibold text-primary">
+                {strings.projectsWorkspaceUnavailable}
+              </h2>
+              <p
+                className="mt-2 max-w-[46ch] text-sm leading-6 text-secondary"
+                role="alert"
+              >
+                {engagementError}
+              </p>
               <button
                 type="button"
                 className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-on-accent !no-underline transition-colors hover:bg-accent-hover hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
@@ -452,7 +548,9 @@ export function TasksModule({
                 {strings.projectsRetry}
               </button>
             </section>
-          ) : view === "overview" && projectId !== undefined && engagement !== null ? (
+          ) : view === "overview" &&
+            projectId !== undefined &&
+            engagement !== null ? (
             <ProjectOverviewView
               project={engagement}
               plan={projectPlan}
@@ -461,11 +559,21 @@ export function TasksModule({
               onAddTask={() => openCreate()}
               onOpenTask={setSelected}
               onOpenTasks={() => openView("list")}
-              onOpenTimesheet={() => navigate(`/projects/week?project=${encodeURIComponent(projectId)}`)}
-              onOpenTimeline={() => navigate(`/projects/timeline?project=${encodeURIComponent(projectId)}`)}
+              onOpenTimesheet={() =>
+                navigate(
+                  `/projects/week?project=${encodeURIComponent(projectId)}`,
+                )
+              }
+              onOpenTimeline={() =>
+                navigate(
+                  `/projects/timeline?project=${encodeURIComponent(projectId)}`,
+                )
+              }
               onOpenReport={() => navigate("/projects/reports")}
               onEditProject={() => setEditingProject(true)}
-              onOpenInvoice={(id) => navigate(`/billing/invoices/${encodeURIComponent(id)}`)}
+              onOpenInvoice={(id) =>
+                navigate(`/billing/invoices/${encodeURIComponent(id)}`)
+              }
             />
           ) : view === "overview" ? (
             <OverviewView
@@ -483,7 +591,11 @@ export function TasksModule({
               onAdd={(status) => openCreate(status)}
             />
           ) : view === "timeline" ? (
-            <TimelineView tasks={filterTasks(tasks, config, identity?.email)} edges={edges} onOpen={setSelected} />
+            <TimelineView
+              tasks={filterTasks(tasks, config, identity?.email)}
+              edges={edges}
+              onOpen={setSelected}
+            />
           ) : view === "calendar" ? (
             <CalendarView
               tasks={filterTasks(tasks, config, identity?.email)}
@@ -561,7 +673,13 @@ export function TasksModule({
 }
 
 /** The AI proposals inbox: accept the real ones, reject the noise (ADR 0023). */
-function ProposalsInbox({ proposals, onDone }: { proposals: Task[]; onDone: () => void }) {
+function ProposalsInbox({
+  proposals,
+  onDone,
+}: {
+  proposals: Task[];
+  onDone: () => void;
+}) {
   const client = useJmapClient();
   if (proposals.length === 0) {
     return (
@@ -569,15 +687,22 @@ function ProposalsInbox({ proposals, onDone }: { proposals: Task[]; onDone: () =
         <span className="mb-2 inline-flex size-[88px] items-center justify-center rounded-full bg-accent-tint text-accent-hover ring-1 ring-inset ring-accent/20">
           <Sparkles size={38} />
         </span>
-        <h2 className="m-0 text-xl font-bold text-primary">{strings.taskNoProposalsTitle}</h2>
-        <p className="m-0 max-w-[360px] text-base leading-relaxed text-secondary">{strings.taskNoProposals}</p>
+        <h2 className="m-0 text-xl font-bold text-primary">
+          {strings.taskNoProposalsTitle}
+        </h2>
+        <p className="m-0 max-w-[360px] text-base leading-relaxed text-secondary">
+          {strings.taskNoProposals}
+        </p>
       </div>
     );
   }
   return (
     <div className="w-full max-w-2xl p-4">
       {proposals.map((t) => (
-        <div key={t.id} className="mb-3 flex flex-col gap-2 rounded-lg border border-default bg-surface p-3">
+        <div
+          key={t.id}
+          className="mb-3 flex flex-col gap-2 rounded-lg border border-default bg-surface p-3"
+        >
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1 rounded-full bg-accent-tint px-2 py-0.5 text-[11px] font-semibold text-accent">
               <Sparkles size={11} /> {strings.taskAiSuggested}
@@ -590,7 +715,12 @@ function ProposalsInbox({ proposals, onDone }: { proposals: Task[]; onDone: () =
             {t.dueAt && <DueChip iso={t.dueAt} done={false} />}
             <PriorityChip priority={t.priority} />
             {t.sourceKind && (
-              <span>· {t.sourceKind === "event" ? strings.taskFromEvent : strings.taskFromEmail}</span>
+              <span>
+                ·{" "}
+                {t.sourceKind === "event"
+                  ? strings.taskFromEvent
+                  : strings.taskFromEmail}
+              </span>
             )}
           </div>
           <div className="flex gap-2">
