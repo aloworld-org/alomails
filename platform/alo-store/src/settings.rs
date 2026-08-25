@@ -48,7 +48,80 @@ impl OutOfOffice {
     }
 }
 
+/// The two spellings of one identity's signature (RFC 8621 §6.1).
+///
+/// Both are stored rather than one converted from the other, because a client
+/// that round-trips `textSignature` must get its own text back — a conversion
+/// looks like corruption to whoever typed it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IdentitySignature {
+    /// The plain-text spelling.
+    pub text: String,
+    /// The HTML spelling.
+    pub html: String,
+}
+
 impl AccountStore {
+    /// The signature stored for one send identity, or `None` when that
+    /// identity has never been given its own — the caller then falls back to
+    /// the account-level [`Self::signature`], which is what every identity
+    /// used before per-identity signatures existed.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn identity_signature(&self, address: &str) -> Result<Option<IdentitySignature>> {
+        let row = sqlx::query_as::<_, (String, String)>(
+            "SELECT text_signature, html_signature FROM identity_signatures              WHERE tenant_id = $1 AND user_id = $2 AND address = $3",
+        )
+        .bind(self.tenant.as_str())
+        .bind(self.user.as_str())
+        .bind(address)
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(row.map(|(text, html)| IdentitySignature { text, html }))
+    }
+
+    /// Sets one send identity's signature; both spellings empty deletes the
+    /// row, which restores the fall-back to the account-level signature rather
+    /// than pinning an explicit "nothing" over it.
+    ///
+    /// The address is stored as given. The *caller* is responsible for only
+    /// passing an address this user may send from — the JMAP layer resolves an
+    /// identity id to an owned address before it gets here — so a row can never
+    /// name an identity the account door would refuse to send as.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn set_identity_signature(
+        &self,
+        address: &str,
+        text: &str,
+        html: &str,
+    ) -> Result<()> {
+        if text.is_empty() && html.is_empty() {
+            sqlx::query(
+                "DELETE FROM identity_signatures                  WHERE tenant_id = $1 AND user_id = $2 AND address = $3",
+            )
+            .bind(self.tenant.as_str())
+            .bind(self.user.as_str())
+            .bind(address)
+            .execute(&self.pool)
+            .await?;
+            return Ok(());
+        }
+        sqlx::query(
+            "INSERT INTO identity_signatures              (tenant_id, user_id, address, text_signature, html_signature)              VALUES ($1, $2, $3, $4, $5)              ON CONFLICT (tenant_id, user_id, address) DO UPDATE              SET text_signature = $4, html_signature = $5, updated_at = now()",
+        )
+        .bind(self.tenant.as_str())
+        .bind(self.user.as_str())
+        .bind(address)
+        .bind(text)
+        .bind(html)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
     /// This user's mail signature (HTML), or empty if unset.
     ///
     /// # Errors

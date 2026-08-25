@@ -237,6 +237,7 @@ async fn dispatch(
         "SearchSnippet/get" => search_snippet_get(account, args, state).await,
         "Thread/get" => thread_get(account, args).await,
         "Identity/get" => identity_get(account, args, state).await,
+        "Identity/set" => identity_set(account, args, state).await,
         "VacationResponse/get" => vacation_get(account, args).await,
         "VacationResponse/set" => vacation_set(account, args).await,
         "Quota/get" => quota_get(account, args).await,
@@ -1623,6 +1624,134 @@ async fn search_snippet_get(
     Ok(json!({ "accountId": account.account_id(), "list": list, "notFound": not_found }))
 }
 
+/// `Identity/set` (RFC 8621 §6.3): updates a send identity's signature.
+///
+/// Signatures are the only mutable part. The identities themselves are
+/// provisioned — the address list is the tenant's directory plus the user's
+/// aliases, which an admin manages — so `create` and `destroy` are refused as
+/// `forbidden` rather than half-implemented. Before this method existed,
+/// `Identity/get` advertised `textSignature`/`htmlSignature` on every identity
+/// and a standard client's attempt to set one was refused as an unknown
+/// method: a per-identity fact was promised and nowhere to put it.
+///
+/// A patch that clears both spellings deletes the stored row, restoring the
+/// fall-back to the account-level signature — an explicit "nothing" is
+/// indistinguishable from "never set" on purpose, because the fall-back is the
+/// behaviour every account had before this existed.
+async fn identity_set(account: &Account, args: &Value, state: &AppState) -> Result<Value, Value> {
+    check_account(args, account)?;
+    let old_state = account.acc.state().await.map_err(store_err)?;
+
+    // The addresses this user may send from, resolved once: an identity id
+    // must map back to one of them or the patch names something that is not
+    // this user's to change — the same set `Identity/get` lists and the
+    // submission path authorizes.
+    let ts = state.store.for_tenant(account.tenant.clone());
+    let mut addresses: Vec<String> = Vec::new();
+    if let Ok(Some(canonical)) = ts.email_of(&account.user).await {
+        addresses.push(canonical);
+    }
+    if let Ok(aliases) = ts.aliases_of(&account.user).await {
+        addresses.extend(aliases);
+    }
+
+    let mut updated = Map::new();
+    let mut not_updated = Map::new();
+    if let Some(update) = args.get("update").and_then(Value::as_object) {
+        for (id, patch) in update {
+            let Some(address) = addresses.iter().find(|a| identity_id(a) == *id) else {
+                // Not an identity of this account — the same answer whether it
+                // belongs to somebody else or to nobody (no oracle).
+                not_updated.insert(id.clone(), method_error("notFound"));
+                continue;
+            };
+            let Some(patch) = patch.as_object() else {
+                not_updated.insert(
+                    id.clone(),
+                    method_error_desc("invalidProperties", "the patch must be an object"),
+                );
+                continue;
+            };
+            // Only the two signature spellings are settable; refusing anything
+            // else keeps a client honest about what stuck, rather than
+            // answering "updated" to a name change that went nowhere.
+            if let Some(bad) = patch
+                .keys()
+                .find(|k| !matches!(k.as_str(), "textSignature" | "htmlSignature"))
+            {
+                not_updated.insert(
+                    id.clone(),
+                    method_error_desc(
+                        "invalidProperties",
+                        &format!("{bad} is not settable on an Identity"),
+                    ),
+                );
+                continue;
+            }
+            // Unnamed spellings keep their current value (RFC 8620 §5.3: a
+            // patch touches only what it names); null clears one.
+            let current = account
+                .acc
+                .identity_signature(address)
+                .await
+                .map_err(store_err)?;
+            let (mut text, mut html) = match current {
+                Some(sig) => (sig.text, sig.html),
+                None => (String::new(), String::new()),
+            };
+            if let Some(v) = patch.get("textSignature") {
+                text = v.as_str().unwrap_or_default().to_owned();
+            }
+            if let Some(v) = patch.get("htmlSignature") {
+                html = v.as_str().unwrap_or_default().to_owned();
+            }
+            if account
+                .acc
+                .set_identity_signature(address, &text, &html)
+                .await
+                .is_err()
+            {
+                not_updated.insert(id.clone(), method_error("serverFail"));
+                continue;
+            }
+            updated.insert(id.clone(), Value::Null);
+        }
+    }
+
+    let mut not_created = Map::new();
+    if let Some(creates) = args.get("create").and_then(Value::as_object) {
+        for cid in creates.keys() {
+            not_created.insert(
+                cid.clone(),
+                method_error_desc("forbidden", "identities are provisioned, not created"),
+            );
+        }
+    }
+    let mut not_destroyed = Map::new();
+    for id in args
+        .get("destroy")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+    {
+        not_destroyed.insert(
+            id.to_owned(),
+            method_error_desc("forbidden", "identities are provisioned, not destroyed"),
+        );
+    }
+
+    let new_state = account.acc.state().await.map_err(store_err)?;
+    Ok(json!({
+        "accountId": account.account_id(),
+        "oldState": old_state,
+        "newState": new_state,
+        "updated": updated, "notUpdated": not_updated,
+        "created": Value::Null, "notCreated": not_created,
+        "destroyed": Vec::<Value>::new(), "notDestroyed": not_destroyed,
+    }))
+}
+
 /// A stable, JMAP-id-safe (`A-Za-z0-9_-`) id for a send identity, derived from
 /// its address via FNV-1a-64 → 16 hex chars.
 fn identity_id(address: &str) -> String {
@@ -1637,8 +1766,14 @@ fn identity_id(address: &str) -> String {
 /// `Identity/get` (RFC 8621 §6.1): the addresses the signed-in user may send
 /// from — canonical + aliases, the same set the submission path authorizes —
 /// as one JMAP Identity each. Standard clients (Thunderbird, Apple Mail) need
-/// this before they can submit. Read-only: identities are provisioned, so
-/// `mayDelete` is false and there is no `Identity/set`.
+/// this before they can submit.
+///
+/// Each identity carries its own signature when one has been set, and the
+/// account-level signature otherwise — the fall-back is what every identity was
+/// serving before per-identity signatures existed, so an account that never
+/// touches `Identity/set` behaves exactly as it always did. The identities
+/// themselves are provisioned: `mayDelete` is false, and `Identity/set` updates
+/// signatures and nothing else.
 async fn identity_get(account: &Account, args: &Value, state: &AppState) -> Result<Value, Value> {
     check_account(args, account)?;
     let acct_state = account.acc.state().await.map_err(store_err)?;
@@ -1651,7 +1786,7 @@ async fn identity_get(account: &Account, args: &Value, state: &AppState) -> Resu
     if let Ok(aliases) = ts.aliases_of(&account.user).await {
         addresses.extend(aliases);
     }
-    let signature = account.acc.signature().await.unwrap_or_default();
+    let account_signature = account.acc.signature().await.unwrap_or_default();
 
     let wanted: Option<std::collections::HashSet<String>> =
         args.get("ids").and_then(Value::as_array).map(|a| {
@@ -1671,14 +1806,23 @@ async fn identity_get(account: &Account, args: &Value, state: &AppState) -> Resu
         if wanted.as_ref().is_some_and(|w| !w.contains(&id)) {
             continue;
         }
+        let own = account
+            .acc
+            .identity_signature(&addr)
+            .await
+            .map_err(store_err)?;
+        let (text_sig, html_sig) = match own {
+            Some(sig) => (sig.text, sig.html),
+            None => (String::new(), account_signature.clone()),
+        };
         list.push(json!({
             "id": id,
             "name": "",
             "email": addr,
             "replyTo": Value::Null,
             "bcc": Value::Null,
-            "textSignature": "",
-            "htmlSignature": signature,
+            "textSignature": text_sig,
+            "htmlSignature": html_sig,
             "mayDelete": false,
         }));
     }
