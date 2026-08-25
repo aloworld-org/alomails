@@ -1,0 +1,10 @@
+[Unit]
+Description=alo restore rehearsal (prove the backup can be restored)
+OnFailure=alo-restore-rehearsal-failed.service
+After=docker.service
+Wants=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/alo/ops/restore-rehearsal.sh
+WorkingDirectory=/opt/alo/deploy/production

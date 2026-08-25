@@ -1,0 +1,13 @@
+[Unit]
+Description=Rehearse a restore weekly
+
+[Timer]
+# Weekly, not monthly. The product promises monthly; a month is long enough for
+# a broken backup to go unnoticed through four failed nights, which is how the
+# 2026-08 outage lasted twenty-five days. The rehearsal costs seconds.
+OnCalendar=Sun *-*-* 04:30:00
+Persistent=true
+RandomizedDelaySec=600
+
+[Install]
+WantedBy=timers.target

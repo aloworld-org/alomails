@@ -1,0 +1,6 @@
+[Unit]
+Description=Alert that the restore rehearsal failed
+
+[Service]
+Type=oneshot
+ExecStart=/opt/alo/monitoring/send-alert.sh "[alo] RESTORE REHEARSAL FAILED" "The backup could not be restored. This means the nightly backup is not usable, whatever its exit code said. Run: journalctl -u alo-restore-rehearsal.service -n50 on the server."
