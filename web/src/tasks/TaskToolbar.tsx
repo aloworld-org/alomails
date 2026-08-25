@@ -13,8 +13,8 @@ import { isFiltering, type GroupKey, type SortKey, type ViewConfig } from "./vie
 interface Props {
   config: ViewConfig;
   onChange: (next: ViewConfig) => void;
-  /** Joins the toolbar to the list's workload summary below it. */
-  connected?: boolean;
+  /** Optional list metrics share the same command surface as the controls. */
+  summary?: ReactNode;
 }
 
 function Dropdown({
@@ -77,7 +77,7 @@ function Choice({ on, label, onClick }: { on: boolean; label: string; onClick: (
   );
 }
 
-export function TaskToolbar({ config, onChange, connected = false }: Props) {
+export function TaskToolbar({ config, onChange, summary }: Props) {
   const set = (patch: Partial<ViewConfig>) => onChange({ ...config, ...patch });
 
   const sortItems: { key: SortKey; label: string }[] = [
@@ -109,9 +109,7 @@ export function TaskToolbar({ config, onChange, connected = false }: Props) {
   }
 
   return (
-    <div
-      className={`mx-auto mt-4 flex w-[calc(100%-3rem)] max-w-[97rem] items-center gap-3 overflow-x-auto border border-subtle bg-surface p-3 shadow-sm max-sm:w-[calc(100%-2rem)] ${connected ? "rounded-t-2xl border-b-0" : "rounded-2xl"}`}
-    >
+    <div className="mx-auto mt-4 flex w-[calc(100%-3rem)] max-w-[97rem] flex-wrap items-center gap-2 rounded-2xl border border-subtle bg-surface p-2 shadow-sm max-sm:w-[calc(100%-2rem)]">
       <Dropdown label={strings.taskFilter} icon={<ListFilter size={15} />} active={isFiltering(config)}>
         <div className="px-2 pb-0.5 pt-1.5 text-xs font-semibold uppercase tracking-wide text-tertiary">{strings.taskPriority}</div>
         {prios.map((p) => (
@@ -155,6 +153,11 @@ export function TaskToolbar({ config, onChange, connected = false }: Props) {
           onClick={() => set({ compact: !config.compact })}
         />
       </Dropdown>
+      {summary !== undefined && (
+        <div className="ml-auto flex flex-wrap items-center gap-1 border-l border-subtle pl-3 max-lg:ml-0 max-lg:w-full max-lg:border-l-0 max-lg:border-t max-lg:pl-0 max-lg:pt-2">
+          {summary}
+        </div>
+      )}
     </div>
   );
 }

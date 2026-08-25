@@ -3,7 +3,7 @@
 // filter / sort / group config reshapes the loaded tasks (viewConfig); groups
 // collapse; status groups get an inline "add task" row. Checking the circle
 // moves a task to/from Done via the one-field move the board uses.
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   CheckCircle2,
   ChevronDown,
@@ -17,6 +17,7 @@ import {
 import { strings } from "../i18n";
 import type { Task } from "../jmap";
 import { Avatar, LabelChips, dueLabel, isOverdue, statusColor } from "./parts";
+import { TaskToolbar } from "./TaskToolbar";
 import {
   filterTasks,
   groupTasks,
@@ -33,6 +34,7 @@ interface Props {
   onOpen: (id: string) => void;
   onMove: (id: string, status: string, position: number) => void;
   onAdd?: (status: string) => void;
+  onConfigChange: (next: ViewConfig) => void;
 }
 
 function assigneeName(email: string, me?: string): string {
@@ -83,8 +85,12 @@ export function ListView({
   onOpen,
   onMove,
   onAdd,
+  onConfigChange,
 }: Props) {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dropGroup, setDropGroup] = useState<string | null>(null);
+  const draggedRef = useRef(false);
   const q = (search ?? "").trim().toLowerCase();
   const searched =
     q === ""
@@ -115,51 +121,84 @@ export function ListView({
     onMove(t.id, t.status === "done" ? "todo" : "done", t.position);
   }
 
+  function dropInto(status: string) {
+    if (dragId === null) return;
+    const destination = ordered.filter(
+      (task) => task.status === status && task.id !== dragId,
+    );
+    const position = destination.length === 0
+      ? 1024
+      : Math.max(...destination.map((task) => task.position)) + 1024;
+    onMove(dragId, status, position);
+    setDragId(null);
+    setDropGroup(null);
+  }
+
   return (
-    <div className="mx-auto w-full max-w-[100rem] px-6 pb-8 max-sm:px-4">
-      <section
-        className="mb-6 flex flex-wrap items-center gap-2 rounded-b-2xl border border-subtle border-t-0 bg-surface px-4 pb-4 pt-2 shadow-sm"
-        aria-label={strings.taskOvProgress}
-      >
-        <span className="inline-flex items-center gap-2 rounded-xl bg-raised px-3 py-2 text-sm font-semibold text-primary">
+    <>
+      <TaskToolbar
+        config={config}
+        onChange={onConfigChange}
+        summary={<>
+        <span className="inline-flex items-center gap-2 rounded-lg bg-raised px-3 py-2 text-sm font-semibold text-primary">
           <ListChecks size={16} className="text-accent" aria-hidden="true" />
           {strings.taskSummaryTotal(ordered.length)}
         </span>
-        <span className="rounded-xl px-3 py-2 text-sm font-medium text-secondary">
+        <span className="rounded-lg px-3 py-2 text-sm font-medium text-secondary">
           {strings.taskSummaryActive(ordered.length - completed)}
         </span>
         <span
-          className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium ${overdue > 0 ? "bg-[var(--danger-tint)] text-danger" : "text-secondary"}`}
+          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium ${overdue > 0 ? "bg-[var(--danger-tint)] text-danger" : "text-secondary"}`}
         >
           <Clock3 size={15} aria-hidden="true" />
           {strings.taskSummaryOverdue(overdue)}
         </span>
-        <span className="rounded-xl px-3 py-2 text-sm font-medium text-secondary">
+        <span className="rounded-lg px-3 py-2 text-sm font-medium text-secondary">
           {strings.taskSummaryCompleted(completed)}
         </span>
-      </section>
+        </>}
+      />
 
-      <div className="hidden grid-cols-[minmax(240px,2.4fr)_minmax(120px,1fr)_minmax(120px,1fr)_110px_120px] items-center gap-4 px-5 pb-2 text-xs font-semibold uppercase tracking-wide text-tertiary lg:grid">
-        <span>{strings.taskColName}</span>
-        <span>{strings.taskColProject}</span>
-        <span>{strings.taskColAssignee}</span>
-        <span>{strings.taskColDue}</span>
-        <span>{strings.taskColPriority}</span>
-      </div>
+    <div className="mx-auto w-full max-w-[100rem] px-6 pb-8 pt-6 max-sm:px-4">
 
-      {groups.map((group) => {
+      <div className="overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm">
+        <div className="hidden grid-cols-[minmax(240px,2.4fr)_minmax(120px,1fr)_minmax(120px,1fr)_110px_120px] items-center gap-4 border-b border-subtle bg-raised/60 px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-tertiary lg:grid">
+          <span>{strings.taskColName}</span>
+          <span>{strings.taskColProject}</span>
+          <span>{strings.taskColAssignee}</span>
+          <span>{strings.taskColDue}</span>
+          <span>{strings.taskColPriority}</span>
+        </div>
+
+      {groups.map((group, groupIndex) => {
         const isCollapsed = collapsed.has(group.key);
         return (
           <section
             key={group.key}
-            className="mb-4 overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm"
+            className={`transition-[background-color,box-shadow] ${groupIndex > 0 ? "border-t border-subtle" : ""} ${dropGroup === group.key ? "bg-[var(--accent-soft)] shadow-[inset_3px_0_0_var(--accent)]" : "bg-surface"}`}
+            onDragOver={(event) => {
+              if (dragId === null || group.status === undefined) return;
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "move";
+              setDropGroup(group.key);
+            }}
+            onDragLeave={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+                setDropGroup((current) => current === group.key ? null : current);
+              }
+            }}
+            onDrop={(event) => {
+              if (group.status === undefined) return;
+              event.preventDefault();
+              dropInto(group.status);
+            }}
           >
             <button
               type="button"
-              className="flex min-h-14 w-full items-center gap-3 py-3 pl-8 pr-6 text-left text-secondary transition-colors hover:bg-raised max-sm:pl-7 max-sm:pr-5"
+              className="flex min-h-12 w-full items-center gap-3 bg-raised/35 py-2.5 pl-6 pr-6 text-left text-secondary transition-colors hover:bg-raised max-sm:pl-5 max-sm:pr-5"
               onClick={() => toggleGroup(group.key)}
             >
-              <span className="ml-6 grid size-8 shrink-0 place-items-center rounded-lg bg-raised text-secondary max-sm:ml-5" aria-hidden="true">
+              <span className="grid size-7 shrink-0 place-items-center rounded-lg text-secondary transition-colors group-hover:bg-surface" aria-hidden="true">
                 {isCollapsed ? (
                   <ChevronRight size={16} />
                 ) : (
@@ -190,8 +229,26 @@ export function ListView({
                       key={t.id}
                       role="button"
                       tabIndex={0}
-                      className={`group grid cursor-pointer grid-cols-1 gap-2 border-t border-subtle pl-8 pr-6 transition-colors hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent max-sm:pl-7 max-sm:pr-5 lg:grid-cols-[minmax(240px,2.4fr)_minmax(120px,1fr)_minmax(120px,1fr)_110px_120px] lg:items-center lg:gap-4 ${config.compact ? "py-2" : "py-3.5"} ${done ? "bg-raised/30" : ""}`}
-                      onClick={() => onOpen(t.id)}
+                      draggable={group.status !== undefined}
+                      className={`group grid cursor-grab grid-cols-1 gap-2 border-t border-subtle pl-6 pr-6 transition-[background-color,opacity] hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent active:cursor-grabbing max-sm:pl-5 max-sm:pr-5 lg:grid-cols-[minmax(240px,2.4fr)_minmax(120px,1fr)_minmax(120px,1fr)_110px_120px] lg:items-center lg:gap-4 ${config.compact ? "py-2" : "py-3.5"} ${done ? "bg-raised/30" : ""} ${dragId === t.id ? "opacity-45" : ""}`}
+                      onClick={() => {
+                        if (draggedRef.current) {
+                          draggedRef.current = false;
+                          return;
+                        }
+                        onOpen(t.id);
+                      }}
+                      onDragStart={(event) => {
+                        draggedRef.current = true;
+                        setDragId(t.id);
+                        event.dataTransfer.effectAllowed = "move";
+                        event.dataTransfer.setData("text/plain", t.id);
+                      }}
+                      onDragEnd={() => {
+                        setDragId(null);
+                        setDropGroup(null);
+                        window.setTimeout(() => { draggedRef.current = false; }, 0);
+                      }}
                       onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === " ") {
                           event.preventDefault();
@@ -207,6 +264,7 @@ export function ListView({
                             e.stopPropagation();
                             toggle(t);
                           }}
+                          onKeyDown={(event) => event.stopPropagation()}
                           aria-label={
                             done
                               ? strings.taskMarkNotDone
@@ -255,7 +313,7 @@ export function ListView({
                 {onAdd !== undefined && group.status !== undefined && (
                   <button
                     type="button"
-                    className="mx-5 my-3 flex min-h-11 w-[calc(100%-2.5rem)] items-center gap-3 rounded-xl border border-transparent bg-raised px-4 py-2.5 text-left text-sm font-medium text-secondary transition-colors hover:border-accent/30 hover:bg-[var(--accent-soft)] hover:text-accent max-sm:mx-4 max-sm:w-[calc(100%-2rem)]"
+                    className="mx-4 my-2 flex min-h-9 w-[calc(100%-2rem)] items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-tertiary transition-colors hover:bg-[var(--accent-soft)] hover:text-accent"
                     onClick={() => onAdd(group.status as string)}
                   >
                     <Plus size={15} /> {strings.taskAdd}
@@ -266,6 +324,8 @@ export function ListView({
           </section>
         );
       })}
+      </div>
     </div>
+    </>
   );
 }

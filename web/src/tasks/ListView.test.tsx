@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Task } from "../jmap";
 import { ListView } from "./ListView";
 import { DEFAULT_CONFIG } from "./viewConfig";
+
+afterEach(cleanup);
 
 function task(id: string, status: string, dueAt: string | null): Task {
   return {
@@ -36,6 +38,7 @@ function task(id: string, status: string, dueAt: string | null): Task {
 describe("premium task list", () => {
   it("summarises the visible workload and keeps task rows actionable", () => {
     const onOpen = vi.fn();
+    const onMove = vi.fn();
     render(
       <ListView
         tasks={[
@@ -46,8 +49,9 @@ describe("premium task list", () => {
         projectName={() => "Northstar Website"}
         me="designer@alo.test"
         onOpen={onOpen}
-        onMove={vi.fn()}
+        onMove={onMove}
         onAdd={vi.fn()}
+        onConfigChange={vi.fn()}
       />,
     );
 
@@ -58,5 +62,37 @@ describe("premium task list", () => {
 
     fireEvent.click(screen.getByText("Build responsive page templates"));
     expect(onOpen).toHaveBeenCalledWith("active");
+    expect(onMove).not.toHaveBeenCalled();
+  });
+
+  it("moves a dragged task into the stage where it is dropped", () => {
+    const onMove = vi.fn();
+    render(
+      <ListView
+        tasks={[task("active", "in_progress", null)]}
+        config={DEFAULT_CONFIG}
+        projectName={() => "Northstar Website"}
+        onOpen={vi.fn()}
+        onMove={onMove}
+        onConfigChange={vi.fn()}
+      />,
+    );
+
+    const row = screen.getByText("Build responsive page templates").closest("[draggable]");
+    const todoStage = screen.getByText("To do").closest("section");
+    expect(row).not.toBeNull();
+    expect(todoStage).not.toBeNull();
+
+    const dataTransfer = {
+      effectAllowed: "none",
+      dropEffect: "none",
+      setData: vi.fn(),
+      getData: vi.fn(() => "active"),
+    };
+    fireEvent.dragStart(row as HTMLElement, { dataTransfer });
+    fireEvent.dragOver(todoStage as HTMLElement, { dataTransfer });
+    fireEvent.drop(todoStage as HTMLElement, { dataTransfer });
+
+    expect(onMove).toHaveBeenCalledWith("active", "todo", 1024);
   });
 });

@@ -416,11 +416,10 @@ export function TasksModule({
           </div>
         )}
 
-        {mode.type !== "proposals" && view !== "overview" && view !== "files" && tasks.length > 0 && (
+        {mode.type !== "proposals" && view !== "overview" && view !== "files" && view !== "list" && tasks.length > 0 && (
           <TaskToolbar
             config={config}
             onChange={setConfig}
-            connected={view === "list"}
           />
         )}
 
@@ -517,6 +516,7 @@ export function TasksModule({
               onOpen={setSelected}
               onMove={move}
               onAdd={(status) => openCreate(status)}
+              onConfigChange={setConfig}
             />
           )}
         </div>
