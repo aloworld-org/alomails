@@ -162,7 +162,7 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
 
   if (data === null) {
     return (
-      <div className="fixed inset-0 z-modal flex justify-end bg-overlay" onMouseDown={onClose}>
+      <div className="fixed inset-0 z-[var(--z-modal)] flex justify-end bg-overlay" onMouseDown={onClose}>
         <div
           className="flex h-full w-full max-w-xl flex-col bg-surface shadow-xl"
           onMouseDown={(e) => e.stopPropagation()}
@@ -337,7 +337,7 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
           : "bg-tertiary";
 
   return (
-    <div className="fixed inset-0 z-modal flex justify-end bg-overlay" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-[var(--z-modal)] flex justify-end bg-overlay" onMouseDown={onClose}>
       <div
         className="flex h-full w-full max-w-xl flex-col bg-surface shadow-xl"
         onMouseDown={(e) => e.stopPropagation()}

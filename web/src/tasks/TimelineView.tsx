@@ -101,7 +101,7 @@ export function TimelineView({ tasks, edges = [], onOpen }: Props) {
           </div>
         </header>
 
-        <div className="overflow-auto">
+        <div className="overflow-auto [scrollbar-color:var(--border-default)_transparent] [scrollbar-width:thin]">
           <div style={{ minWidth: LABEL + total }}>
             <div className="sticky top-0 z-30 flex h-14 bg-surface">
               <div
@@ -179,10 +179,10 @@ export function TimelineView({ tasks, edges = [], onOpen }: Props) {
         {scheduled.map((t) => {
           const { left, width } = bar(t);
           return (
-            <div key={t.id} className="relative z-10 flex border-b border-subtle last:border-b-0" style={{ height: ROW }}>
+            <div key={t.id} className="relative isolate flex border-b border-subtle last:border-b-0" style={{ height: ROW }}>
               <button
                 type="button"
-                className="sticky left-0 z-20 flex shrink-0 overflow-hidden whitespace-nowrap border-r border-subtle bg-surface text-left text-sm font-medium text-primary transition-colors hover:bg-raised hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+                className="sticky left-0 z-20 flex shrink-0 overflow-hidden whitespace-nowrap border-r border-subtle bg-surface text-left text-sm font-medium text-primary shadow-[4px_0_8px_-8px_rgba(15,35,55,0.45)] transition-colors hover:bg-raised hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
                 style={{ width: LABEL }}
                 title={t.title}
                 onClick={() => onOpen(t.id)}
@@ -193,10 +193,10 @@ export function TimelineView({ tasks, edges = [], onOpen }: Props) {
                   <span className="shrink-0 pl-2 text-[11px] font-normal tabular-nums text-tertiary">{dueLabel(t.dueAt as string)}</span>
                 </span>
               </button>
-              <div className="relative h-full" style={{ width: total }}>
+              <div className="relative h-full overflow-hidden" style={{ width: total }}>
                 <button
                   type="button"
-                  className="absolute top-4 z-10 h-5 overflow-hidden rounded-full border shadow-sm transition-[filter,box-shadow,transform] hover:-translate-y-px hover:brightness-95 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                  className="absolute top-4 z-0 h-5 overflow-hidden rounded-full border shadow-sm transition-[filter,box-shadow,transform] hover:-translate-y-px hover:brightness-95 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                   style={{
                     left,
                     width,
