@@ -5,13 +5,20 @@
 // The auth layer is stubbed down to one recording `fetch`, so the REAL client,
 // the real views and the real money parsing all run — only the network is
 // fake.
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { DialogProvider } from "../ds";
 import { strings } from "../i18n";
 import { CustomersView } from "./CustomersView";
 import { ProductsView } from "./ProductsView";
+import { BILLING_DEFAULT_PATH } from "./BillingModule";
 import type { BillingCustomer, BillingProduct } from "./types";
 
 interface Call {
@@ -30,7 +37,10 @@ const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
     method: init?.method ?? "GET",
     body: typeof init?.body === "string" ? JSON.parse(init.body) : undefined,
   });
-  const next = answers.shift() ?? { status: 200, body: { customers: [], products: [] } };
+  const next = answers.shift() ?? {
+    status: 200,
+    body: { customers: [], products: [] },
+  };
   return new Response(JSON.stringify(next.body), {
     status: next.status,
     headers: { "content-type": "application/json" },
@@ -96,6 +106,10 @@ beforeEach(() => {
 // the document while the next one queries for a field of the same name.
 afterEach(cleanup);
 
+test("Billing opens on invoices instead of setup data", () => {
+  expect(BILLING_DEFAULT_PATH).toBe("/billing/invoices");
+});
+
 describe("the customer list", () => {
   test("shows what the API answered, archived rows included on request", async () => {
     answers = [{ status: 200, body: { customers: [CUSTOMER] } }];
@@ -107,7 +121,9 @@ describe("the customer list", () => {
     expect(calls[0]?.url).toContain("/billing/customers");
     expect(calls[0]?.url).not.toContain("includeArchived");
 
-    answers = [{ status: 200, body: { customers: [{ ...CUSTOMER, archived: true }] } }];
+    answers = [
+      { status: 200, body: { customers: [{ ...CUSTOMER, archived: true }] } },
+    ];
     fireEvent.click(screen.getByLabelText(strings.billingShowArchived));
     await waitFor(() => expect(calls[1]?.url).toContain("includeArchived=1"));
     expect(await screen.findByText(strings.billingArchived)).toBeTruthy();
@@ -118,18 +134,32 @@ describe("the customer list", () => {
     ui(<CustomersView />);
 
     // The toolbar and the empty state both offer the action; either will do.
-    fireEvent.click((await screen.findAllByRole("button", { name: strings.billingNewCustomer }))[0]!);
-    fireEvent.change(screen.getByLabelText(strings.billingFieldName, { exact: false }), {
-      target: { value: "  Acme GmbH  " },
-    });
-    fireEvent.change(screen.getByLabelText(strings.billingFieldCountry, { exact: false }), {
-      target: { value: "de" },
-    });
+    fireEvent.click(
+      (
+        await screen.findAllByRole("button", {
+          name: strings.billingNewCustomer,
+        })
+      )[0]!,
+    );
+    fireEvent.change(
+      screen.getByLabelText(strings.billingFieldName, { exact: false }),
+      {
+        target: { value: "  Acme GmbH  " },
+      },
+    );
+    fireEvent.change(
+      screen.getByLabelText(strings.billingFieldCountry, { exact: false }),
+      {
+        target: { value: "de" },
+      },
+    );
     answers = [
       { status: 200, body: { customer: CUSTOMER } },
       { status: 200, body: { customers: [CUSTOMER] } },
     ];
-    fireEvent.click(screen.getByRole("button", { name: strings.billingCreate }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.billingCreate }),
+    );
 
     await waitFor(() => expect(calls.length).toBeGreaterThan(1));
     const create = calls[1];
@@ -144,10 +174,15 @@ describe("the customer list", () => {
     ui(<CustomersView />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Acme GmbH" }));
-    fireEvent.change(screen.getByLabelText(strings.billingFieldVatId, { exact: false }), {
-      target: { value: "  " },
-    });
-    answers = [{ status: 200, body: { customer: { ...CUSTOMER, vatId: null } } }];
+    fireEvent.change(
+      screen.getByLabelText(strings.billingFieldVatId, { exact: false }),
+      {
+        target: { value: "  " },
+      },
+    );
+    answers = [
+      { status: 200, body: { customer: { ...CUSTOMER, vatId: null } } },
+    ];
     fireEvent.click(screen.getByRole("button", { name: strings.billingSave }));
 
     await waitFor(() => expect(calls.length).toBeGreaterThan(1));
@@ -161,19 +196,35 @@ describe("the customer list", () => {
     ui(<CustomersView />);
 
     // The toolbar and the empty state both offer the action; either will do.
-    fireEvent.click((await screen.findAllByRole("button", { name: strings.billingNewCustomer }))[0]!);
-    const name = screen.getByLabelText(strings.billingFieldName, { exact: false });
-    fireEvent.change(name, { target: { value: "Acme" } });
-    fireEvent.change(screen.getByLabelText(strings.billingFieldVatId, { exact: false }), {
-      target: { value: "DE811907981" },
+    fireEvent.click(
+      (
+        await screen.findAllByRole("button", {
+          name: strings.billingNewCustomer,
+        })
+      )[0]!,
+    );
+    const name = screen.getByLabelText(strings.billingFieldName, {
+      exact: false,
     });
+    fireEvent.change(name, { target: { value: "Acme" } });
+    fireEvent.change(
+      screen.getByLabelText(strings.billingFieldVatId, { exact: false }),
+      {
+        target: { value: "DE811907981" },
+      },
+    );
     answers = [
       {
         status: 422,
-        body: { detail: "the check digit of this DE VAT id does not match; check for a typo" },
+        body: {
+          detail:
+            "the check digit of this DE VAT id does not match; check for a typo",
+        },
       },
     ];
-    fireEvent.click(screen.getByRole("button", { name: strings.billingCreate }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.billingCreate }),
+    );
 
     expect(await screen.findByRole("alert")).toHaveProperty(
       "textContent",
@@ -199,37 +250,70 @@ describe("the price list", () => {
     answers = [{ status: 200, body: { products: [] } }];
     ui(<ProductsView />);
 
-    fireEvent.click((await screen.findAllByRole("button", { name: strings.billingNewProduct }))[0]!);
-    fireEvent.change(screen.getByLabelText(strings.billingFieldName, { exact: false }), {
-      target: { value: "Consulting" },
-    });
-    fireEvent.change(screen.getByLabelText(strings.billingFieldUnitPrice, { exact: false }), {
-      target: { value: "1 234,56" },
-    });
-    fireEvent.change(screen.getByLabelText(strings.billingFieldVatRate, { exact: false }), {
-      target: { value: "5,5" },
-    });
+    fireEvent.click(
+      (
+        await screen.findAllByRole("button", {
+          name: strings.billingNewProduct,
+        })
+      )[0]!,
+    );
+    fireEvent.change(
+      screen.getByLabelText(strings.billingFieldName, { exact: false }),
+      {
+        target: { value: "Consulting" },
+      },
+    );
+    fireEvent.change(
+      screen.getByLabelText(strings.billingFieldUnitPrice, { exact: false }),
+      {
+        target: { value: "1 234,56" },
+      },
+    );
+    fireEvent.change(
+      screen.getByLabelText(strings.billingFieldVatRate, { exact: false }),
+      {
+        target: { value: "5,5" },
+      },
+    );
     answers = [
       { status: 200, body: { product: PRODUCT } },
       { status: 200, body: { products: [PRODUCT] } },
     ];
-    fireEvent.click(screen.getByRole("button", { name: strings.billingCreate }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.billingCreate }),
+    );
 
     await waitFor(() => expect(calls.length).toBeGreaterThan(1));
-    expect(calls[1]?.body).toEqual({ name: "Consulting", unitPriceCents: 123456, vatRateBp: 550 });
+    expect(calls[1]?.body).toEqual({
+      name: "Consulting",
+      unitPriceCents: 123456,
+      vatRateBp: 550,
+    });
   });
 
   test("a price that is not a number is never sent", async () => {
     answers = [{ status: 200, body: { products: [] } }];
     ui(<ProductsView />);
 
-    fireEvent.click((await screen.findAllByRole("button", { name: strings.billingNewProduct }))[0]!);
-    fireEvent.change(screen.getByLabelText(strings.billingFieldName, { exact: false }), {
-      target: { value: "Consulting" },
-    });
-    fireEvent.change(screen.getByLabelText(strings.billingFieldUnitPrice, { exact: false }), {
-      target: { value: "twelve fifty" },
-    });
+    fireEvent.click(
+      (
+        await screen.findAllByRole("button", {
+          name: strings.billingNewProduct,
+        })
+      )[0]!,
+    );
+    fireEvent.change(
+      screen.getByLabelText(strings.billingFieldName, { exact: false }),
+      {
+        target: { value: "Consulting" },
+      },
+    );
+    fireEvent.change(
+      screen.getByLabelText(strings.billingFieldUnitPrice, { exact: false }),
+      {
+        target: { value: "twelve fifty" },
+      },
+    );
 
     expect(await screen.findByText(strings.billingNotAnAmount)).toBeTruthy();
     const submit = screen.getByRole("button", { name: strings.billingCreate });

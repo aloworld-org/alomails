@@ -18,6 +18,8 @@ export const en = {
   moduleDrive: "Drive",
   moduleDocs: "Docs",
   moduleBilling: "Billing",
+  billingWorkspacePurpose:
+    "Customers, quotes, invoices and payments in one financial workspace.",
 
   // Home dashboard
   homeGreetingMorning: "Good morning",
@@ -1674,8 +1676,10 @@ export const en = {
   sheetChartPie: "Pie chart",
   sheetCharts: "Charts in this sheet",
   sheetChartRemove: "Remove chart",
-  sheetChartSelectionHint: "Select a header row, a category column, and at least one numeric series.",
-  sheetChartExcelLimit: "Charts stay live in alo Sheet. Excel export currently includes the cells, but not these charts.",
+  sheetChartSelectionHint:
+    "Select a header row, a category column, and at least one numeric series.",
+  sheetChartExcelLimit:
+    "Charts stay live in alo Sheet. Excel export currently includes the cells, but not these charts.",
   sheetChartSeries: (number: number) => `Series ${number}`,
   chartTabMissing: "The sheet tab used by this chart no longer exists.",
   chartRangesRagged: "The chart ranges no longer have matching lengths.",
@@ -1799,7 +1803,8 @@ export const en = {
   chatReplyHere: "Reply here",
   chatReplyPrivately: "Reply privately",
   chatReplyingHere: "Replying here",
-  chatReplyingPrivately: (who: string): string => `Replying privately to ${who}`,
+  chatReplyingPrivately: (who: string): string =>
+    `Replying privately to ${who}`,
   chatCancelReply: "Cancel reply",
   chatAddReaction: "Add a reaction",
   chatAgentTag: "agent",
@@ -1842,18 +1847,22 @@ export const en = {
   meetEyebrow: "Your meeting space",
   meetSubtitle: "Start a call or step into one that is already happening.",
   meetHeroTitle: "Be together in one click",
-  meetHeroText: "Microphone on, camera your choice. Check both before anyone sees or hears you.",
+  meetHeroText:
+    "Microphone on, camera your choice. Check both before anyone sees or hears you.",
   meetHappeningNow: "Happening now",
   meetHappeningHint: "Meetings you can join without asking for a link.",
-  meetLiveCount: (count: number) => count === 1 ? "1 meeting" : `${count} meetings`,
+  meetLiveCount: (count: number) =>
+    count === 1 ? "1 meeting" : `${count} meetings`,
   meetReady: "Ready",
   meetStartedAt: (time: string) => `Started at ${time}`,
   meetStartNow: "Start a meeting",
   meetStarting: "Starting…",
-  meetStartFailed: "The meeting couldn’t be started. Check your connection and try again.",
+  meetStartFailed:
+    "The meeting couldn’t be started. Check your connection and try again.",
   meetLoading: "Loading meetings",
   meetLoadFailed: "Meetings couldn’t be loaded",
-  meetLoadFailedHint: "Check your connection, then try again. Starting a new meeting is still available.",
+  meetLoadFailedHint:
+    "Check your connection, then try again. Starting a new meeting is still available.",
   meetRetry: "Try again",
   meetBack: "Back to Meet",
   meetInstantTitle: "Instant meeting",
@@ -1869,11 +1878,12 @@ export const en = {
   meetJoin: "Join the meeting",
   meetLive: "Meeting in progress",
   meetJoinNow: "Join now",
-  meetReadyGreeting: (name: string) => name ? `Hi ${name}` : "Hi there",
+  meetReadyGreeting: (name: string) => (name ? `Hi ${name}` : "Hi there"),
   meetReadyTitle: "You’re all set to join",
   meetReadyBody: "Check your camera and microphone before you join.",
   meetReadySafetyTitle: "Your meeting is safe",
-  meetReadySafetyBody: "Only invited people and participants admitted by the host can join.",
+  meetReadySafetyBody:
+    "Only invited people and participants admitted by the host can join.",
   meetSettingsAfterJoin: "You can still change your settings after joining.",
   meetGoodConnection: "Good connection",
   meetConnectingStatus: "Connecting",
@@ -1889,7 +1899,8 @@ export const en = {
   meetStopRecording: "Stop recording",
   meetIConsent: "I consent",
   meetRecordingConsentTitle: "Recording needs everyone's consent",
-  meetRecordingConsentBody: "The host can start after everyone currently in the room agrees.",
+  meetRecordingConsentBody:
+    "The host can start after everyone currently in the room agrees.",
   meetRecordingConsentGiven: "Consent given",
   meetConsentCount: (count: number) => `${count} consented`,
   meetRecordingFailed: "The recording action could not be completed.",
@@ -1899,7 +1910,8 @@ export const en = {
   meetMinutesNoActions: "No action items were identified.",
   meetMinutesFailed: "Minutes need a transcript and a configured AI provider.",
   meetPresentingTitle: "You’re presenting",
-  meetPresentingBody: "Everyone else sees your shared screen. You see this calm reminder instead of a hall of mirrors.",
+  meetPresentingBody:
+    "Everyone else sees your shared screen. You see this calm reminder instead of a hall of mirrors.",
   meetClose: "Close",
   meetJoinFailed: "That meeting couldn’t be joined.",
   meetJoinProblemTitle: "We couldn’t connect you",
@@ -1911,7 +1923,8 @@ export const en = {
   meetInviteTitle: "Join my alo meeting",
   meetInviteText: "Use this alo link to join the meeting.",
   meetChatEmptyTitle: "The room is listening",
-  meetChatEmptyBody: "Share a thought, a link, or the detail everyone will want after the call.",
+  meetChatEmptyBody:
+    "Share a thought, a link, or the detail everyone will want after the call.",
   meetChat: "Chat",
   meetCaptions: "Live captions",
   meetCaptionLanguage: "Caption language",
@@ -1936,12 +1949,14 @@ export const en = {
   deleteLabel: "Delete",
   add: "Add",
   save: "Save",
-  meetCaptionsWaiting: "Captions will appear when the transcription service hears speech.",
+  meetCaptionsWaiting:
+    "Captions will appear when the transcription service hears speech.",
   meetChatTitle: "In-call chat",
   meetChatMessages: "Messages",
   meetChatPeople: (count: number) => `People (${count})`,
   meetChatPlaceholder: "Send a message",
-  meetMessageSendFailed: "That message was not saved. Check your connection and try again.",
+  meetMessageSendFailed:
+    "That message was not saved. Check your connection and try again.",
   meetEveryone: "Everyone",
   meetSendTo: "To:",
   meetChooseRecipient: "Send message to",
@@ -1954,14 +1969,18 @@ export const en = {
   meetAddEmoji: "Add emoji",
   meetSettings: "Meeting settings",
   meetDeviceSettings: "Camera and audio",
-  meetDeviceSettingsHint: "Changes take effect immediately and stay on this device.",
+  meetDeviceSettingsHint:
+    "Changes take effect immediately and stay on this device.",
   meetBackgroundEffects: "Background effects",
-  meetBackgroundEffectsHint: "Keep the focus on you. The effect is applied to the video everyone receives.",
+  meetBackgroundEffectsHint:
+    "Keep the focus on you. The effect is applied to the video everyone receives.",
   meetBackgroundNone: "None",
   meetBackgroundBlur: "Blur",
-  meetBackgroundUnsupported: "Background blur is not supported by this browser or camera.",
+  meetBackgroundUnsupported:
+    "Background blur is not supported by this browser or camera.",
   meetReconnecting: "Reconnecting your call",
-  meetReconnectingHint: "Stay here — audio and video will resume automatically.",
+  meetReconnectingHint:
+    "Stay here — audio and video will resume automatically.",
   meetConnectionLost: "The call lost its connection. Try joining again.",
   meetPictureInPicture: "Picture in picture",
   meetSpeaker: "Speaker",
@@ -1973,8 +1992,10 @@ export const en = {
   meetMuted: "Muted",
   meetMuteParticipant: "Mute participant",
   meetRemoveParticipant: "Remove participant",
-  meetRemoveParticipantConfirm: (name: string) => `Remove ${name} from this meeting?`,
-  meetModerationFailed: "That participant action could not be completed. Try again.",
+  meetRemoveParticipantConfirm: (name: string) =>
+    `Remove ${name} from this meeting?`,
+  meetModerationFailed:
+    "That participant action could not be completed. Try again.",
   meetQuickReplyOne: "👍 Sounds good",
   meetQuickReplyTwo: "Let's go!",
   meetQuickReplyThree: "Start now",
@@ -1984,7 +2005,8 @@ export const en = {
   meetYourSpaceLead: "Your",
   meetYourSpaceAccent: "meeting space",
   meetHeroNewTitle: "Meet together in one click",
-  meetHeroNewText: "High-quality calls with screen sharing, chat, reactions, and a device check before anyone sees or hears you.",
+  meetHeroNewText:
+    "High-quality calls with screen sharing, chat, reactions, and a device check before anyone sees or hears you.",
   meetSchedule: "Schedule",
   meetJoinInputInvalid: "Enter a valid alo meeting link or meeting code.",
   meetUpcoming: "Upcoming meetings",
@@ -1995,7 +2017,8 @@ export const en = {
   meetDuration: (minutes: number) => `${minutes} min`,
   meetCalendarUntitled: "Untitled calendar event",
   meetSafetyTitle: "Entry stays under your control",
-  meetSafetyBody: "The workspace checks access before it issues a media token. A meeting code never bypasses authorization.",
+  meetSafetyBody:
+    "The workspace checks access before it issues a media token. A meeting code never bypasses authorization.",
   meetTodaySchedule: "Today’s schedule",
   meetOpenAgenda: "Open Agenda",
   meetNoEventsToday: "Nothing else is scheduled for today.",
@@ -2527,7 +2550,8 @@ export const en = {
     "A customer carries the address, VAT id and payment terms every invoice you raise for them starts from.",
   billingGetStarted: "Get started in 3 simple steps",
   billingStepCustomerTitle: "Add your first customer",
-  billingStepCustomerBody: "Create a customer profile with their billing details.",
+  billingStepCustomerBody:
+    "Create a customer profile with their billing details.",
   billingStepInvoiceTitle: "Create your first invoice",
   billingStepInvoiceBody: "Add items, set payment terms and issue it.",
   billingStepPaidTitle: "Get paid faster",
@@ -3288,13 +3312,17 @@ export const en = {
   sitesCollaboratorEmailPlaceholder: "collaborator@example.com",
   sitesInviteCollaborator: "Invite editor",
   sitesCollaboratorsLoading: "Loading collaborators…",
-  sitesCollaboratorsLoadFailed: "This website's collaborators could not be loaded.",
+  sitesCollaboratorsLoadFailed:
+    "This website's collaborators could not be loaded.",
   sitesCollaboratorInviteFailed: "The collaborator could not be invited.",
-  sitesCollaboratorRevokeFailed: "That collaborator's access could not be removed.",
-  sitesCollaboratorCopyFailed: "The setup link could not be copied. Create a new link and try again.",
+  sitesCollaboratorRevokeFailed:
+    "That collaborator's access could not be removed.",
+  sitesCollaboratorCopyFailed:
+    "The setup link could not be copied. Create a new link and try again.",
   sitesCollaboratorLinkReady: (email: string) =>
     `A private setup link is ready for ${email}. Copy it and share it securely.`,
-  sitesCollaboratorAdded: (email: string) => `${email} can now edit this website.`,
+  sitesCollaboratorAdded: (email: string) =>
+    `${email} can now edit this website.`,
   sitesCollaboratorLinkCopied: "Setup link copied.",
   sitesCollaboratorRevoked: (email: string) => `${email}'s access was removed.`,
   sitesUndoCollaboratorRevoke: "Undo",
@@ -3323,7 +3351,8 @@ export const en = {
     `Sign in as ${email}. You will see only the websites shared with you.`,
   sitesInvitationSignIn: "Sign in to alo",
   sitesPages: "Pages",
-  sitesPageCount: (count: number) => `${count} ${count === 1 ? "page" : "pages"}`,
+  sitesPageCount: (count: number) =>
+    `${count} ${count === 1 ? "page" : "pages"}`,
   sitesSiteTools: "Site tools",
   sitesSiteToolsHint: "Content, commerce, insights, and settings",
   sitesNewPage: "New page",
@@ -3577,9 +3606,15 @@ export const en = {
     "Drag on the picture to choose what stays visible. With the keyboard: arrow keys move the frame, shift with the arrow keys resizes it.",
   sitesImageFocalHint:
     "Drag the round marker onto whatever must stay in view when a layout has to crop the picture further.",
-  sitesImageFrameAt: (width: number, height: number, left: number, top: number) =>
+  sitesImageFrameAt: (
+    width: number,
+    height: number,
+    left: number,
+    top: number,
+  ) =>
     `Visible area: ${width}% by ${height}% of the picture, ${left}% from the left and ${top}% from the top`,
-  sitesImageFocalAt: (x: number, y: number) => `Focal point ${x}% across and ${y}% down`,
+  sitesImageFocalAt: (x: number, y: number) =>
+    `Focal point ${x}% across and ${y}% down`,
   sitesImageFrameWidth: "Width",
   sitesImageFrameHeight: "Height",
   sitesImageFrameLeft: "Left",
@@ -3669,7 +3704,8 @@ export const en = {
   // Sites — the visitor assistant's admin screen (ADR 0040, S3.02d).
   sitesAssistant: "Assistant",
   sitesAssistantTitle: "Site assistant",
-  sitesAssistantLoadFailed: "The assistant's settings could not be loaded. Try again.",
+  sitesAssistantLoadFailed:
+    "The assistant's settings could not be loaded. Try again.",
   sitesAssistantSwitchTitle: "The assistant and its budget",
   sitesAssistantSwitchHint:
     "A chat assistant on your published website that answers visitors' questions from your published pages — and always names the page an answer came from.",
@@ -3677,14 +3713,16 @@ export const en = {
   sitesAssistantBudgetLabel: "Monthly budget (€)",
   sitesAssistantBudgetHint: (defaultBudget: string) =>
     `Answers cost money. When a month's answers reach this budget, the assistant pauses and visitors are pointed to your contact form instead — you will be notified. If you leave it unset, the budget is ${defaultBudget}.`,
-  sitesAssistantBudgetNotANumber: "Enter the monthly budget as a number of euros.",
+  sitesAssistantBudgetNotANumber:
+    "Enter the monthly budget as a number of euros.",
   sitesAssistantSpent: (spent: string, budget: string) =>
     `${spent} of ${budget} spent this month.`,
   sitesAssistantCeilingHit:
     "This month's budget is used up, so the assistant is paused and visitors are offered your contact form. Raising the budget reopens it immediately.",
   sitesAssistantSave: "Save",
   sitesAssistantSaved: "Saved.",
-  sitesAssistantSaveFailed: "The assistant's settings could not be saved. Try again.",
+  sitesAssistantSaveFailed:
+    "The assistant's settings could not be saved. Try again.",
   sitesAssistantReadsTitle: "What the assistant reads",
   sitesAssistantReadsRule:
     "Whatever the assistant can read, anyone on the internet can read — it answers strangers with it.",
@@ -3755,7 +3793,8 @@ export const en = {
     "Drafted from your site's own pages — edit them freely.",
   sitesAssistantSuggestedNone:
     "Nothing to draft from yet. An FAQ, pricing, booking, or contact section on your pages gives this something to work with.",
-  sitesAssistantSuggestFailed: "Your pages could not be read for suggestions. Try again.",
+  sitesAssistantSuggestFailed:
+    "Your pages could not be read for suggestions. Try again.",
   sitesAssistantSuggestedPricing: "What does it cost?",
   sitesAssistantSuggestedBooking: "Can I book an appointment?",
   sitesAssistantSuggestedCatalog: "What do you offer?",
@@ -3854,7 +3893,8 @@ export const en = {
   sitesAnalyticsTopPagesNote: "The pages that were opened most.",
   sitesAnalyticsPagesEmpty: "No pages counted in this period yet.",
   sitesAnalyticsEntryPages: "First pages",
-  sitesAnalyticsEntryPagesNote: "The page a visitor's day on your site started on.",
+  sitesAnalyticsEntryPagesNote:
+    "The page a visitor's day on your site started on.",
   sitesAnalyticsExitPages: "Last pages",
   sitesAnalyticsExitPagesNote:
     "The last page seen that day. A last page is where someone finished reading, not necessarily where they gave up.",
@@ -3968,7 +4008,8 @@ export const en = {
   sitesFunnelMoney: "The money behind it",
   sitesFunnelInvoiceRule:
     "Invoices raised for the customer an enquiry became, after it was handed over.",
-  sitesFunnelMoneyEmpty: "No opportunity has been raised from this website yet.",
+  sitesFunnelMoneyEmpty:
+    "No opportunity has been raised from this website yet.",
   sitesFunnelOpen: "Being worked",
   sitesFunnelWon: "Won",
   sitesFunnelInvoiced: "Invoiced",
@@ -4092,7 +4133,8 @@ export const en = {
   sitesSchedulePublishingNow: "This website is being published right now.",
   sitesScheduleCancel: "Call it off",
   sitesScheduleCancelling: "Calling it off…",
-  sitesScheduleCancelFailed: "The scheduled publishing could not be called off.",
+  sitesScheduleCancelFailed:
+    "The scheduled publishing could not be called off.",
   sitesScheduleCancelled: (moment: string) =>
     `Called off. This website will not publish on ${moment}, and nothing that is online has changed.`,
   sitesScheduleDone: (moment: string) =>
@@ -4335,7 +4377,8 @@ export const en = {
   projectsEdit: "Edit",
   projectsOpenProject: (name: string) => `Open ${name}`,
   projectsDetailsTitle: "Project details",
-  projectsDetailsSubtitle: "Keep the outcome, timing, and current state clear for everyone.",
+  projectsDetailsSubtitle:
+    "Keep the outcome, timing, and current state clear for everyone.",
   projectsDescription: "Description",
   projectsStatus: "Status",
   projectsStatusPlanned: "Planned",
@@ -4356,7 +4399,8 @@ export const en = {
   projectsInternalWork: "Our company",
   projectsClientWorkHint: "Bill a customer for this work",
   projectsInternalWorkHint: "Keep this work internal",
-  projectsNewCustomerHint: "You can add rates and budgets after creating the project.",
+  projectsNewCustomerHint:
+    "You can add rates and budgets after creating the project.",
   projectsCreate: "Create project",
   projectsCreateFailed: "The project could not be created.",
 
@@ -4375,7 +4419,8 @@ export const en = {
   projectsCustomer: "Customer",
   projectsCustomerHint: "The customer this project's hours are billed to.",
   projectsCustomerPick: "Choose a customer…",
-  projectsNoCustomersAvailable: "No customers are available yet. Add one in Billing first.",
+  projectsNoCustomersAvailable:
+    "No customers are available yet. Add one in Billing first.",
   projectsCustomerUnknown: "Unknown customer",
   projectsInternal: "Internal",
   projectsRate: "Hourly rate",
@@ -4390,23 +4435,30 @@ export const en = {
   projectsHealthAtRisk: "Needs attention",
   projectsHealthNeedsTarget: "Add a target date to make delivery risk visible.",
   projectsUpdates: "Project updates",
-  projectsUpdatesSubtitle: "Share progress, decisions, and risks with everyone following this project.",
+  projectsUpdatesSubtitle:
+    "Share progress, decisions, and risks with everyone following this project.",
   projectsUpdateHealth: "Update health",
   projectsUpdateOffTrack: "Off track",
-  projectsUpdatePlaceholder: "What changed? Add the outcome, decision, risk, or next step.",
-  projectsUpdateHint: "Keep it concise and useful to someone catching up later.",
+  projectsUpdatePlaceholder:
+    "What changed? Add the outcome, decision, risk, or next step.",
+  projectsUpdateHint:
+    "Keep it concise and useful to someone catching up later.",
   projectsPublishUpdate: "Publish update",
   projectsUpdatesEmpty: "No updates yet",
-  projectsUpdatesEmptyBody: "Publish the first update to give this project a durable narrative.",
+  projectsUpdatesEmptyBody:
+    "Publish the first update to give this project a durable narrative.",
   projectsUpdatesLoadFailed: "The project updates could not be loaded.",
   projectsUpdateSaveFailed: "The update could not be published.",
   projectsRemoveAttachment: "Remove attachment",
   projectsSomeone: "Someone",
-  projectsBlockedTasks: (count: number) => count === 1 ? "1 blocked task" : `${count} blocked tasks`,
-  projectsOverdueTasks: (count: number) => count === 1 ? "1 overdue task" : `${count} overdue tasks`,
+  projectsBlockedTasks: (count: number) =>
+    count === 1 ? "1 blocked task" : `${count} blocked tasks`,
+  projectsOverdueTasks: (count: number) =>
+    count === 1 ? "1 overdue task" : `${count} overdue tasks`,
   projectsWorkload: "Workload",
   projectsWorkloadEmpty: "No open work is assigned yet.",
-  projectsOpenTasks: (count: number) => count === 1 ? "1 open task" : `${count} open tasks`,
+  projectsOpenTasks: (count: number) =>
+    count === 1 ? "1 open task" : `${count} open tasks`,
   projectsBudgetUsed: "Budget used",
   projectsBudgetHours: "Budget (hours)",
   projectsBudgetAmount: "Budget (amount)",
@@ -4461,7 +4513,8 @@ export const en = {
   projectsProposedEntry: "suggested",
   projectsBilledEntry: "on an invoice",
   projectsReadyToInvoice: "Ready to invoice",
-  projectsReadyToInvoiceBody: (duration: string) => `${duration} of approved time has not been invoiced yet.`,
+  projectsReadyToInvoiceBody: (duration: string) =>
+    `${duration} of approved time has not been invoiced yet.`,
   projectsWorkflowEyebrow: "Next step",
   projectsWorkflowLabel: "Project workflow",
   projectsWorkflowTasks: "Tasks",
@@ -4469,23 +4522,30 @@ export const en = {
   projectsWorkflowApproval: "Approval",
   projectsWorkflowInvoice: "Invoice",
   projectsWorkflowTasksTitle: "Define the work",
-  projectsWorkflowTasksBody: "Create the first task so the team knows what needs to happen next.",
+  projectsWorkflowTasksBody:
+    "Create the first task so the team knows what needs to happen next.",
   projectsWorkflowTimeTitle: "Record the work",
-  projectsWorkflowTimeBody: "Log time against this project or its tasks while the work is fresh.",
+  projectsWorkflowTimeBody:
+    "Log time against this project or its tasks while the work is fresh.",
   projectsWorkflowApprovalTitle: "Send the time for approval",
-  projectsWorkflowApprovalBody: "Review the week and submit it so approved customer work can be invoiced.",
+  projectsWorkflowApprovalBody:
+    "Review the week and submit it so approved customer work can be invoiced.",
   projectsWorkflowAwaitingApprovalTitle: "Time is awaiting approval",
-  projectsWorkflowAwaitingApprovalBody: "This time has already been submitted. Review the timesheet or wait for an approver before invoicing.",
+  projectsWorkflowAwaitingApprovalBody:
+    "This time has already been submitted. Review the timesheet or wait for an approver before invoicing.",
   projectsWorkflowInvoiceTitle: "Turn approved work into an invoice",
   projectsWorkflowContinueTitle: "Keep the project moving",
   projectsWorkflowContinueBody: "Add the next time entry as work continues.",
   projectsReviewTimesheet: "Review timesheet",
   projectsCreateInvoice: "Create invoice",
-  projectsCreateInvoiceSubtitle: "Choose the approved time to carry into a new draft invoice.",
+  projectsCreateInvoiceSubtitle:
+    "Choose the approved time to carry into a new draft invoice.",
   projectsInvoiceThrough: "Invoice through",
-  projectsInvoiceCutoffHint: "Only approved, unbilled time through this date is included.",
+  projectsInvoiceCutoffHint:
+    "Only approved, unbilled time through this date is included.",
   projectsNothingToInvoice: "Nothing ready to invoice",
-  projectsNothingToInvoiceBody: "Approved time will appear here after the week is approved.",
+  projectsNothingToInvoiceBody:
+    "Approved time will appear here after the week is approved.",
   projectsUnratedTime: "No hourly rate is set for this time",
   projectsInvoiceRate: (rate: string) => `${rate} per hour`,
   projectsBelgianVat: "Belgian standard VAT is applied to this draft.",
@@ -4502,12 +4562,15 @@ export const en = {
   projectsWeekEmptyBody:
     "Add your first time entry. Choose a project, enter the duration and note, and it will appear in this weekly review.",
   projectsWeekTitle: "Weekly timesheet",
-  projectsWeekPurpose: "Log your work, review the week, then submit it for approval.",
+  projectsWeekPurpose:
+    "Log your work, review the week, then submit it for approval.",
   projectsWeekAllScope: "Your complete week across every project.",
-  projectsWeekProjectScope: (project: string) => `Time for ${project}. Submitting still sends your complete week for approval.`,
+  projectsWeekProjectScope: (project: string) =>
+    `Time for ${project}. Submitting still sends your complete week for approval.`,
   projectsAddTime: "Add time",
   projectsChooseTimeProject: "What did you work on?",
-  projectsChooseTimeProjectHint: "Choose a project to add a time entry for this week.",
+  projectsChooseTimeProjectHint:
+    "Choose a project to add a time entry for this week.",
   projectsBillableOfWeek: (duration: string) => `${duration} billable`,
   projectsCompleteWeek: "Entire week",
   projectsCompleteWeekSubmission: "Entire week submitted for approval",
@@ -4609,7 +4672,8 @@ export const en = {
   projectsSubmittedAt: "Handed in",
   projectsApprove: "Approve",
   projectsApprovalComplete: "Week approved",
-  projectsApprovalCompleteBody: "Review the affected projects and invoice any customer work that is ready.",
+  projectsApprovalCompleteBody:
+    "Review the affected projects and invoice any customer work that is ready.",
   projectsReject: "Send back",
   projectsRejectTitle: "Send this week back?",
   projectsRejectBody: (person: string) =>
@@ -5522,26 +5586,32 @@ export const en = {
   hrTabHiring: "Hiring",
   hrTabTemplates: "Letter templates",
   hrTemplatesTitle: "Letter templates",
-  hrTemplatesIntro: "Write approved wording once, then let HR create a personal draft without retyping it.",
+  hrTemplatesIntro:
+    "Write approved wording once, then let HR create a personal draft without retyping it.",
   hrTemplatesLoadFailed: "The letter templates could not be loaded.",
   hrTemplatesEmpty: "No letter templates yet",
-  hrTemplatesEmptyBody: "Create the wording your company is prepared to send. Nothing is sent from this screen.",
+  hrTemplatesEmptyBody:
+    "Create the wording your company is prepared to send. Nothing is sent from this screen.",
   hrTemplateNew: "New template",
   hrTemplateCreateTitle: "Create a letter template",
   hrTemplateEditTitle: "Edit letter template",
-  hrTemplateEditorIntro: "Placeholders are filled only when HR creates a draft for a specific colleague.",
+  hrTemplateEditorIntro:
+    "Placeholders are filled only when HR creates a draft for a specific colleague.",
   hrTemplateName: "Template name",
   hrTemplateSubject: "Email subject",
   hrTemplateBody: "Letter wording",
-  hrTemplateBodyHint: "Use the approved placeholders below. Unknown placeholders are refused.",
+  hrTemplateBodyHint:
+    "Use the approved placeholders below. Unknown placeholders are refused.",
   hrTemplateInsertField: "Insert a placeholder",
   hrTemplateSave: "Save template",
   hrTemplateSaveFailed: "The letter template was not saved.",
   hrTemplateDelete: "Delete template",
   hrTemplateDeleteTitle: (name: string) => `Delete ${name}?`,
-  hrTemplateDeleteBody: "Existing draft letters stay unchanged. This template will no longer be available for new letters.",
+  hrTemplateDeleteBody:
+    "Existing draft letters stay unchanged. This template will no longer be available for new letters.",
   hrTemplateDeleteFailed: "The letter template was not deleted.",
-  hrTemplateFields: (count: number) => count === 1 ? "1 placeholder" : `${count} placeholders`,
+  hrTemplateFields: (count: number) =>
+    count === 1 ? "1 placeholder" : `${count} placeholders`,
   hrLoadFailed: "That could not be loaded.",
   hrSaveFailed: "That change was not saved.",
   hrClose: "Close",
@@ -5638,9 +5708,12 @@ export const en = {
     `${name} is already in the directory with this address. Adding this record would make a second colleague with the same email.`,
   hrHireKnownLeft: (name: string) =>
     `${name} had this address and has left. If this is the same person coming back, adding them here is right — their old record stays as it was.`,
-  hrHireNameHint: "Split from the name on the application. Correct it if it split wrongly.",
-  hrHireEmailHint: "Their work address, if it is known yet. It can be added later.",
-  hrHireStartHint: "The day their terms begin. Every leave balance is counted from it.",
+  hrHireNameHint:
+    "Split from the name on the application. Correct it if it split wrongly.",
+  hrHireEmailHint:
+    "Their work address, if it is known yet. It can be added later.",
+  hrHireStartHint:
+    "The day their terms begin. Every leave balance is counted from it.",
   hrHireNoKind: "Not stated",
   hrHireNoAccount:
     "This writes a record in People. It does not create a login or a mailbox — an administrator does that, and the onboarding checklist has a task for it.",
@@ -5731,7 +5804,8 @@ export const en = {
   sitesCatalogItemPriceHint:
     "Write it as you would on a menu — 4.50 or 4,50. Leave it empty for price on request.",
   sitesCatalogItemPriceNote: "Beside the price",
-  sitesCatalogItemPriceNoteHint: "A short qualifier — per night, from, per person.",
+  sitesCatalogItemPriceNoteHint:
+    "A short qualifier — per night, from, per person.",
   sitesCatalogItemGroup: "Group",
   sitesCatalogItemNoGroup: "No group",
   sitesCatalogItemDescription: "Description",
@@ -5778,7 +5852,8 @@ export const en = {
   sitesCatalogSectionAllGroups: "Everything in the catalog",
   sitesCatalogSectionGroupHint:
     "Show one group on this page — the lunch menu, the double rooms — or everything.",
-  sitesCatalogSectionGoneGroup: (handle: string) => `${handle} (no longer a group)`,
+  sitesCatalogSectionGoneGroup: (handle: string) =>
+    `${handle} (no longer a group)`,
   sitesCatalogSectionOneGroup: (handle: string) => `One group: ${handle}`,
   sitesCatalogSectionNoCatalogs: "This site has no catalog yet",
   sitesCatalogSectionNoCatalogsHint:
@@ -5816,7 +5891,8 @@ export const en = {
   sitesBookingCalendar: "Booked into",
   sitesBookingCalendarHint:
     "Appointments are written into this calendar, and times you are already busy there are never offered.",
-  sitesBookingCalendarReadOnly: (name: string) => `${name} — shared with you for reading only`,
+  sitesBookingCalendarReadOnly: (name: string) =>
+    `${name} — shared with you for reading only`,
   sitesBookingCalendarGone: "Calendar no longer available",
   sitesBookingCalendarGoneHint:
     "The calendar this service was booked into can no longer be reached — it was deleted, or its sharing was withdrawn. Until you choose another one, the published page offers no times at all.",
@@ -5852,7 +5928,8 @@ export const en = {
   sitesBookingQuestionOptionsPlaceholder: "Cut, colour, both",
   sitesBookingQuestionRequired: "Must be answered",
   sitesBookingAddQuestion: "Add a question",
-  sitesBookingRemoveQuestion: (question: string) => `Remove the question ${question}`,
+  sitesBookingRemoveQuestion: (question: string) =>
+    `Remove the question ${question}`,
   sitesBookingActive: "Take bookings for this",
   sitesBookingActiveHint:
     "Switched off, the service stays exactly as it is and the published page says it takes no bookings for now.",
@@ -5870,7 +5947,8 @@ export const en = {
   sitesBookingPreviewHint:
     "The offer as the published page states it. The free times themselves are worked out against your calendar the moment somebody asks.",
   sitesBookingUnnamed: "Untitled service",
-  sitesBookingAsksNothingExtra: "Visitors are asked their name and email address.",
+  sitesBookingAsksNothingExtra:
+    "Visitors are asked their name and email address.",
   sitesBookingAsksAlso: (questions: string) =>
     `Visitors are asked their name and email address, and: ${questions}.`,
   sitesBookingPublishHint:
@@ -5880,13 +5958,15 @@ export const en = {
   // Offering a booking on a page. The section names a service and nothing else:
   // the length, the week and the questions belong to the service.
   sitesSectionBooking: "Booking",
-  sitesSectionBookingDesc: "Let visitors book a time with you, straight into your calendar.",
+  sitesSectionBookingDesc:
+    "Let visitors book a time with you, straight into your calendar.",
   sitesBookingSectionHeading: "Heading above it",
   sitesBookingSectionChoose: "What can be booked here",
   sitesBookingSectionNoServices: "This site has nothing to book yet",
   sitesBookingSectionNoServicesHint:
     "A bookable service says how long it takes, when you are open for it, and which calendar it goes into. Make one and this section can offer it.",
-  sitesBookingSectionOffOption: (name: string) => `${name} (not taking bookings)`,
+  sitesBookingSectionOffOption: (name: string) =>
+    `${name} (not taking bookings)`,
   sitesBookingSectionLength: (minutes: number) =>
     `Visitors pick a free time of ${minutes} minutes. The times come from your calendar when they ask, not from this page.`,
   sitesBookingSectionOff:
@@ -5926,7 +6006,8 @@ export const en = {
   sitesTicketEventProduct: "What a seat is sold as",
   sitesTicketEventProductHint:
     "An item from your price list. Its name and price are read live, never copied.",
-  sitesTicketProductOption: (name: string, price: string) => `${name} — ${price}`,
+  sitesTicketProductOption: (name: string, price: string) =>
+    `${name} — ${price}`,
   sitesTicketEventStartsAt: "When it starts",
   sitesTicketEventCapacity: "Seats",
   sitesTicketEventCapacityHint:
@@ -5972,7 +6053,9 @@ export const en = {
   sitesShopSectionHint:
     "The block links to your shop page. What is on sale, prices and stock are read live — nothing is stored in the page.",
   sitesShopSectionListed: (count: number) =>
-    count === 1 ? "1 product is in the shop." : `${count} products are in the shop.`,
+    count === 1
+      ? "1 product is in the shop."
+      : `${count} products are in the shop.`,
   sitesAssistantSuggestedShop: "What do you sell?",
   sitesShop: "Shop",
   sitesShopLoadFailed:
@@ -5994,7 +6077,8 @@ export const en = {
   sitesShopColShelf: "On the shelf",
   sitesShopGoneProduct: "No longer on the price list",
   sitesShopNotStocked: "No longer stocked",
-  sitesShopUnits: (units: number) => (units === 1 ? "1 unit" : `${units} units`),
+  sitesShopUnits: (units: number) =>
+    units === 1 ? "1 unit" : `${units} units`,
   sitesShopRemove: "Remove",
   // Named per product (S2.16b2 rule): a shelf of rows is otherwise a column
   // of buttons all called "Remove" with nothing to say which product.
@@ -6010,7 +6094,8 @@ export const en = {
   sitesShopEmptyBody:
     "List a stocked product and visitors can buy it on your site, paid on the payment provider's page.",
   sitesShopAllListed: "Every stocked product is already in the shop.",
-  sitesShopDeliveryRate: (price: string) => `Delivery is charged at ${price} per order.`,
+  sitesShopDeliveryRate: (price: string) =>
+    `Delivery is charged at ${price} per order.`,
   sitesShopDeliveryFree: "Delivery is free.",
   sitesCommerceReadOnly:
     "Only this website's owner can change what it sells and charges — you can look, not change.",
@@ -6052,7 +6137,8 @@ export const en = {
   sitesShopSetupItemPrice: (currency: string) => `Price (${currency})`,
   sitesShopSetupVatLabel: "VAT %",
   sitesShopSetupVatGuessBadge: "VAT is a guess",
-  sitesShopSetupNameMissing: "Every included item needs a name before approving.",
+  sitesShopSetupNameMissing:
+    "Every included item needs a name before approving.",
   sitesShopSetupPriceMissing:
     "Your description didn't state a price — enter one before approving.",
   sitesShopSetupVatMissing:
@@ -6097,7 +6183,8 @@ export const en = {
   sitesOrderDetail: "This order",
   sitesOrderFilter: "Show",
   sitesOrderFilterAll: "All",
-  sitesOrderFilterOption: (label: string, count: number) => `${label} (${count})`,
+  sitesOrderFilterOption: (label: string, count: number) =>
+    `${label} (${count})`,
   sitesOrderFilterEmpty: "No orders in this state.",
   sitesOrderStatus: "Where this order stands",
   sitesOrderStatusNew: "New",
@@ -6116,7 +6203,8 @@ export const en = {
   sitesOrderLineNoPrice: "On request",
   sitesOrderQuotedHint:
     "An item with no price adds nothing to the total — quote it yourself when you reply.",
-  sitesOrderLineCount: (count: number) => (count === 1 ? "1 item" : `${count} items`),
+  sitesOrderLineCount: (count: number) =>
+    count === 1 ? "1 item" : `${count} items`,
   sitesOrderDelete: "Delete order",
   sitesOrderDeleteConfirm: "Delete it for good",
   sitesOrderDeleteHint:
@@ -6209,14 +6297,15 @@ export const en = {
     "Shown by the page above the block, in your site's own type. Leave it empty for a block that stands alone.",
   sitesCustomCodeFrameTitle: "What this block is",
   sitesCustomCodeFrameTitleHint:
-    "Read aloud to visitors using a screen reader — \"A timer counting down the current roast\", not \"frame\".",
+    'Read aloud to visitors using a screen reader — "A timer counting down the current roast", not "frame".',
   sitesCustomCodeHtml: "Markup",
   sitesCustomCodeHtmlHint:
     "The body of the block. The document around it — its policy, its style and script blocks — is written for you.",
   sitesCustomCodeCss: "Style",
   sitesCustomCodeCssHint: "Applies inside this block only. Optional.",
   sitesCustomCodeJs: "Script",
-  sitesCustomCodeJsHint: "Runs inside this block only, on the visitor's device.",
+  sitesCustomCodeJsHint:
+    "Runs inside this block only, on the visitor's device.",
   sitesCustomCodeCapabilities: "What the block is allowed to do",
   sitesCustomCodeCapabilitiesHint:
     "Everything is off until you turn it on, and only these two can be turned on.",
@@ -6233,7 +6322,8 @@ export const en = {
   sitesCustomCodeHeight: "Height on the page (pixels)",
   sitesCustomCodeHeightHint:
     "A sealed block cannot be measured from the outside, so you say how tall it is. Between 40 and 2000.",
-  sitesCustomCodeBytes: (used: number, max: number) => `${used} of ${max} bytes`,
+  sitesCustomCodeBytes: (used: number, max: number) =>
+    `${used} of ${max} bytes`,
   sitesCustomCodeBytesOver: (used: number, max: number) =>
     `${used} of ${max} bytes — too long to save`,
   sitesCustomCodeTotalBytes: (used: number, max: number) =>
@@ -6340,9 +6430,11 @@ export const en = {
   sitesDomainRegistrantPostalCode: "Postal code",
   sitesDomainRegistrantCity: "City",
   sitesDomainRegistrantCountry: "Country",
-  sitesDomainRegistrantCountryHint: "The two-letter country code, such as nl or be.",
+  sitesDomainRegistrantCountryHint:
+    "The two-letter country code, such as nl or be.",
   sitesDomainRegistrantPhone: "Telephone",
-  sitesDomainRegistrantPhoneHint: "In international form, such as +31201234567.",
+  sitesDomainRegistrantPhoneHint:
+    "In international form, such as +31201234567.",
   sitesDomainRequirementEea:
     "This ending is only sold to a registrant inside the European Economic Area.",
   sitesDomainRequirementCountry: (country: string) =>
@@ -6368,7 +6460,9 @@ export const en = {
   sitesDomainPurchasesLoadFailed: "The domain purchases could not be loaded.",
   sitesDomainRefresh: "Refresh",
   sitesDomainTermPrice: (price: string, years: number) =>
-    years === 1 ? `${price} for the first year` : `${price} for the first ${years} years`,
+    years === 1
+      ? `${price} for the first year`
+      : `${price} for the first ${years} years`,
   sitesDomainRenewalLine: (price: string) => `then ${price} a year`,
   sitesDomainApprovedOn: (when: string) => `Price approved on ${when}.`,
   sitesDomainAttempts: (attempts: number) =>
@@ -6392,7 +6486,8 @@ export const en = {
   sitesDomainStepAwaitingPayment:
     "Waiting for the payment to settle. Registration starts by itself the moment it does.",
   sitesDomainStepPaid: "Paid. Registration starts within a minute.",
-  sitesDomainStepRegistering: "The registrar is registering the name right now.",
+  sitesDomainStepRegistering:
+    "The registrar is registering the name right now.",
   sitesDomainStepRegistered: (domain: string) =>
     `${domain} is registered to you. Attaching it to this website.`,
   sitesDomainStepConfigured: (domain: string) =>
@@ -6511,7 +6606,8 @@ export const en = {
   hrBalanceTaken: "Taken",
   hrBalanceBooked: "Booked",
   hrBalanceWaiting: "Waiting",
-  hrBalanceAsOf: (day: string) => `Worked out on ${day}, on your own working pattern.`,
+  hrBalanceAsOf: (day: string) =>
+    `Worked out on ${day}, on your own working pattern.`,
   hrUnpaid: "Unpaid",
   hrNotDecided: "Recorded, not decided",
   hrLeaveKind: "Kind",
@@ -6520,7 +6616,8 @@ export const en = {
   hrLeaveWhy: "Why",
   hrLeaveState: "State",
   hrLeaveBetween: (from: string, to: string) => `${from} – ${to}`,
-  hrHolidaysInside: "A public holiday falls inside these dates and is not counted.",
+  hrHolidaysInside:
+    "A public holiday falls inside these dates and is not counted.",
   hrLeaveRequested: "Waiting",
   hrLeaveApproved: "Booked",
   hrLeaveRejected: "Not agreed",
@@ -6535,7 +6632,8 @@ export const en = {
   hrLeaveTeamEmptyBody:
     "When somebody who reports to you asks for days off, they arrive here and in your approvals inbox — with the dates, what it costs their balance, and who else is away then.",
   hrLeaveNoneShownTitle: "Nothing in that state",
-  hrLeaveNoneShownBody: "There is time off recorded, but none of it is in the state you asked for.",
+  hrLeaveNoneShownBody:
+    "There is time off recorded, but none of it is in the state you asked for.",
   hrAskSubtitle:
     "The days come off the balance for the kind you pick, worked out from your own working pattern — you never type a number of days.",
   hrAskSubmit: "Ask",
@@ -6547,7 +6645,8 @@ export const en = {
   hrRangeBackwards: "The last day is before the first one.",
   hrAlsoAway: "Already off then",
   hrNobodyAway: "Nobody else is off on those days.",
-  hrWhyHint: "Optional. Only whoever decides this reads it, and it is never logged.",
+  hrWhyHint:
+    "Optional. Only whoever decides this reads it, and it is never logged.",
 
   // The absence calendar. It says who, and when — and nothing else, because the
   // route behind it does not carry a reason and never should.
@@ -6556,7 +6655,9 @@ export const en = {
   hrNextMonth: "The month after",
   hrThisMonth: "This month",
   hrAwayThisMonth: (count: number) =>
-    count === 1 ? "1 person away this month" : `${count} people away this month`,
+    count === 1
+      ? "1 person away this month"
+      : `${count} people away this month`,
   hrMoreAway: (count: number) => `+${count} more`,
   hrDayAway: (day: string, count: number) =>
     count === 0 ? `${day}: nobody away` : `${day}: ${count} away`,
@@ -6574,7 +6675,8 @@ export const en = {
   campaignsSubtitle:
     "Everyone this workspace could reach, and everyone it may not — with the reason.",
   campaignsCountriesLabel: "Countries",
-  campaignsCountriesHint: "Two-letter codes, separated by commas. Empty means everywhere.",
+  campaignsCountriesHint:
+    "Two-letter codes, separated by commas. Empty means everywhere.",
   campaignsCountriesPlaceholder: "BE, NL",
   campaignsPurchaseLabel: "Purchases",
   campaignsPurchaseAny: "Anyone",
@@ -6594,7 +6696,8 @@ export const en = {
   campaignsTallyMailable: (mailable: number, matched: number) =>
     `${mailable} of ${matched} people will be mailed`,
   campaignsTallyNobody: "Nobody in this workspace matches that question.",
-  campaignsExcludedCount: (people: number, reason: string) => `${people} · ${reason}`,
+  campaignsExcludedCount: (people: number, reason: string) =>
+    `${people} · ${reason}`,
   campaignsWillBeMailed: "Will be mailed",
   campaignsReasonNoConsent: "Never agreed",
   campaignsReasonUnsubscribe: "Unsubscribed",
@@ -6629,7 +6732,8 @@ export const en = {
   campaignsTabAudience: "Audience",
   campaignsTabLetters: "Letters",
   campaignsLettersTitle: "Letters",
-  campaignsLettersSubtitle: "Each letter as one person will actually receive it.",
+  campaignsLettersSubtitle:
+    "Each letter as one person will actually receive it.",
   campaignsLetterLabel: "Letter",
   campaignsNoLettersTitle: "No letters yet",
   campaignsNoLettersBody:
@@ -6639,7 +6743,8 @@ export const en = {
   campaignsShowAsRecipient: "Someone you can mail",
   campaignsShowAsFallbacks: "Someone with nothing on file",
   campaignsPartLabel: "Part",
-  campaignsPartHint: "Every letter carries both. Some people, and every filter, read the plain one.",
+  campaignsPartHint:
+    "Every letter carries both. Some people, and every filter, read the plain one.",
   campaignsPartHtml: "Formatted",
   campaignsPartText: "Plain text",
   campaignsPreviewFrameLabel: "The letter as it will be received",
@@ -6647,7 +6752,8 @@ export const en = {
   campaignsPreviewPreheader: "Preview text",
   campaignsPreviewNoPreheader:
     "None — mail clients will show the first line of the letter instead.",
-  campaignsAgainstRecipient: (person: string) => `This is the copy ${person} receives.`,
+  campaignsAgainstRecipient: (person: string) =>
+    `This is the copy ${person} receives.`,
   campaignsAgainstFallbacks:
     "This is the copy everyone with nothing on file receives — every personalised value below is your own fallback wording.",
   campaignsAgainstNobodyYet:

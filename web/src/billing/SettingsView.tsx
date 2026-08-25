@@ -209,7 +209,7 @@ export function SettingsView() {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-8 py-6 max-sm:p-3">
       <header className="mx-auto mb-6 flex w-full max-w-[90rem] items-center gap-3 border-b border-subtle pb-5 max-sm:items-start">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg--soft text-accent">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-accent">
           <Building2 className="size-5" aria-hidden="true" />
         </span>
         <div className="min-w-0">

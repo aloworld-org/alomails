@@ -9,7 +9,16 @@
 // spelled out as two flat paths, so that a relative `..` from the editor lands
 // on the list instead of on the module root.
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
-import { Building2, FileText, IdCard, Package, ReceiptText, RefreshCw, Tags } from "lucide-react";
+import {
+  Building2,
+  FileText,
+  IdCard,
+  Package,
+  ReceiptText,
+  RefreshCw,
+  Tags,
+  WalletCards,
+} from "lucide-react";
 
 import { strings } from "../i18n";
 import { CustomersView } from "./CustomersView";
@@ -47,21 +56,44 @@ const TABS = [
 
 const billingPath = (path: (typeof TABS)[number]["path"]) => `/billing/${path}`;
 
+/** Billing opens on the document people return to most often. Kept as a
+ * named contract so a shell refactor cannot quietly send the rail entry back
+ * to setup data. */
+export const BILLING_DEFAULT_PATH = "/billing/invoices";
+
 export function BillingModule() {
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-app">
-      <header className="shrink-0 border-b border-subtle px-8 pt-6 max-sm:px-4 max-sm:pt-4">
-        <h1 className="m-0 text-2xl font-bold text-primary">{strings.moduleBilling}</h1>
-        <nav className="mt-3 flex min-w-0 gap-1 overflow-x-auto" aria-label={strings.moduleBilling}>
+      <header className="shrink-0 border-b border-subtle bg-surface px-8 pb-4 pt-6 max-sm:px-4 max-sm:pt-4">
+        <div className="flex items-center gap-3.5">
+          <span
+            className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--accent-soft)] text-accent shadow-sm ring-1 ring-inset ring-accent/10"
+            aria-hidden="true"
+          >
+            <WalletCards className="size-5" />
+          </span>
+          <div className="min-w-0">
+            <h1 className="m-0 text-2xl font-bold tracking-tight text-primary">
+              {strings.moduleBilling}
+            </h1>
+            <p className="m-0 mt-1 text-sm text-secondary">
+              {strings.billingWorkspacePurpose}
+            </p>
+          </div>
+        </div>
+        <nav
+          className="mt-5 flex min-w-0 gap-2 overflow-x-auto"
+          aria-label={strings.moduleBilling}
+        >
           {TABS.map((t) => (
             <NavLink
               key={t.path}
               to={billingPath(t.path)}
               className={({ isActive }) =>
-                `inline-flex min-h-11 shrink-0 items-center gap-2 rounded-t-lg border-b-2 px-4 py-2.5 text-sm !no-underline transition-colors hover:!no-underline focus-visible:!no-underline ${
+                `inline-flex min-h-11 shrink-0 items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm !no-underline transition-colors hover:!no-underline focus-visible:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${
                   isActive
-                    ? "border-accent bg-[var(--accent-soft)] font-semibold !text-accent"
-                    : "border-transparent bg-transparent !text-secondary hover:bg-raised hover:!text-primary"
+                    ? "bg-[var(--accent-soft)] font-semibold !text-accent shadow-sm ring-1 ring-inset ring-accent/10"
+                    : "bg-transparent font-medium !text-secondary hover:bg-raised hover:!text-primary"
                 }`
               }
             >
@@ -73,7 +105,7 @@ export function BillingModule() {
       </header>
 
       <Routes>
-        <Route index element={<Navigate to="/billing/customers" replace />} />
+        <Route index element={<Navigate to={BILLING_DEFAULT_PATH} replace />} />
         <Route path="invoices">
           <Route index element={<InvoicesView />} />
           <Route path="new" element={<InvoiceEditor />} />
@@ -90,9 +122,15 @@ export function BillingModule() {
         <Route path="reports" element={<VatReportView />} />
         <Route path="details" element={<SettingsView />} />
         {/* Keep old bookmarks working while exposing a clear, user-facing URL. */}
-        <Route path="settings" element={<Navigate to="/billing/details" replace />} />
+        <Route
+          path="settings"
+          element={<Navigate to="/billing/details" replace />}
+        />
         {/* An unknown billing path is a stale link, not an error page. */}
-        <Route path="*" element={<Navigate to="/billing/customers" replace />} />
+        <Route
+          path="*"
+          element={<Navigate to="/billing/customers" replace />}
+        />
       </Routes>
     </div>
   );

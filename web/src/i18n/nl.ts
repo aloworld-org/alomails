@@ -126,7 +126,8 @@ export const nl: Partial<Catalog> = {
   homeAskBody: "Uw AI-assistent voor al uw werk.",
   homeAskCta: "Vraag alo",
   homeAskPlaceholder: "Vraag me alles…",
-  homeAskUnavailable: "alo is momenteel niet beschikbaar. Probeer het zo opnieuw.",
+  homeAskUnavailable:
+    "alo is momenteel niet beschikbaar. Probeer het zo opnieuw.",
   homeMailClearTitle: "U bent helemaal bij!",
   homeCalendarClearTitle: "Geen afspraken vandaag",
   homeTasksClearTitle: "Alles is klaar!",
@@ -1287,11 +1288,14 @@ export const nl: Partial<Catalog> = {
   sheetChartPie: "Cirkeldiagram",
   sheetCharts: "Grafieken in dit werkblad",
   sheetChartRemove: "Grafiek verwijderen",
-  sheetChartSelectionHint: "Selecteer een kopregel, een categoriekolom en minstens één numerieke reeks.",
-  sheetChartExcelLimit: "Grafieken blijven live in alo Sheet. De Excel-export bevat momenteel de cellen, maar niet deze grafieken.",
+  sheetChartSelectionHint:
+    "Selecteer een kopregel, een categoriekolom en minstens één numerieke reeks.",
+  sheetChartExcelLimit:
+    "Grafieken blijven live in alo Sheet. De Excel-export bevat momenteel de cellen, maar niet deze grafieken.",
   sheetChartSeries: (number: number) => `Reeks ${number}`,
   chartTabMissing: "Het werkbladtabblad voor deze grafiek bestaat niet meer.",
-  chartRangesRagged: "De bereiken van de grafiek hebben niet langer dezelfde lengte.",
+  chartRangesRagged:
+    "De bereiken van de grafiek hebben niet langer dezelfde lengte.",
   chartTooLarge: "Deze grafiekselectie is te groot om veilig te tekenen.",
   sheetGroupProtection: "Beveiliging",
   sheetGroupFreeze: "Vensters vastzetten",
@@ -1521,6 +1525,8 @@ export const nl: Partial<Catalog> = {
   // er in de woorden van de server, zodat de twee elkaar nooit kunnen
   // tegenspreken.
   moduleBilling: "Facturatie",
+  billingWorkspacePurpose:
+    "Klanten, offertes, facturen en betalingen in één financiële werkruimte.",
   billingCustomers: "Klanten",
   billingProducts: "Prijslijst",
   billingSearchCustomers: "Klanten zoeken…",
@@ -1554,7 +1560,8 @@ export const nl: Partial<Catalog> = {
   billingStepCustomerTitle: "Voeg uw eerste klant toe",
   billingStepCustomerBody: "Maak een klantprofiel met de factuurgegevens.",
   billingStepInvoiceTitle: "Maak uw eerste factuur",
-  billingStepInvoiceBody: "Voeg artikelen toe, stel betaalvoorwaarden in en verstuur de factuur.",
+  billingStepInvoiceBody:
+    "Voeg artikelen toe, stel betaalvoorwaarden in en verstuur de factuur.",
   billingStepPaidTitle: "Word sneller betaald",
   billingStepPaidBody: "Registreer betalingen en houd uw kasstroom bij.",
   billingNoCustomersBody:
@@ -2453,7 +2460,8 @@ export const nl: Partial<Catalog> = {
   projectsEdit: "Bewerken",
   projectsOpenProject: (name: string) => `${name} openen`,
   projectsDetailsTitle: "Projectdetails",
-  projectsDetailsSubtitle: "Houd het resultaat, de planning en de huidige status voor iedereen duidelijk.",
+  projectsDetailsSubtitle:
+    "Houd het resultaat, de planning en de huidige status voor iedereen duidelijk.",
   projectsDescription: "Beschrijving",
   projectsStatus: "Status",
   projectsStatusPlanned: "Gepland",
@@ -2474,7 +2482,8 @@ export const nl: Partial<Catalog> = {
   projectsInternalWork: "Ons bedrijf",
   projectsClientWorkHint: "Factureer dit werk aan een klant",
   projectsInternalWorkHint: "Houd dit werk intern",
-  projectsNewCustomerHint: "Na het maken kunt u tarieven en budgetten toevoegen.",
+  projectsNewCustomerHint:
+    "Na het maken kunt u tarieven en budgetten toevoegen.",
   projectsCreate: "Project maken",
   projectsCreateFailed: "Het project kon niet worden gemaakt.",
 
@@ -2494,7 +2503,8 @@ export const nl: Partial<Catalog> = {
   projectsCustomerHint:
     "De klant aan wie de uren van dit project worden gefactureerd.",
   projectsCustomerPick: "Kies een klant…",
-  projectsNoCustomersAvailable: "Er zijn nog geen klanten beschikbaar. Voeg er eerst een toe in Facturatie.",
+  projectsNoCustomersAvailable:
+    "Er zijn nog geen klanten beschikbaar. Voeg er eerst een toe in Facturatie.",
   projectsCustomerUnknown: "Onbekende klant",
   projectsInternal: "Intern",
   projectsRate: "Uurtarief",
@@ -2509,25 +2519,33 @@ export const nl: Partial<Catalog> = {
   projectsHealth: "Projectgezondheid",
   projectsHealthOnTrack: "Op schema",
   projectsHealthAtRisk: "Aandacht nodig",
-  projectsHealthNeedsTarget: "Voeg een streefdatum toe om leveringsrisico zichtbaar te maken.",
+  projectsHealthNeedsTarget:
+    "Voeg een streefdatum toe om leveringsrisico zichtbaar te maken.",
   projectsUpdates: "Projectupdates",
-  projectsUpdatesSubtitle: "Deel voortgang, besluiten en risico's met iedereen die dit project volgt.",
+  projectsUpdatesSubtitle:
+    "Deel voortgang, besluiten en risico's met iedereen die dit project volgt.",
   projectsUpdateHealth: "Status van de update",
   projectsUpdateOffTrack: "Niet op schema",
-  projectsUpdatePlaceholder: "Wat is er veranderd? Voeg het resultaat, besluit, risico of de volgende stap toe.",
-  projectsUpdateHint: "Houd het beknopt en nuttig voor iemand die later bijleest.",
+  projectsUpdatePlaceholder:
+    "Wat is er veranderd? Voeg het resultaat, besluit, risico of de volgende stap toe.",
+  projectsUpdateHint:
+    "Houd het beknopt en nuttig voor iemand die later bijleest.",
   projectsPublishUpdate: "Update publiceren",
   projectsUpdatesEmpty: "Nog geen updates",
-  projectsUpdatesEmptyBody: "Publiceer de eerste update om dit project een blijvend verhaal te geven.",
+  projectsUpdatesEmptyBody:
+    "Publiceer de eerste update om dit project een blijvend verhaal te geven.",
   projectsUpdatesLoadFailed: "De projectupdates konden niet worden geladen.",
   projectsUpdateSaveFailed: "De update kon niet worden gepubliceerd.",
   projectsRemoveAttachment: "Bijlage verwijderen",
   projectsSomeone: "Iemand",
-  projectsBlockedTasks: (count: number) => count === 1 ? "1 geblokkeerde taak" : `${count} geblokkeerde taken`,
-  projectsOverdueTasks: (count: number) => count === 1 ? "1 achterstallige taak" : `${count} achterstallige taken`,
+  projectsBlockedTasks: (count: number) =>
+    count === 1 ? "1 geblokkeerde taak" : `${count} geblokkeerde taken`,
+  projectsOverdueTasks: (count: number) =>
+    count === 1 ? "1 achterstallige taak" : `${count} achterstallige taken`,
   projectsWorkload: "Werkbelasting",
   projectsWorkloadEmpty: "Er is nog geen open werk toegewezen.",
-  projectsOpenTasks: (count: number) => count === 1 ? "1 open taak" : `${count} open taken`,
+  projectsOpenTasks: (count: number) =>
+    count === 1 ? "1 open taak" : `${count} open taken`,
   projectsBudgetUsed: "Budget verbruikt",
   projectsBudgetHours: "Budget (uren)",
   projectsBudgetAmount: "Budget (bedrag)",
@@ -2580,7 +2598,8 @@ export const nl: Partial<Catalog> = {
   projectsProposedEntry: "voorgesteld",
   projectsBilledEntry: "op een factuur",
   projectsReadyToInvoice: "Klaar om te factureren",
-  projectsReadyToInvoiceBody: (duration: string) => `${duration} goedgekeurde tijd is nog niet gefactureerd.`,
+  projectsReadyToInvoiceBody: (duration: string) =>
+    `${duration} goedgekeurde tijd is nog niet gefactureerd.`,
   projectsWorkflowEyebrow: "Volgende stap",
   projectsWorkflowLabel: "Projectworkflow",
   projectsWorkflowTasks: "Taken",
@@ -2588,26 +2607,35 @@ export const nl: Partial<Catalog> = {
   projectsWorkflowApproval: "Goedkeuring",
   projectsWorkflowInvoice: "Factuur",
   projectsWorkflowTasksTitle: "Bepaal het werk",
-  projectsWorkflowTasksBody: "Maak de eerste taak zodat het team weet wat er daarna moet gebeuren.",
+  projectsWorkflowTasksBody:
+    "Maak de eerste taak zodat het team weet wat er daarna moet gebeuren.",
   projectsWorkflowTimeTitle: "Registreer het werk",
-  projectsWorkflowTimeBody: "Registreer tijd op dit project of de taken zolang het werk nog vers is.",
+  projectsWorkflowTimeBody:
+    "Registreer tijd op dit project of de taken zolang het werk nog vers is.",
   projectsWorkflowApprovalTitle: "Dien de tijd ter goedkeuring in",
-  projectsWorkflowApprovalBody: "Controleer de week en dien ze in zodat goedgekeurd klantwerk kan worden gefactureerd.",
+  projectsWorkflowApprovalBody:
+    "Controleer de week en dien ze in zodat goedgekeurd klantwerk kan worden gefactureerd.",
   projectsWorkflowAwaitingApprovalTitle: "Tijd wacht op goedkeuring",
-  projectsWorkflowAwaitingApprovalBody: "Deze tijd is al ingediend. Bekijk de urenstaat of wacht op goedkeuring voordat je factureert.",
+  projectsWorkflowAwaitingApprovalBody:
+    "Deze tijd is al ingediend. Bekijk de urenstaat of wacht op goedkeuring voordat je factureert.",
   projectsWorkflowInvoiceTitle: "Maak van goedgekeurd werk een factuur",
   projectsWorkflowContinueTitle: "Houd het project in beweging",
-  projectsWorkflowContinueBody: "Voeg de volgende tijdregistratie toe terwijl het werk doorgaat.",
+  projectsWorkflowContinueBody:
+    "Voeg de volgende tijdregistratie toe terwijl het werk doorgaat.",
   projectsReviewTimesheet: "Weekstaat controleren",
   projectsCreateInvoice: "Factuur maken",
-  projectsCreateInvoiceSubtitle: "Kies de goedgekeurde tijd voor een nieuwe conceptfactuur.",
+  projectsCreateInvoiceSubtitle:
+    "Kies de goedgekeurde tijd voor een nieuwe conceptfactuur.",
   projectsInvoiceThrough: "Factureren tot en met",
-  projectsInvoiceCutoffHint: "Alleen goedgekeurde, niet-gefactureerde tijd tot en met deze datum wordt opgenomen.",
+  projectsInvoiceCutoffHint:
+    "Alleen goedgekeurde, niet-gefactureerde tijd tot en met deze datum wordt opgenomen.",
   projectsNothingToInvoice: "Niets klaar om te factureren",
-  projectsNothingToInvoiceBody: "Goedgekeurde tijd verschijnt hier nadat de week is goedgekeurd.",
+  projectsNothingToInvoiceBody:
+    "Goedgekeurde tijd verschijnt hier nadat de week is goedgekeurd.",
   projectsUnratedTime: "Voor deze tijd is geen uurtarief ingesteld",
   projectsInvoiceRate: (rate: string) => `${rate} per uur`,
-  projectsBelgianVat: "Het Belgische standaard-btw-tarief wordt op dit concept toegepast.",
+  projectsBelgianVat:
+    "Het Belgische standaard-btw-tarief wordt op dit concept toegepast.",
   projectsCreateDraftInvoice: "Conceptfactuur maken",
   projectsInvoiceLoadFailed: "De goedgekeurde tijd kon niet worden geladen.",
   projectsInvoiceCreateFailed: "De conceptfactuur kon niet worden gemaakt.",
@@ -2621,12 +2649,15 @@ export const nl: Partial<Catalog> = {
   projectsWeekEmptyBody:
     "Voeg je eerste tijdregistratie toe. Kies een project, vul de duur en notitie in en bekijk ze daarna in dit weekoverzicht.",
   projectsWeekTitle: "Weekstaat",
-  projectsWeekPurpose: "Registreer je werk, controleer de week en dien ze daarna ter goedkeuring in.",
+  projectsWeekPurpose:
+    "Registreer je werk, controleer de week en dien ze daarna ter goedkeuring in.",
   projectsWeekAllScope: "Je volledige week over alle projecten.",
-  projectsWeekProjectScope: (project: string) => `Tijd voor ${project}. Bij indienen wordt nog steeds je volledige week ter goedkeuring verstuurd.`,
+  projectsWeekProjectScope: (project: string) =>
+    `Tijd voor ${project}. Bij indienen wordt nog steeds je volledige week ter goedkeuring verstuurd.`,
   projectsAddTime: "Tijd toevoegen",
   projectsChooseTimeProject: "Waaraan heb je gewerkt?",
-  projectsChooseTimeProjectHint: "Kies een project om deze week een tijdregistratie toe te voegen.",
+  projectsChooseTimeProjectHint:
+    "Kies een project om deze week een tijdregistratie toe te voegen.",
   projectsBillableOfWeek: (duration: string) =>
     `waarvan ${duration} factureerbaar`,
   projectsCompleteWeek: "Volledige week",
@@ -2730,7 +2761,8 @@ export const nl: Partial<Catalog> = {
   projectsSubmittedAt: "Ingediend op",
   projectsApprove: "Goedkeuren",
   projectsApprovalComplete: "Week goedgekeurd",
-  projectsApprovalCompleteBody: "Bekijk de betrokken projecten en factureer klantwerk dat klaarstaat.",
+  projectsApprovalCompleteBody:
+    "Bekijk de betrokken projecten en factureer klantwerk dat klaarstaat.",
   projectsReject: "Terugsturen",
   projectsRejectTitle: "Deze week terugsturen?",
   projectsRejectBody: (person: string) =>
@@ -2883,11 +2915,13 @@ export const nl: Partial<Catalog> = {
   sitesAssistantSwitchTitle: "De assistent en zijn budget",
   sitesAssistantSwitchHint:
     "Een chatassistent op uw gepubliceerde website die vragen van bezoekers beantwoordt vanuit uw gepubliceerde pagina's — en altijd de pagina noemt waar een antwoord vandaan komt.",
-  sitesAssistantEnable: "Vragen van bezoekers beantwoorden op de gepubliceerde website",
+  sitesAssistantEnable:
+    "Vragen van bezoekers beantwoorden op de gepubliceerde website",
   sitesAssistantBudgetLabel: "Maandbudget (€)",
   sitesAssistantBudgetHint: (defaultBudget: string) =>
     `Antwoorden kosten geld. Zodra de antwoorden van een maand dit budget bereiken, pauzeert de assistent en worden bezoekers naar uw contactformulier verwezen — u krijgt hiervan bericht. Zonder instelling is het budget ${defaultBudget}.`,
-  sitesAssistantBudgetNotANumber: "Voer het maandbudget in als een bedrag in euro's.",
+  sitesAssistantBudgetNotANumber:
+    "Voer het maandbudget in als een bedrag in euro's.",
   sitesAssistantSpent: (spent: string, budget: string) =>
     `${spent} van ${budget} uitgegeven deze maand.`,
   sitesAssistantCeilingHit:
@@ -2899,7 +2933,8 @@ export const nl: Partial<Catalog> = {
   sitesAssistantReadsTitle: "Wat de assistent leest",
   sitesAssistantReadsRule:
     "Alles wat de assistent kan lezen, kan iedereen op het internet lezen — hij beantwoordt er vreemden mee.",
-  sitesAssistantReadsPublishedSite: "Uw gepubliceerde website — elke live pagina",
+  sitesAssistantReadsPublishedSite:
+    "Uw gepubliceerde website — elke live pagina",
   sitesAssistantReadsPublishedPosts: "Uw gepubliceerde blogberichten",
   sitesAssistantAlwaysRead: "altijd gelezen",
   sitesAssistantNoKnowledge:
@@ -2938,8 +2973,7 @@ export const nl: Partial<Catalog> = {
     `Bood vrije tijden aan voor “${service}”`,
   sitesAssistantDidBooked: (service: string, when: string) =>
     `Boekte “${service}” op ${when} — de afspraak staat in uw agenda`,
-  sitesAssistantDidLeadOffered:
-    "Bood het contactformulier aan in het gesprek",
+  sitesAssistantDidLeadOffered: "Bood het contactformulier aan in het gesprek",
   sitesAssistantDidLeadSaved: "Zette een nieuwe lead op uw CRM-bord",
   sitesAssistantDidLeadKnown:
     "Liet een terugkerend contact weten dat u die al kent — er is geen duplicaat gemaakt",
@@ -3176,8 +3210,7 @@ export const nl: Partial<Catalog> = {
   sitesFunnelMoney: "Het geld erachter",
   sitesFunnelInvoiceRule:
     "Facturen opgemaakt voor de klant die een aanvraag werd, ná het doorgeven.",
-  sitesFunnelMoneyEmpty:
-    "Er is nog geen kans aangemaakt vanuit deze website.",
+  sitesFunnelMoneyEmpty: "Er is nog geen kans aangemaakt vanuit deze website.",
   sitesFunnelOpen: "In behandeling",
   sitesFunnelWon: "Gewonnen",
   sitesFunnelInvoiced: "Gefactureerd",
@@ -3247,8 +3280,7 @@ export const nl: Partial<Catalog> = {
     `Een kopie van de versie van ${date}`,
   sitesHistoryRestore: "Deze versie weer online zetten",
   sitesHistoryRestoring: "Weer online zetten…",
-  sitesHistoryRestoreFailed:
-    "Deze versie kon niet weer online worden gezet.",
+  sitesHistoryRestoreFailed: "Deze versie kon niet weer online worden gezet.",
   sitesHistoryRestored: (date: string) =>
     `De versie van ${date} staat weer online.`,
   sitesHistoryUndo: "Ongedaan maken",
@@ -3281,8 +3313,7 @@ export const nl: Partial<Catalog> = {
   sitesScheduleHint:
     "Kies een datum en tijd, dan gaat deze site vanzelf online. U hoeft er niet bij te zijn.",
   sitesScheduleLoading: "Controleren wat er gepland staat",
-  sitesScheduleLoadFailed:
-    "De geplande publicatie kon niet worden geladen.",
+  sitesScheduleLoadFailed: "De geplande publicatie kon niet worden geladen.",
   sitesScheduleOpen: "Publicatie plannen",
   sitesScheduleChange: "Moment wijzigen",
   sitesScheduleWhen: "Datum en tijd",
@@ -3299,8 +3330,7 @@ export const nl: Partial<Catalog> = {
   sitesSchedulePublishingNow: "Deze site wordt nu gepubliceerd.",
   sitesScheduleCancel: "Afzeggen",
   sitesScheduleCancelling: "Afzeggen…",
-  sitesScheduleCancelFailed:
-    "De geplande publicatie kon niet worden afgezegd.",
+  sitesScheduleCancelFailed: "De geplande publicatie kon niet worden afgezegd.",
   sitesScheduleCancelled: (moment: string) =>
     `Afgezegd. Deze site wordt niet gepubliceerd op ${moment}, en er is niets veranderd aan wat online staat.`,
   sitesScheduleDone: (moment: string) =>
@@ -3433,8 +3463,7 @@ export const nl: Partial<Catalog> = {
     "Genereren is niet ingesteld voor deze werkruimte. Begin met een lege site of kies hieronder een sjabloon.",
   sitesChooseTemplate: "Kies een beginpunt",
   sitesBlankTemplate: "Lege site",
-  sitesBlankTemplateSummary:
-    "Een lege startpagina. U kiest zelf elke sectie.",
+  sitesBlankTemplateSummary: "Een lege startpagina. U kiest zelf elke sectie.",
   sitesTemplatePageCount: (count: number) =>
     count === 1 ? "1 pagina" : `${count} pagina’s`,
   sitesTemplatesLoading: "De sjablonen worden geladen…",
@@ -3561,15 +3590,20 @@ export const nl: Partial<Catalog> = {
   sitesCollaboratorEmailPlaceholder: "medewerker@voorbeeld.nl",
   sitesInviteCollaborator: "Editor uitnodigen",
   sitesCollaboratorsLoading: "Medewerkers laden…",
-  sitesCollaboratorsLoadFailed: "De medewerkers van deze website konden niet worden geladen.",
+  sitesCollaboratorsLoadFailed:
+    "De medewerkers van deze website konden niet worden geladen.",
   sitesCollaboratorInviteFailed: "De medewerker kon niet worden uitgenodigd.",
-  sitesCollaboratorRevokeFailed: "De toegang van deze medewerker kon niet worden verwijderd.",
-  sitesCollaboratorCopyFailed: "De instellink kon niet worden gekopieerd. Maak een nieuwe link en probeer opnieuw.",
+  sitesCollaboratorRevokeFailed:
+    "De toegang van deze medewerker kon niet worden verwijderd.",
+  sitesCollaboratorCopyFailed:
+    "De instellink kon niet worden gekopieerd. Maak een nieuwe link en probeer opnieuw.",
   sitesCollaboratorLinkReady: (email: string) =>
     `Er staat een persoonlijke instellink klaar voor ${email}. Kopieer en deel hem veilig.`,
-  sitesCollaboratorAdded: (email: string) => `${email} kan deze website nu bewerken.`,
+  sitesCollaboratorAdded: (email: string) =>
+    `${email} kan deze website nu bewerken.`,
   sitesCollaboratorLinkCopied: "Instellink gekopieerd.",
-  sitesCollaboratorRevoked: (email: string) => `De toegang van ${email} is verwijderd.`,
+  sitesCollaboratorRevoked: (email: string) =>
+    `De toegang van ${email} is verwijderd.`,
   sitesUndoCollaboratorRevoke: "Ongedaan maken",
   sitesNoCollaborators:
     "Alleen jij kunt deze website bewerken. Vul hierboven een e-mailadres in om de eerste medewerker uit te nodigen.",
@@ -3596,7 +3630,8 @@ export const nl: Partial<Catalog> = {
     `Meld je aan als ${email}. Je ziet alleen de websites die met je zijn gedeeld.`,
   sitesInvitationSignIn: "Aanmelden bij alo",
   sitesPages: "Pagina's",
-  sitesPageCount: (count: number) => `${count} ${count === 1 ? "pagina" : "pagina's"}`,
+  sitesPageCount: (count: number) =>
+    `${count} ${count === 1 ? "pagina" : "pagina's"}`,
   sitesSiteTools: "Websitehulpmiddelen",
   sitesSiteToolsHint: "Inhoud, handel, inzichten en instellingen",
   sitesNewPage: "Nieuwe pagina",
@@ -3766,9 +3801,15 @@ export const nl: Partial<Catalog> = {
     "Sleep over de afbeelding om te kiezen wat zichtbaar blijft. Met het toetsenbord: pijltoetsen verplaatsen het kader, shift met de pijltoetsen maakt het groter of kleiner.",
   sitesImageFocalHint:
     "Sleep het ronde punt naar wat in beeld moet blijven wanneer een lay-out de afbeelding verder bijsnijdt.",
-  sitesImageFrameAt: (width: number, height: number, left: number, top: number) =>
+  sitesImageFrameAt: (
+    width: number,
+    height: number,
+    left: number,
+    top: number,
+  ) =>
     `Zichtbaar gebied: ${width}% bij ${height}% van de afbeelding, ${left}% vanaf links en ${top}% vanaf boven`,
-  sitesImageFocalAt: (x: number, y: number) => `Aandachtspunt ${x}% horizontaal en ${y}% verticaal`,
+  sitesImageFocalAt: (x: number, y: number) =>
+    `Aandachtspunt ${x}% horizontaal en ${y}% verticaal`,
   sitesImageFrameWidth: "Breedte",
   sitesImageFrameHeight: "Hoogte",
   sitesImageFrameLeft: "Links",
@@ -4980,7 +5021,8 @@ export const nl: Partial<Catalog> = {
   sitesBookingDeleteConfirm: "Verwijderen",
   sitesBookingDeleteHint:
     "Afspraken die al in uw agenda staan blijven precies zoals ze zijn — hier wordt er geen enkele geannuleerd. Al gepubliceerde pagina’s blijven de dienst aanbieden tot u opnieuw publiceert.",
-  sitesBookingDeleteFailed: "De reserveerbare dienst kon niet worden verwijderd.",
+  sitesBookingDeleteFailed:
+    "De reserveerbare dienst kon niet worden verwijderd.",
   sitesBookingMinutes: (minutes: number) => `${minutes} minuten`,
   sitesBookingOff: "Neemt geen reserveringen aan",
   sitesBookingPreview: "Wat een bezoeker ziet",
@@ -5025,7 +5067,9 @@ export const nl: Partial<Catalog> = {
   sitesTicketSectionHint:
     "De gepubliceerde sectie linkt naar je ticketshop; evenementen, prijzen en plaatsen worden live gelezen wanneer een bezoeker aankomt.",
   sitesTicketSectionOnSale: (count: number) =>
-    count === 1 ? "1 evenement staat te koop." : `${count} evenementen staan te koop.`,
+    count === 1
+      ? "1 evenement staat te koop."
+      : `${count} evenementen staan te koop.`,
   sitesTickets: "Tickets",
   sitesTicketsLoadFailed:
     "De evenementen konden niet worden geladen. Controleer je verbinding en probeer opnieuw.",
@@ -5043,7 +5087,8 @@ export const nl: Partial<Catalog> = {
   sitesTicketEventProduct: "Wat een plaats verkoopt",
   sitesTicketEventProductHint:
     "Een artikel van je prijslijst. Naam en prijs worden live gelezen, nooit gekopieerd.",
-  sitesTicketProductOption: (name: string, price: string) => `${name} — ${price}`,
+  sitesTicketProductOption: (name: string, price: string) =>
+    `${name} — ${price}`,
   sitesTicketEventStartsAt: "Wanneer het begint",
   sitesTicketEventCapacity: "Plaatsen",
   sitesTicketEventCapacityHint:
@@ -5057,7 +5102,8 @@ export const nl: Partial<Catalog> = {
   sitesTicketCapacityFailed: "Het aantal plaatsen kon niet worden gewijzigd.",
   sitesTicketChangeCapacity: "Plaatsen...",
   sitesTicketDelete: "Verwijderen",
-  sitesTicketChangeCapacityFor: (event: string) => `Plaatsen wijzigen voor ${event}`,
+  sitesTicketChangeCapacityFor: (event: string) =>
+    `Plaatsen wijzigen voor ${event}`,
   sitesTicketDeleteFor: (event: string) => `${event} verwijderen`,
   sitesTicketDeleteConfirm: "Echt verwijderen?",
   sitesTicketDeleteHint:
@@ -5084,7 +5130,9 @@ export const nl: Partial<Catalog> = {
   sitesShopSectionHint:
     "Het blok linkt naar uw winkelpagina. Aanbod, prijzen en voorraad worden live gelezen — er wordt niets in de pagina opgeslagen.",
   sitesShopSectionListed: (count: number) =>
-    count === 1 ? "1 product ligt in de winkel." : `${count} producten liggen in de winkel.`,
+    count === 1
+      ? "1 product ligt in de winkel."
+      : `${count} producten liggen in de winkel.`,
   sitesAssistantSuggestedShop: "Wat verkoopt u?",
   sitesShop: "Winkel",
   sitesShopLoadFailed:
@@ -5106,9 +5154,11 @@ export const nl: Partial<Catalog> = {
   sitesShopColShelf: "Op de plank",
   sitesShopGoneProduct: "Niet meer op de prijslijst",
   sitesShopNotStocked: "Geen voorraadartikel meer",
-  sitesShopUnits: (units: number) => (units === 1 ? "1 stuk" : `${units} stuks`),
+  sitesShopUnits: (units: number) =>
+    units === 1 ? "1 stuk" : `${units} stuks`,
   sitesShopRemove: "Verwijderen",
-  sitesShopRemoveFor: (product: string) => `${product} uit de winkel verwijderen`,
+  sitesShopRemoveFor: (product: string) =>
+    `${product} uit de winkel verwijderen`,
   sitesShopRemoveConfirm: "Echt verwijderen?",
   sitesShopRemoveHint:
     "Verwijderen haalt het product alleen uit de etalage. Al geplaatste bestellingen behouden het.",
@@ -5142,7 +5192,8 @@ export const nl: Partial<Catalog> = {
   sitesShopSetupDescribeHint:
     "Benoem wat u verkoopt en welke prijzen u vraagt. Genoemde prijzen worden letterlijk overgenomen — al het andere blijft een leeg veld of een gemarkeerde gok, door u te bevestigen.",
   sitesShopSetupPropose: "Stel een inrichting voor",
-  sitesShopSetupProposeFailed: "Er kon geen inrichting worden voorgesteld. Probeer opnieuw.",
+  sitesShopSetupProposeFailed:
+    "Er kon geen inrichting worden voorgesteld. Probeer opnieuw.",
   sitesShopSetupUnconfigured:
     "Deze werkruimte heeft geen AI-aanbieder ingesteld, dus hier kan niets worden voorgesteld — stel uw prijslijst met de hand samen.",
   sitesShopSetupManualPath: "Doet u het liever met de hand?",
@@ -5179,7 +5230,8 @@ export const nl: Partial<Catalog> = {
     "Er worden goederen verzonden, maar uw beschrijving noemt geen verzendkosten — vul ze in vóór u goedkeurt.",
   sitesShopSetupShippingCurrent: (price: string) => `Nu ${price}.`,
   sitesShopSetupShippingSaved: "Verzendkosten opgeslagen.",
-  sitesShopSetupShippingFailed: "De verzendkosten konden niet worden opgeslagen.",
+  sitesShopSetupShippingFailed:
+    "De verzendkosten konden niet worden opgeslagen.",
   sitesShopSetupNothingIncluded:
     "Er is niets aangevinkt — vink minstens één artikel aan om aan te maken.",
   sitesShopSetupApprove: (count: number) =>
@@ -5194,7 +5246,8 @@ export const nl: Partial<Catalog> = {
     count === 1
       ? "1 artikel staat nu op uw prijslijst."
       : `${count} artikelen staan nu op uw prijslijst.`,
-  sitesShopSetupNextTickets: "Plan de evenementen waarvoor tickets verkocht worden",
+  sitesShopSetupNextTickets:
+    "Plan de evenementen waarvoor tickets verkocht worden",
   sitesOrders: "Bestellingen",
   sitesOrdersLoadFailed:
     "De bestellingen konden niet worden geladen. Controleer uw verbinding en probeer het opnieuw.",
@@ -5321,7 +5374,7 @@ export const nl: Partial<Catalog> = {
     "Wordt door de pagina boven het blok getoond, in de typografie van uw site. Laat leeg voor een blok dat op zichzelf staat.",
   sitesCustomCodeFrameTitle: "Wat dit blok is",
   sitesCustomCodeFrameTitleHint:
-    "Wordt voorgelezen aan bezoekers met een schermlezer: \"Een timer voor de branding die nu loopt\", niet \"kader\".",
+    'Wordt voorgelezen aan bezoekers met een schermlezer: "Een timer voor de branding die nu loopt", niet "kader".',
   sitesCustomCodeHtml: "Opmaak",
   sitesCustomCodeHtmlHint:
     "De inhoud van het blok. Het document eromheen — het beleid, de stijl- en scriptblokken — wordt voor u geschreven.",
@@ -5346,7 +5399,8 @@ export const nl: Partial<Catalog> = {
   sitesCustomCodeHeight: "Hoogte op de pagina (pixels)",
   sitesCustomCodeHeightHint:
     "Een verzegeld blok kan van buitenaf niet worden opgemeten, dus geeft u de hoogte op. Tussen 40 en 2000.",
-  sitesCustomCodeBytes: (used: number, max: number) => `${used} van ${max} bytes`,
+  sitesCustomCodeBytes: (used: number, max: number) =>
+    `${used} van ${max} bytes`,
   sitesCustomCodeBytesOver: (used: number, max: number) =>
     `${used} van ${max} bytes — te lang om op te slaan`,
   sitesCustomCodeTotalBytes: (used: number, max: number) =>
@@ -5355,12 +5409,15 @@ export const nl: Partial<Catalog> = {
     "De apps die u het meest gebruikt, automatisch bijgehouden",
   meetTitle: "Vergadering",
   meetEyebrow: "Uw vergaderruimte",
-  meetSubtitle: "Start een gesprek of stap binnen bij een vergadering die al bezig is.",
+  meetSubtitle:
+    "Start een gesprek of stap binnen bij een vergadering die al bezig is.",
   meetHeroTitle: "Samen in één klik",
-  meetHeroText: "Microfoon aan, camera naar keuze. Controleer beide voordat iemand u ziet of hoort.",
+  meetHeroText:
+    "Microfoon aan, camera naar keuze. Controleer beide voordat iemand u ziet of hoort.",
   meetHappeningNow: "Nu bezig",
   meetHappeningHint: "Vergaderingen waaraan u zonder link kunt deelnemen.",
-  meetLiveCount: (count: number) => count === 1 ? "1 vergadering" : `${count} vergaderingen`,
+  meetLiveCount: (count: number) =>
+    count === 1 ? "1 vergadering" : `${count} vergaderingen`,
   meetReady: "Klaar",
   meetStartedAt: (time: string) => `Begonnen om ${time}`,
   meetInstantTitle: "Directe vergadering",
@@ -5373,10 +5430,12 @@ export const nl: Partial<Catalog> = {
   meetStart: "Een vergadering starten",
   meetStartNow: "Een vergadering starten",
   meetStarting: "Bezig met starten…",
-  meetStartFailed: "De vergadering kon niet worden gestart. Controleer uw verbinding en probeer het opnieuw.",
+  meetStartFailed:
+    "De vergadering kon niet worden gestart. Controleer uw verbinding en probeer het opnieuw.",
   meetLoading: "Vergaderingen laden",
   meetLoadFailed: "Vergaderingen konden niet worden geladen",
-  meetLoadFailedHint: "Controleer uw verbinding en probeer het opnieuw. U kunt nog steeds een nieuwe vergadering starten.",
+  meetLoadFailedHint:
+    "Controleer uw verbinding en probeer het opnieuw. U kunt nog steeds een nieuwe vergadering starten.",
   meetRetry: "Opnieuw proberen",
   meetBack: "Terug naar Meet",
   meetStartedHere: "is een vergadering gestart in dit gesprek",
@@ -5384,11 +5443,12 @@ export const nl: Partial<Catalog> = {
   meetJoin: "Deelnemen aan de vergadering",
   meetLive: "Vergadering bezig",
   meetJoinNow: "Nu deelnemen",
-  meetReadyGreeting: (name: string) => name ? `Hallo ${name}` : "Hallo",
+  meetReadyGreeting: (name: string) => (name ? `Hallo ${name}` : "Hallo"),
   meetReadyTitle: "Alles is klaar om deel te nemen",
   meetReadyBody: "Controleer uw camera en microfoon voordat u deelneemt.",
   meetReadySafetyTitle: "Uw vergadering is veilig",
-  meetReadySafetyBody: "Alleen genodigden en deelnemers die de host toelaat, kunnen deelnemen.",
+  meetReadySafetyBody:
+    "Alleen genodigden en deelnemers die de host toelaat, kunnen deelnemen.",
   meetSettingsAfterJoin: "U kunt uw instellingen na deelname nog wijzigen.",
   meetGoodConnection: "Goede verbinding",
   meetConnectingStatus: "Verbinding maken",
@@ -5404,7 +5464,8 @@ export const nl: Partial<Catalog> = {
   meetStopRecording: "Opname stoppen",
   meetIConsent: "Ik geef toestemming",
   meetRecordingConsentTitle: "Voor opnemen is ieders toestemming nodig",
-  meetRecordingConsentBody: "De host kan beginnen zodra iedereen in de ruimte akkoord is.",
+  meetRecordingConsentBody:
+    "De host kan beginnen zodra iedereen in de ruimte akkoord is.",
   meetRecordingConsentGiven: "Toestemming gegeven",
   meetConsentCount: (count: number) => `${count} akkoord`,
   meetRecordingFailed: "De opnameactie kon niet worden uitgevoerd.",
@@ -5412,9 +5473,11 @@ export const nl: Partial<Catalog> = {
   meetMinutesTitle: "Vergadernotulen",
   meetMinutesActions: "Actiepunten",
   meetMinutesNoActions: "Er zijn geen actiepunten gevonden.",
-  meetMinutesFailed: "Voor notulen zijn een transcript en een ingestelde AI-provider nodig.",
+  meetMinutesFailed:
+    "Voor notulen zijn een transcript en een ingestelde AI-provider nodig.",
   meetPresentingTitle: "U presenteert",
-  meetPresentingBody: "Alle anderen zien uw gedeelde scherm. U ziet deze rustige herinnering in plaats van een eindeloze spiegeling.",
+  meetPresentingBody:
+    "Alle anderen zien uw gedeelde scherm. U ziet deze rustige herinnering in plaats van een eindeloze spiegeling.",
   meetClose: "Sluiten",
   meetJoinFailed: "Deelnemen aan die vergadering is niet gelukt.",
   meetJoinProblemTitle: "We konden u niet verbinden",
@@ -5426,7 +5489,8 @@ export const nl: Partial<Catalog> = {
   meetInviteTitle: "Neem deel aan mijn alo-vergadering",
   meetInviteText: "Gebruik deze alo-link om deel te nemen.",
   meetChatEmptyTitle: "De ruimte luistert",
-  meetChatEmptyBody: "Deel een gedachte, een link of het detail dat iedereen na het gesprek nodig heeft.",
+  meetChatEmptyBody:
+    "Deel een gedachte, een link of het detail dat iedereen na het gesprek nodig heeft.",
   meetChat: "Chat",
   meetCaptions: "Live ondertiteling",
   meetCaptionLanguage: "Taal van ondertitels",
@@ -5447,16 +5511,19 @@ export const nl: Partial<Catalog> = {
   meetFiles: "Bestanden",
   meetFilesHint: "Afbeeldingen en pdf's die in dit gesprek zijn gedeeld.",
   meetNoFiles: "Er zijn nog geen bestanden gedeeld.",
-  meetToolsFailed: "De vergaderhulpmiddelen zijn elders gewijzigd. Laad opnieuw.",
+  meetToolsFailed:
+    "De vergaderhulpmiddelen zijn elders gewijzigd. Laad opnieuw.",
   deleteLabel: "Verwijderen",
   add: "Toevoegen",
   save: "Opslaan",
-  meetCaptionsWaiting: "Ondertiteling verschijnt wanneer de transcriptieservice spraak hoort.",
+  meetCaptionsWaiting:
+    "Ondertiteling verschijnt wanneer de transcriptieservice spraak hoort.",
   meetChatTitle: "Chat tijdens gesprek",
   meetChatMessages: "Berichten",
   meetChatPeople: (count: number) => `Mensen (${count})`,
   meetChatPlaceholder: "Stuur een bericht",
-  meetMessageSendFailed: "Dit bericht is niet opgeslagen. Controleer uw verbinding en probeer het opnieuw.",
+  meetMessageSendFailed:
+    "Dit bericht is niet opgeslagen. Controleer uw verbinding en probeer het opnieuw.",
   meetEveryone: "Iedereen",
   meetSendTo: "Aan:",
   meetChooseRecipient: "Bericht sturen naar",
@@ -5469,15 +5536,20 @@ export const nl: Partial<Catalog> = {
   meetAddEmoji: "Emoji toevoegen",
   meetSettings: "Vergaderinstellingen",
   meetDeviceSettings: "Camera en audio",
-  meetDeviceSettingsHint: "Wijzigingen gelden direct en blijven op dit apparaat bewaard.",
+  meetDeviceSettingsHint:
+    "Wijzigingen gelden direct en blijven op dit apparaat bewaard.",
   meetBackgroundEffects: "Achtergrondeffecten",
-  meetBackgroundEffectsHint: "Houd de aandacht op uzelf. Het effect wordt toegepast op de video die iedereen ontvangt.",
+  meetBackgroundEffectsHint:
+    "Houd de aandacht op uzelf. Het effect wordt toegepast op de video die iedereen ontvangt.",
   meetBackgroundNone: "Geen",
   meetBackgroundBlur: "Vervagen",
-  meetBackgroundUnsupported: "Achtergrondvervaging wordt niet ondersteund door deze browser of camera.",
+  meetBackgroundUnsupported:
+    "Achtergrondvervaging wordt niet ondersteund door deze browser of camera.",
   meetReconnecting: "Gesprek wordt opnieuw verbonden",
-  meetReconnectingHint: "Blijf hier — audio en video worden automatisch hervat.",
-  meetConnectionLost: "De verbinding met het gesprek is verbroken. Probeer opnieuw deel te nemen.",
+  meetReconnectingHint:
+    "Blijf hier — audio en video worden automatisch hervat.",
+  meetConnectionLost:
+    "De verbinding met het gesprek is verbroken. Probeer opnieuw deel te nemen.",
   meetPictureInPicture: "Beeld-in-beeld",
   meetSpeaker: "Luidspreker",
   meetDone: "Klaar",
@@ -5488,8 +5560,10 @@ export const nl: Partial<Catalog> = {
   meetMuted: "Gedempt",
   meetMuteParticipant: "Deelnemer dempen",
   meetRemoveParticipant: "Deelnemer verwijderen",
-  meetRemoveParticipantConfirm: (name: string) => `${name} uit deze vergadering verwijderen?`,
-  meetModerationFailed: "Die actie voor de deelnemer kon niet worden uitgevoerd. Probeer opnieuw.",
+  meetRemoveParticipantConfirm: (name: string) =>
+    `${name} uit deze vergadering verwijderen?`,
+  meetModerationFailed:
+    "Die actie voor de deelnemer kon niet worden uitgevoerd. Probeer opnieuw.",
   meetQuickReplyOne: "👍 Klinkt goed",
   meetQuickReplyTwo: "Aan de slag!",
   meetQuickReplyThree: "Nu beginnen",
@@ -5499,18 +5573,21 @@ export const nl: Partial<Catalog> = {
   meetYourSpaceLead: "Uw",
   meetYourSpaceAccent: "vergaderruimte",
   meetHeroNewTitle: "Kom met één klik samen",
-  meetHeroNewText: "Hoogwaardige gesprekken met schermdelen, chat, reacties en een apparaatcontrole voordat iemand u ziet of hoort.",
+  meetHeroNewText:
+    "Hoogwaardige gesprekken met schermdelen, chat, reacties en een apparaatcontrole voordat iemand u ziet of hoort.",
   meetSchedule: "Plannen",
   meetJoinInputInvalid: "Voer een geldige alo-vergaderlink of vergadercode in.",
   meetUpcoming: "Aankomende vergaderingen",
   meetUpcomingHint: "Wat volgens uw agenda hierna komt.",
   meetRecent: "Recente vergaderingen",
-  meetRecentHint: "Gesprekken waaraan u kon deelnemen, bewaard als werkruimtegeschiedenis.",
+  meetRecentHint:
+    "Gesprekken waaraan u kon deelnemen, bewaard als werkruimtegeschiedenis.",
   meetEndedAt: (time: string) => `Beëindigd ${time}`,
   meetDuration: (minutes: number) => `${minutes} min`,
   meetCalendarUntitled: "Agenda-item zonder titel",
   meetSafetyTitle: "U houdt de toegang onder controle",
-  meetSafetyBody: "De werkruimte controleert de toegang voordat een mediatoken wordt uitgegeven. Een vergadercode omzeilt de autorisatie nooit.",
+  meetSafetyBody:
+    "De werkruimte controleert de toegang voordat een mediatoken wordt uitgegeven. Een vergadercode omzeilt de autorisatie nooit.",
   meetTodaySchedule: "De planning van vandaag",
   meetOpenAgenda: "Agenda openen",
   meetNoEventsToday: "Er staat vandaag verder niets gepland.",
@@ -6156,26 +6233,32 @@ export const nl: Partial<Catalog> = {
   hrTabHiring: "Werving",
   hrTabTemplates: "Briefsjablonen",
   hrTemplatesTitle: "Briefsjablonen",
-  hrTemplatesIntro: "Schrijf goedgekeurde tekst één keer en laat HR daarna een persoonlijk concept maken zonder die opnieuw te typen.",
+  hrTemplatesIntro:
+    "Schrijf goedgekeurde tekst één keer en laat HR daarna een persoonlijk concept maken zonder die opnieuw te typen.",
   hrTemplatesLoadFailed: "De briefsjablonen konden niet worden geladen.",
   hrTemplatesEmpty: "Nog geen briefsjablonen",
-  hrTemplatesEmptyBody: "Maak de tekst die uw bedrijf wil versturen. Vanuit dit scherm wordt niets verzonden.",
+  hrTemplatesEmptyBody:
+    "Maak de tekst die uw bedrijf wil versturen. Vanuit dit scherm wordt niets verzonden.",
   hrTemplateNew: "Nieuw sjabloon",
   hrTemplateCreateTitle: "Briefsjabloon maken",
   hrTemplateEditTitle: "Briefsjabloon bewerken",
-  hrTemplateEditorIntro: "Plaatshouders worden pas ingevuld wanneer HR een concept voor een specifieke collega maakt.",
+  hrTemplateEditorIntro:
+    "Plaatshouders worden pas ingevuld wanneer HR een concept voor een specifieke collega maakt.",
   hrTemplateName: "Naam van sjabloon",
   hrTemplateSubject: "Onderwerp van e-mail",
   hrTemplateBody: "Tekst van brief",
-  hrTemplateBodyHint: "Gebruik de goedgekeurde plaatshouders hieronder. Onbekende plaatshouders worden geweigerd.",
+  hrTemplateBodyHint:
+    "Gebruik de goedgekeurde plaatshouders hieronder. Onbekende plaatshouders worden geweigerd.",
   hrTemplateInsertField: "Plaatshouder invoegen",
   hrTemplateSave: "Sjabloon opslaan",
   hrTemplateSaveFailed: "Het briefsjabloon is niet opgeslagen.",
   hrTemplateDelete: "Sjabloon verwijderen",
   hrTemplateDeleteTitle: (name: string) => `${name} verwijderen?`,
-  hrTemplateDeleteBody: "Bestaande conceptbrieven blijven ongewijzigd. Dit sjabloon is niet meer beschikbaar voor nieuwe brieven.",
+  hrTemplateDeleteBody:
+    "Bestaande conceptbrieven blijven ongewijzigd. Dit sjabloon is niet meer beschikbaar voor nieuwe brieven.",
   hrTemplateDeleteFailed: "Het briefsjabloon is niet verwijderd.",
-  hrTemplateFields: (count: number) => count === 1 ? "1 plaatshouder" : `${count} plaatshouders`,
+  hrTemplateFields: (count: number) =>
+    count === 1 ? "1 plaatshouder" : `${count} plaatshouders`,
   hrTabLeave: "Mijn verlof",
   hrThisMonth: "Deze maand",
   hrUnpaid: "Onbetaald",
@@ -6231,16 +6314,20 @@ export const nl: Partial<Catalog> = {
     count === 1 ? "1 wachtend" : `${count} wachtend`,
   hrWorkingDays: (days: number) => (days === 1 ? "1 dag" : `${days} dagen`),
   userApps: "Apps",
-  userAppsHint: "Alleen de aangevinkte apps staan in de navigatie van deze persoon, en de server weigert de rest — dit verbergt niet alleen, het sluit ook af. E-mail en Start kunnen niet worden uitgezet. Een app aanvinken geeft nog geen toegang tot alles erin: Finance vraagt nog steeds om de boekhoudersrol en een Space nog steeds om lidmaatschap.",
-  userAppsSelfHint: "Dit is uw eigen account. Beheerders worden nooit buitengesloten, dus deze schakelaars veranderen niets aan wat u kunt openen — ze worden bewaard voor als dit account ooit geen beheerder meer is.",
+  userAppsHint:
+    "Alleen de aangevinkte apps staan in de navigatie van deze persoon, en de server weigert de rest — dit verbergt niet alleen, het sluit ook af. E-mail en Start kunnen niet worden uitgezet. Een app aanvinken geeft nog geen toegang tot alles erin: Finance vraagt nog steeds om de boekhoudersrol en een Space nog steeds om lidmaatschap.",
+  userAppsSelfHint:
+    "Dit is uw eigen account. Beheerders worden nooit buitengesloten, dus deze schakelaars veranderen niets aan wat u kunt openen — ze worden bewaard voor als dit account ooit geen beheerder meer is.",
   accessModuleOff: "Deze app is uitgezet voor uw account.",
-  accessModuleOffHint: "Een beheerder van de werkruimte kan hem weer aanzetten.",
+  accessModuleOffHint:
+    "Een beheerder van de werkruimte kan hem weer aanzetten.",
   accessBackHome: "Terug naar Start",
   userInvite: "Uitnodiging maken",
   userInviteReady: "Instellink",
   userInviteCopy: "Kopiëren",
   userInviteCopied: "Gekopieerd",
-  userInviteHint: "Stuur deze link naar uw collega. Hij werkt één keer, verloopt na zeven dagen, en zij kiezen zelf hun wachtwoord en herstel-adres — u komt het nooit te weten. Deze link wordt maar één keer getoond.",
+  userInviteHint:
+    "Stuur deze link naar uw collega. Hij werkt één keer, verloopt na zeven dagen, en zij kiezen zelf hun wachtwoord en herstel-adres — u komt het nooit te weten. Deze link wordt maar één keer getoond.",
   inviteTitle: "Stel uw account in",
   inviteUnavailable: "Deze uitnodiging werkt niet meer",
   inviteAskAdmin: "Vraag de beheerder van uw werkruimte om een nieuwe.",
@@ -6250,7 +6337,8 @@ export const nl: Partial<Catalog> = {
   invitePasswordHint: "Minstens 8 tekens. Alleen u kent het.",
   inviteRecovery: "Herstel-adres",
   inviteRecoveryPlaceholder: "u@ergens-anders.nl",
-  inviteRecoveryHint: "Een adres dat u ergens anders kunt lezen — niet dit nieuwe. Als u ooit uw wachtwoord vergeet, is dit de enige manier om weer binnen te komen zonder het aan een beheerder te vragen.",
+  inviteRecoveryHint:
+    "Een adres dat u ergens anders kunt lezen — niet dit nieuwe. Als u ooit uw wachtwoord vergeet, is dit de enige manier om weer binnen te komen zonder het aan een beheerder te vragen.",
   inviteSubmit: "Account instellen",
   inviteWorking: "Bezig met instellen…",
   inviteDoneTitle: "Klaar",
@@ -6379,8 +6467,7 @@ export const nl: Partial<Catalog> = {
   sitesDomainPurchases: "Hier gekochte domeinen",
   sitesDomainPurchasesHint:
     "Elk domein waarvan de aankoop voor deze website is begonnen, en hoe ver die is.",
-  sitesDomainPurchasesNone:
-    "Voor deze website is nog geen domein gekocht.",
+  sitesDomainPurchasesNone: "Voor deze website is nog geen domein gekocht.",
   sitesDomainPurchasesLoadFailed:
     "De domeinaankopen konden niet worden geladen.",
   sitesDomainRefresh: "Vernieuwen",
@@ -6487,13 +6574,15 @@ export const nl: Partial<Catalog> = {
   campaignsTabAudience: "Publiek",
   campaignsTabLetters: "Brieven",
   campaignsLettersTitle: "Brieven",
-  campaignsLettersSubtitle: "Elke brief zoals één persoon hem werkelijk ontvangt.",
+  campaignsLettersSubtitle:
+    "Elke brief zoals één persoon hem werkelijk ontvangt.",
   campaignsLetterLabel: "Brief",
   campaignsNoLettersTitle: "Nog geen brieven",
   campaignsNoLettersBody:
     "Een brief schrijft u in dezelfde editor als een document: koppen, alinea’s, tabellen en code. Zodra er één bestaat verschijnt hij hier, precies weergegeven zoals hij aankomt.",
   campaignsShowAsLabel: "Tonen als",
-  campaignsShowAsHint: "Beide zijn echt. De helft van een publiek heeft geen naam vastgelegd.",
+  campaignsShowAsHint:
+    "Beide zijn echt. De helft van een publiek heeft geen naam vastgelegd.",
   campaignsShowAsRecipient: "Iemand die u mag mailen",
   campaignsShowAsFallbacks: "Iemand van wie u niets weet",
   campaignsPartLabel: "Deel",
@@ -6504,8 +6593,10 @@ export const nl: Partial<Catalog> = {
   campaignsPreviewFrameLabel: "De brief zoals hij ontvangen wordt",
   campaignsPreviewSubject: "Onderwerp",
   campaignsPreviewPreheader: "Voorbeeldtekst",
-  campaignsPreviewNoPreheader: "Geen — e-mailprogramma’s tonen dan de eerste regel van de brief.",
-  campaignsAgainstRecipient: (person: string) => `Dit is de kopie die ${person} ontvangt.`,
+  campaignsPreviewNoPreheader:
+    "Geen — e-mailprogramma’s tonen dan de eerste regel van de brief.",
+  campaignsAgainstRecipient: (person: string) =>
+    `Dit is de kopie die ${person} ontvangt.`,
   campaignsAgainstFallbacks:
     "Dit is de kopie die iedereen ontvangt van wie u niets weet — elke gepersonaliseerde waarde hieronder is uw eigen terugvalformulering.",
   campaignsAgainstNobodyYet:
@@ -6543,7 +6634,8 @@ export const nl: Partial<Catalog> = {
     `Dit bericht is verstuurd als „${topic}”. U kunt dat soort apart stoppen, of alles stoppen.`,
   campaignUnsubscribeSubtitleUntopiced:
     "U kunt stoppen met het ontvangen van e-mail van deze werkruimte. Één druk op de knop volstaat.",
-  campaignUnsubscribeStopTopic: (topic: string) => `Stuur mij geen „${topic}” meer`,
+  campaignUnsubscribeStopTopic: (topic: string) =>
+    `Stuur mij geen „${topic}” meer`,
   campaignUnsubscribeStopAll: "Stuur mij helemaal niets meer",
   campaignUnsubscribeAlreadyStopped:
     "Deze werkruimte heeft al de opdracht gekregen u niet meer te mailen. U hoeft verder niets te doen.",
@@ -6553,7 +6645,8 @@ export const nl: Partial<Catalog> = {
   campaignUnsubscribeLinkText: "Uitschrijven",
   campaignUnsubscribeDoneAll:
     "Deze werkruimte zal u niet meer mailen. Verder is er niets nodig.",
-  campaignUnsubscribeDoneTopic: (topic: string) => `„${topic}” wordt u niet meer gestuurd.`,
+  campaignUnsubscribeDoneTopic: (topic: string) =>
+    `„${topic}” wordt u niet meer gestuurd.`,
   campaignUnsubscribeDoneTopicNote:
     "Andere soorten e-mail van deze werkruimte — facturen en antwoorden, bijvoorbeeld — bereiken u nog wel. Kom terug op deze link om ook die te stoppen.",
   campaignUnsubscribeFinalNote:

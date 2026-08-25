@@ -18,11 +18,12 @@
 // system still has no multi-line control, so the box below is `ds/Input`'s
 // written out for a `<textarea>`. It goes when that component exists.
 const styles = {
-  page: "flex min-h-0 flex-1 flex-col gap-5 overflow-hidden px-8 pb-8 pt-5 max-[52rem]:p-3",
+  page: "mx-auto flex min-h-0 w-full max-w-[112rem] flex-1 flex-col gap-5 overflow-hidden px-8 pb-8 pt-6 max-[52rem]:p-4",
   /** What billing adds to `ds/Toolbar` above a list: a minimum height so a bar
    *  with only a heading in it still reads as a bar, and controls that stretch
    *  rather than centre once the row has wrapped. */
-  listBar: "min-h-11 shrink-0 max-[52rem]:items-stretch",
+  listBar:
+    "min-h-14 shrink-0 rounded-2xl border border-default bg-surface px-4 py-3 shadow-sm max-[52rem]:items-stretch",
   searchWrap:
     "relative flex max-w-[380px] flex-1 items-center [&>svg]:pointer-events-none [&>svg]:absolute [&>svg]:right-3 [&>svg]:size-4 [&>svg]:text-tertiary max-[52rem]:max-w-none max-[52rem]:basis-full",
   /** A filter's name, sitting beside the `ds/Select` it names. */
@@ -42,7 +43,7 @@ const styles = {
   archivedRow: "opacity-60",
   rowActions: "whitespace-nowrap text-right",
   linkAction:
-    "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm !text-secondary !no-underline transition-colors hover:bg-raised hover:!text-accent hover:!no-underline",
+    "inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-transparent !px-3 !py-2 text-sm font-medium !text-secondary !no-underline transition-colors hover:bg-raised hover:!text-accent hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
   empty:
     "flex min-h-72 flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-subtle bg-surface p-8 text-center",
   customerEmptyLayout: "flex min-h-0 flex-1 overflow-auto pb-2",

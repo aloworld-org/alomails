@@ -427,7 +427,8 @@ export const fr: Partial<Catalog> = {
   taskClose: "Fermer",
   taskDelete: "Supprimer",
   taskTimeTracking: "Suivi du temps",
-  taskTimeTrackingHint: "Enregistrez cette tâche directement dans votre feuille de temps.",
+  taskTimeTrackingHint:
+    "Enregistrez cette tâche directement dans votre feuille de temps.",
   taskTimerRunningOnTask: "Le temps est suivi sur cette tâche.",
   taskTimerRunningElsewhere: "Un autre chronomètre est déjà en cours.",
   taskSwitchTimer: "Changer de chronomètre",
@@ -683,8 +684,7 @@ export const fr: Partial<Catalog> = {
   delegateSendOnBehalf: "Envoyer au nom de",
   delegateRemove: "Retirer l’accès",
   delegateRemoveFor: (email: string) => `Retirer l’accès de ${email}`,
-  delegateFoldersFor: (email: string) =>
-    `Limiter ${email} à certains dossiers`,
+  delegateFoldersFor: (email: string) => `Limiter ${email} à certains dossiers`,
   delegateError:
     "Cette modification d’accès n’a pas fonctionné — veuillez réessayer.",
   delegateFoldersLabel: "Limiter à des dossiers",
@@ -1312,12 +1312,15 @@ export const fr: Partial<Catalog> = {
   sheetChartPie: "Graphique circulaire",
   sheetCharts: "Graphiques de cette feuille",
   sheetChartRemove: "Supprimer le graphique",
-  sheetChartSelectionHint: "Sélectionnez une ligne d’en-tête, une colonne de catégories et au moins une série numérique.",
-  sheetChartExcelLimit: "Les graphiques restent dynamiques dans alo Sheet. L’export Excel inclut actuellement les cellules, mais pas ces graphiques.",
+  sheetChartSelectionHint:
+    "Sélectionnez une ligne d’en-tête, une colonne de catégories et au moins une série numérique.",
+  sheetChartExcelLimit:
+    "Les graphiques restent dynamiques dans alo Sheet. L’export Excel inclut actuellement les cellules, mais pas ces graphiques.",
   sheetChartSeries: (number: number) => `Série ${number}`,
   chartTabMissing: "L’onglet utilisé par ce graphique n’existe plus.",
   chartRangesRagged: "Les plages du graphique n’ont plus la même longueur.",
-  chartTooLarge: "Cette sélection est trop grande pour être affichée en toute sécurité.",
+  chartTooLarge:
+    "Cette sélection est trop grande pour être affichée en toute sécurité.",
   sheetGroupProtection: "Protection",
   sheetGroupFreeze: "Figer les volets",
   sheetGroupZoom: "Zoom",
@@ -1560,6 +1563,8 @@ export const fr: Partial<Catalog> = {
   // un refus est affiché dans les mots du serveur, pour que les deux ne
   // puissent jamais se contredire.
   moduleBilling: "Facturation",
+  billingWorkspacePurpose:
+    "Clients, devis, factures et paiements dans un seul espace financier.",
   billingCustomers: "Clients",
   billingProducts: "Tarifs",
   billingSearchCustomers: "Rechercher un client…",
@@ -1592,9 +1597,11 @@ export const fr: Partial<Catalog> = {
   billingNoCustomersTitle: "Aucun client pour l’instant",
   billingGetStarted: "Démarrez en 3 étapes simples",
   billingStepCustomerTitle: "Ajoutez votre premier client",
-  billingStepCustomerBody: "Créez un profil client avec ses informations de facturation.",
+  billingStepCustomerBody:
+    "Créez un profil client avec ses informations de facturation.",
   billingStepInvoiceTitle: "Créez votre première facture",
-  billingStepInvoiceBody: "Ajoutez des articles, définissez les modalités et émettez la facture.",
+  billingStepInvoiceBody:
+    "Ajoutez des articles, définissez les modalités et émettez la facture.",
   billingStepPaidTitle: "Soyez payé plus rapidement",
   billingStepPaidBody: "Enregistrez les paiements et suivez votre trésorerie.",
   billingNoCustomersBody:
@@ -2494,7 +2501,8 @@ export const fr: Partial<Catalog> = {
   projectsEdit: "Modifier",
   projectsOpenProject: (name: string) => `Ouvrir ${name}`,
   projectsDetailsTitle: "Détails du projet",
-  projectsDetailsSubtitle: "Gardez le résultat, le calendrier et l’état actuel clairs pour tous.",
+  projectsDetailsSubtitle:
+    "Gardez le résultat, le calendrier et l’état actuel clairs pour tous.",
   projectsDescription: "Description",
   projectsStatus: "Statut",
   projectsStatusPlanned: "Planifié",
@@ -2515,7 +2523,8 @@ export const fr: Partial<Catalog> = {
   projectsInternalWork: "Notre entreprise",
   projectsClientWorkHint: "Facturer ce travail à un client",
   projectsInternalWorkHint: "Garder ce travail en interne",
-  projectsNewCustomerHint: "Vous pourrez ajouter les tarifs et budgets après la création.",
+  projectsNewCustomerHint:
+    "Vous pourrez ajouter les tarifs et budgets après la création.",
   projectsCreate: "Créer le projet",
   projectsCreateFailed: "Le projet n’a pas pu être créé.",
 
@@ -2535,7 +2544,8 @@ export const fr: Partial<Catalog> = {
   projectsCustomerHint:
     "Le client à qui les heures de ce projet sont facturées.",
   projectsCustomerPick: "Choisissez un client…",
-  projectsNoCustomersAvailable: "Aucun client n’est encore disponible. Ajoutez-en un dans Facturation.",
+  projectsNoCustomersAvailable:
+    "Aucun client n’est encore disponible. Ajoutez-en un dans Facturation.",
   projectsCustomerUnknown: "Client inconnu",
   projectsInternal: "Interne",
   projectsRate: "Taux horaire",
@@ -2550,25 +2560,34 @@ export const fr: Partial<Catalog> = {
   projectsHealth: "Santé du projet",
   projectsHealthOnTrack: "Dans les temps",
   projectsHealthAtRisk: "Attention requise",
-  projectsHealthNeedsTarget: "Ajoutez une date cible pour rendre le risque de livraison visible.",
+  projectsHealthNeedsTarget:
+    "Ajoutez une date cible pour rendre le risque de livraison visible.",
   projectsUpdates: "Actualités du projet",
-  projectsUpdatesSubtitle: "Partagez l'avancement, les décisions et les risques avec les personnes qui suivent ce projet.",
+  projectsUpdatesSubtitle:
+    "Partagez l'avancement, les décisions et les risques avec les personnes qui suivent ce projet.",
   projectsUpdateHealth: "État de l'actualité",
   projectsUpdateOffTrack: "Hors trajectoire",
-  projectsUpdatePlaceholder: "Qu'est-ce qui a changé ? Ajoutez le résultat, la décision, le risque ou la prochaine étape.",
-  projectsUpdateHint: "Restez concis et utile pour les personnes qui se mettront à jour plus tard.",
+  projectsUpdatePlaceholder:
+    "Qu'est-ce qui a changé ? Ajoutez le résultat, la décision, le risque ou la prochaine étape.",
+  projectsUpdateHint:
+    "Restez concis et utile pour les personnes qui se mettront à jour plus tard.",
   projectsPublishUpdate: "Publier l'actualité",
   projectsUpdatesEmpty: "Aucune actualité",
-  projectsUpdatesEmptyBody: "Publiez la première actualité pour conserver l'histoire de ce projet.",
-  projectsUpdatesLoadFailed: "Les actualités du projet n'ont pas pu être chargées.",
+  projectsUpdatesEmptyBody:
+    "Publiez la première actualité pour conserver l'histoire de ce projet.",
+  projectsUpdatesLoadFailed:
+    "Les actualités du projet n'ont pas pu être chargées.",
   projectsUpdateSaveFailed: "L'actualité n'a pas pu être publiée.",
   projectsRemoveAttachment: "Supprimer la pièce jointe",
   projectsSomeone: "Quelqu'un",
-  projectsBlockedTasks: (count: number) => count === 1 ? "1 tâche bloquée" : `${count} tâches bloquées`,
-  projectsOverdueTasks: (count: number) => count === 1 ? "1 tâche en retard" : `${count} tâches en retard`,
+  projectsBlockedTasks: (count: number) =>
+    count === 1 ? "1 tâche bloquée" : `${count} tâches bloquées`,
+  projectsOverdueTasks: (count: number) =>
+    count === 1 ? "1 tâche en retard" : `${count} tâches en retard`,
   projectsWorkload: "Charge de travail",
   projectsWorkloadEmpty: "Aucun travail ouvert n’est encore attribué.",
-  projectsOpenTasks: (count: number) => count === 1 ? "1 tâche ouverte" : `${count} tâches ouvertes`,
+  projectsOpenTasks: (count: number) =>
+    count === 1 ? "1 tâche ouverte" : `${count} tâches ouvertes`,
   projectsBudgetUsed: "Budget consommé",
   projectsBudgetHours: "Budget (heures)",
   projectsBudgetAmount: "Budget (montant)",
@@ -2622,7 +2641,8 @@ export const fr: Partial<Catalog> = {
   projectsProposedEntry: "proposée",
   projectsBilledEntry: "sur une facture",
   projectsReadyToInvoice: "Prêt à facturer",
-  projectsReadyToInvoiceBody: (duration: string) => `${duration} de temps approuvé n’a pas encore été facturé.`,
+  projectsReadyToInvoiceBody: (duration: string) =>
+    `${duration} de temps approuvé n’a pas encore été facturé.`,
   projectsWorkflowEyebrow: "Prochaine étape",
   projectsWorkflowLabel: "Parcours du projet",
   projectsWorkflowTasks: "Tâches",
@@ -2630,26 +2650,35 @@ export const fr: Partial<Catalog> = {
   projectsWorkflowApproval: "Validation",
   projectsWorkflowInvoice: "Facture",
   projectsWorkflowTasksTitle: "Définir le travail",
-  projectsWorkflowTasksBody: "Créez la première tâche pour que l’équipe sache ce qui doit suivre.",
+  projectsWorkflowTasksBody:
+    "Créez la première tâche pour que l’équipe sache ce qui doit suivre.",
   projectsWorkflowTimeTitle: "Enregistrer le travail",
-  projectsWorkflowTimeBody: "Saisissez le temps sur ce projet ou ses tâches pendant que le travail est encore récent.",
+  projectsWorkflowTimeBody:
+    "Saisissez le temps sur ce projet ou ses tâches pendant que le travail est encore récent.",
   projectsWorkflowApprovalTitle: "Envoyer le temps pour validation",
-  projectsWorkflowApprovalBody: "Vérifiez la semaine et soumettez-la afin que le travail client approuvé puisse être facturé.",
+  projectsWorkflowApprovalBody:
+    "Vérifiez la semaine et soumettez-la afin que le travail client approuvé puisse être facturé.",
   projectsWorkflowAwaitingApprovalTitle: "Le temps attend une validation",
-  projectsWorkflowAwaitingApprovalBody: "Ce temps a déjà été soumis. Consultez la feuille de temps ou attendez sa validation avant de facturer.",
+  projectsWorkflowAwaitingApprovalBody:
+    "Ce temps a déjà été soumis. Consultez la feuille de temps ou attendez sa validation avant de facturer.",
   projectsWorkflowInvoiceTitle: "Transformer le travail approuvé en facture",
   projectsWorkflowContinueTitle: "Faire avancer le projet",
-  projectsWorkflowContinueBody: "Ajoutez la prochaine saisie de temps au fil du travail.",
+  projectsWorkflowContinueBody:
+    "Ajoutez la prochaine saisie de temps au fil du travail.",
   projectsReviewTimesheet: "Vérifier la feuille de temps",
   projectsCreateInvoice: "Créer une facture",
-  projectsCreateInvoiceSubtitle: "Choisissez le temps approuvé à ajouter à une nouvelle facture brouillon.",
+  projectsCreateInvoiceSubtitle:
+    "Choisissez le temps approuvé à ajouter à une nouvelle facture brouillon.",
   projectsInvoiceThrough: "Facturer jusqu’au",
-  projectsInvoiceCutoffHint: "Seul le temps approuvé et non facturé jusqu’à cette date est inclus.",
+  projectsInvoiceCutoffHint:
+    "Seul le temps approuvé et non facturé jusqu’à cette date est inclus.",
   projectsNothingToInvoice: "Rien à facturer",
-  projectsNothingToInvoiceBody: "Le temps approuvé apparaîtra ici après l’approbation de la semaine.",
+  projectsNothingToInvoiceBody:
+    "Le temps approuvé apparaîtra ici après l’approbation de la semaine.",
   projectsUnratedTime: "Aucun tarif horaire n’est défini pour ce temps",
   projectsInvoiceRate: (rate: string) => `${rate} par heure`,
-  projectsBelgianVat: "Le taux de TVA belge standard est appliqué à ce brouillon.",
+  projectsBelgianVat:
+    "Le taux de TVA belge standard est appliqué à ce brouillon.",
   projectsCreateDraftInvoice: "Créer la facture brouillon",
   projectsInvoiceLoadFailed: "Le temps approuvé n’a pas pu être chargé.",
   projectsInvoiceCreateFailed: "La facture brouillon n’a pas pu être créée.",
@@ -2663,12 +2692,15 @@ export const fr: Partial<Catalog> = {
   projectsWeekEmptyBody:
     "Ajoutez votre première saisie de temps. Choisissez un projet, indiquez la durée et une note, puis retrouvez-la dans ce récapitulatif hebdomadaire.",
   projectsWeekTitle: "Feuille de temps hebdomadaire",
-  projectsWeekPurpose: "Saisissez votre travail, vérifiez la semaine, puis soumettez-la pour approbation.",
+  projectsWeekPurpose:
+    "Saisissez votre travail, vérifiez la semaine, puis soumettez-la pour approbation.",
   projectsWeekAllScope: "Votre semaine complète pour tous les projets.",
-  projectsWeekProjectScope: (project: string) => `Temps consacré à ${project}. La soumission envoie toujours votre semaine complète pour approbation.`,
+  projectsWeekProjectScope: (project: string) =>
+    `Temps consacré à ${project}. La soumission envoie toujours votre semaine complète pour approbation.`,
   projectsAddTime: "Ajouter du temps",
   projectsChooseTimeProject: "Sur quoi avez-vous travaillé ?",
-  projectsChooseTimeProjectHint: "Choisissez un projet pour ajouter une saisie de temps cette semaine.",
+  projectsChooseTimeProjectHint:
+    "Choisissez un projet pour ajouter une saisie de temps cette semaine.",
   projectsBillableOfWeek: (duration: string) => `dont ${duration} facturables`,
   projectsCompleteWeek: "Semaine entière",
   projectsCompleteWeekSubmission: "Semaine entière soumise pour approbation",
@@ -2769,7 +2801,8 @@ export const fr: Partial<Catalog> = {
   projectsSubmittedAt: "Remise le",
   projectsApprove: "Valider",
   projectsApprovalComplete: "Semaine validée",
-  projectsApprovalCompleteBody: "Consultez les projets concernés et facturez le travail client prêt à l’être.",
+  projectsApprovalCompleteBody:
+    "Consultez les projets concernés et facturez le travail client prêt à l’être.",
   projectsReject: "Renvoyer",
   projectsRejectTitle: "Renvoyer cette semaine ?",
   projectsRejectBody: (person: string) =>
@@ -2921,7 +2954,8 @@ export const fr: Partial<Catalog> = {
   sitesAssistantSwitchTitle: "L’assistant et son budget",
   sitesAssistantSwitchHint:
     "Un assistant de conversation sur votre site publié qui répond aux questions des visiteurs à partir de vos pages publiées — et cite toujours la page d’où vient une réponse.",
-  sitesAssistantEnable: "Répondre aux questions des visiteurs sur le site publié",
+  sitesAssistantEnable:
+    "Répondre aux questions des visiteurs sur le site publié",
   sitesAssistantBudgetLabel: "Budget mensuel (€)",
   sitesAssistantBudgetHint: (defaultBudget: string) =>
     `Les réponses coûtent de l’argent. Quand les réponses d’un mois atteignent ce budget, l’assistant se met en pause et les visiteurs sont orientés vers votre formulaire de contact — vous en serez averti. Sans réglage, le budget est de ${defaultBudget}.`,
@@ -2947,8 +2981,7 @@ export const fr: Partial<Catalog> = {
   sitesAssistantWithdraw: (title: string) => `Retirer ${title}`,
   sitesAssistantWithdrawFailed:
     "Le document n’a pas pu être retiré de l’assistant. Réessayez.",
-  sitesAssistantInternetWarning:
-    "N’importe qui sur Internet pourra lire ceci.",
+  sitesAssistantInternetWarning: "N’importe qui sur Internet pourra lire ceci.",
   sitesAssistantPublishDocument: "Publier un document vers l’assistant…",
   sitesAssistantPublishFailed:
     "Le document n’a pas pu être publié vers l’assistant. Réessayez.",
@@ -3192,8 +3225,7 @@ export const fr: Partial<Catalog> = {
   sitesFunnel: "Résultats",
   sitesFunnelPeriod: "Période",
   sitesFunnelLoading: "Chargement des résultats",
-  sitesFunnelLoadFailed:
-    "Les résultats n’ont pas pu être chargés. Réessayez.",
+  sitesFunnelLoadFailed: "Les résultats n’ont pas pu être chargés. Réessayez.",
   sitesFunnelDeniedTitle: "En dehors de vos accès",
   sitesFunnelDeniedFallback:
     "Cette page lit alo CRM et alo Facturation, qui ne sont pas ouverts pour ce compte.",
@@ -3261,8 +3293,7 @@ export const fr: Partial<Catalog> = {
   sitesHandoffCrmDenied: "alo CRM n’est pas ouvert pour ce compte.",
   sitesHandoffBoardsFailed:
     "Vos tableaux des ventes n’ont pas pu être chargés. Réessayez.",
-  sitesHandoffFailed:
-    "Cette demande n’a pas pu être transmise. Réessayez.",
+  sitesHandoffFailed: "Cette demande n’a pas pu être transmise. Réessayez.",
   sitesInSales: "Aux ventes",
   sitesLeadsLoadFailed:
     "Les liens vers les ventes n’ont pas pu être chargés pour cette boîte.",
@@ -3277,8 +3308,7 @@ export const fr: Partial<Catalog> = {
   sitesHistory: "Historique des versions",
   sitesHistorySubtitle:
     "Chaque version de ce site que vous avez publiée. Consultez-en une, et remettez-la en ligne en un clic.",
-  sitesHistoryLoadFailed:
-    "L’historique des versions n’a pas pu être chargé.",
+  sitesHistoryLoadFailed: "L’historique des versions n’a pas pu être chargé.",
   sitesHistoryVersions: "Versions publiées",
   sitesHistoryLiveNow: "En ligne",
   sitesHistoryVersionOf: (date: string) => `Version du ${date}`,
@@ -3289,8 +3319,7 @@ export const fr: Partial<Catalog> = {
     `Une copie de la version du ${date}`,
   sitesHistoryRestore: "Remettre cette version en ligne",
   sitesHistoryRestoring: "Remise en ligne…",
-  sitesHistoryRestoreFailed:
-    "Cette version n’a pas pu être remise en ligne.",
+  sitesHistoryRestoreFailed: "Cette version n’a pas pu être remise en ligne.",
   sitesHistoryRestored: (date: string) =>
     `La version du ${date} est de nouveau en ligne.`,
   sitesHistoryUndo: "Annuler",
@@ -3323,8 +3352,7 @@ export const fr: Partial<Catalog> = {
   sitesScheduleHint:
     "Choisissez une date et une heure : ce site se mettra en ligne tout seul. Vous n’avez pas besoin d’être là.",
   sitesScheduleLoading: "Vérification de ce qui est programmé",
-  sitesScheduleLoadFailed:
-    "La publication programmée n’a pas pu être chargée.",
+  sitesScheduleLoadFailed: "La publication programmée n’a pas pu être chargée.",
   sitesScheduleOpen: "Programmer la publication",
   sitesScheduleChange: "Changer le moment",
   sitesScheduleWhen: "Date et heure",
@@ -3357,8 +3385,7 @@ export const fr: Partial<Catalog> = {
     "Impossible de vérifier si cette page demande un mot de passe.",
   sitesPagePasswordUnknown:
     "On ne sait pas pour l’instant si cette page demande un mot de passe aux visiteurs.",
-  sitesPagePasswordPublic:
-    "N’importe qui sur Internet peut ouvrir cette page.",
+  sitesPagePasswordPublic: "N’importe qui sur Internet peut ouvrir cette page.",
   sitesPagePasswordPublicHint:
     "Donnez-lui un mot de passe et seules les personnes à qui vous le confiez pourront la lire. Le reste de ce site reste public.",
   sitesPagePasswordProtected: (moment: string) =>
@@ -3605,15 +3632,20 @@ export const fr: Partial<Catalog> = {
   sitesCollaboratorEmailPlaceholder: "collaborateur@exemple.com",
   sitesInviteCollaborator: "Inviter un éditeur",
   sitesCollaboratorsLoading: "Chargement des collaborateurs…",
-  sitesCollaboratorsLoadFailed: "Les collaborateurs de ce site n'ont pas pu être chargés.",
+  sitesCollaboratorsLoadFailed:
+    "Les collaborateurs de ce site n'ont pas pu être chargés.",
   sitesCollaboratorInviteFailed: "Le collaborateur n'a pas pu être invité.",
-  sitesCollaboratorRevokeFailed: "L'accès de ce collaborateur n'a pas pu être retiré.",
-  sitesCollaboratorCopyFailed: "Le lien de configuration n'a pas pu être copié. Créez-en un nouveau et réessayez.",
+  sitesCollaboratorRevokeFailed:
+    "L'accès de ce collaborateur n'a pas pu être retiré.",
+  sitesCollaboratorCopyFailed:
+    "Le lien de configuration n'a pas pu être copié. Créez-en un nouveau et réessayez.",
   sitesCollaboratorLinkReady: (email: string) =>
     `Un lien de configuration privé est prêt pour ${email}. Copiez-le et partagez-le en toute sécurité.`,
-  sitesCollaboratorAdded: (email: string) => `${email} peut maintenant modifier ce site.`,
+  sitesCollaboratorAdded: (email: string) =>
+    `${email} peut maintenant modifier ce site.`,
   sitesCollaboratorLinkCopied: "Lien de configuration copié.",
-  sitesCollaboratorRevoked: (email: string) => `L'accès de ${email} a été retiré.`,
+  sitesCollaboratorRevoked: (email: string) =>
+    `L'accès de ${email} a été retiré.`,
   sitesUndoCollaboratorRevoke: "Annuler",
   sitesNoCollaborators:
     "Vous seul pouvez modifier ce site. Saisissez une adresse ci-dessus pour inviter un premier collaborateur.",
@@ -3810,7 +3842,12 @@ export const fr: Partial<Catalog> = {
     "Faites glisser sur l’image pour choisir ce qui reste visible. Au clavier : les flèches déplacent le cadre, majuscule et flèches le redimensionnent.",
   sitesImageFocalHint:
     "Placez le repère rond sur ce qui doit rester visible lorsqu’une mise en page recadre encore l’image.",
-  sitesImageFrameAt: (width: number, height: number, left: number, top: number) =>
+  sitesImageFrameAt: (
+    width: number,
+    height: number,
+    left: number,
+    top: number,
+  ) =>
     `Zone visible : ${width} % sur ${height} % de l’image, à ${left} % du bord gauche et ${top} % du bord supérieur`,
   sitesImageFocalAt: (x: number, y: number) =>
     `Point focal à ${x} % horizontalement et ${y} % verticalement`,
@@ -4608,7 +4645,8 @@ export const fr: Partial<Catalog> = {
 
   // Le carnet de commandes.
   inventoryTabOrderBook: "Carnet de commandes",
-  inventoryOrderBookLoadFailed: "Le carnet de commandes n’a pas pu être chargé.",
+  inventoryOrderBookLoadFailed:
+    "Le carnet de commandes n’a pas pu être chargé.",
   inventoryFilterScope: "Afficher",
   inventoryScopeOpen: "Commandes en cours",
   inventoryScopeAll: "Toutes les commandes",
@@ -4942,7 +4980,8 @@ export const fr: Partial<Catalog> = {
   sitesCatalogItemDelete: "Supprimer",
   sitesCatalogItemDeleteConfirm: "Le supprimer",
   sitesCatalogItemDeleteLabel: (name: string) => `Supprimer ${name}`,
-  sitesCatalogItemDeleteConfirmLabel: (name: string) => `Le supprimer : ${name}`,
+  sitesCatalogItemDeleteConfirmLabel: (name: string) =>
+    `Le supprimer : ${name}`,
   sitesCatalogItemDeleteFailed: "L’article n’a pas pu être supprimé.",
   sitesSectionCatalog: "Catalogue",
   sitesSectionCatalogDesc:
@@ -5034,12 +5073,14 @@ export const fr: Partial<Catalog> = {
     "Désactivée, la prestation reste telle quelle et la page publiée indique qu’elle n’accepte pas de réservation pour le moment.",
   sitesBookingCreate: "Créer la prestation",
   sitesBookingSave: "Enregistrer la prestation",
-  sitesBookingSaveFailed: "La prestation réservable n’a pas pu être enregistrée.",
+  sitesBookingSaveFailed:
+    "La prestation réservable n’a pas pu être enregistrée.",
   sitesBookingDelete: "Supprimer la prestation",
   sitesBookingDeleteConfirm: "Supprimer",
   sitesBookingDeleteHint:
     "Les rendez-vous déjà inscrits dans votre agenda restent tels quels — rien ici n’en annule un. Les pages déjà publiées continuent de la proposer jusqu’à votre prochaine publication.",
-  sitesBookingDeleteFailed: "La prestation réservable n’a pas pu être supprimée.",
+  sitesBookingDeleteFailed:
+    "La prestation réservable n’a pas pu être supprimée.",
   sitesBookingMinutes: (minutes: number) => `${minutes} minutes`,
   sitesBookingOff: "N’accepte pas de réservation",
   sitesBookingPreview: "Ce que voit un visiteur",
@@ -5084,7 +5125,9 @@ export const fr: Partial<Catalog> = {
   sitesTicketSectionHint:
     "La section publiée mène à votre billetterie ; événements, prix et places sont lus en direct à l'arrivée du visiteur.",
   sitesTicketSectionOnSale: (count: number) =>
-    count === 1 ? "1 événement est en vente." : `${count} événements sont en vente.`,
+    count === 1
+      ? "1 événement est en vente."
+      : `${count} événements sont en vente.`,
   sitesTickets: "Billets",
   sitesTicketsLoadFailed:
     "Les événements n'ont pas pu être chargés. Vérifiez votre connexion et réessayez.",
@@ -5102,7 +5145,8 @@ export const fr: Partial<Catalog> = {
   sitesTicketEventProduct: "Ce qu'une place vend",
   sitesTicketEventProductHint:
     "Un article de votre tarif. Son nom et son prix sont lus en direct, jamais copiés.",
-  sitesTicketProductOption: (name: string, price: string) => `${name} — ${price}`,
+  sitesTicketProductOption: (name: string, price: string) =>
+    `${name} — ${price}`,
   sitesTicketEventStartsAt: "Quand cela commence",
   sitesTicketEventCapacity: "Places",
   sitesTicketEventCapacityHint:
@@ -5116,7 +5160,8 @@ export const fr: Partial<Catalog> = {
   sitesTicketCapacityFailed: "Le nombre de places n'a pas pu être changé.",
   sitesTicketChangeCapacity: "Places...",
   sitesTicketDelete: "Supprimer",
-  sitesTicketChangeCapacityFor: (event: string) => `Modifier les places de ${event}`,
+  sitesTicketChangeCapacityFor: (event: string) =>
+    `Modifier les places de ${event}`,
   sitesTicketDeleteFor: (event: string) => `Supprimer ${event}`,
   sitesTicketDeleteConfirm: "Vraiment supprimer ?",
   sitesTicketDeleteHint:
@@ -5143,7 +5188,9 @@ export const fr: Partial<Catalog> = {
   sitesShopSectionHint:
     "Le bloc mène à votre page boutique. Articles, prix et stock sont lus en direct — rien n'est enregistré dans la page.",
   sitesShopSectionListed: (count: number) =>
-    count === 1 ? "1 produit est en boutique." : `${count} produits sont en boutique.`,
+    count === 1
+      ? "1 produit est en boutique."
+      : `${count} produits sont en boutique.`,
   sitesAssistantSuggestedShop: "Que vendez-vous ?",
   sitesShop: "Boutique",
   sitesShopLoadFailed:
@@ -5165,7 +5212,8 @@ export const fr: Partial<Catalog> = {
   sitesShopColShelf: "En rayon",
   sitesShopGoneProduct: "Plus au tarif",
   sitesShopNotStocked: "Plus suivi en stock",
-  sitesShopUnits: (units: number) => (units === 1 ? "1 unité" : `${units} unités`),
+  sitesShopUnits: (units: number) =>
+    units === 1 ? "1 unité" : `${units} unités`,
   sitesShopRemove: "Retirer",
   sitesShopRemoveFor: (product: string) => `Retirer ${product} de la boutique`,
   sitesShopRemoveConfirm: "Vraiment retirer ?",
@@ -5188,7 +5236,8 @@ export const fr: Partial<Catalog> = {
   sitesShopDeliveryTitle: "Livraison par commande",
   sitesShopDeliverySubtitle:
     "Un tarif unique par commande, facturé avec les marchandises. La TVA suit les marchandises.",
-  sitesShopDeliveryLabel: (currency: string) => `Prix de livraison (${currency})`,
+  sitesShopDeliveryLabel: (currency: string) =>
+    `Prix de livraison (${currency})`,
   sitesShopDeliveryHint: "0 signifie que la livraison est gratuite.",
   sitesShopDeliverySave: "Enregistrer la livraison",
   sitesShopDeliveryFailed: "Le prix de livraison n'a pas pu être enregistré.",
@@ -5201,7 +5250,8 @@ export const fr: Partial<Catalog> = {
   sitesShopSetupDescribeHint:
     "Nommez ce que vous vendez et les prix que vous pratiquez. Les prix énoncés sont repris tels quels — tout le reste reste un champ vide ou une supposition signalée, à confirmer par vous.",
   sitesShopSetupPropose: "Proposer une configuration",
-  sitesShopSetupProposeFailed: "Aucune configuration n'a pu être proposée. Réessayez.",
+  sitesShopSetupProposeFailed:
+    "Aucune configuration n'a pu être proposée. Réessayez.",
   sitesShopSetupUnconfigured:
     "Cet espace de travail n'a pas de fournisseur d'IA configuré, rien ne peut donc être proposé ici — établissez votre tarif à la main.",
   sitesShopSetupManualPath: "Vous préférez le faire à la main ?",
@@ -5243,7 +5293,9 @@ export const fr: Partial<Catalog> = {
   sitesShopSetupNothingIncluded:
     "Rien n'est coché — cochez au moins un article à créer.",
   sitesShopSetupApprove: (count: number) =>
-    count === 1 ? "Approuver — créer 1 article" : `Approuver — créer ${count} articles`,
+    count === 1
+      ? "Approuver — créer 1 article"
+      : `Approuver — créer ${count} articles`,
   sitesShopSetupRetry: "Réessayer",
   sitesShopSetupDiscard: "Abandonner la proposition",
   sitesShopSetupCreated: "Créé",
@@ -5387,7 +5439,8 @@ export const fr: Partial<Catalog> = {
   sitesCustomCodeHtmlHint:
     "Le corps du bloc. Le document qui l’entoure — sa politique, ses blocs de style et de script — est écrit pour vous.",
   sitesCustomCodeCss: "Style",
-  sitesCustomCodeCssHint: "Ne s’applique qu’à l’intérieur de ce bloc. Facultatif.",
+  sitesCustomCodeCssHint:
+    "Ne s’applique qu’à l’intérieur de ce bloc. Facultatif.",
   sitesCustomCodeJs: "Script",
   sitesCustomCodeJsHint:
     "Ne s’exécute qu’à l’intérieur de ce bloc, sur l’appareil du visiteur.",
@@ -5407,7 +5460,8 @@ export const fr: Partial<Catalog> = {
   sitesCustomCodeHeight: "Hauteur sur la page (pixels)",
   sitesCustomCodeHeightHint:
     "Un bloc scellé ne peut pas être mesuré de l’extérieur : c’est donc vous qui indiquez sa hauteur. Entre 40 et 2000.",
-  sitesCustomCodeBytes: (used: number, max: number) => `${used} octets sur ${max}`,
+  sitesCustomCodeBytes: (used: number, max: number) =>
+    `${used} octets sur ${max}`,
   sitesCustomCodeBytesOver: (used: number, max: number) =>
     `${used} octets sur ${max} — trop long pour être enregistré`,
   sitesCustomCodeTotalBytes: (used: number, max: number) =>
@@ -5418,10 +5472,13 @@ export const fr: Partial<Catalog> = {
   meetEyebrow: "Votre espace de réunion",
   meetSubtitle: "Démarrez un appel ou rejoignez une réunion déjà en cours.",
   meetHeroTitle: "Réunis en un clic",
-  meetHeroText: "Microphone activé, caméra au choix. Vérifiez-les avant que quiconque ne vous voie ou ne vous entende.",
+  meetHeroText:
+    "Microphone activé, caméra au choix. Vérifiez-les avant que quiconque ne vous voie ou ne vous entende.",
   meetHappeningNow: "En cours",
-  meetHappeningHint: "Les réunions que vous pouvez rejoindre sans demander de lien.",
-  meetLiveCount: (count: number) => count === 1 ? "1 réunion" : `${count} réunions`,
+  meetHappeningHint:
+    "Les réunions que vous pouvez rejoindre sans demander de lien.",
+  meetLiveCount: (count: number) =>
+    count === 1 ? "1 réunion" : `${count} réunions`,
   meetReady: "Prête",
   meetStartedAt: (time: string) => `Démarrée à ${time}`,
   meetInstantTitle: "Réunion instantanée",
@@ -5434,10 +5491,12 @@ export const fr: Partial<Catalog> = {
   meetStart: "Démarrer une réunion",
   meetStartNow: "Démarrer une réunion",
   meetStarting: "Démarrage…",
-  meetStartFailed: "La réunion n’a pas pu démarrer. Vérifiez votre connexion et réessayez.",
+  meetStartFailed:
+    "La réunion n’a pas pu démarrer. Vérifiez votre connexion et réessayez.",
   meetLoading: "Chargement des réunions",
   meetLoadFailed: "Les réunions n’ont pas pu être chargées",
-  meetLoadFailedHint: "Vérifiez votre connexion, puis réessayez. Vous pouvez toujours démarrer une nouvelle réunion.",
+  meetLoadFailedHint:
+    "Vérifiez votre connexion, puis réessayez. Vous pouvez toujours démarrer une nouvelle réunion.",
   meetRetry: "Réessayer",
   meetBack: "Retour à Meet",
   meetStartedHere: "a démarré une réunion dans cette conversation",
@@ -5445,12 +5504,15 @@ export const fr: Partial<Catalog> = {
   meetJoin: "Rejoindre la réunion",
   meetLive: "Réunion en cours",
   meetJoinNow: "Rejoindre maintenant",
-  meetReadyGreeting: (name: string) => name ? `Bonjour ${name}` : "Bonjour",
+  meetReadyGreeting: (name: string) => (name ? `Bonjour ${name}` : "Bonjour"),
   meetReadyTitle: "Tout est prêt pour participer",
-  meetReadyBody: "Vérifiez votre caméra et votre microphone avant de participer.",
+  meetReadyBody:
+    "Vérifiez votre caméra et votre microphone avant de participer.",
   meetReadySafetyTitle: "Votre réunion est sécurisée",
-  meetReadySafetyBody: "Seules les personnes invitées ou admises par l’hôte peuvent participer.",
-  meetSettingsAfterJoin: "Vous pourrez encore modifier vos réglages après avoir rejoint la réunion.",
+  meetReadySafetyBody:
+    "Seules les personnes invitées ou admises par l’hôte peuvent participer.",
+  meetSettingsAfterJoin:
+    "Vous pourrez encore modifier vos réglages après avoir rejoint la réunion.",
   meetGoodConnection: "Bonne connexion",
   meetConnectingStatus: "Connexion en cours",
   meetEnterFullscreen: "Passer en plein écran",
@@ -5464,8 +5526,10 @@ export const fr: Partial<Catalog> = {
   meetStartRecording: "Démarrer l’enregistrement",
   meetStopRecording: "Arrêter l’enregistrement",
   meetIConsent: "Je consens",
-  meetRecordingConsentTitle: "L’enregistrement nécessite le consentement de tous",
-  meetRecordingConsentBody: "L’hôte peut commencer lorsque toutes les personnes présentes ont accepté.",
+  meetRecordingConsentTitle:
+    "L’enregistrement nécessite le consentement de tous",
+  meetRecordingConsentBody:
+    "L’hôte peut commencer lorsque toutes les personnes présentes ont accepté.",
   meetRecordingConsentGiven: "Consentement donné",
   meetConsentCount: (count: number) => `${count} consentement(s)`,
   meetRecordingFailed: "L’action d’enregistrement n’a pas pu être effectuée.",
@@ -5473,9 +5537,11 @@ export const fr: Partial<Catalog> = {
   meetMinutesTitle: "Compte rendu de réunion",
   meetMinutesActions: "Actions à mener",
   meetMinutesNoActions: "Aucune action n’a été identifiée.",
-  meetMinutesFailed: "Le compte rendu nécessite une transcription et un fournisseur d’IA configuré.",
+  meetMinutesFailed:
+    "Le compte rendu nécessite une transcription et un fournisseur d’IA configuré.",
   meetPresentingTitle: "Vous présentez",
-  meetPresentingBody: "Toutes les autres personnes voient votre écran partagé. Vous voyez ce rappel discret plutôt qu’un effet de miroir infini.",
+  meetPresentingBody:
+    "Toutes les autres personnes voient votre écran partagé. Vous voyez ce rappel discret plutôt qu’un effet de miroir infini.",
   meetClose: "Fermer",
   meetJoinFailed: "Impossible de rejoindre cette réunion.",
   meetJoinProblemTitle: "Nous n’avons pas pu vous connecter",
@@ -5487,7 +5553,8 @@ export const fr: Partial<Catalog> = {
   meetInviteTitle: "Rejoignez ma réunion alo",
   meetInviteText: "Utilisez ce lien alo pour rejoindre la réunion.",
   meetChatEmptyTitle: "La salle vous écoute",
-  meetChatEmptyBody: "Partagez une idée, un lien ou le détail dont chacun aura besoin après l’appel.",
+  meetChatEmptyBody:
+    "Partagez une idée, un lien ou le détail dont chacun aura besoin après l’appel.",
   meetChat: "Chat",
   meetCaptions: "Sous-titres en direct",
   meetCaptionLanguage: "Langue des sous-titres",
@@ -5512,12 +5579,14 @@ export const fr: Partial<Catalog> = {
   deleteLabel: "Supprimer",
   add: "Ajouter",
   save: "Enregistrer",
-  meetCaptionsWaiting: "Les sous-titres apparaîtront lorsque le service de transcription entendra la parole.",
+  meetCaptionsWaiting:
+    "Les sous-titres apparaîtront lorsque le service de transcription entendra la parole.",
   meetChatTitle: "Chat de l’appel",
   meetChatMessages: "Messages",
   meetChatPeople: (count: number) => `Personnes (${count})`,
   meetChatPlaceholder: "Envoyer un message",
-  meetMessageSendFailed: "Ce message n’a pas été enregistré. Vérifiez votre connexion et réessayez.",
+  meetMessageSendFailed:
+    "Ce message n’a pas été enregistré. Vérifiez votre connexion et réessayez.",
   meetEveryone: "Tout le monde",
   meetSendTo: "À :",
   meetChooseRecipient: "Envoyer le message à",
@@ -5530,15 +5599,20 @@ export const fr: Partial<Catalog> = {
   meetAddEmoji: "Ajouter un emoji",
   meetSettings: "Paramètres de l’appel",
   meetDeviceSettings: "Caméra et audio",
-  meetDeviceSettingsHint: "Les modifications s’appliquent immédiatement et restent sur cet appareil.",
+  meetDeviceSettingsHint:
+    "Les modifications s’appliquent immédiatement et restent sur cet appareil.",
   meetBackgroundEffects: "Effets d’arrière-plan",
-  meetBackgroundEffectsHint: "Gardez l’attention sur vous. L’effet s’applique à la vidéo reçue par tous.",
+  meetBackgroundEffectsHint:
+    "Gardez l’attention sur vous. L’effet s’applique à la vidéo reçue par tous.",
   meetBackgroundNone: "Aucun",
   meetBackgroundBlur: "Flou",
-  meetBackgroundUnsupported: "Le flou d’arrière-plan n’est pas pris en charge par ce navigateur ou cette caméra.",
+  meetBackgroundUnsupported:
+    "Le flou d’arrière-plan n’est pas pris en charge par ce navigateur ou cette caméra.",
   meetReconnecting: "Reconnexion à l’appel",
-  meetReconnectingHint: "Restez ici — l’audio et la vidéo reprendront automatiquement.",
-  meetConnectionLost: "La connexion à l’appel a été interrompue. Essayez de le rejoindre à nouveau.",
+  meetReconnectingHint:
+    "Restez ici — l’audio et la vidéo reprendront automatiquement.",
+  meetConnectionLost:
+    "La connexion à l’appel a été interrompue. Essayez de le rejoindre à nouveau.",
   meetPictureInPicture: "Image dans l’image",
   meetSpeaker: "Haut-parleur",
   meetDone: "Terminé",
@@ -5549,7 +5623,8 @@ export const fr: Partial<Catalog> = {
   meetMuted: "En sourdine",
   meetMuteParticipant: "Couper le micro du participant",
   meetRemoveParticipant: "Retirer le participant",
-  meetRemoveParticipantConfirm: (name: string) => `Retirer ${name} de cette réunion ?`,
+  meetRemoveParticipantConfirm: (name: string) =>
+    `Retirer ${name} de cette réunion ?`,
   meetModerationFailed: "Cette action n’a pas pu être effectuée. Réessayez.",
   meetQuickReplyOne: "👍 Ça marche",
   meetQuickReplyTwo: "Allons-y !",
@@ -5560,18 +5635,22 @@ export const fr: Partial<Catalog> = {
   meetYourSpaceLead: "Votre",
   meetYourSpaceAccent: "espace de réunion",
   meetHeroNewTitle: "Réunissez-vous en un clic",
-  meetHeroNewText: "Des appels de qualité avec partage d’écran, chat, réactions et vérification des appareils avant que quiconque vous voie ou vous entende.",
+  meetHeroNewText:
+    "Des appels de qualité avec partage d’écran, chat, réactions et vérification des appareils avant que quiconque vous voie ou vous entende.",
   meetSchedule: "Planifier",
-  meetJoinInputInvalid: "Saisissez un lien de réunion alo ou un code de réunion valide.",
+  meetJoinInputInvalid:
+    "Saisissez un lien de réunion alo ou un code de réunion valide.",
   meetUpcoming: "Réunions à venir",
   meetUpcomingHint: "La suite indiquée par votre Agenda.",
   meetRecent: "Réunions récentes",
-  meetRecentHint: "Les appels auxquels vous pouviez participer, conservés dans l’historique de l’espace.",
+  meetRecentHint:
+    "Les appels auxquels vous pouviez participer, conservés dans l’historique de l’espace.",
   meetEndedAt: (time: string) => `Terminée ${time}`,
   meetDuration: (minutes: number) => `${minutes} min`,
   meetCalendarUntitled: "Événement sans titre",
   meetSafetyTitle: "Vous gardez le contrôle des accès",
-  meetSafetyBody: "L’espace vérifie l’accès avant d’émettre un jeton média. Un code de réunion ne contourne jamais l’autorisation.",
+  meetSafetyBody:
+    "L’espace vérifie l’accès avant d’émettre un jeton média. Un code de réunion ne contourne jamais l’autorisation.",
   meetTodaySchedule: "Programme du jour",
   meetOpenAgenda: "Ouvrir Agenda",
   meetNoEventsToday: "Rien d’autre n’est prévu aujourd’hui.",
@@ -5784,7 +5863,8 @@ export const fr: Partial<Catalog> = {
   chatRenameSave: "Renommer",
   chatAddDescription: "Ajouter une description",
   chatEditDescription: "Modifier la description",
-  chatDescriptionPrompt: "Aidez les membres à comprendre l’objectif de ce canal.",
+  chatDescriptionPrompt:
+    "Aidez les membres à comprendre l’objectif de ce canal.",
   chatDescriptionSave: "Enregistrer la description",
   chatDescriptionFailed: "Impossible d’enregistrer la description du canal.",
   chatReplyInThread: "Répondre ici",
@@ -5913,7 +5993,8 @@ export const fr: Partial<Catalog> = {
   homeStatTasks: "Tâches à faire aujourd’hui",
   homeSubtitle: "Voici ce qui se passe aujourd’hui.",
   homeToolsTitle: "Vos outils",
-  homeToolsSubtitle: "Les applications que vous utilisez le plus, à portée de main.",
+  homeToolsSubtitle:
+    "Les applications que vous utilisez le plus, à portée de main.",
   homeTaskOverdue: "En retard",
   homeTaskToday: "Aujourd’hui",
   homeTodaysCalendar: "Agenda du jour",
@@ -6210,26 +6291,32 @@ export const fr: Partial<Catalog> = {
   hrTabHiring: "Recrutement",
   hrTabTemplates: "Modèles de lettre",
   hrTemplatesTitle: "Modèles de lettre",
-  hrTemplatesIntro: "Rédigez une fois le texte approuvé, puis laissez les RH créer un brouillon personnel sans le ressaisir.",
+  hrTemplatesIntro:
+    "Rédigez une fois le texte approuvé, puis laissez les RH créer un brouillon personnel sans le ressaisir.",
   hrTemplatesLoadFailed: "Les modèles de lettre n’ont pas pu être chargés.",
   hrTemplatesEmpty: "Aucun modèle de lettre",
-  hrTemplatesEmptyBody: "Créez le texte que votre entreprise accepte d’envoyer. Rien n’est envoyé depuis cet écran.",
+  hrTemplatesEmptyBody:
+    "Créez le texte que votre entreprise accepte d’envoyer. Rien n’est envoyé depuis cet écran.",
   hrTemplateNew: "Nouveau modèle",
   hrTemplateCreateTitle: "Créer un modèle de lettre",
   hrTemplateEditTitle: "Modifier le modèle de lettre",
-  hrTemplateEditorIntro: "Les champs ne sont remplis que lorsque les RH créent un brouillon pour une personne précise.",
+  hrTemplateEditorIntro:
+    "Les champs ne sont remplis que lorsque les RH créent un brouillon pour une personne précise.",
   hrTemplateName: "Nom du modèle",
   hrTemplateSubject: "Objet de l’e-mail",
   hrTemplateBody: "Texte de la lettre",
-  hrTemplateBodyHint: "Utilisez les champs approuvés ci-dessous. Les champs inconnus sont refusés.",
+  hrTemplateBodyHint:
+    "Utilisez les champs approuvés ci-dessous. Les champs inconnus sont refusés.",
   hrTemplateInsertField: "Insérer un champ",
   hrTemplateSave: "Enregistrer le modèle",
   hrTemplateSaveFailed: "Le modèle de lettre n’a pas été enregistré.",
   hrTemplateDelete: "Supprimer le modèle",
   hrTemplateDeleteTitle: (name: string) => `Supprimer ${name} ?`,
-  hrTemplateDeleteBody: "Les brouillons existants restent inchangés. Ce modèle ne sera plus proposé pour les nouvelles lettres.",
+  hrTemplateDeleteBody:
+    "Les brouillons existants restent inchangés. Ce modèle ne sera plus proposé pour les nouvelles lettres.",
   hrTemplateDeleteFailed: "Le modèle de lettre n’a pas été supprimé.",
-  hrTemplateFields: (count: number) => count === 1 ? "1 champ" : `${count} champs`,
+  hrTemplateFields: (count: number) =>
+    count === 1 ? "1 champ" : `${count} champs`,
   hrTabLeave: "Mes congés",
   hrThisMonth: "Ce mois-ci",
   hrUnpaid: "Sans solde",
@@ -6287,26 +6374,32 @@ export const fr: Partial<Catalog> = {
     count === 1 ? "1 en attente" : `${count} en attente`,
   hrWorkingDays: (days: number) => (days === 1 ? "1 jour" : `${days} jours`),
   userApps: "Applications",
-  userAppsHint: "Seules les applications cochées apparaissent dans la navigation de cette personne, et le serveur refuse les autres — ceci ne masque pas, ceci ferme. Le courrier et l’accueil ne peuvent pas être désactivés. Cocher une application ne donne pas accès à tout ce qu’elle contient : Finance demande toujours le rôle de comptable, et un Space toujours d’en être membre.",
-  userAppsSelfHint: "Ceci est votre propre compte. Un administrateur n’est jamais exclu, donc ces interrupteurs ne changent rien à ce que vous pouvez ouvrir — ils sont conservés au cas où ce compte cesserait un jour d’être administrateur.",
+  userAppsHint:
+    "Seules les applications cochées apparaissent dans la navigation de cette personne, et le serveur refuse les autres — ceci ne masque pas, ceci ferme. Le courrier et l’accueil ne peuvent pas être désactivés. Cocher une application ne donne pas accès à tout ce qu’elle contient : Finance demande toujours le rôle de comptable, et un Space toujours d’en être membre.",
+  userAppsSelfHint:
+    "Ceci est votre propre compte. Un administrateur n’est jamais exclu, donc ces interrupteurs ne changent rien à ce que vous pouvez ouvrir — ils sont conservés au cas où ce compte cesserait un jour d’être administrateur.",
   accessModuleOff: "Cette application est désactivée pour votre compte.",
-  accessModuleOffHint: "Un administrateur de l’espace de travail peut la réactiver.",
+  accessModuleOffHint:
+    "Un administrateur de l’espace de travail peut la réactiver.",
   accessBackHome: "Retour à l’accueil",
   userInvite: "Créer une invitation",
   userInviteReady: "Lien d’installation",
   userInviteCopy: "Copier",
   userInviteCopied: "Copié",
-  userInviteHint: "Envoyez ce lien à votre collègue. Il fonctionne une seule fois, expire après sept jours, et c’est la personne qui choisit son mot de passe et son adresse de récupération — vous ne les connaîtrez jamais. Ce lien n’est affiché qu’une fois.",
+  userInviteHint:
+    "Envoyez ce lien à votre collègue. Il fonctionne une seule fois, expire après sept jours, et c’est la personne qui choisit son mot de passe et son adresse de récupération — vous ne les connaîtrez jamais. Ce lien n’est affiché qu’une fois.",
   inviteTitle: "Configurez votre compte",
   inviteUnavailable: "Cette invitation ne fonctionne plus",
-  inviteAskAdmin: "Demandez-en une nouvelle à l’administrateur de votre espace de travail.",
+  inviteAskAdmin:
+    "Demandez-en une nouvelle à l’administrateur de votre espace de travail.",
   inviteLoadFailed: "Cette invitation a expiré ou a déjà été utilisée.",
   inviteFailed: "Impossible d’enregistrer. Réessayez.",
   invitePassword: "Choisissez un mot de passe",
   invitePasswordHint: "Au moins 8 caractères. Vous seul le connaissez.",
   inviteRecovery: "Adresse de récupération",
   inviteRecoveryPlaceholder: "vous@ailleurs.fr",
-  inviteRecoveryHint: "Une adresse que vous pouvez lire ailleurs — pas cette nouvelle. Si vous oubliez un jour votre mot de passe, c’est le seul moyen de revenir sans le demander à un administrateur.",
+  inviteRecoveryHint:
+    "Une adresse que vous pouvez lire ailleurs — pas cette nouvelle. Si vous oubliez un jour votre mot de passe, c’est le seul moyen de revenir sans le demander à un administrateur.",
   inviteSubmit: "Configurer le compte",
   inviteWorking: "Configuration…",
   inviteDoneTitle: "C’est fait",
@@ -6365,7 +6458,8 @@ export const fr: Partial<Catalog> = {
   sitesDomainSearchInvite:
     "Saisissez un nom pour voir quelles extensions sont libres.",
   sitesDomainSearchFailed: "Ce nom n’a pas pu être vérifié.",
-  sitesDomainCatalogFailed: "Les tarifs des domaines n’ont pas pu être chargés.",
+  sitesDomainCatalogFailed:
+    "Les tarifs des domaines n’ont pas pu être chargés.",
   sitesDomainUnconfiguredTitle: "L’achat de domaines n’est pas activé ici",
   sitesDomainUnconfiguredBody:
     "Cet espace de travail ne peut pas enregistrer de noms de domaine. Vous pouvez toujours connecter un domaine que vous possédez déjà.",
@@ -6436,8 +6530,7 @@ export const fr: Partial<Catalog> = {
   sitesDomainPurchases: "Domaines achetés ici",
   sitesDomainPurchasesHint:
     "Tous les domaines dont l’achat a été entamé pour ce site, et où chacun en est.",
-  sitesDomainPurchasesNone:
-    "Aucun domaine n’a encore été acheté pour ce site.",
+  sitesDomainPurchasesNone: "Aucun domaine n’a encore été acheté pour ce site.",
   sitesDomainPurchasesLoadFailed:
     "Les achats de domaines n’ont pas pu être chargés.",
   sitesDomainRefresh: "Actualiser",
@@ -6527,8 +6620,7 @@ export const fr: Partial<Catalog> = {
   campaignsNoMatches: "Personne ne correspond à cette question.",
   campaignsMore: "Afficher plus de personnes",
   campaignsLoadFailed: "L’audience n’a pas pu être lue.",
-  campaignsSegmentsFailed:
-    "Vos questions enregistrées n’ont pas pu être lues.",
+  campaignsSegmentsFailed: "Vos questions enregistrées n’ont pas pu être lues.",
   campaignsSaveFailed: "Cette question n’a pas pu être enregistrée.",
   campaignsDeleteFailed: "Cette question n’a pas pu être supprimée.",
   campaignsEmptyTitle: "Personne à contacter pour l’instant",
@@ -6546,13 +6638,15 @@ export const fr: Partial<Catalog> = {
   campaignsTabAudience: "Audience",
   campaignsTabLetters: "Lettres",
   campaignsLettersTitle: "Lettres",
-  campaignsLettersSubtitle: "Chaque lettre telle qu’une personne la recevra réellement.",
+  campaignsLettersSubtitle:
+    "Chaque lettre telle qu’une personne la recevra réellement.",
   campaignsLetterLabel: "Lettre",
   campaignsNoLettersTitle: "Aucune lettre pour l’instant",
   campaignsNoLettersBody:
     "Une lettre s’écrit dans le même éditeur qu’un document : titres, paragraphes, tableaux et code. Dès qu’il en existe une, elle apparaît ici, rendue exactement telle qu’elle arrivera.",
   campaignsShowAsLabel: "Afficher comme",
-  campaignsShowAsHint: "Les deux sont réelles. La moitié d’une audience n’a aucun nom enregistré.",
+  campaignsShowAsHint:
+    "Les deux sont réelles. La moitié d’une audience n’a aucun nom enregistré.",
   campaignsShowAsRecipient: "Quelqu’un que vous pouvez contacter",
   campaignsShowAsFallbacks: "Quelqu’un dont vous ne savez rien",
   campaignsPartLabel: "Partie",
@@ -6565,7 +6659,8 @@ export const fr: Partial<Catalog> = {
   campaignsPreviewPreheader: "Texte d’aperçu",
   campaignsPreviewNoPreheader:
     "Aucun — les logiciels de messagerie afficheront la première ligne de la lettre à la place.",
-  campaignsAgainstRecipient: (person: string) => `Voici la copie que reçoit ${person}.`,
+  campaignsAgainstRecipient: (person: string) =>
+    `Voici la copie que reçoit ${person}.`,
   campaignsAgainstFallbacks:
     "Voici la copie que reçoit toute personne dont vous ne savez rien — chaque valeur personnalisée ci-dessous est votre propre formulation de repli.",
   campaignsAgainstNobodyYet:
