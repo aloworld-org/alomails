@@ -1,0 +1,13 @@
+[Unit]
+Description=Check hourly whether a renewed certificate needs the services restarted
+
+[Timer]
+# Hourly: certbot's own loop wakes every 12 hours, so a renewal is in service
+# within the hour rather than whenever somebody next deploys. Cheap, because
+# the common case reads two timestamps and stops.
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=600
+
+[Install]
+WantedBy=timers.target

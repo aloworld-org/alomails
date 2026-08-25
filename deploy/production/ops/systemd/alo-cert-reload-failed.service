@@ -1,0 +1,6 @@
+[Unit]
+Description=Alert that the certificate reload failed
+
+[Service]
+Type=oneshot
+ExecStart=/opt/alo/monitoring/send-alert.sh "[alo] CERT RELOAD FAILED" "A renewed certificate could not be put into service. Run: journalctl -u alo-cert-reload.service -n50 on the server. Until this succeeds the services keep serving the OLD certificate, which will expire."

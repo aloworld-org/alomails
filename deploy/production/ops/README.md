@@ -20,6 +20,9 @@ procedure — is in [`docs/operations-runbook.md`](../../../docs/operations-runb
 | `systemd/alo-backup.{service,timer}` | Runs `backup.sh` daily at 03:30 (catches up if the server was off). |
 | `systemd/alo-backup-failed.service` | `OnFailure` hook that emails you if a backup fails. |
 | `systemd/alo-monitor.{service,timer}` | Runs `monitor.py` every 10 minutes. |
+| `cert-reload.sh` | Restarts the TLS-terminating services when the certificate is newer than the process reading it. certbot cannot do this itself — it has no Docker socket — so without it a renewed certificate never reaches the wire. |
+| `systemd/alo-cert-reload.{service,timer}` | Runs `cert-reload.sh` hourly. |
+| `systemd/alo-cert-reload-failed.service` | `OnFailure` hook: emails you if a renewed certificate could not be put into service. |
 | `systemd/alo-campaign-egress.service` | Rewrites the source address of campaign mail to the campaign IP (ADR 0044 §1). Only needed on a host with a second address; see below. |
 
 ## Install on the server (one time)
@@ -29,6 +32,7 @@ procedure — is in [`docs/operations-runbook.md`](../../../docs/operations-runb
 install -D -m700 backup.sh      /opt/alo/backups/backup.sh
 install -D -m700 monitor.py     /opt/alo/monitoring/monitor.py
 install -D -m700 send-alert.sh  /opt/alo/monitoring/send-alert.sh
+install -D -m700 cert-reload.sh /opt/alo/ops/cert-reload.sh
 
 # 2. config (fill in real values, keep 0600)
 install -D -m600 monitor.env.example /root/.config/alo/monitor.env
@@ -44,7 +48,7 @@ RESTIC_PASSWORD_FILE=/root/.config/alo/restic-password \
 # 4. systemd units
 cp systemd/*.service systemd/*.timer /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now alo-backup.timer alo-monitor.timer
+systemctl enable --now alo-backup.timer alo-monitor.timer alo-cert-reload.timer
 
 # 5. prove alerting works — you should get an email
 python3 /opt/alo/monitoring/monitor.py --test

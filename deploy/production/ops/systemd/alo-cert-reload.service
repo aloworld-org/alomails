@@ -1,0 +1,10 @@
+[Unit]
+Description=alo restart TLS services onto a renewed certificate
+OnFailure=alo-cert-reload-failed.service
+After=docker.service
+Wants=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/alo/ops/cert-reload.sh
+WorkingDirectory=/opt/alo/deploy/production
