@@ -33,8 +33,9 @@ pub struct AppState {
     /// Externally-visible base URL, for building session URLs.
     pub base_url: String,
     /// `host:port` of the SMTP trusted internal submission listener, used by
-    /// `EmailSubmission/set` to send. `None` disables sending (the capability
-    /// is still advertised but a submit returns `forbiddenToSend`).
+    /// `EmailSubmission/set` to send. `None` disables sending: the capability
+    /// is still advertised, and a submit answers `serverFail` — a deployment
+    /// that cannot send at all is our fault to fix, not the caller's.
     pub submission_addr: Option<String>,
     /// Extra hosts this deployment serves the API on, besides the configured
     /// `base_url`.

@@ -81,9 +81,22 @@ async fn create_one(account: &Account, props: &Value, state: &AppState) -> Resul
 
     // Submit through the trusted internal listener (DKIM-signed + queued there).
     // Failures are logged server-side without recipient/body detail.
+    // No listener means a deployment that cannot send at all. That is a fault
+    // of ours, not a judgement about this user, so it answers `serverFail` and
+    // says configuration rather than permission. `forbiddenToSend` sent whoever
+    // hit it looking through identities, aliases and send-as rules, none of
+    // which were wrong — clients render it as "you may not send from this
+    // address". The branch cannot be reached in a configured deployment, so
+    // its only reader is somebody debugging one that is not.
     let Some(addr) = state.submission_addr.as_deref() else {
-        tracing::error!("EmailSubmission/set: no submission listener configured");
-        return Err(set_err("forbiddenToSend", "sending is not available"));
+        tracing::error!(
+            "EmailSubmission/set: no submission listener configured; set \
+             ALO_JMAP_SUBMISSION_ADDR to the alo-smtp internal submission address"
+        );
+        return Err(set_err(
+            "serverFail",
+            "sending is not configured on this server",
+        ));
     };
     // Privacy: strip the `Bcc:` header from the bytes put on the wire so
     // recipients never learn who was blind-copied. The sender's own copy (moved
