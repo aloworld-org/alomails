@@ -182,32 +182,32 @@ export function TimelineView({ tasks, edges = [], onOpen }: Props) {
             <div key={t.id} className="relative z-10 flex border-b border-subtle last:border-b-0" style={{ height: ROW }}>
               <button
                 type="button"
-                className="sticky left-0 z-20 flex shrink-0 items-center gap-3 overflow-hidden whitespace-nowrap border-r border-subtle bg-surface px-5 text-left text-sm font-medium text-primary transition-colors hover:bg-raised hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+                className="sticky left-0 z-20 flex shrink-0 overflow-hidden whitespace-nowrap border-r border-subtle bg-surface text-left text-sm font-medium text-primary transition-colors hover:bg-raised hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
                 style={{ width: LABEL }}
                 title={t.title}
                 onClick={() => onOpen(t.id)}
               >
-                {t.assignee !== null && <Avatar email={t.assignee} />}
-                <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{t.title}</span>
-                <span className="shrink-0 text-[11px] font-normal text-tertiary">{dueLabel(t.dueAt as string)}</span>
+                <span className="flex min-h-[3.1875rem] w-full items-center gap-3 px-4">
+                  {t.assignee !== null && <Avatar email={t.assignee} />}
+                  <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{t.title}</span>
+                  <span className="shrink-0 pl-2 text-[11px] font-normal tabular-nums text-tertiary">{dueLabel(t.dueAt as string)}</span>
+                </span>
               </button>
               <div className="relative h-full" style={{ width: total }}>
                 <button
                   type="button"
-                  className="absolute top-2.5 z-10 flex h-8 items-center overflow-hidden rounded-lg border px-3 text-xs font-semibold shadow-sm transition-[filter,box-shadow] hover:brightness-95 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                  className="absolute top-4 z-10 h-5 overflow-hidden rounded-full border shadow-sm transition-[filter,box-shadow,transform] hover:-translate-y-px hover:brightness-95 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                   style={{
                     left,
                     width,
-                    borderColor: `color-mix(in srgb, ${statusColor(t.status)} 42%, transparent)`,
-                    background: `color-mix(in srgb, ${statusColor(t.status)} 18%, var(--surface))`,
-                    color: `color-mix(in srgb, ${statusColor(t.status)} 78%, var(--text-primary))`,
-                    boxShadow: `inset 3px 0 0 ${statusColor(t.status)}`,
+                    minWidth: 18,
+                    borderColor: `color-mix(in srgb, ${statusColor(t.status)} 72%, transparent)`,
+                    background: statusColor(t.status),
                   }}
                   onClick={() => onOpen(t.id)}
                   title={t.title}
-                >
-                  <span className="overflow-hidden text-ellipsis whitespace-nowrap">{columnLabel(t.status)}</span>
-                </button>
+                  aria-label={`${t.title}: ${columnLabel(t.status)}`}
+                />
               </div>
             </div>
           );

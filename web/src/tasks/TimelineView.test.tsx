@@ -44,10 +44,12 @@ describe("project timeline", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Build responsive templates/ }));
+    const scheduledBar = screen.getByRole("button", { name: "Build responsive templates: In progress" });
+    fireEvent.click(scheduledBar);
     fireEvent.click(screen.getByRole("button", { name: "Plan launch retrospective" }));
 
     expect(onOpen).toHaveBeenNthCalledWith(1, "scheduled");
     expect(onOpen).toHaveBeenNthCalledWith(2, "unscheduled");
+    expect(scheduledBar.textContent).toBe("");
   });
 });
