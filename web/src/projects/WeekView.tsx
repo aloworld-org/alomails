@@ -27,7 +27,14 @@
 //   submitted has no record yet and asking a person to create one first would
 //   be a round trip that exists only to satisfy REST.
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  Plus,
+  X,
+} from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { Button, Spinner } from "../ds";
@@ -47,27 +54,29 @@ import { ProjectScopePicker } from "./ProjectScopePicker";
 import { resolveProjectScope } from "./scope";
 import type { Project, TimeEntry, TimeTotals, TimesheetWeek } from "./types";
 const styles = {
-  page: "flex min-h-0 flex-col gap-4 overflow-auto px-5 py-4",
+  page: "mx-auto flex min-h-0 w-full max-w-[112rem] flex-col gap-5 overflow-auto px-5 py-5 lg:px-7",
   toolbar: "flex flex-wrap items-center gap-3",
   periodLabel: "min-w-[15ch] text-base font-medium text-primary",
   toolbarSpacer: "flex-1",
-  tableWrap: "overflow-x-auto rounded-lg border border-subtle bg-surface",
-  grid: "w-full border-collapse text-sm [&_th]:whitespace-nowrap [&_th]:border-b [&_th]:border-subtle [&_th]:px-2.5 [&_th]:py-2 [&_th]:text-right [&_th]:font-medium [&_th]:text-tertiary [&_th:first-child]:min-w-52 [&_th:first-child]:text-left [&_td]:border-b [&_td]:border-subtle [&_td]:px-1.5 [&_td]:py-1",
+  tableWrap:
+    "overflow-x-auto rounded-2xl border border-default bg-surface shadow-sm",
+  grid: "w-full min-w-[64rem] border-collapse text-sm [&_th]:whitespace-nowrap [&_th]:border-b [&_th]:border-subtle [&_th]:bg-raised/60 [&_th]:px-4 [&_th]:py-3 [&_th]:text-right [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-tertiary [&_th:first-child]:min-w-64 [&_th:first-child]:text-left [&_td]:border-b [&_td]:border-subtle [&_td]:px-2 [&_td]:py-2.5",
   gridToday: "text-accent",
-  gridProject: "flex !px-3.5 flex-col gap-0.5",
+  gridProject: "flex !px-4 flex-col gap-0.5",
   gridProjectName: "font-medium",
   internal: "italic text-tertiary",
   gridCell:
-    "w-full min-w-14 rounded-sm border border-transparent bg-transparent px-2 py-1.5 text-right text-sm tabular-nums text-primary hover:border-default hover:bg-surface disabled:cursor-default disabled:text-tertiary",
+    "w-full min-w-20 rounded-lg border border-transparent bg-transparent px-3 py-2 text-right text-sm tabular-nums text-primary transition-colors hover:border-default hover:bg-raised disabled:cursor-default disabled:text-tertiary",
   gridCellFilled: "font-medium",
   muted: "text-tertiary",
   numeric: "whitespace-nowrap text-right tabular-nums",
   gridTotals:
     "[&_td]:border-b-0 [&_td]:border-t-2 [&_td]:border-default [&_td]:p-2.5 [&_td]:text-right [&_td]:font-semibold [&_td]:tabular-nums [&_td:first-child]:pl-3.5 [&_td:first-child]:text-left",
   table:
-    "w-full border-collapse text-sm [&_th]:whitespace-nowrap [&_th]:border-b [&_th]:border-subtle [&_th]:px-3.5 [&_th]:py-2.5 [&_th]:text-left [&_th]:font-medium [&_th]:text-tertiary [&_td]:border-b [&_td]:border-subtle [&_td]:px-3.5 [&_td]:py-2.5 [&_td]:align-middle [&_tbody_tr:hover]:bg-raised",
+    "w-full min-w-[62rem] border-collapse text-sm [&_th]:whitespace-nowrap [&_th]:border-b [&_th]:border-subtle [&_th]:bg-raised/60 [&_th]:px-5 [&_th]:py-3 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-tertiary [&_td]:border-b [&_td]:border-subtle [&_td]:px-5 [&_td]:py-3.5 [&_td]:align-middle [&_tbody_tr:last-child_td]:border-b-0 [&_tbody_tr:hover]:bg-raised/50",
   rowActions: "flex items-center justify-end gap-2",
-  weekFoot: "flex flex-wrap items-center gap-3 py-3",
+  weekFoot:
+    "sticky bottom-0 z-10 flex flex-wrap items-center gap-4 rounded-2xl border border-default bg-surface/95 px-5 py-4 shadow-lg backdrop-blur",
   weekFootFacts: "flex flex-col gap-0.5",
   weekFootTotal: "text-lg font-semibold tabular-nums text-primary",
   weekFootNote: "m-0 text-sm text-tertiary",
@@ -369,98 +378,116 @@ export function WeekView({
             : {})}
         />
       ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.grid}>
-            <thead>
-              <tr>
-                <th scope="col">{strings.projectsProject}</th>
-                {days.map((day) => (
-                  <th
-                    key={day}
-                    scope="col"
-                    className={day === today ? styles.gridToday : undefined}
-                  >
-                    {dayLabel(day, { weekday: "short", day: "numeric" })}
-                  </th>
-                ))}
-                <th scope="col">{strings.projectsTotal}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((project) => {
-                const rowMinutes = minutesOf(
-                  entries.filter((e) => e.projectId === project.id),
-                );
-                return (
-                  <tr key={project.id}>
-                    <td>
-                      <span className={styles.gridProject}>
-                        <span className={styles.gridProjectName}>
-                          {project.name}
-                        </span>
-                        {project.client === null && (
-                          <span className={styles.internal}>
-                            {strings.projectsInternal}
+        <section className="overflow-hidden rounded-2xl border border-default bg-surface shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-subtle px-5 py-4">
+            <div>
+              <h3 className="m-0 text-base font-semibold text-primary">
+                {strings.projectsWeek}
+              </h3>
+              <p className="m-0 mt-0.5 text-sm text-secondary">
+                {strings.projectsWeekOf(dayLabel(monday), dayLabel(sunday))}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 rounded-xl bg-raised px-3 py-2">
+              <Clock3 size={16} className="text-accent" aria-hidden="true" />
+              <span className="text-sm font-semibold tabular-nums text-primary">
+                {durationLabel(totals?.minutes ?? 0)}
+              </span>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className={styles.grid}>
+              <thead>
+                <tr>
+                  <th scope="col">{strings.projectsProject}</th>
+                  {days.map((day) => (
+                    <th
+                      key={day}
+                      scope="col"
+                      className={day === today ? styles.gridToday : undefined}
+                    >
+                      {dayLabel(day, { weekday: "short", day: "numeric" })}
+                    </th>
+                  ))}
+                  <th scope="col">{strings.projectsTotal}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((project) => {
+                  const rowMinutes = minutesOf(
+                    entries.filter((e) => e.projectId === project.id),
+                  );
+                  return (
+                    <tr key={project.id}>
+                      <td>
+                        <span className={styles.gridProject}>
+                          <span className={styles.gridProjectName}>
+                            {project.name}
                           </span>
-                        )}
-                      </span>
+                          {project.client === null && (
+                            <span className={styles.internal}>
+                              {strings.projectsInternal}
+                            </span>
+                          )}
+                        </span>
+                      </td>
+                      {days.map((day) => {
+                        const set = cell(project.id, day);
+                        const minutes = minutesOf(set);
+                        const proposed = set.some((e) => e.proposed);
+                        return (
+                          <td key={day}>
+                            <button
+                              type="button"
+                              className={`${styles.gridCell} ${minutes > 0 ? styles.gridCellFilled : ""}`}
+                              disabled={locked}
+                              aria-label={strings.projectsCellLabel(
+                                project.name,
+                                dayLabel(day),
+                                durationLabel(minutes),
+                              )}
+                              onClick={() => openCell(project.id, day)}
+                            >
+                              {minutes === 0 && !proposed
+                                ? ""
+                                : durationLabel(minutes)}
+                              {set.length > 1 && (
+                                <span className={styles.muted}>
+                                  {" "}
+                                  ·{set.length}
+                                </span>
+                              )}
+                              {proposed && (
+                                <span className={styles.muted}> ✦</span>
+                              )}
+                            </button>
+                          </td>
+                        );
+                      })}
+                      <td className={styles.numeric}>
+                        {durationLabel(rowMinutes)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className={styles.gridTotals}>
+                  <td>{strings.projectsTotal}</td>
+                  {days.map((day) => (
+                    <td key={day}>
+                      {durationLabel(
+                        minutesOf(entries.filter((e) => e.workDate === day)),
+                      )}
                     </td>
-                    {days.map((day) => {
-                      const set = cell(project.id, day);
-                      const minutes = minutesOf(set);
-                      const proposed = set.some((e) => e.proposed);
-                      return (
-                        <td key={day}>
-                          <button
-                            type="button"
-                            className={`${styles.gridCell} ${minutes > 0 ? styles.gridCellFilled : ""}`}
-                            disabled={locked}
-                            aria-label={strings.projectsCellLabel(
-                              project.name,
-                              dayLabel(day),
-                              durationLabel(minutes),
-                            )}
-                            onClick={() => openCell(project.id, day)}
-                          >
-                            {minutes === 0 && !proposed
-                              ? ""
-                              : durationLabel(minutes)}
-                            {set.length > 1 && (
-                              <span className={styles.muted}>
-                                {" "}
-                                ·{set.length}
-                              </span>
-                            )}
-                            {proposed && (
-                              <span className={styles.muted}> ✦</span>
-                            )}
-                          </button>
-                        </td>
-                      );
-                    })}
-                    <td className={styles.numeric}>
-                      {durationLabel(rowMinutes)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot>
-              <tr className={styles.gridTotals}>
-                <td>{strings.projectsTotal}</td>
-                {days.map((day) => (
-                  <td key={day}>
-                    {durationLabel(
-                      minutesOf(entries.filter((e) => e.workDate === day)),
-                    )}
-                  </td>
-                ))}
-                {/* The week's own figure, as the server counted it. */}
-                <td>{durationLabel(totals?.minutes ?? 0)}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+                  ))}
+                  {/* The week's own figure, as the server counted it. */}
+                  <td>{durationLabel(totals?.minutes ?? 0)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </section>
       )}
 
       {choosingProject && !locked && (
