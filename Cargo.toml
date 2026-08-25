@@ -137,5 +137,20 @@ unsafe_code = "forbid"
 # to test targets only, so no dependency is rebuilt. It lives here rather than in
 # a loop's environment because every checkout and every agent needs it, and the
 # advice version of this rule was written down and then not applied.
+#
+# Measured 2026-08-25, so the next person does not repeat it: this helps but
+# does not finish the job, and the obvious next lever does not work. A test
+# binary's `.pdb` here is ~71 MB *with* this applied, down from ~150 MB without
+# — the remainder is debug info from the dependencies it links, which compile
+# under `[profile.dev]`. Setting `[profile.dev] debug = "line-tables-only"` and
+# rebuilding from a clean target moved that 71 MB to 71 MB: line tables across
+# a graph this size are themselves the bulk. `debug = 0` there would shrink it
+# further and cost every panic its file and line, in library code as well as
+# test code, which is a bad trade for disk on a machine that has any.
+#
+# The lever that does work is not a profile setting: `scripts\dev.ps1 -Action
+# Clean` drops this checkout's own crates and keeps the dependencies, which
+# reclaimed 9-16 GB in seconds on three separate occasions the day this was
+# written. Disk here is a housekeeping problem, not a build-configuration one.
 [profile.test]
 debug = 0
