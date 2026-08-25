@@ -147,7 +147,11 @@ impl BlobStore {
     /// the stored object exceeds the ceiling; [`StoreError::Blob`]
     /// otherwise.
     pub async fn get(&self, tenant: &str, hash: &str) -> Result<Bytes> {
-        let result = self.inner.get(&key(tenant, hash)).await?;
+        let result = self
+            .inner
+            .get(&key(tenant, hash))
+            .await
+            .map_err(|e| referenced_object_err(tenant, hash, e))?;
         // Reject on the object's declared size BEFORE buffering it, so an
         // oversized/tampered object is never fully read into memory.
         let declared = result.meta.size as usize;
@@ -228,7 +232,11 @@ impl BlobStore {
     /// # Errors
     /// [`StoreError::NotFound`] if absent; [`StoreError::Blob`] otherwise.
     pub async fn get_share_stream(&self, tenant: &str, id: &str) -> Result<ShareStream> {
-        let result = self.inner.get(&share_key(tenant, id)).await?;
+        let result = self
+            .inner
+            .get(&share_key(tenant, id))
+            .await
+            .map_err(|e| referenced_object_err(tenant, id, e))?;
         let size = result.meta.size as u64;
         let content = result
             .into_stream()
@@ -248,6 +256,32 @@ impl BlobStore {
             Err(other) => Err(other.into()),
         }
     }
+}
+
+/// Maps an object-store failure on an object a row *points at*, saying so in
+/// the log when the object is simply absent.
+///
+/// A referenced blob is never supposed to be missing: [`BlobStore::put`]
+/// completes before the row that references it is committed, exactly so a
+/// crash leaves an unreferenced object rather than a message with no body. So
+/// absence here means the object store lost it, or was pointed at a different
+/// one — a configuration mistake, not a user's.
+///
+/// The caller still sees a plain [`StoreError::NotFound`], which is right on
+/// the wire: a body that cannot be read is not a different answer from a row
+/// that was never there. But it is indistinguishable in a log, and that is how
+/// "could not load messages" costs an afternoon instead of a minute. The
+/// tenant and the content hash are identifiers, never content, and they are
+/// the two things that make the answer immediate.
+fn referenced_object_err(tenant: &str, object: &str, error: object_store::Error) -> StoreError {
+    if matches!(error, object_store::Error::NotFound { .. }) {
+        tracing::warn!(
+            tenant = %tenant,
+            object = %object,
+            "a referenced object is missing from the blob store",
+        );
+    }
+    StoreError::from(error)
 }
 
 /// Wrap a byte-stream/IO error as a blob error without exposing detail.

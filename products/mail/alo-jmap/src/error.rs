@@ -133,7 +133,14 @@ impl From<alo_store::StoreError> for Problem {
                 Self::with(StatusCode::UNPROCESSABLE_ENTITY, message)
             }
             StoreError::Conflict(message) => Self::with(StatusCode::CONFLICT, message),
-            _ => Self::server_error(),
+            // The four above are the caller's to fix, and the wire says so.
+            // Everything else is ours, and a 500 deliberately tells the caller
+            // nothing — so it gets written down here instead. Dropping it left
+            // the log silent for precisely the failures worth investigating.
+            other => {
+                tracing::warn!(cause = %other.log_cause(), "store failure returned as 500");
+                Self::server_error()
+            }
         }
     }
 }

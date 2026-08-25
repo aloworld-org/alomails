@@ -54,6 +54,9 @@ time = { workspace = true }
 # Purge assertions read rows directly: the public list APIs may lazily
 # re-create defaults, which a deleted tenant can no longer satisfy.
 sqlx = { workspace = true }
+# A missing blob is reported only in the log — the caller is told the same
+# NotFound either way — so reading the log is the only way to hold that line.
+tracing-subscriber = { workspace = true }
 
 [lints]
 workspace = true

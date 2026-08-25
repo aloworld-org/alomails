@@ -257,7 +257,20 @@ pub(crate) fn check_account(args: &Value, account: &Account) -> Result<(), Value
     }
 }
 
-fn store_err(_e: StoreError) -> Value {
+/// Maps a store failure to the JMAP `serverFail` the client sees — and says so
+/// in the log on the way past.
+///
+/// The error used to be dropped here, which is how a reading pane could show
+/// "could not load messages" while the server's log stayed completely silent:
+/// nothing to search for, nothing to alert on, and no way to tell a missing
+/// message body from a database that had gone away. `serverFail` carries no
+/// detail to the client by design — so the detail has to land somewhere, and
+/// this is the only place it still exists.
+///
+/// `log_cause` is what makes that safe to write down; see its documentation
+/// for what is summarised and why.
+fn store_err(error: StoreError) -> Value {
+    tracing::warn!(cause = %error.log_cause(), "store failure returned as serverFail");
     method_error("serverFail")
 }
 
