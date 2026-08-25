@@ -105,7 +105,7 @@ export function TaskToolbar({ config, onChange }: Props) {
   }
 
   return (
-    <div className="flex items-center gap-1 px-6 pt-3 max-sm:overflow-x-auto max-sm:px-4">
+    <div className="mx-auto mt-4 flex w-[calc(100%-3rem)] max-w-[97rem] items-center gap-1 overflow-x-auto rounded-2xl border border-subtle bg-surface p-2 shadow-sm max-sm:w-[calc(100%-2rem)]">
       <Dropdown label={strings.taskFilter} icon={<ListFilter size={15} />} active={isFiltering(config)}>
         <div className="px-2 pb-0.5 pt-1.5 text-xs font-semibold uppercase tracking-wide text-tertiary">{strings.taskPriority}</div>
         {prios.map((p) => (
