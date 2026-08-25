@@ -4324,6 +4324,7 @@ export const en = {
   projectsCancel: "Cancel",
   projectsSave: "Save",
   projectsEdit: "Edit",
+  projectsOpenProject: (name: string) => `Open ${name}`,
   projectsDetailsTitle: "Project details",
   projectsDetailsSubtitle: "Keep the outcome, timing, and current state clear for everyone.",
   projectsDescription: "Description",

@@ -10,6 +10,8 @@ interface Props {
   onChange: (projectId: string | null) => void;
   description?: string;
   disabled?: boolean;
+  /** Keeps the picker inside a screen toolbar instead of making it a card. */
+  compact?: boolean;
 }
 
 /**
@@ -24,6 +26,7 @@ export function ProjectScopePicker({
   onChange,
   description,
   disabled = false,
+  compact = false,
 }: Props) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -53,14 +56,20 @@ export function ProjectScopePicker({
   }
 
   return (
-    <section className="flex flex-wrap items-end gap-4 rounded-2xl border border-subtle bg-surface px-5 py-4 shadow-sm">
+    <section
+      className={
+        compact
+          ? "flex min-w-0 flex-wrap items-end gap-3"
+          : "flex flex-wrap items-end gap-4 rounded-2xl border border-subtle bg-surface px-5 py-4 shadow-sm"
+      }
+    >
       <div ref={rootRef} className="relative min-w-64 flex-1 sm:max-w-sm">
         <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-tertiary">
           {strings.projectsProject}
         </span>
         <button
           type="button"
-          className="flex min-h-12 w-full items-center gap-3 rounded-xl border border-default bg-surface px-3.5 py-2 text-left text-primary transition-colors hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
+          className={`flex w-full items-center gap-3 rounded-xl border border-default bg-surface px-3.5 text-left text-primary transition-colors hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60 ${compact ? "min-h-10 py-1.5" : "min-h-12 py-2"}`}
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-controls={listboxId}

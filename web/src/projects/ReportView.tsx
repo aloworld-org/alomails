@@ -17,7 +17,7 @@
 // The period is applied on submit rather than on every keystroke, so a
 // half-typed date never becomes a request.
 import { useCallback, useEffect, useState } from "react";
-import { PieChart } from "lucide-react";
+import { ArrowUpRight, PieChart } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 
 import {
@@ -48,6 +48,8 @@ interface Props {
   revision: number;
   /** Continues from a report row into the approved-time invoice handoff. */
   onCreateInvoice: (project: Project, cutoff: string) => void;
+  /** Opens the project workspace without losing the report's period. */
+  onOpenProject: (project: Project) => void;
 }
 
 /** What a saved report is called: the server names the file in its own
@@ -67,6 +69,7 @@ export function ReportView({
   customerName,
   revision,
   onCreateInvoice,
+  onOpenProject,
 }: Props) {
   const api = useProjectsApi();
   const [searchParams] = useSearchParams();
@@ -217,6 +220,7 @@ export function ReportView({
             projects={projects}
             customerName={customerName}
             onCreateInvoice={(project) => onCreateInvoice(project, report.to)}
+            onOpenProject={onOpenProject}
           />
         )
       )}
@@ -240,11 +244,13 @@ function ReportTable({
   projects,
   customerName,
   onCreateInvoice,
+  onOpenProject,
 }: {
   report: ProfitabilityReport;
   projects: Project[];
   customerName: (customerId: string) => string | null;
   onCreateInvoice: (project: Project) => void;
+  onOpenProject: (project: Project) => void;
 }) {
   const locale = useLocale();
   return (
@@ -306,6 +312,7 @@ function ReportTable({
               customerName={customerName}
               locale={locale}
               onCreateInvoice={onCreateInvoice}
+              onOpenProject={onOpenProject}
             />
           ))}
         </tbody>
@@ -359,12 +366,14 @@ function ProjectRow({
   customerName,
   locale,
   onCreateInvoice,
+  onOpenProject,
 }: {
   project: ProjectProfitability;
   sourceProject: Project | null;
   customerName: (customerId: string) => string | null;
   locale: string;
   onCreateInvoice: (project: Project) => void;
+  onOpenProject: (project: Project) => void;
 }) {
   const customer = customerName(project.customerId);
   const remaining = project.budgetRemainingCents;
@@ -374,7 +383,23 @@ function ProjectRow({
   return (
     <tr>
       <td>
-        <span className="font-medium">{project.projectName}</span>
+        {sourceProject === null ? (
+          <span className="font-medium">{project.projectName}</span>
+        ) : (
+          <button
+            type="button"
+            className="group inline-flex items-center gap-1.5 rounded-md font-semibold text-link transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            aria-label={strings.projectsOpenProject(project.projectName)}
+            onClick={() => onOpenProject(sourceProject)}
+          >
+            {project.projectName}
+            <ArrowUpRight
+              size={15}
+              className="opacity-60 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100"
+              aria-hidden="true"
+            />
+          </button>
+        )}
         {/* Chargeable hours nobody has priced are named where they were
             worked, because that is where somebody can do something about
             them — never folded into a value of zero. */}

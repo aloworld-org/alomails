@@ -2445,6 +2445,7 @@ export const nl: Partial<Catalog> = {
   projectsCancel: "Annuleren",
   projectsSave: "Opslaan",
   projectsEdit: "Bewerken",
+  projectsOpenProject: (name: string) => `${name} openen`,
   projectsDetailsTitle: "Projectdetails",
   projectsDetailsSubtitle: "Houd het resultaat, de planning en de huidige status voor iedereen duidelijk.",
   projectsDescription: "Beschrijving",

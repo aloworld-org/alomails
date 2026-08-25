@@ -2486,6 +2486,7 @@ export const fr: Partial<Catalog> = {
   projectsCancel: "Annuler",
   projectsSave: "Enregistrer",
   projectsEdit: "Modifier",
+  projectsOpenProject: (name: string) => `Ouvrir ${name}`,
   projectsDetailsTitle: "Détails du projet",
   projectsDetailsSubtitle: "Gardez le résultat, le calendrier et l’état actuel clairs pour tous.",
   projectsDescription: "Description",

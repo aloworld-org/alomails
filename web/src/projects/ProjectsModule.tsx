@@ -402,6 +402,7 @@ export function ProjectsModule() {
               customerName={customerName}
               revision={revision}
               onCreateInvoice={(project, cutoff) => setInvoiceHandoff({ project, cutoff })}
+              onOpenProject={(project) => navigate(`/projects/${encodeURIComponent(project.id)}/overview`)}
             />
           )}
         />

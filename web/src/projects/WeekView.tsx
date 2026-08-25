@@ -271,83 +271,85 @@ export function WeekView({
 
   return (
     <div className={styles.page}>
-      <ProjectScopePicker
-        projects={projects}
-        value={projectId}
-        disabled={projectsLoading}
-        description={
-          projectId === null
-            ? strings.projectsWeekAllScope
-            : strings.projectsWeekProjectScope(
-                projects.find((project) => project.id === projectId)?.name ??
-                  "",
-              )
-        }
-        onChange={(nextProjectId) => {
-          const next = new URLSearchParams(searchParams);
-          if (nextProjectId === null) next.delete("project");
-          else next.set("project", nextProjectId);
-          setSearchParams(next);
-        }}
-      />
-      <section className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-default bg-surface px-5 py-4 shadow-sm">
-        <div className="min-w-0">
-          <p className="text-lg font-semibold text-primary">
-            {strings.projectsWeekTitle}
-          </p>
-          <p className="mt-1 text-sm text-secondary">
-            {strings.projectsWeekPurpose}
-          </p>
+      <section className="rounded-2xl border border-default bg-surface shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-4 px-5 py-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+              <CalendarDays size={20} aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="m-0 text-lg font-semibold text-primary">
+                {strings.projectsWeekTitle}
+              </h2>
+              <p className="m-0 mt-0.5 text-sm text-secondary">
+                {strings.projectsWeekPurpose}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <WeekChip status={status} />
+            {loading && <Spinner size={16} />}
+            {showTimesheetHeaderAddTime(
+              rows.length,
+              locked,
+              projects.length,
+            ) && (
+              <Button
+                icon={<Plus size={17} />}
+                onClick={() => {
+                  if (projectId !== null) startEntry(projectId);
+                  else setChoosingProject(true);
+                }}
+              >
+                {strings.projectsAddTime}
+              </Button>
+            )}
+          </div>
         </div>
-        {showTimesheetHeaderAddTime(rows.length, locked, projects.length) && (
-          <Button
-            icon={<Plus size={17} />}
-            onClick={() => {
-              if (projectId !== null) startEntry(projectId);
-              else setChoosingProject(true);
+        <div className="grid gap-4 border-t border-subtle px-5 py-4 lg:grid-cols-[minmax(16rem,22rem)_1fr] lg:items-end">
+          <ProjectScopePicker
+            compact
+            projects={projects}
+            value={projectId}
+            disabled={projectsLoading}
+            onChange={(nextProjectId) => {
+              const next = new URLSearchParams(searchParams);
+              if (nextProjectId === null) next.delete("project");
+              else next.set("project", nextProjectId);
+              setSearchParams(next);
             }}
-          >
-            {strings.projectsAddTime}
-          </Button>
-        )}
+          />
+          <div className="flex flex-wrap items-center gap-1 lg:justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<ChevronLeft size={16} />}
+              aria-label={strings.projectsPreviousWeek}
+              onClick={() => setMonday(shiftWeek(monday, -1))}
+            />
+            <span className="min-w-[15ch] px-2 text-center text-sm font-semibold text-primary">
+              {strings.projectsWeekOf(
+                dayLabel(monday, { day: "numeric", month: "short" }),
+                dayLabel(sunday),
+              )}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<ChevronRight size={16} />}
+              aria-label={strings.projectsNextWeek}
+              onClick={() => setMonday(shiftWeek(monday, 1))}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setMonday(mondayOf(new Date()))}
+            >
+              {strings.projectsThisWeek}
+            </Button>
+          </div>
+        </div>
       </section>
-
-      <div
-        className={`${styles.toolbar} rounded-xl border border-default bg-surface px-3 py-2`}
-      >
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={<ChevronLeft size={16} />}
-          onClick={() => setMonday(shiftWeek(monday, -1))}
-        >
-          {strings.projectsPreviousWeek}
-        </Button>
-        <span className={styles.periodLabel}>
-          {strings.projectsWeekOf(
-            dayLabel(monday, { day: "numeric", month: "short" }),
-            dayLabel(sunday),
-          )}
-        </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={<ChevronRight size={16} />}
-          onClick={() => setMonday(shiftWeek(monday, 1))}
-        >
-          {strings.projectsNextWeek}
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setMonday(mondayOf(new Date()))}
-        >
-          {strings.projectsThisWeek}
-        </Button>
-        <span className={styles.toolbarSpacer} />
-        <WeekChip status={status} />
-        {loading && <Spinner size={16} />}
-      </div>
 
       {error !== null && <ErrorBanner message={error} />}
 

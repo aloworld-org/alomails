@@ -20,7 +20,7 @@
 // - **It draws no bar for a plan of one date.** A timeline needs a span; one
 //   milestone is a date, and it is shown as one.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Flag, Plus } from "lucide-react";
+import { CheckCircle2, Flag, Plus, X } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 
 import { Button, Spinner } from "../ds";
@@ -37,9 +37,10 @@ import type { Milestone, Project, ProjectPlan } from "./types";
 const styles = {
   page: "flex min-h-0 flex-col gap-4 overflow-auto px-5 py-4",
   toolbar: "flex flex-wrap items-center gap-3",
-  select: "w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent",
+  select:
+    "w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent",
   toolbarSpacer: "flex-1",
-  timeline: "relative mx-3 mt-2 h-12",
+  timeline: "relative mx-6 h-14",
   timelineTrack: "absolute inset-x-0 top-2.5 h-0.5 bg-subtle",
   timelineMark:
     "absolute top-0 flex -translate-x-1/2 flex-col items-center gap-1",
@@ -47,17 +48,18 @@ const styles = {
   timelineDotDone: "!border-success !bg-success",
   timelineDotLate: "!border-danger !bg-danger",
   timelineDay: "whitespace-nowrap text-xs text-tertiary",
-  plan: "m-0 flex list-none flex-col gap-3 p-0",
-  milestone: "rounded-md border border-subtle bg-surface",
-  milestoneHead: "flex flex-wrap items-center gap-3 px-4 py-2.5",
-  rowName: "text-left font-medium text-link",
+  plan: "m-0 grid list-none gap-4 p-0 xl:grid-cols-2",
+  milestone:
+    "overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm transition-shadow hover:shadow-md",
+  milestoneHead: "flex flex-wrap items-start gap-3 px-5 py-4",
+  rowName: "text-left text-base font-semibold text-link hover:text-accent",
   muted: "text-tertiary",
   chip: "inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium",
   chipGood: "bg-[var(--success-tint)] text-success",
   chipBad: "bg-[var(--danger-tint)] text-danger",
-  milestoneTasks: "m-0 list-none border-t border-subtle p-0",
+  milestoneTasks: "m-0 list-none border-t border-subtle bg-raised/40 p-0",
   milestoneTask:
-    "flex items-center gap-3 border-b border-subtle px-4 py-2 text-sm text-primary last:border-b-0",
+    "flex min-h-11 items-center gap-3 border-b border-subtle px-5 py-2.5 text-sm text-primary last:border-b-0",
   taskDone: "text-tertiary line-through",
   unplaced: "rounded-md border border-dashed border-default",
   unplacedTitle: "m-0 px-4 py-2.5 text-sm font-medium text-secondary",
@@ -213,23 +215,71 @@ export function PlanView({
 
   return (
     <div className={styles.page}>
-      <ProjectScopePicker
-        projects={projects}
-        value={projectId === ALL_PROJECTS ? null : projectId}
-        disabled={projectsLoading}
-        onChange={(nextProjectId) =>
-          selectProject(nextProjectId ?? ALL_PROJECTS)
-        }
-      />
-      <div className={styles.toolbar}>
-        <span className={styles.toolbarSpacer} />
-        {loading && <Spinner size={16} />}
-        {project !== null && plan.milestones.length > 0 && (
-          <Button onClick={() => setEditing("new")}>
-            <Plus size={15} /> {strings.projectsMilestoneAdd}
-          </Button>
+      <section className="rounded-2xl border border-default bg-surface shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+              <Flag size={20} aria-hidden="true" />
+            </span>
+            <div>
+              <h2 className="m-0 text-lg font-semibold text-primary">
+                {strings.projectsTabPlan}
+              </h2>
+              <p className="m-0 mt-0.5 text-sm text-secondary">
+                {projectId === ALL_PROJECTS
+                  ? strings.projectsAllProjects
+                  : project?.name}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {loading && <Spinner size={16} />}
+            {project !== null && plan.milestones.length > 0 && (
+              <Button
+                icon={<Plus size={15} />}
+                onClick={() => setEditing("new")}
+              >
+                {strings.projectsMilestoneAdd}
+              </Button>
+            )}
+          </div>
+        </div>
+        <div className="border-t border-subtle px-5 py-4">
+          <ProjectScopePicker
+            compact
+            projects={projects}
+            value={projectId === ALL_PROJECTS ? null : projectId}
+            disabled={projectsLoading}
+            onChange={(nextProjectId) =>
+              selectProject(nextProjectId ?? ALL_PROJECTS)
+            }
+          />
+        </div>
+        {positions !== null && (
+          <div className="border-t border-subtle py-4">
+            <div className={styles.timeline} aria-hidden="true">
+              <span className={styles.timelineTrack} />
+              {plan.milestones.map((milestone, index) => (
+                <span
+                  key={milestone.id}
+                  className={styles.timelineMark}
+                  style={{ left: `${positions[index] ?? 0}%` }}
+                >
+                  <span
+                    className={`${styles.timelineDot} ${milestone.done ? styles.timelineDotDone : milestone.late ? styles.timelineDotLate : ""}`}
+                  />
+                  <span className={styles.timelineDay}>
+                    {dayLabel(milestone.dueOn, {
+                      day: "numeric",
+                      month: "short",
+                    })}
+                  </span>
+                </span>
+              ))}
+            </div>
+          </div>
         )}
-      </div>
+      </section>
 
       {error !== null && <ErrorBanner message={error} />}
 
@@ -259,35 +309,6 @@ export function PlanView({
         />
       ) : (
         <>
-          {positions !== null && (
-            <div className={styles.timeline} aria-hidden="true">
-              <span className={styles.timelineTrack} />
-              {plan.milestones.map((milestone, index) => (
-                <span
-                  key={milestone.id}
-                  className={styles.timelineMark}
-                  style={{ left: `${positions[index] ?? 0}%` }}
-                >
-                  <span
-                    className={`${styles.timelineDot} ${
-                      milestone.done
-                        ? styles.timelineDotDone
-                        : milestone.late
-                          ? styles.timelineDotLate
-                          : ""
-                    }`}
-                  />
-                  <span className={styles.timelineDay}>
-                    {dayLabel(milestone.dueOn, {
-                      day: "numeric",
-                      month: "short",
-                    })}
-                  </span>
-                </span>
-              ))}
-            </div>
-          )}
-
           <ul className={styles.plan}>
             {plan.milestones.map((milestone) => {
               const under = tasks.filter(
@@ -327,15 +348,32 @@ export function PlanView({
                         {strings.projectsMilestoneLate}
                       </span>
                     ) : null}
-                    <span className={styles.toolbarSpacer} />
-                    <span className={styles.muted}>
-                      {milestone.taskCount === 0
-                        ? strings.projectsMilestoneNoTasks
-                        : strings.projectsMilestoneTasksClosed(
-                            milestone.taskDoneCount,
-                            milestone.taskCount,
-                          )}
-                    </span>
+                    <div className="ml-auto flex min-w-36 flex-col gap-1.5">
+                      <span className="text-right text-xs text-secondary">
+                        {milestone.taskCount === 0
+                          ? strings.projectsMilestoneNoTasks
+                          : strings.projectsMilestoneTasksClosed(
+                              milestone.taskDoneCount,
+                              milestone.taskCount,
+                            )}
+                      </span>
+                      {milestone.taskCount > 0 && (
+                        <span
+                          className="h-1.5 overflow-hidden rounded-full bg-raised"
+                          role="progressbar"
+                          aria-valuemin={0}
+                          aria-valuemax={milestone.taskCount}
+                          aria-valuenow={milestone.taskDoneCount}
+                        >
+                          <span
+                            className="block h-full rounded-full bg-accent"
+                            style={{
+                              width: `${(milestone.taskDoneCount / milestone.taskCount) * 100}%`,
+                            }}
+                          />
+                        </span>
+                      )}
+                    </div>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -351,6 +389,14 @@ export function PlanView({
                       {under.map((task) => (
                         <li key={task.id} className={styles.milestoneTask}>
                           <span
+                            className="grid size-5 shrink-0 place-items-center rounded-full border border-default text-success"
+                            aria-hidden="true"
+                          >
+                            {task.completedAt !== null && (
+                              <CheckCircle2 size={14} />
+                            )}
+                          </span>
+                          <span
                             className={
                               task.completedAt === null
                                 ? undefined
@@ -363,10 +409,10 @@ export function PlanView({
                           <Button
                             variant="ghost"
                             size="sm"
+                            icon={<X size={15} />}
+                            aria-label={strings.projectsPlanRemove}
                             onClick={() => void place(task.id, "")}
-                          >
-                            {strings.projectsPlanRemove}
-                          </Button>
+                          />
                         </li>
                       ))}
                     </ul>

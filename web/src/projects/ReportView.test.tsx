@@ -125,6 +125,28 @@ afterEach(() => {
 });
 
 describe("ReportView invoice handoff", () => {
+  it("opens a reported project from its name", async () => {
+    profitability.mockResolvedValue(report);
+    const onOpenProject = vi.fn();
+
+    render(
+      <MemoryRouter>
+        <ReportView
+          projects={[project]}
+          customerName={() => "Atelier Dupont SARL"}
+          revision={0}
+          onCreateInvoice={vi.fn()}
+          onOpenProject={onOpenProject}
+        />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Open Website redesign" }),
+    );
+    expect(onOpenProject).toHaveBeenCalledWith(project);
+  });
+
   it("always reads the full accessible client portfolio", async () => {
     profitability.mockResolvedValue({ ...report, projects: [] });
 
@@ -137,6 +159,7 @@ describe("ReportView invoice handoff", () => {
           customerName={() => "Atelier Dupont SARL"}
           revision={0}
           onCreateInvoice={vi.fn()}
+          onOpenProject={vi.fn()}
         />
       </MemoryRouter>,
     );
@@ -149,7 +172,9 @@ describe("ReportView invoice handoff", () => {
     });
     expect(screen.queryByText("Internal operations")).toBeNull();
     expect(screen.getByText("Portfolio report")).toBeTruthy();
-    expect(screen.getByText("All client projects you can access.")).toBeTruthy();
+    expect(
+      screen.getByText("All client projects you can access."),
+    ).toBeTruthy();
     expect(screen.queryByRole("combobox")).toBeNull();
   });
 
@@ -171,15 +196,13 @@ describe("ReportView invoice handoff", () => {
           customerName={() => "Atelier Dupont SARL"}
           revision={0}
           onCreateInvoice={vi.fn()}
+          onOpenProject={vi.fn()}
         />
       </MemoryRouter>,
     );
 
     await waitFor(() => {
-      expect(profitability).toHaveBeenCalledWith(
-        "2026-08-17",
-        "2026-08-23",
-      );
+      expect(profitability).toHaveBeenCalledWith("2026-08-17", "2026-08-23");
     });
   });
 
@@ -194,6 +217,7 @@ describe("ReportView invoice handoff", () => {
           customerName={() => "Atelier Dupont SARL"}
           revision={0}
           onCreateInvoice={onCreateInvoice}
+          onOpenProject={vi.fn()}
         />
       </MemoryRouter>,
     );
@@ -229,6 +253,7 @@ describe("ReportView invoice handoff", () => {
           customerName={() => "Atelier Dupont SARL"}
           revision={0}
           onCreateInvoice={vi.fn()}
+          onOpenProject={vi.fn()}
         />
       </MemoryRouter>,
     );
