@@ -1583,12 +1583,14 @@ function ImageOptionGroup<T extends string | number>({
             className={cx(
               "group relative whitespace-nowrap border text-center text-sm font-medium transition-all hover:border-accent hover:bg-accent-soft hover:text-accent",
               visual
-                ? "h-20 rounded-xl bg-surface p-2 shadow-sm hover:-translate-y-px hover:shadow-md"
+                ? "h-20 rounded-xl bg-transparent p-2"
                 : "min-h-11 rounded-lg px-3",
               value === id
-                ? "border-accent/30 bg-accent-soft font-semibold text-accent shadow-sm ring-1 ring-inset ring-accent/15"
+                ? visual
+                  ? "border-accent bg-transparent text-accent ring-1 ring-inset ring-accent/15"
+                  : "border-accent/30 bg-accent-soft font-semibold text-accent shadow-sm ring-1 ring-inset ring-accent/15"
                 : visual
-                  ? "border-default text-secondary"
+                  ? "border-transparent text-secondary"
                   : "border-transparent bg-transparent text-secondary",
             )}
             onClick={() => onChange(id)}
