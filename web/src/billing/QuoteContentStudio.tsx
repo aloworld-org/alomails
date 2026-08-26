@@ -979,8 +979,8 @@ function ListBlockEditor({
 
 type ImageBlock = Extract<Block, { kind: "image" }>;
 
-const IMAGE_ASPECT = {
-  natural: "max-h-[520px]",
+const IMAGE_FRAME = {
+  natural: "",
   landscape: "aspect-[16/7]",
   square: "aspect-square",
 } as const;
@@ -995,6 +995,40 @@ const IMAGE_BLOCK_ZOOM = {
   200: "scale-200",
 } as const;
 
+function QuotationBlockImage({
+  block,
+  onDoubleClick,
+}: {
+  block: ImageBlock;
+  onDoubleClick?: () => void;
+}) {
+  const aspect = block.aspect ?? "landscape";
+  const fit = block.fit ?? "cover";
+  const zoom = fit === "cover" ? Math.max(100, block.zoom ?? 100) : block.zoom ?? 100;
+  return (
+    <div
+      className={cx(
+        "relative overflow-hidden rounded-xl bg-surface",
+        IMAGE_FRAME[aspect],
+      )}
+    >
+      <img
+        src={block.src}
+        alt={block.caption || "Quotation image"}
+        className={cx(
+          "transition-transform duration-200",
+          aspect === "natural"
+            ? "mx-auto max-h-[520px] w-full"
+            : "absolute inset-0 size-full",
+          fit === "contain" ? "object-contain" : "object-cover",
+          IMAGE_BLOCK_ZOOM[zoom as keyof typeof IMAGE_BLOCK_ZOOM],
+        )}
+        onDoubleClick={onDoubleClick}
+      />
+    </div>
+  );
+}
+
 function ImageContentBlock({
   block,
   readOnly,
@@ -1006,19 +1040,10 @@ function ImageContentBlock({
 }) {
   const placement = block.placement ?? "full";
   const image = (
-    <div className="group/image relative overflow-hidden rounded-xl bg-raised">
-      <img
-        src={block.src}
-        alt={block.caption || "Quotation image"}
-        className={cx(
-          "w-full transition-transform duration-200",
-          IMAGE_ASPECT[block.aspect ?? "landscape"],
-          block.fit === "contain" ? "object-contain" : "object-cover",
-          IMAGE_BLOCK_ZOOM[block.zoom ?? 100],
-        )}
-        onDoubleClick={readOnly ? undefined : onEdit}
-      />
-    </div>
+    <QuotationBlockImage
+      block={block}
+      onDoubleClick={readOnly ? undefined : onEdit}
+    />
   );
   const copy = (block.body || block.caption) && (
     <div className="flex flex-col justify-center px-1 py-2">
@@ -1083,12 +1108,12 @@ function ImageBlockEditor({
           quotation.
         </p>
       </div>
-      <section className="rounded-2xl border border-default bg-surface p-5 shadow-sm">
+      <section className="border-y border-subtle py-5">
         <h4 className="text-sm font-semibold text-primary">Layout tools</h4>
         <p className="mt-1 text-xs text-secondary">
           Choose how this content block will appear in the quotation.
         </p>
-        <div className="mt-5 grid items-start gap-x-5 gap-y-4 md:grid-cols-2 xl:grid-cols-[1.15fr_1.15fr_1fr_1.1fr]">
+        <div className="mt-5 grid items-start gap-x-6 gap-y-5 md:grid-cols-2 xl:grid-cols-[1.15fr_1.15fr_1fr_1.1fr]">
           <ImageOptionGroup
             label="Place text"
             value={block.placement ?? "full"}
@@ -1116,10 +1141,26 @@ function ImageBlockEditor({
               ["cover", "Fill frame"],
               ["contain", "Show whole image"],
             ]}
-            onChange={(fit) => onChange({ fit })}
+            onChange={(fit) =>
+              onChange({
+                fit,
+                zoom:
+                  fit === "cover" && (block.zoom ?? 100) < 100
+                    ? 100
+                    : block.zoom,
+              })
+            }
           />
           <ImageZoomControl
-            value={block.zoom ?? 100}
+            value={
+              block.fit === "cover"
+                ? (Math.max(100, block.zoom ?? 100) as Exclude<
+                    ImageBlock["zoom"],
+                    undefined
+                  >)
+                : (block.zoom ?? 100)
+            }
+            minimum={block.fit === "cover" ? 100 : 50}
             onChange={(zoom) => onChange({ zoom })}
           />
         </div>
@@ -1136,19 +1177,8 @@ function ImageBlockEditor({
               <Upload className="size-4" aria-hidden="true" /> Replace
             </button>
           </div>
-          <div className="rounded-2xl border border-default bg-surface p-4 shadow-sm">
-            <div className="mx-auto flex min-h-[26rem] items-center justify-center overflow-hidden rounded-xl bg-surface">
-              <img
-                src={block.src}
-                alt={block.caption || "Quotation image"}
-                className={cx(
-                  "mx-auto w-full transition-transform duration-200",
-                  IMAGE_ASPECT[block.aspect ?? "landscape"],
-                  block.fit === "contain" ? "object-contain" : "object-cover",
-                  IMAGE_BLOCK_ZOOM[block.zoom ?? 100],
-                )}
-              />
-            </div>
+          <div className="rounded-2xl border border-default bg-surface p-3 shadow-sm">
+            <QuotationBlockImage block={block} />
           </div>
         </section>
         <section className="min-w-0">
@@ -1386,7 +1416,7 @@ function ImageOptionGroup<T extends string | number>({
       </legend>
       <div
         className={cx(
-          "mt-2 grid gap-1 rounded-xl bg-raised p-1",
+          "mt-2 grid gap-2",
           options.length === 3 ? "grid-cols-3" : "grid-cols-2",
         )}
       >
@@ -1396,10 +1426,10 @@ function ImageOptionGroup<T extends string | number>({
             type="button"
             aria-pressed={value === id}
             className={cx(
-              "relative min-h-11 rounded-lg border px-2 text-center text-xs font-semibold transition-colors hover:bg-accent-soft hover:text-accent",
+              "relative min-h-11 rounded-xl border px-3 text-center text-xs font-semibold shadow-sm transition-all hover:-translate-y-px hover:border-accent hover:bg-accent-soft hover:text-accent",
               value === id
                 ? "border-accent bg-accent-soft text-accent shadow-sm"
-                : "border-transparent bg-transparent text-primary hover:border-accent/30",
+                : "border-default bg-surface text-primary",
             )}
             onClick={() => onChange(id)}
           >
@@ -1415,13 +1445,16 @@ const IMAGE_ZOOM_STEPS = [50, 75, 100, 125, 150, 175, 200] as const;
 
 function ImageZoomControl({
   value,
+  minimum = 50,
   onChange,
 }: {
   value: ImageBlock["zoom"] extends infer Z ? Exclude<Z, undefined> : never;
+  minimum?: 50 | 100;
   onChange: (value: Exclude<ImageBlock["zoom"], undefined>) => void;
 }) {
   const index = IMAGE_ZOOM_STEPS.indexOf(value);
-  const previous = IMAGE_ZOOM_STEPS[Math.max(0, index - 1)] ?? 50;
+  const minimumIndex = IMAGE_ZOOM_STEPS.indexOf(minimum);
+  const previous = IMAGE_ZOOM_STEPS[Math.max(minimumIndex, index - 1)] ?? minimum;
   const next =
     IMAGE_ZOOM_STEPS[Math.min(IMAGE_ZOOM_STEPS.length - 1, index + 1)] ?? 200;
   return (
@@ -1442,12 +1475,12 @@ function ImageZoomControl({
           Reset
         </button>
       </div>
-      <div className="mt-2 grid grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-1 rounded-xl bg-raised p-1">
+      <div className="mt-2 grid grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-1 rounded-xl border border-default bg-surface p-1 shadow-sm">
         <button
           type="button"
           className="grid size-10 place-items-center rounded-lg text-primary transition-colors hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-35"
           aria-label="Zoom out"
-          disabled={index <= 0}
+          disabled={index <= minimumIndex}
           onClick={() => onChange(previous)}
         >
           <Minus className="size-4" aria-hidden="true" />
@@ -1466,7 +1499,7 @@ function ImageZoomControl({
         </button>
       </div>
       <div className="mt-2 flex justify-between px-1 text-[11px] text-tertiary">
-        <span>50%</span>
+        <span>{minimum}%</span>
         <span>100%</span>
         <span>200%</span>
       </div>
