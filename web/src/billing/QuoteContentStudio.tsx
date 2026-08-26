@@ -1113,7 +1113,7 @@ function ImageBlockEditor({
         <p className="mt-1 text-xs text-secondary">
           Choose how this content block will appear in the quotation.
         </p>
-        <div className="mt-5 grid items-start gap-x-6 gap-y-5 md:grid-cols-2 xl:grid-cols-[1.15fr_1.15fr_1fr_1.1fr]">
+        <div className="mt-5 grid items-stretch gap-3 md:grid-cols-2 xl:grid-cols-[1.2fr_1fr_1.05fr_1.05fr]">
           <ImageOptionGroup
             label="Place text"
             value={block.placement ?? "full"}
@@ -1139,7 +1139,7 @@ function ImageBlockEditor({
             value={block.fit ?? "cover"}
             options={[
               ["cover", "Fill frame"],
-              ["contain", "Show whole image"],
+              ["contain", "Whole image"],
             ]}
             onChange={(fit) =>
               onChange({
@@ -1410,13 +1410,16 @@ function ImageOptionGroup<T extends string | number>({
   onChange: (value: T) => void;
 }) {
   return (
-    <fieldset className="min-w-0">
-      <legend className="text-xs font-semibold uppercase tracking-wide text-tertiary">
+    <fieldset className="min-w-0 rounded-xl border border-default bg-surface p-3 shadow-sm">
+      <legend className="sr-only">
         {label}
       </legend>
+      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-tertiary">
+        {label}
+      </p>
       <div
         className={cx(
-          "mt-2 grid gap-2",
+          "grid gap-2",
           options.length === 3 ? "grid-cols-3" : "grid-cols-2",
         )}
       >
@@ -1426,10 +1429,10 @@ function ImageOptionGroup<T extends string | number>({
             type="button"
             aria-pressed={value === id}
             className={cx(
-              "relative min-h-11 rounded-xl border px-3 text-center text-xs font-semibold shadow-sm transition-all hover:-translate-y-px hover:border-accent hover:bg-accent-soft hover:text-accent",
+              "relative min-h-11 whitespace-nowrap rounded-lg border px-3 text-center text-sm font-medium transition-all hover:border-accent hover:bg-accent-soft hover:text-accent",
               value === id
-                ? "border-accent bg-accent-soft text-accent shadow-sm"
-                : "border-default bg-surface text-primary",
+                ? "border-accent bg-accent-soft font-semibold text-accent ring-1 ring-inset ring-accent/20"
+                : "border-subtle bg-raised/40 text-primary",
             )}
             onClick={() => onChange(id)}
           >
@@ -1458,7 +1461,7 @@ function ImageZoomControl({
   const next =
     IMAGE_ZOOM_STEPS[Math.min(IMAGE_ZOOM_STEPS.length - 1, index + 1)] ?? 200;
   return (
-    <section className="min-w-0">
+    <section className="min-w-0 rounded-xl border border-default bg-surface p-3 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h4 className="text-xs font-semibold uppercase tracking-wide text-tertiary">
@@ -1468,14 +1471,14 @@ function ImageZoomControl({
         </div>
         <button
           type="button"
-          className="text-xs font-semibold text-secondary transition-colors hover:text-accent disabled:opacity-40"
+          className="rounded-md px-2 py-1 text-xs font-semibold text-secondary transition-colors hover:bg-accent-soft hover:text-accent disabled:cursor-default disabled:opacity-35"
           disabled={value === 100}
           onClick={() => onChange(100)}
         >
           Reset
         </button>
       </div>
-      <div className="mt-2 grid grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-1 rounded-xl border border-default bg-surface p-1 shadow-sm">
+      <div className="mt-3 grid grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-1 rounded-lg border border-subtle bg-raised/40 p-1">
         <button
           type="button"
           className="grid size-10 place-items-center rounded-lg text-primary transition-colors hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-35"
