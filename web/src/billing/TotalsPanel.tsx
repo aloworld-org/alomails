@@ -11,6 +11,7 @@
 import { strings, useLocale } from "../i18n";
 import { cx } from "../ds";
 import { formatAmount, formatRate } from "./money";
+import { useQuoteTableOptions } from "./quoteTableOptions";
 import type { DocumentTotals } from "./types";
 import styles from "./billingStyles";
 
@@ -24,27 +25,69 @@ export function TotalsPanel({
   stale: boolean;
 }) {
   const locale = useLocale();
-  const amount = (cents: number) => formatAmount(cents, locale, currency);
+  const options = useQuoteTableOptions();
+  const amount = (cents: number) =>
+    `${formatAmount(cents, locale, currency)}${options.enabled && options.showCurrencyCode ? ` ${currency}` : ""}`;
+  const showSummary = !options.enabled || options.totalsDetail !== "total";
+  const showBreakdown =
+    !options.enabled || options.totalsDetail === "breakdown";
 
   return (
-    <section className={cx(styles.totals, stale && styles.stale)} aria-live="polite">
+    <section
+      className={cx(
+        styles.totals,
+        stale && styles.stale,
+        options.enabled &&
+          options.totalsPlacement === "full" &&
+          "!w-full !self-stretch max-sm:!w-full",
+        options.enabled &&
+          options.totalsPlacement === "footer" &&
+          "!w-full !self-stretch !rounded-t-none !border-x-0 !border-b-0 !bg-transparent !px-0 max-sm:!rounded-xl max-sm:!border max-sm:!bg-raised/40 max-sm:!px-5",
+        options.enabled && "max-sm:!w-full max-sm:!self-stretch",
+      )}
+      aria-live="polite"
+    >
       <dl className={styles.totalsList}>
-        <div className={styles.totalsRow}>
-          <dt>{strings.billingTotalsNet}</dt>
-          <dd className={styles.numeric}>{amount(totals.netCents)}</dd>
-        </div>
-        {totals.vatByRate.map((share) => (
-          <div key={share.rateBp} className={styles.totalsRow}>
-            <dt>{strings.billingVatAtRate(formatRate(share.rateBp, locale))}</dt>
-            <dd className={styles.numeric}>{amount(share.vatCents)}</dd>
+        {showSummary && (
+          <div className={styles.totalsRow}>
+            <dt>{strings.billingTotalsNet}</dt>
+            <dd className={styles.numeric}>{amount(totals.netCents)}</dd>
           </div>
-        ))}
-        <div className={cx(styles.totalsRow, styles.totalsGross)}>
+        )}
+        {showSummary &&
+          (showBreakdown ? (
+            totals.vatByRate.map((share) => (
+              <div key={share.rateBp} className={styles.totalsRow}>
+                <dt>
+                  {strings.billingVatAtRate(formatRate(share.rateBp, locale))}
+                </dt>
+                <dd className={styles.numeric}>{amount(share.vatCents)}</dd>
+              </div>
+            ))
+          ) : (
+            <div className={styles.totalsRow}>
+              <dt>VAT</dt>
+              <dd className={styles.numeric}>{amount(totals.vatCents)}</dd>
+            </div>
+          ))}
+        <div
+          className={cx(
+            styles.totalsRow,
+            (!options.enabled || options.emphasizeTotal) && styles.totalsGross,
+          )}
+        >
           <dt>{strings.billingTotalsGross}</dt>
           <dd className={styles.numeric}>{amount(totals.grossCents)}</dd>
         </div>
       </dl>
-      {stale && <p className={styles.totalsNote}>{strings.billingTotalsStale}</p>}
+      {options.enabled && options.showTaxNote && (
+        <p className="mt-3 text-xs text-tertiary">
+          VAT is shown separately from the net amount.
+        </p>
+      )}
+      {stale && (
+        <p className={styles.totalsNote}>{strings.billingTotalsStale}</p>
+      )}
     </section>
   );
 }

@@ -31,6 +31,8 @@ import {
   QuoteTableOptionsProvider,
   type QuoteLineContent,
   type QuoteTableLayout,
+  type QuoteTotalsDetail,
+  type QuoteTotalsPlacement,
 } from "./quoteTableOptions";
 
 type Theme = "modern" | "editorial" | "minimal";
@@ -73,6 +75,11 @@ interface Design {
   showProductImages: boolean;
   showProductDescriptions: boolean;
   lineContent: Record<string, QuoteLineContent>;
+  totalsPlacement: QuoteTotalsPlacement;
+  totalsDetail: QuoteTotalsDetail;
+  showCurrencyCode: boolean;
+  emphasizeTotal: boolean;
+  showTaxNote: boolean;
   blocks: Block[];
 }
 const DEFAULT_COLORS: Colors = {
@@ -91,6 +98,11 @@ const EMPTY: Design = {
   showProductImages: false,
   showProductDescriptions: false,
   lineContent: {},
+  totalsPlacement: "summary",
+  totalsDetail: "summary",
+  showCurrencyCode: false,
+  emphasizeTotal: true,
+  showTaxNote: false,
   blocks: [{ id: "pricing-table", kind: "pricing" }],
 };
 const DESIGN_STORE = "quote-designs";
@@ -462,6 +474,11 @@ export const QuoteContentStudio = forwardRef<
                             layout: design.tableLayout,
                             showImages: design.showProductImages,
                             showDescriptions: design.showProductDescriptions,
+                            totalsPlacement: design.totalsPlacement,
+                            totalsDetail: design.totalsDetail,
+                            showCurrencyCode: design.showCurrencyCode,
+                            emphasizeTotal: design.emphasizeTotal,
+                            showTaxNote: design.showTaxNote,
                             lineContent: design.lineContent,
                             updateLineContent,
                           }}
@@ -1241,7 +1258,152 @@ function CustomizeTable({
           ))}
         </div>
       </section>
+
+      <section className="mt-6 border-t border-subtle pt-6">
+        <h3 className="text-sm font-semibold text-primary">Totals display</h3>
+        <p className="mt-1 text-sm text-secondary">
+          Choose where the totals sit and how much financial detail the customer
+          sees.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          {(
+            [
+              ["summary", "Summary card", "Compact and right aligned"],
+              ["full", "Full width", "Balances the entire table"],
+              ["footer", "Table footer", "Feels attached to the rows"],
+            ] as const
+          ).map(([placement, label, help]) => (
+            <button
+              key={placement}
+              type="button"
+              className={cx(
+                "group rounded-xl border p-3 text-left transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-sm",
+                design.totalsPlacement === placement
+                  ? "border-accent bg-accent-soft ring-1 ring-accent/20"
+                  : "border-default bg-surface",
+              )}
+              onClick={() =>
+                onChange((current) => ({
+                  ...current,
+                  totalsPlacement: placement,
+                }))
+              }
+            >
+              <TotalsPreview placement={placement} />
+              <span className="mt-3 flex items-start justify-between gap-2">
+                <span>
+                  <strong className="block text-sm font-semibold text-primary">
+                    {label}
+                  </strong>
+                  <span className="mt-0.5 block text-xs text-secondary">
+                    {help}
+                  </span>
+                </span>
+                <span
+                  className={cx(
+                    "grid size-5 shrink-0 place-items-center rounded-full border",
+                    design.totalsPlacement === placement
+                      ? "border-accent bg-accent text-on-accent"
+                      : "border-default group-hover:border-accent",
+                  )}
+                >
+                  {design.totalsPlacement === placement && (
+                    <Check className="size-3.5" />
+                  )}
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <h4 className="mt-5 text-xs font-semibold uppercase tracking-wide text-tertiary">
+          Amount details
+        </h4>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          {(
+            [
+              ["total", "Total only", "The shortest summary"],
+              ["summary", "Net, VAT and total", "Recommended for most quotes"],
+              ["breakdown", "VAT breakdown", "Show every VAT rate"],
+            ] as const
+          ).map(([detail, label, help]) => (
+            <TableToggle
+              key={detail}
+              label={label}
+              help={help}
+              checked={design.totalsDetail === detail}
+              onClick={() =>
+                onChange((current) => ({ ...current, totalsDetail: detail }))
+              }
+            />
+          ))}
+        </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <TableToggle
+            label="Currency code"
+            help="Show EUR, USD, or the quote currency"
+            checked={design.showCurrencyCode}
+            onClick={() =>
+              onChange((current) => ({
+                ...current,
+                showCurrencyCode: !current.showCurrencyCode,
+              }))
+            }
+          />
+          <TableToggle
+            label="Emphasize total"
+            help="Give the final amount stronger hierarchy"
+            checked={design.emphasizeTotal}
+            onClick={() =>
+              onChange((current) => ({
+                ...current,
+                emphasizeTotal: !current.emphasizeTotal,
+              }))
+            }
+          />
+          <TableToggle
+            label="VAT note"
+            help="Explain that VAT is shown separately"
+            checked={design.showTaxNote}
+            onClick={() =>
+              onChange((current) => ({
+                ...current,
+                showTaxNote: !current.showTaxNote,
+              }))
+            }
+          />
+        </div>
+      </section>
     </Modal>
+  );
+}
+
+function TotalsPreview({ placement }: { placement: QuoteTotalsPlacement }) {
+  return (
+    <span
+      className="block h-20 rounded-lg border border-subtle bg-raised/40 p-2"
+      aria-hidden="true"
+    >
+      <span className="block h-5 rounded bg-surface" />
+      <span
+        className={cx(
+          "mt-2 flex flex-col gap-1 rounded-md bg-surface p-2",
+          placement === "summary" && "ml-auto w-1/2",
+          placement === "full" && "w-full",
+          placement === "footer" &&
+            "mt-3 w-full rounded-t-none border-t border-accent/35",
+        )}
+      >
+        <span className="flex justify-between">
+          <span className="h-1 w-8 rounded bg-secondary/20" />
+          <span className="h-1 w-6 rounded bg-secondary/20" />
+        </span>
+        <span className="flex justify-between">
+          <span className="h-1 w-6 rounded bg-primary/25" />
+          <span className="h-1 w-8 rounded bg-accent/55" />
+        </span>
+      </span>
+    </span>
   );
 }
 

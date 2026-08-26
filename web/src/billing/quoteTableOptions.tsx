@@ -2,6 +2,8 @@ import { createContext, useContext } from "react";
 import type { ReactNode } from "react";
 
 export type QuoteTableLayout = "compact" | "detailed" | "catalogue";
+export type QuoteTotalsPlacement = "summary" | "full" | "footer";
+export type QuoteTotalsDetail = "total" | "summary" | "breakdown";
 
 export interface QuoteLineContent {
   description: string;
@@ -13,6 +15,11 @@ export interface QuoteTableOptionsValue {
   layout: QuoteTableLayout;
   showImages: boolean;
   showDescriptions: boolean;
+  totalsPlacement: QuoteTotalsPlacement;
+  totalsDetail: QuoteTotalsDetail;
+  showCurrencyCode: boolean;
+  emphasizeTotal: boolean;
+  showTaxNote: boolean;
   lineContent: Record<string, QuoteLineContent>;
   updateLineContent: (key: string, patch: Partial<QuoteLineContent>) => void;
 }
@@ -22,6 +29,11 @@ const QuoteTableOptions = createContext<QuoteTableOptionsValue>({
   layout: "compact",
   showImages: false,
   showDescriptions: false,
+  totalsPlacement: "summary",
+  totalsDetail: "summary",
+  showCurrencyCode: false,
+  emphasizeTotal: true,
+  showTaxNote: false,
   lineContent: {},
   updateLineContent: () => undefined,
 });
