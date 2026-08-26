@@ -460,6 +460,61 @@ async fn app_password_opens_legacy_login_for_2fa_accounts() {
     assert_no(&c.login(&email, &app_pw).await);
 }
 
+/// SASL XOAUTH2 over real TLS IMAP (M1.4): the capability is advertised,
+/// a live bearer token authenticates via an initial response and reaches
+/// the mailbox, and a revoked token gets the mechanism's error dialog —
+/// a `+ <base64 status>` continuation, an empty client acknowledgement,
+/// then the tagged NO. Exchange recorded in `docs/interop.md`.
+#[tokio::test]
+async fn xoauth2_bearer_authenticates_and_revocation_runs_error_dialog() {
+    use base64::Engine;
+    use base64::engine::general_purpose::STANDARD as B64;
+
+    let store = test_store().await;
+    let (tenant, user, email, _pw) = make_user(&store, "xoauth2").await;
+    let identity = test_identity(store.clone());
+    let token = identity
+        .issue_access_token(&tenant, &user, None, "openid email profile")
+        .await
+        .unwrap();
+    let blob = B64.encode(format!(
+        "user={email}\u{1}auth=Bearer {}\u{1}\u{1}",
+        token.reveal()
+    ));
+
+    let addr = spawn_imap(store.clone()).await;
+
+    let mut c = Client::connect(addr).await;
+    let caps = c.command("CAPABILITY").await;
+    assert!(caps.iter().any(|l| l.contains("AUTH=XOAUTH2")), "{caps:?}");
+    assert!(caps.iter().any(|l| l.contains("SASL-IR")), "{caps:?}");
+
+    // A live token authenticates (SASL-IR form) and reaches the mailbox.
+    let r = c.command(&format!("AUTHENTICATE XOAUTH2 {blob}")).await;
+    assert_ok(&r);
+    assert_ok(&c.command("SELECT INBOX").await);
+    assert_ok(&c.command("LOGOUT").await);
+
+    // Revoked → the error dialog, then NO (fails on the next connection).
+    identity.revoke_access_token(token.reveal()).await.unwrap();
+    let mut c = Client::connect(addr).await;
+    c.write(format!("x AUTHENTICATE XOAUTH2 {blob}\r\n").as_bytes())
+        .await;
+    let cont = c.read_line().await;
+    let status = cont
+        .strip_prefix("+ ")
+        .unwrap_or_else(|| panic!("expected error-status continuation, got {cont}"));
+    let decoded = String::from_utf8(B64.decode(status.trim()).unwrap()).unwrap();
+    assert!(decoded.contains("\"status\":\"401\""), "{decoded}");
+    c.write(b"\r\n").await; // the client's empty acknowledgement
+    assert_no(&c.read_until_tag("x").await);
+
+    // A malformed blob is a protocol error, not a credential failure.
+    let mut c = Client::connect(addr).await;
+    let bad = c.command("AUTHENTICATE XOAUTH2 bm90LWEtYmxvYg==").await;
+    assert!(completion(&bad).contains(" BAD "), "{bad:?}");
+}
+
 /// Extracts a numeric response code value (e.g. UIDVALIDITY) from lines.
 fn extract_code(lines: &[String], code: &str) -> String {
     for l in lines {

@@ -535,3 +535,64 @@ async fn legacy_seam_accepts_app_passwords_and_keeps_primary_refused_under_2fa()
         "a revoked app password must fail on the next connection"
     );
 }
+
+/// The M1.4 seam: `authenticate_xoauth2` accepts a live bearer token only
+/// for the token's own principal — never across users or tenants — and a
+/// revoked token fails on the next connection. 2FA is upstream by
+/// construction: the token was only issued after the full login.
+#[tokio::test]
+async fn xoauth2_seam_binds_tokens_to_their_own_principal() {
+    let (store, id) = setup().await;
+    let a = make_user(&store, &id, "xo-a").await;
+    let b = make_user(&store, &id, "xo-b").await; // a different tenant
+
+    let token = id
+        .issue_access_token(&a.tenant, &a.user, None, "openid email profile")
+        .await
+        .unwrap();
+
+    // The token's own user authenticates; the principal is scope-less
+    // (a protocol login grants no OAuth capability).
+    let p = id
+        .authenticate_xoauth2(&a.email, token.reveal())
+        .await
+        .unwrap()
+        .expect("a live token must authenticate its own user");
+    assert_eq!(p.tenant, a.tenant);
+    assert_eq!(p.user, a.user);
+    assert!(p.scope.is_empty(), "protocol logins grant no OAuth scope");
+
+    // A's token can never log in as B (wrong tenant AND wrong user), nor
+    // as an unknown user — all indistinguishable failures.
+    assert!(
+        id.authenticate_xoauth2(&b.email, token.reveal())
+            .await
+            .unwrap()
+            .is_none(),
+        "a token must never authenticate another principal"
+    );
+    assert!(
+        id.authenticate_xoauth2("nobody-here@ex.test", token.reveal())
+            .await
+            .unwrap()
+            .is_none()
+    );
+
+    // A garbage token never authenticates.
+    assert!(
+        id.authenticate_xoauth2(&a.email, "not-a-real-token")
+            .await
+            .unwrap()
+            .is_none()
+    );
+
+    // Revocation is honoured immediately (the introspection seam).
+    id.revoke_access_token(token.reveal()).await.unwrap();
+    assert!(
+        id.authenticate_xoauth2(&a.email, token.reveal())
+            .await
+            .unwrap()
+            .is_none(),
+        "a revoked token must fail on the next connection"
+    );
+}

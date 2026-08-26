@@ -31,6 +31,7 @@ pub mod site_invites;
 pub mod token;
 pub mod totp;
 mod user_invites;
+pub mod xoauth2;
 
 pub use config::{ConfigError, IdentityConfig};
 pub use oauth::router;

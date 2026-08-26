@@ -624,3 +624,88 @@ async fn auth_accepts_app_password_for_2fa_account() {
     );
     assert!(sec.cmd("QUIT").await.starts_with("221 "));
 }
+
+/// SASL XOAUTH2 on submission (M1.4): the mechanism is advertised after
+/// TLS, a live OAuth bearer token authenticates, and a revoked token gets
+/// the mechanism's error dialog — `334 <base64 status>`, an empty client
+/// acknowledgement, then `535`. Exchange recorded in `docs/interop.md`.
+#[tokio::test]
+async fn auth_xoauth2_accepts_live_bearer_and_refuses_revoked() {
+    let (addr, _spool, _dir) = spawn_submission().await;
+
+    // A dedicated user with an issued access token (the same kind the
+    // OAuth flow mints after the full login, 2FA included).
+    let store = shared_store().await;
+    let identity = Identity::new(Arc::clone(&store), fast_config()).unwrap();
+    let tenant = store.create_tenant("submission-xoauth2").await.unwrap();
+    let email = format!("xoauth2-{tenant}@alo.test");
+    let user = store
+        .for_tenant(tenant.clone())
+        .create_user(&email)
+        .await
+        .unwrap();
+    identity
+        .set_password(&tenant, &user, &email, "primary-s3cret")
+        .await
+        .unwrap();
+    let token = identity
+        .issue_access_token(&tenant, &user, None, "openid email profile")
+        .await
+        .unwrap();
+    let blob = BASE64.encode(format!(
+        "user={email}\u{1}auth=Bearer {}\u{1}\u{1}",
+        token.reveal()
+    ));
+
+    // Connect, upgrade to TLS.
+    let tcp = TcpStream::connect(addr).await.unwrap();
+    let mut plain = Client::new(tcp);
+    assert!(plain.read_reply().await.starts_with("220 "));
+    plain.cmd_multiline("EHLO client.example").await;
+    assert!(plain.cmd("STARTTLS").await.starts_with("220 "));
+    let tcp = plain.into_inner();
+    let server_name = rustls::pki_types::ServerName::try_from("localhost").unwrap();
+    let tls: TlsStream<TcpStream> = tls_connector().connect(server_name, tcp).await.unwrap();
+    let mut sec = Client::new(tls);
+    let ehlo = sec.cmd_multiline("EHLO client.example").await;
+    assert!(
+        ehlo.iter().any(|l| l.contains("XOAUTH2")),
+        "XOAUTH2 must be advertised after TLS: {ehlo:?}"
+    );
+
+    // A live token authenticates (initial-response form).
+    assert!(
+        sec.cmd(&format!("AUTH XOAUTH2 {blob}"))
+            .await
+            .starts_with("235 ")
+    );
+    assert!(sec.cmd("QUIT").await.starts_with("221 "));
+
+    // Revoke the token; the next connection runs the error dialog.
+    identity.revoke_access_token(token.reveal()).await.unwrap();
+    let tcp = TcpStream::connect(addr).await.unwrap();
+    let mut plain = Client::new(tcp);
+    assert!(plain.read_reply().await.starts_with("220 "));
+    plain.cmd_multiline("EHLO client.example").await;
+    assert!(plain.cmd("STARTTLS").await.starts_with("220 "));
+    let tcp = plain.into_inner();
+    let server_name = rustls::pki_types::ServerName::try_from("localhost").unwrap();
+    let tls: TlsStream<TcpStream> = tls_connector().connect(server_name, tcp).await.unwrap();
+    let mut sec = Client::new(tls);
+    sec.cmd_multiline("EHLO client.example").await;
+    let challenge = sec.cmd(&format!("AUTH XOAUTH2 {blob}")).await;
+    let status_b64 = challenge
+        .strip_prefix("334 ")
+        .unwrap_or_else(|| panic!("expected the error-status challenge, got {challenge}"));
+    let decoded = String::from_utf8(BASE64.decode(status_b64.trim()).unwrap()).unwrap();
+    assert!(decoded.contains("\"status\":\"401\""), "{decoded}");
+    // The empty acknowledgement, then the protocol-level rejection.
+    assert!(sec.cmd("").await.starts_with("535 "));
+
+    // A malformed blob is a 501, not a credential failure.
+    assert!(
+        sec.cmd("AUTH XOAUTH2 bm90LWEtYmxvYg==")
+            .await
+            .starts_with("501 ")
+    );
+}

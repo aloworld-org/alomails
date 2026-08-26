@@ -151,7 +151,7 @@ impl Session {
         // AUTH is offered only where it can be used: a submission role,
         // over TLS, not already authenticated (RFC 4954 §4).
         if self.params.role == Role::Submission && self.tls_active && self.identity.is_none() {
-            caps.push("AUTH PLAIN LOGIN".to_owned());
+            caps.push("AUTH PLAIN LOGIN XOAUTH2".to_owned());
         }
         caps.push(format!("SIZE {}", self.params.max_message_size));
         caps.push("8BITMIME".to_owned());

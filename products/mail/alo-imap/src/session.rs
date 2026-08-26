@@ -183,6 +183,10 @@ impl Session {
         if self.tls_active {
             caps.push("AUTH=PLAIN".to_owned());
             caps.push("AUTH=LOGIN".to_owned());
+            caps.push("AUTH=XOAUTH2".to_owned());
+            // RFC 4959: the AUTHENTICATE initial response every mechanism
+            // above accepts (XOAUTH2 clients in particular always send one).
+            caps.push("SASL-IR".to_owned());
         }
         for c in [
             "IDLE",
@@ -386,6 +390,22 @@ impl Session {
                     _ => self.tagged(tag, "BAD", "Invalid SASL response").await,
                 }
             }
+            "XOAUTH2" => {
+                let b64 = if initial.is_empty() {
+                    self.send("+ \r\n".as_bytes()).await?;
+                    self.read_continuation().await?
+                } else {
+                    initial
+                };
+                let parsed = B64
+                    .decode(b64.trim())
+                    .ok()
+                    .and_then(|raw| alo_identity::xoauth2::parse_client_response(&raw));
+                match parsed {
+                    Some(resp) => self.try_xoauth2(tag, &resp.username, &resp.token).await,
+                    None => self.tagged(tag, "BAD", "Invalid SASL response").await,
+                }
+            }
             _ => {
                 self.tagged(tag, "NO", "Unsupported authentication mechanism")
                     .await
@@ -411,34 +431,76 @@ impl Session {
         // password or OIDC instead), with per-username backoff. See
         // docs/design/identity.md.
         match self.identity.authenticate_legacy(user, pass).await {
-            Ok(Some(principal)) => {
-                let acc = self.store.for_account(principal.tenant, principal.user);
-                // Guarantee INBOX exists (RFC 9051 §5.1 — INBOX is always
-                // present); the store provisions it lazily otherwise.
-                let _ = acc.inbox().await;
-                self.acc = Some(acc);
-                self.state = State::Auth;
-                let caps = self.capabilities();
-                self.tagged(tag, "OK", &format!("[CAPABILITY {caps}] LOGIN completed"))
-                    .await
-            }
+            Ok(Some(principal)) => self.auth_success(tag, principal).await,
             Ok(None) => {
-                self.auth_failures += 1;
                 self.tagged(tag, "NO", "[AUTHENTICATIONFAILED] invalid credentials")
                     .await?;
-                if self.auth_failures >= self.cfg.max_auth_failures {
-                    let _ = self
-                        .send_line("* BYE Too many authentication failures")
-                        .await;
-                    return Err(std::io::Error::other("auth failure cap"));
-                }
-                Ok(())
+                self.auth_failure().await
             }
             Err(_) => {
                 self.tagged(tag, "NO", "Temporary authentication failure")
                     .await
             }
         }
+    }
+
+    /// Verifies an XOAUTH2 bearer login. On a credential failure the
+    /// mechanism's own error dialog runs first: a continuation carrying a
+    /// base64 error status, which the client acknowledges with an empty
+    /// line before the tagged `NO` (the de-facto XOAUTH2 contract real
+    /// clients implement — see `docs/interop.md`).
+    async fn try_xoauth2(&mut self, tag: &str, user: &str, token: &str) -> std::io::Result<()> {
+        // Bearer verification through the introspection seam (ADR 0025):
+        // revoked and expired tokens fail on the next connection, and the
+        // token must belong to exactly the asserted user.
+        match self.identity.authenticate_xoauth2(user, token).await {
+            Ok(Some(principal)) => self.auth_success(tag, principal).await,
+            Ok(None) => {
+                let status = alo_identity::xoauth2::error_status_b64();
+                self.send(format!("+ {status}\r\n").as_bytes()).await?;
+                // The client's (empty) acknowledgement line; its content is
+                // irrelevant — the exchange has already failed.
+                let _ = self.read_continuation().await?;
+                self.tagged(tag, "NO", "[AUTHENTICATIONFAILED] invalid credentials")
+                    .await?;
+                self.auth_failure().await
+            }
+            Err(_) => {
+                self.tagged(tag, "NO", "Temporary authentication failure")
+                    .await
+            }
+        }
+    }
+
+    /// Enters the Authenticated state for a verified principal and sends
+    /// the tagged OK (with the post-auth capability list, RFC 9051 §6.2).
+    async fn auth_success(
+        &mut self,
+        tag: &str,
+        principal: alo_identity::Principal,
+    ) -> std::io::Result<()> {
+        let acc = self.store.for_account(principal.tenant, principal.user);
+        // Guarantee INBOX exists (RFC 9051 §5.1 — INBOX is always
+        // present); the store provisions it lazily otherwise.
+        let _ = acc.inbox().await;
+        self.acc = Some(acc);
+        self.state = State::Auth;
+        let caps = self.capabilities();
+        self.tagged(tag, "OK", &format!("[CAPABILITY {caps}] LOGIN completed"))
+            .await
+    }
+
+    /// Counts one failed authentication toward the per-connection cap,
+    /// closing the connection when it is reached.
+    async fn auth_failure(&mut self) -> std::io::Result<()> {
+        self.auth_failures += 1;
+        if self.auth_failures >= self.cfg.max_auth_failures {
+            let _ = self
+                .send_line("* BYE Too many authentication failures")
+                .await;
+            return Err(std::io::Error::other("auth failure cap"));
+        }
+        Ok(())
     }
 
     // ---- tagged completion --------------------------------------------

@@ -819,6 +819,9 @@ async fn do_auth(
     mechanism: Mechanism,
     initial: Option<String>,
 ) -> std::io::Result<bool> {
+    if mechanism == Mechanism::XOAuth2 {
+        return do_auth_xoauth2(conn, session, runtime, initial).await;
+    }
     let credentials = match collect_credentials(conn, mechanism, initial).await? {
         Ok(credentials) => credentials,
         Err(reply) => {
@@ -859,6 +862,85 @@ async fn do_auth(
         Err(_) => {
             // A store fault is a temporary condition, not a credential
             // rejection — reply 454 so the client may retry.
+            tracing::warn!("authentication backend error");
+            write_reply(conn, &Reply::auth_temporary_failure()).await?;
+            Ok(false)
+        }
+    }
+}
+
+/// Runs the `AUTH XOAUTH2` exchange: one base64 blob carrying an asserted
+/// login name and an OAuth bearer token, verified through the
+/// introspection seam (ADR 0025) — this is how an OAuth-capable client
+/// submits mail without an app password. On a credential failure the
+/// mechanism's own error dialog runs first: a `334` carrying a base64
+/// error status, which the client acknowledges with one (empty) line
+/// before the final `535` (the de-facto XOAUTH2 contract — see
+/// `docs/interop.md`).
+async fn do_auth_xoauth2(
+    conn: &mut Conn,
+    session: &mut Session,
+    runtime: &Arc<Runtime>,
+    initial: Option<String>,
+) -> std::io::Result<bool> {
+    let payload = match initial {
+        Some(ir) => ir,
+        None => {
+            write_reply(conn, &Reply::auth_challenge("")).await?;
+            match read_sasl_line(conn).await? {
+                Some(line) => line,
+                None => {
+                    write_reply(conn, &Reply::auth_malformed()).await?;
+                    return Ok(false);
+                }
+            }
+        }
+    };
+    if payload == "*" {
+        write_reply(conn, &Reply::auth_malformed()).await?; // client cancelled
+        return Ok(false);
+    }
+    let response = match auth::decode_xoauth2(decode_ir_marker(&payload)) {
+        Ok(response) => response,
+        Err(_) => {
+            write_reply(conn, &Reply::auth_malformed()).await?;
+            return Ok(false);
+        }
+    };
+    let Some(identity) = runtime.identity.as_ref() else {
+        tracing::info!("authentication failed (no credential authority)");
+        write_reply(conn, &Reply::auth_failed()).await?;
+        return Ok(false);
+    };
+    match identity
+        .authenticate_xoauth2(&response.username, &response.token)
+        .await
+    {
+        Ok(Some(_principal)) => {
+            // The login is personal data (CLAUDE.md law 1): keep it out of
+            // default-visible logs; available at debug for audit.
+            tracing::debug!(user = %response.username, "authentication succeeded");
+            tracing::info!("authentication succeeded");
+            session.set_authenticated(AuthIdentity::new(response.username.clone()));
+            write_reply(conn, &Reply::auth_ok()).await?;
+            Ok(true)
+        }
+        Ok(None) => {
+            // Unknown, expired, revoked, and wrong-user tokens all land
+            // here indistinguishably (no oracle). The client's
+            // acknowledgement line's content is irrelevant — the exchange
+            // has already failed.
+            tracing::info!("authentication failed");
+            write_reply(
+                conn,
+                &Reply::auth_challenge(&alo_identity::xoauth2::error_status_b64()),
+            )
+            .await?;
+            let _ = read_sasl_line(conn).await?;
+            write_reply(conn, &Reply::auth_failed()).await?;
+            Ok(false)
+        }
+        Err(_) => {
             tracing::warn!("authentication backend error");
             write_reply(conn, &Reply::auth_temporary_failure()).await?;
             Ok(false)
@@ -934,6 +1016,10 @@ async fn collect_credentials(
             }
             Ok(Ok(auth::Credentials { username, password }))
         }
+        // Not a username/password mechanism: `do_auth` routes XOAUTH2 to
+        // its own exchange before calling here. Kept as a refusal, not a
+        // panic, so a future call-site mistake fails safe on the wire.
+        Mechanism::XOAuth2 => Ok(Err(Reply::auth_mechanism_unsupported())),
     }
 }
 

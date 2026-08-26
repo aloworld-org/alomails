@@ -57,6 +57,11 @@ pub enum Mechanism {
     /// `AUTH LOGIN`: username then password, each base64, via 334
     /// challenges (de-facto standard, not an RFC).
     Login,
+    /// `AUTH XOAUTH2`: a `user=…^Aauth=Bearer …^A^A` blob carrying an
+    /// OAuth bearer token (de-facto standard, not an RFC; see
+    /// `docs/interop.md`). Parsing and verification live in
+    /// `alo_identity::xoauth2`.
+    XOAuth2,
 }
 
 impl Mechanism {
@@ -65,6 +70,7 @@ impl Mechanism {
         match token.to_ascii_uppercase().as_str() {
             "PLAIN" => Some(Self::Plain),
             "LOGIN" => Some(Self::Login),
+            "XOAUTH2" => Some(Self::XOAuth2),
             _ => None,
         }
     }
@@ -132,6 +138,25 @@ pub fn decode_login_field(b64: &str) -> Result<String, SaslError> {
 pub const LOGIN_USERNAME_CHALLENGE: &str = "VXNlcm5hbWU6";
 pub const LOGIN_PASSWORD_CHALLENGE: &str = "UGFzc3dvcmQ6";
 
+/// Decodes an `AUTH XOAUTH2` response: base64 of the
+/// `user=…^Aauth=Bearer …^A^A` blob (parsed by `alo_identity::xoauth2`,
+/// the one parser IMAP and SMTP share). The asserted login name obeys the
+/// same boundary rule as PLAIN ([`is_valid_username`]).
+///
+/// # Errors
+/// [`SaslError`] on bad base64 or a malformed/invalid blob.
+pub fn decode_xoauth2(b64: &str) -> Result<alo_identity::xoauth2::XOAuth2Response, SaslError> {
+    let decoded = BASE64
+        .decode(b64.trim())
+        .map_err(|_| SaslError::BadBase64)?;
+    let response =
+        alo_identity::xoauth2::parse_client_response(&decoded).ok_or(SaslError::Malformed)?;
+    if !is_valid_username(&response.username) {
+        return Err(SaslError::Malformed);
+    }
+    Ok(response)
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]
@@ -146,7 +171,27 @@ mod tests {
     fn mechanism_parsing_is_case_insensitive() {
         assert_eq!(Mechanism::parse("plain"), Some(Mechanism::Plain));
         assert_eq!(Mechanism::parse("LOGIN"), Some(Mechanism::Login));
+        assert_eq!(Mechanism::parse("xoauth2"), Some(Mechanism::XOAuth2));
         assert_eq!(Mechanism::parse("CRAM-MD5"), None);
+    }
+
+    #[test]
+    fn xoauth2_decodes_and_validates() {
+        let payload = b64("user=alice@a.test\u{1}auth=Bearer tok123\u{1}\u{1}");
+        let r = decode_xoauth2(&payload).unwrap();
+        assert_eq!(r.username, "alice@a.test");
+        assert_eq!(r.token, "tok123");
+        assert_eq!(decode_xoauth2("!!!notb64"), Err(SaslError::BadBase64));
+        assert_eq!(
+            decode_xoauth2(&b64("auth=Bearer tok\u{1}\u{1}")),
+            Err(SaslError::Malformed)
+        );
+        // A control character in the asserted login name is rejected at the
+        // boundary, same as PLAIN.
+        assert_eq!(
+            decode_xoauth2(&b64("user=a\rb\u{1}auth=Bearer tok\u{1}\u{1}")),
+            Err(SaslError::Malformed)
+        );
     }
 
     #[test]
