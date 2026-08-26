@@ -255,7 +255,6 @@ export const QuoteContentStudio = forwardRef<
       title?: string;
       onRowKeysChange: (keys: string[]) => void;
     }) => ReactNode;
-    totals: ReactNode;
     tableSubtotal: (rowKeys?: string[]) => ReactNode;
     lineKeys: string[];
     onColumnsChange?: (columns: QuoteColumns) => void;
@@ -266,7 +265,6 @@ export const QuoteContentStudio = forwardRef<
     readOnly,
     preview = false,
     pricingTable,
-    totals,
     tableSubtotal,
     lineKeys,
     onColumnsChange,
@@ -656,17 +654,8 @@ export const QuoteContentStudio = forwardRef<
                             onRowKeysChange: (rowKeys) =>
                               update(block.id, { rowKeys }),
                           })}
-                          {design.blocks.filter(
-                            (item) => item.kind === "pricing",
-                          ).length > 1 &&
-                            block.showSubtotal !== false &&
+                          {block.showSubtotal !== false &&
                             tableSubtotal(block.rowKeys)}
-                          {block.id ===
-                            [...design.blocks]
-                              .reverse()
-                              .find((item) => item.kind === "pricing")?.id && (
-                            <div className="mt-4">{totals}</div>
-                          )}
                         </QuoteTableOptionsProvider>
                       ) : block.kind === "table" ? (
                         <GeneralTableBlock

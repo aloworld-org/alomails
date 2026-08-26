@@ -278,20 +278,43 @@ export function DocumentEditor<T extends StoredDocument, A>({
     if (document === null) return null;
     const owned = new Set(rowKeys ?? rows.map((row) => row.key));
     let lineIndex = 0;
-    const subtotal = rows.reduce((sum, row) => {
-      if (isBlankRow(row)) return sum;
+    const ownedLines = rows.flatMap((row) => {
+      if (isBlankRow(row)) return [];
       const line = document.lines[lineIndex];
       lineIndex += 1;
-      return owned.has(row.key) && line !== undefined
-        ? sum + line.netCents
-        : sum;
-    }, 0);
+      return owned.has(row.key) && line !== undefined ? [line] : [];
+    });
+    const ownsEveryLine = ownedLines.length === document.lines.length;
+    const netCents = ownsEveryLine
+      ? document.totals.netCents
+      : ownedLines.reduce((sum, line) => sum + line.netCents, 0);
+    const netByRate = ownedLines.reduce<Map<number, number>>((rates, line) => {
+      rates.set(line.vatRateBp, (rates.get(line.vatRateBp) ?? 0) + line.netCents);
+      return rates;
+    }, new Map());
+    const vatCents = ownsEveryLine
+      ? document.totals.vatCents
+      : Array.from(netByRate).reduce(
+          (sum, [rate, net]) => sum + Math.round((net * rate) / 10_000),
+          0,
+        );
+    const grossCents = ownsEveryLine
+      ? document.totals.grossCents
+      : netCents + vatCents;
+    const amount = (cents: number) =>
+      saved ? formatAmount(cents, locale, currency) : "—";
     return (
-      <div className="mt-4 flex items-center justify-between rounded-xl bg-raised/45 px-4 py-3 text-sm">
-        <span className="font-medium text-secondary">Table subtotal</span>
-        <strong className="font-semibold tabular-nums text-primary">
-          {saved ? formatAmount(subtotal, locale, currency) : "—"}
-        </strong>
+      <div className="mt-4 rounded-xl bg-raised/45 px-4 py-3 text-sm">
+        <dl className="ml-auto grid max-w-sm grid-cols-[1fr_auto] gap-x-8 gap-y-2">
+          <dt className="text-secondary">Net</dt>
+          <dd className="text-right tabular-nums text-primary">{amount(netCents)}</dd>
+          <dt className="text-secondary">VAT</dt>
+          <dd className="text-right tabular-nums text-primary">{amount(vatCents)}</dd>
+          <dt className="border-t border-default pt-2 font-semibold text-primary">Total</dt>
+          <dd className="border-t border-default pt-2 text-right font-semibold tabular-nums text-primary">
+            {amount(grossCents)}
+          </dd>
+        </dl>
       </div>
     );
   };

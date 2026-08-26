@@ -243,14 +243,13 @@ export function QuoteEditor() {
       documentBody={
         id === undefined
           ? null
-          : (pricingTable, totals, lineKeys, tableSubtotal) => (
+          : (pricingTable, _totals, lineKeys, tableSubtotal) => (
               <QuoteContentStudio
                 ref={quoteStudio}
                 quoteId={id}
                 readOnly={preview}
                 preview={preview}
                 pricingTable={pricingTable}
-                totals={totals}
                 tableSubtotal={tableSubtotal}
                 lineKeys={lineKeys}
                 onColumnsChange={setQuoteColumns}
