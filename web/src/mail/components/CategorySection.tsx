@@ -173,7 +173,7 @@ export function CategorySection({
           >
             <button
               type="button"
-              className={styles.menuItem}
+              className={`${styles.menuItem} hover:!bg-accent-soft hover:!text-accent`}
               onClick={() => {
                 setEditing({ id: menu.cat.id, value: menu.cat.name });
                 setMenu(null);

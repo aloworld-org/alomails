@@ -71,7 +71,7 @@ import {
 const BASE =
   "max-w-full rounded-md border font-[inherit] text-base text-primary cursor-pointer " +
   "transition-colors duration-[var(--duration-fast)] ease-standard " +
-  "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1 " +
+  "focus:outline-none focus-visible:outline-none " +
   "disabled:text-tertiary disabled:cursor-not-allowed";
 
 /** A select in a form: `Input`'s box, down to the same height, so a row of the
@@ -163,8 +163,8 @@ export function Select({
     invalid === true
       ? "border-danger focus-visible:border-danger"
       : ghost
-        ? "border-transparent focus-visible:border-strong"
-        : "border-default focus-visible:border-strong",
+        ? "border-transparent focus:border-accent focus-visible:border-accent"
+        : "border-default focus:border-accent focus-visible:border-accent",
     size === "lg" ? "h-control-lg" : "h-control",
     // Room for the platform's chevron on the trailing side; a ghost sits
     // tighter because it has no box to sit inside.

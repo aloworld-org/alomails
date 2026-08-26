@@ -58,7 +58,7 @@ export function CategoryPicker({ categories, activeIds, onToggle }: CategoryPick
                   type="button"
                   role="menuitemcheckbox"
                   aria-checked={on}
-                  className={cx(styles.item, on && styles.itemOn)}
+                  className={cx(styles.item, "hover:!bg-accent-soft hover:!text-accent", on && styles.itemOn)}
                   onClick={() => onToggle(c.id, !on)}
                 >
                   <span

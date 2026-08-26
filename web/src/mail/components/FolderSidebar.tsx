@@ -453,7 +453,7 @@ export function FolderSidebar({
           >
             <button
               type="button"
-              className={styles.menuItem}
+              className={`${styles.menuItem} hover:!bg-accent-soft hover:!text-accent`}
               onClick={() => {
                 setCreating({ parentId: menu.box.id, value: "" });
                 setMenu(null);
@@ -464,7 +464,7 @@ export function FolderSidebar({
             </button>
             <button
               type="button"
-              className={styles.menuItem}
+              className={`${styles.menuItem} hover:!bg-accent-soft hover:!text-accent`}
               onClick={() => {
                 setEditing({ id: menu.box.id, value: menu.box.name });
                 setMenu(null);

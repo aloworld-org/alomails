@@ -105,7 +105,7 @@ export function MessageLine({
                       key={emoji}
                       type="button"
                       role="menuitem"
-                      className="flex size-8 items-center justify-center rounded-sm border-0 bg-transparent text-base hover:bg--tint focus-visible:bg--tint"
+                      className="flex size-8 items-center justify-center rounded-sm border-0 bg-transparent text-base transition-colors hover:bg-accent-soft hover:text-accent focus-visible:bg-accent-soft"
                       onClick={() => {
                         setPicking(false);
                         onReact(emoji);

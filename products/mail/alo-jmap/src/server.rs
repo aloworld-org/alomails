@@ -112,6 +112,10 @@ pub fn app_with_site_boundaries(
             "/ai/extract-tasks",
             post(ai::extract_tasks).layer(DefaultBodyLimit::max(ai::MAX_SUMMARIZE_BYTES)),
         )
+        .route(
+            "/ai/extract-price-list",
+            post(ai::extract_price_list).layer(DefaultBodyLimit::max(ai::MAX_PRICE_IMAGE_BYTES)),
+        )
         // Ask across the workspace (ADR 0029): cited answers over access-scoped
         // retrieval of files, tasks, and mail.
         .route(

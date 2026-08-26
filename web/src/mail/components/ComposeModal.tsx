@@ -884,7 +884,7 @@ export function ComposeModal({
                         key={preset.label}
                         type="button"
                         role="menuitem"
-                        className={styles.scheduleItem}
+                        className={`${styles.scheduleItem} hover:!bg-accent-soft hover:!text-accent`}
                         onClick={() => void onScheduleAt(preset.at)}
                       >
                         <span>{preset.label}</span>

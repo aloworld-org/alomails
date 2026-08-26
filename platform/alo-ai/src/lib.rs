@@ -13,6 +13,7 @@
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
+use serde_json::{Value, json};
 
 pub mod egress;
 use egress::{is_blocked_ip, split_authority};
@@ -448,6 +449,68 @@ pub(crate) async fn chat(
     }
     let text = read_body_capped(response).await?;
     parse_completion(&text)
+}
+
+/// A candidate price-list row read from a user-supplied image. It is only a
+/// proposal: callers must show it for review and the model never writes data.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PriceListCandidate {
+    pub name: String,
+    #[serde(default)]
+    pub unit: String,
+    pub unit_price: f64,
+    #[serde(default)]
+    pub vat_rate: f64,
+    #[serde(default)]
+    pub sku: String,
+}
+
+#[derive(Serialize)]
+struct VisionChatRequest<'a> {
+    model: &'a str,
+    messages: Vec<Value>,
+    temperature: f32,
+    stream: bool,
+}
+
+/// Read price rows from an image using the tenant's configured multimodal
+/// OpenAI-compatible model. The image is sent only for this user-invoked call;
+/// neither image nor completion is logged or stored by alo.
+pub async fn extract_price_list_image(
+    config: &AiConfig,
+    data_url: &str,
+) -> Result<Vec<PriceListCandidate>, InferenceError> {
+    if !config.enabled {
+        return Err(InferenceError::Disabled);
+    }
+    if config.base_url.trim().is_empty() || config.model.trim().is_empty() {
+        return Err(InferenceError::NotConfigured);
+    }
+    let prompt = "Read this price-list image. Return only valid JSON as an array of objects with exactly these keys: name (string), unit (string, blank if absent), unitPrice (number, without currency symbols), vatRate (number as a percent, zero if absent), sku (string, blank if absent). Do not guess unreadable values and omit rows without a product name or unit price.";
+    let messages = vec![
+        json!({ "role": "system", "content": "You extract structured price-list rows faithfully. Never invent missing products, prices, taxes, units, or codes." }),
+        json!({ "role": "user", "content": [
+            { "type": "text", "text": prompt },
+            { "type": "image_url", "image_url": { "url": data_url, "detail": "high" } }
+        ] }),
+    ];
+    let url = endpoint(&config.base_url, "chat/completions");
+    let client = build_client(&url, Duration::from_secs(90)).await?;
+    let body = VisionChatRequest { model: config.model.trim(), messages, temperature: 0.0, stream: false };
+    let mut request = client.post(&url).json(&body);
+    if let Some(key) = &config.api_key && !key.trim().is_empty() {
+        request = request.bearer_auth(key.trim());
+    }
+    let response = request.send().await.map_err(|_| InferenceError::Transport)?;
+    let status = response.status();
+    if !status.is_success() {
+        return Err(InferenceError::Backend(status.as_u16()));
+    }
+    let completion = parse_completion(&read_body_capped(response).await?)?;
+    let json_text = completion.trim().strip_prefix("```json").or_else(|| completion.trim().strip_prefix("```")).unwrap_or(completion.trim()).strip_suffix("```").unwrap_or(completion.trim()).trim();
+    let rows: Vec<PriceListCandidate> = serde_json::from_str(json_text).map_err(|_| InferenceError::Empty)?;
+    Ok(rows.into_iter().filter(|row| !row.name.trim().is_empty() && row.unit_price.is_finite() && row.unit_price >= 0.0 && row.vat_rate.is_finite() && row.vat_rate >= 0.0).collect())
 }
 
 /// Improve an email draft via the configured backend. User-invoked only.

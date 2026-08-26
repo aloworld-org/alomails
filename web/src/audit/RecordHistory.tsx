@@ -14,7 +14,6 @@ import { strings, useLocale } from "../i18n";
 import { auditMessage, useAuditApi } from "./api";
 import { actionLabel, actorLabel } from "./label";
 import type { AuditEntry } from "./types";
-import styles from "./RecordHistory.module.css";
 
 interface Props {
   /** `billing.invoice`, `crm.deal`, … — the server's own record kind. */
@@ -48,21 +47,25 @@ export function RecordHistory({ entityType, entityId }: Props) {
   }
 
   return (
-    <section className={styles.history}>
-      <h2 className={styles.title}>
+    <section className="flex flex-col gap-2">
+      <h2 className="m-0 flex items-center gap-1 text-sm font-semibold uppercase tracking-[0.04em] text-tertiary">
         <History size={13} /> {strings.auditHistoryTitle}
       </h2>
-      {error !== null && <p className={styles.error}>{error}</p>}
+      {error !== null && <p className="m-0 text-sm text-danger">{error}</p>}
       {error === null && entries !== null && entries.length === 0 && (
-        <p className={styles.empty}>{strings.auditHistoryEmpty}</p>
+        <p className="m-0 text-sm text-tertiary">{strings.auditHistoryEmpty}</p>
       )}
       {entries !== null && entries.length > 0 && (
-        <ol className={styles.entries}>
+        <ol className="m-0 flex list-none flex-col gap-1 p-0">
           {entries.map((entry) => (
-            <li key={entry.id} className={styles.entry}>
-              <span className={styles.action}>{actionLabel(entry.action, entry.entityType)}</span>
-              <span className={styles.actor}>{strings.auditBy(actorLabel(entry.actor))}</span>
-              <time className={styles.moment} dateTime={entry.at}>
+            <li key={entry.id} className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-secondary">
+              <span className="font-medium text-primary">
+                {actionLabel(entry.action, entry.entityType)}
+              </span>
+              <span className="break-words text-secondary">
+                {strings.auditBy(actorLabel(entry.actor))}
+              </span>
+              <time className="ml-auto whitespace-nowrap text-tertiary" dateTime={entry.at}>
                 {moment(entry.at)}
               </time>
             </li>

@@ -11,7 +11,7 @@ export function EmojiPicker({
   onChoose: (emoji: string) => void;
 }) {
   const hits = query.trim() === "" ? null : searchEmoji(query);
-  const optionClass = "flex size-9 items-center justify-center rounded-sm border-0 bg-transparent text-lg hover:bg--tint focus-visible:bg--tint focus-visible:outline-2 focus-visible:outline-accent";
+  const optionClass = "flex size-9 items-center justify-center rounded-sm border-0 bg-transparent text-lg transition-colors hover:bg-accent-soft hover:text-accent focus-visible:bg-accent-soft focus-visible:outline-2 focus-visible:outline-accent";
   return (
     <section className="absolute bottom-full left-0 z-30 mb-2 flex max-h-80 w-80 flex-col overflow-hidden rounded-lg border border-subtle bg-surface shadow-lg max-sm:w-64">
       <div className="border-b border-subtle p-2">

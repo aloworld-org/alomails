@@ -22,15 +22,14 @@ import type { ComponentPropsWithRef } from "react";
 
 /** What both variants are. `font-[inherit]` keeps the page's typeface rather
  *  than the platform's form font, which is what every copy of this control
- *  wanted and what a bare `<input>` does not do. The focus ring is a real
- *  outline, not a border-colour change: neither implementation this replaces
- *  had one, and a 1px border shift is easy to miss and fails contrast guidance
- *  for a focus indicator. `:focus-visible` keeps it off a mouse click. */
+ *  wanted and what a bare `<input>` does not do. Focus is owned by the shared
+ *  form-control rule in `global.css`: one two-pixel Terracotta perimeter drawn
+ *  inside the existing box, never a border plus an offset second outline. */
 const BASE =
   "w-full rounded-md border font-[inherit] text-primary " +
   "placeholder:text-tertiary " +
   "transition-colors duration-[var(--duration-fast)] ease-standard " +
-  "focus-visible:outline-2 focus-visible:outline-accent " +
+  "focus:outline-none focus-visible:outline-none " +
   "disabled:bg-raised disabled:text-tertiary disabled:cursor-not-allowed";
 
 /** A field in a form: a visible border on the surface, which reads as editable
@@ -39,7 +38,7 @@ const BASE =
  *  developed copies disagreed about (40 vs 46) — the 46 survives as `lg`,
  *  because a sign-in screen wanting a larger target is a decision, not a
  *  discrepancy. */
-const FIELD = "bg-surface focus-visible:outline-offset-1";
+const FIELD = "bg-surface";
 const FIELD_MD = "h-control px-3 text-base";
 const FIELD_LG = "h-control-lg px-4 text-base";
 
@@ -68,7 +67,7 @@ function borderColor(variant: "field" | "cell", invalid: boolean): string {
   if (invalid) return "border-danger focus-visible:border-danger";
   if (variant === "cell")
     return "border-transparent focus-visible:border-transparent";
-  return "border-default focus-visible:border-strong";
+  return "border-default focus:border-accent focus-visible:border-accent";
 }
 
 // `size` is omitted from the native attributes on purpose: HTML's `size` is a

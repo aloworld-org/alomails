@@ -170,7 +170,6 @@ const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
     headers: { "content-type": "application/json" },
   });
 });
-
 /** The lists a screen loads before anything interesting happens. */
 function fallback(url: string, method: string): Reply {
   const body =
@@ -267,11 +266,10 @@ describe("the quote draft editor", () => {
   test("a draft is raised for the chosen customer, and nothing else is sent", async () => {
     ui("/billing/quotes/new");
 
-    fireEvent.change(await screen.findByLabelText(strings.billingFieldCustomer), {
-      target: { value: "c-1" },
-    });
+    fireEvent.click(await screen.findByRole("combobox", { name: strings.billingFieldCustomer }));
+    fireEvent.click(screen.getByRole("option", { name: CUSTOMER.name }));
     reply("/billing/quotes", "POST", { quote: { ...DRAFT, lines: [], reference: "" } });
-    fireEvent.click(screen.getByRole("button", { name: strings.billingCreateDraft }));
+    fireEvent.click(screen.getByRole("button", { name: strings.billingQuoteContinueToEditor }));
 
     await waitFor(() => expect(lastWrite()).toBeTruthy());
     const write = lastWrite();
@@ -280,6 +278,50 @@ describe("the quote draft editor", () => {
     // The blanks stay absent, so the customer's currency and the server's own
     // default validity still apply.
     expect(write?.body).toEqual({ customerId: "c-1" });
+  });
+
+  test("a template copies live price-list items into the persisted draft", async () => {
+    ui("/billing/quotes/new");
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: new RegExp(strings.billingQuoteTemplateServices) }),
+    );
+    expect(screen.getByText("Consulting")).toBeTruthy();
+    fireEvent.click(screen.getByRole("combobox", { name: strings.billingFieldCustomer }));
+    fireEvent.click(screen.getByRole("option", { name: CUSTOMER.name }));
+    reply("/billing/quotes", "POST", { quote: DRAFT });
+    fireEvent.click(screen.getByRole("button", { name: strings.billingQuoteContinueToEditor }));
+
+    await waitFor(() => expect(lastWrite()?.method).toBe("POST"));
+    expect(lastWrite()?.body).toEqual({
+      customerId: "c-1",
+      lines: [
+        {
+          description: "Consulting",
+          unit: "hour",
+          qtyMilli: 1000,
+          unitPriceCents: 12500,
+          vatRateBp: 2100,
+          productId: "p-1",
+        },
+      ],
+    });
+  });
+
+  test("a blank quote can add any active price-list item before it is created", async () => {
+    ui("/billing/quotes/new");
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.billingQuoteAddFromPriceList }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(PRODUCT.name) }));
+
+    expect(
+      screen.getByRole("button", {
+        name: strings.billingQuoteRemoveIncludedItem(PRODUCT.name),
+      }),
+    ).toBeTruthy();
+    expect(screen.getByText(strings.billingQuoteIncludedItems(1))).toBeTruthy();
   });
 
   test("a typed quantity is saved as milli-units and the totals shown are the server's", async () => {

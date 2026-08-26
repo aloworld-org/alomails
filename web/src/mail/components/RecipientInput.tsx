@@ -163,7 +163,7 @@ export function RecipientInput({
               <li key={c.email} role="option" aria-selected={i === active}>
                 <button
                   type="button"
-                  className={i === active ? styles.suggestActive : styles.suggest}
+                  className={`${i === active ? styles.suggestActive : styles.suggest} hover:!bg-accent-soft hover:!text-accent`}
                   // mousedown (not click) so the input doesn't blur-commit first.
                   onMouseDown={(e) => {
                     e.preventDefault();

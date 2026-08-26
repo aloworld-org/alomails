@@ -13,7 +13,6 @@ import { ComingSoon } from "./ComingSoon";
 import { surface } from "../product";
 import { recordAppVisit } from "./appUsage";
 import { SearchOverlay } from "./SearchOverlay";
-import styles from "./AppShell.module.css";
 
 export function AppShell() {
   const location = useLocation();
@@ -42,18 +41,18 @@ export function AppShell() {
   }, []);
 
   return (
-    <div className={styles.shell}>
-      <Rail onAskAi={() => setAiOpen(true)} />
+    <div className="relative grid h-dvh min-h-0 overflow-hidden grid-cols-[var(--rail-width)_minmax(0,1fr)_auto] grid-rows-1 [grid-template-areas:'rail_main_panel'] max-md:grid-cols-1 max-md:grid-rows-[minmax(0,1fr)_auto] max-md:[grid-template-areas:'main'_'rail']">
+      <Rail className="[grid-area:rail]" onAskAi={() => setAiOpen(true)} />
 
-      <main className={styles.main}>
+      <main className="min-h-0 min-w-0 overflow-hidden bg-app [grid-area:main]">
         <Outlet />
       </main>
 
       {searchOpen && <SearchOverlay onClose={() => setSearchOpen(false)} />}
 
       {aiOpen && (
-        <aside className={styles.panel} aria-label={strings.moduleAi}>
-          <div className={styles.panelHead}>
+        <aside className="flex w-[340px] flex-col border-l border-subtle bg-surface [grid-area:panel] max-md:fixed max-md:inset-0 max-md:z-[900] max-md:w-auto max-md:border-l-0" aria-label={strings.moduleAi}>
+          <div className="flex justify-end p-3">
             <IconButton
               size="sm"
               label="Close"

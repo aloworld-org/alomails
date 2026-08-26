@@ -51,7 +51,7 @@ export function SnoozeMenu({ onPick, compact }: SnoozeMenuProps) {
             <button
               key={p.key}
               type="button"
-              className={styles.item}
+              className={`${styles.item} hover:!bg-accent-soft hover:!text-accent`}
               onClick={() => {
                 onPick(p.at);
                 setOpen(false);

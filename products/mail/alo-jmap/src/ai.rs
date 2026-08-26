@@ -31,6 +31,10 @@ pub const MAX_IMPROVE_BYTES: usize = 64 * 1024;
 /// draft since it is a whole conversation, but still bounded.
 pub const MAX_SUMMARIZE_BYTES: usize = 256 * 1024;
 
+/// An encoded phone photo or screenshot of a price list. Eight MiB of source
+/// image becomes roughly eleven MiB as base64 JSON; cap before parsing.
+pub const MAX_PRICE_IMAGE_BYTES: usize = 12 * 1024 * 1024;
+
 /// Load the tenant's default AI backend config, or a 503 problem if none is set.
 pub(crate) async fn tenant_ai_config(account: &crate::state::Account) -> Result<AiConfig, Problem> {
     let row = account
@@ -172,6 +176,30 @@ pub async fn extract_tasks(
         .await
         .map_err(|e| ai_problem(&e))?;
     Ok(Json(json!({ "tasks": tasks })))
+}
+
+/// `POST /ai/extract-price-list` proposes structured rows from one image. It
+/// never creates products: the Billing review screen is the only writer.
+pub async fn extract_price_list(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    if body.len() > MAX_PRICE_IMAGE_BYTES {
+        return Err(Problem::with(StatusCode::PAYLOAD_TOO_LARGE, "image too large"));
+    }
+    let request: Value = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let data_url = request.get("dataUrl").and_then(Value::as_str).unwrap_or("");
+    let supported = ["data:image/jpeg;base64,", "data:image/png;base64,", "data:image/webp;base64,"];
+    if !supported.iter().any(|prefix| data_url.starts_with(prefix)) {
+        return Err(Problem::with(StatusCode::BAD_REQUEST, "JPEG, PNG or WebP image required"));
+    }
+    let config = tenant_ai_config(&account).await?;
+    let rows = alo_ai::extract_price_list_image(&config, data_url)
+        .await
+        .map_err(|error| ai_problem(&error))?;
+    Ok(Json(json!({ "rows": rows })))
 }
 
 /// `POST /ai/improve` — `{"text": "..."}` → `{"text": "improved"}`.

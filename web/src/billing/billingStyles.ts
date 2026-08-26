@@ -18,7 +18,7 @@
 // system still has no multi-line control, so the box below is `ds/Input`'s
 // written out for a `<textarea>`. It goes when that component exists.
 const styles = {
-  page: "mx-auto flex min-h-0 w-full max-w-[112rem] flex-1 flex-col gap-5 overflow-hidden px-8 pb-8 pt-6 max-[52rem]:p-4",
+  page: "mx-auto flex min-h-0 w-full max-w-[112rem] flex-1 flex-col gap-5 overflow-y-auto px-8 pb-0 pt-6 max-[52rem]:px-4 max-[52rem]:pb-0 max-[52rem]:pt-4",
   /** What billing adds to `ds/Toolbar` above a list: a minimum height so a bar
    *  with only a heading in it still reads as a bar, and controls that stretch
    *  rather than centre once the row has wrapped. */
@@ -67,40 +67,102 @@ const styles = {
    *  callers go. Do not reach for it as a general text-box recipe: a
    *  single-line field is `ds/Input`. */
   textarea:
-    "w-full min-h-16 resize-y rounded-md border border-default bg-surface px-3 py-2 font-[inherit] text-base text-primary placeholder:text-tertiary transition-colors duration-[var(--duration-fast)] ease-standard focus-visible:border-strong focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1",
+    "w-full min-h-16 resize-y rounded-md border border-default bg-surface px-3 py-2 font-[inherit] text-base text-primary placeholder:text-tertiary transition-colors duration-[var(--duration-fast)] ease-standard focus:border-accent focus:outline-none focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1",
+  templatePicker: "mb-6 flex flex-col gap-3",
+  templatePickerTitle: "m-0 text-sm font-semibold text-primary",
+  templatePickerHint: "mb-0 mt-1 text-xs leading-relaxed text-tertiary",
+  templateGrid:
+    "grid grid-cols-4 gap-2 max-[46rem]:grid-cols-2 max-[28rem]:grid-cols-1",
+  templateCard:
+    "flex min-h-28 flex-col items-start gap-2 rounded-xl border border-default bg-surface !px-4 !py-4 text-left shadow-sm transition-[border-color,background-color,box-shadow] hover:border-accent/40 hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
+  templateCardActive:
+    "!border-accent !bg-accent-soft ring-1 ring-accent/20 [&>span:first-child]:text-accent",
+  templateCardName: "block text-sm font-semibold leading-snug text-primary",
+  templateCardDescription: "block text-xs leading-relaxed text-secondary",
+  templateItems:
+    "rounded-xl border border-accent/25 bg-accent-soft p-4 text-sm text-secondary shadow-sm",
+  templateItemsHead:
+    "flex items-start justify-between gap-4 max-[34rem]:flex-col",
+  templateItemsTitle: "m-0 text-sm font-semibold text-primary",
+  templateItemsHint: "mb-0 mt-1 max-w-2xl text-xs leading-relaxed text-secondary",
+  templateItemsCount:
+    "inline-flex min-h-8 shrink-0 items-center rounded-full bg-surface px-3 text-xs font-semibold text-accent shadow-sm ring-1 ring-accent/20",
+  templateAddItems:
+    "inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg border border-accent/25 bg-surface !px-4 !py-2 text-sm font-semibold text-accent shadow-sm transition-colors hover:border-accent hover:bg-accent hover:text-on-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
+  templateItemsList:
+    "mt-3 grid grid-cols-2 gap-2 max-[38rem]:grid-cols-1",
+  templateItem:
+    "flex min-h-11 items-center gap-3 rounded-lg border border-accent/15 bg-surface px-3 py-2 text-sm font-medium text-primary shadow-sm",
+  templateItemRemove:
+    "inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-tertiary transition-colors hover:bg-[var(--danger-tint)] hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/30",
+  templateProductPicker:
+    "mt-4 rounded-xl border border-accent/20 bg-surface p-3 shadow-sm",
+  templateProductSearch:
+    "relative block [&>svg]:pointer-events-none [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-1/2 [&>svg]:z-10 [&>svg]:-translate-y-1/2 [&>svg]:text-tertiary [&_input]:!pl-11",
+  templateProductList:
+    "mt-3 grid max-h-52 grid-cols-2 gap-2 overflow-y-auto pr-1 max-[38rem]:grid-cols-1",
+  templateProductOption:
+    "flex min-h-11 items-center gap-3 rounded-lg border border-subtle bg-surface !px-4 !py-2.5 text-left text-sm transition-[border-color,background-color] hover:border-accent/50 hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
+  templateProductEmpty:
+    "m-0 mt-3 rounded-lg bg-accent-soft px-4 py-3 text-center text-sm text-secondary",
   chips: "inline-flex flex-wrap items-center gap-2",
   overdueRow: "[&_td]:bg-[var(--danger-tint)]",
   notice:
-    "m-0 rounded-lg border border-default bg-raised p-3 text-sm text-secondary",
+    "mx-6 mb-0 mt-5 rounded-xl border border-default bg-raised px-4 py-3 text-sm leading-relaxed text-secondary max-[52rem]:mx-4",
   loading: "flex flex-1 items-center justify-center p-10",
   dataLoading:
     "flex min-h-48 flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-subtle bg-surface text-sm text-secondary",
-  editor: "overflow-auto",
+  editor:
+    "min-h-full shrink-0 overflow-hidden rounded-t-2xl border border-b-0 border-default bg-surface shadow-sm",
   editorHead:
-    "flex flex-wrap items-center gap-3 border-b border-subtle px-6 pb-4 pt-5",
-  editorTitle: "m-0 text-lg font-semibold text-primary",
+    "flex min-h-20 flex-wrap items-center gap-3 border-b border-subtle bg-surface px-6 py-4 max-[52rem]:px-4",
+  editorTitle: "m-0 text-xl font-semibold tracking-tight text-primary",
   saveState: "ml-auto whitespace-nowrap text-xs text-tertiary",
-  editorBody: "flex flex-col gap-5 px-6 pb-8 pt-5",
-  headerFields: "grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4",
-  readOnlyValue: "m-0 min-h-5 py-2 text-sm text-primary",
+  editorBody: "flex flex-col gap-6 px-6 pb-8 pt-6 max-[52rem]:px-4",
+  quoteHero:
+    "relative flex min-h-44 items-center justify-between gap-8 overflow-hidden rounded-2xl border border-default bg-[var(--quote-background,var(--bg-surface))] px-7 py-6 text-[var(--quote-text,var(--text-primary))] shadow-sm before:absolute before:bottom-0 before:left-0 before:top-0 before:w-1 before:bg-[var(--quote-accent,var(--accent))] max-[52rem]:flex-col max-[52rem]:items-stretch max-[52rem]:px-5",
+  quoteHeroIdentity: "relative flex min-w-0 items-center gap-4",
+  quoteHeroIcon:
+    "inline-flex size-12 shrink-0 items-center justify-center rounded-xl bg-surface text-[var(--quote-accent,var(--accent))] shadow-sm ring-1 ring-default",
+  quoteEyebrow:
+    "mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--quote-accent,var(--accent))]",
+  quoteCustomer:
+    "m-0 truncate text-2xl font-semibold tracking-tight text-[var(--quote-text,var(--text-primary))] max-[52rem]:text-xl",
+  quotePreparedFor: "mb-0 mt-1 text-sm text-[var(--quote-text,var(--text-secondary))] opacity-75",
+  quoteHeroMetrics:
+    "relative grid min-w-[390px] grid-cols-2 divide-x divide-default overflow-hidden rounded-xl border border-default bg-surface/90 shadow-sm max-[52rem]:min-w-0 max-[36rem]:grid-cols-1 max-[36rem]:divide-x-0 max-[36rem]:divide-y",
+  quoteMetric:
+    "flex min-h-24 flex-col justify-center gap-1 px-5 py-4 [&>span]:text-xs [&>span]:font-semibold [&>span]:uppercase [&>span]:tracking-wide [&>span]:text-tertiary [&>strong]:text-lg [&>strong]:font-semibold [&>strong]:tabular-nums [&>strong]:text-primary [&>small]:text-xs [&>small]:text-tertiary",
+  documentSummary:
+    "overflow-hidden rounded-xl border border-default bg-surface shadow-sm",
+  headerFields:
+    "grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-x-8 gap-y-5 p-5",
+  documentNote: "border-t border-subtle bg-raised/40 px-5 py-4",
+  readOnlyValue:
+    "m-0 min-h-5 py-1 text-[0.9375rem] font-medium leading-relaxed text-primary",
   createBar:
     "flex items-center gap-4 border-t border-subtle pt-2 [&>p]:mr-auto",
-  lines: "flex flex-col gap-2",
-  linesHead: "flex items-center justify-between gap-3",
+  lines: "flex flex-col gap-3",
+  linesHead: "flex min-h-10 items-center justify-between gap-3",
   sectionTitle:
     "m-0 text-xs font-semibold uppercase tracking-wide text-tertiary",
   lineDescription: "flex min-w-[260px] flex-col gap-1",
   creditList:
     "flex flex-col gap-2 [&_li]:flex [&_li]:items-center [&_li]:gap-2",
-  totals: "min-w-[min(320px,100%)] self-end",
-  totalsList: "m-0 flex flex-col gap-1",
+  totals:
+    "min-w-[min(360px,100%)] self-end rounded-xl border border-default bg-raised/40 p-5",
+  totalsList: "m-0 flex flex-col gap-2",
   totalsRow:
     "flex justify-between gap-6 text-sm text-secondary [&_dd]:m-0 [&_dt]:m-0",
-  totalsGross: "mt-2 border-t border-default pt-2 font-semibold text-primary",
+  totalsGross:
+    "mt-2 border-t border-default pt-3 text-base font-semibold text-primary",
   totalsNote: "mt-2 text-xs text-tertiary",
   stale: "opacity-55",
-  actionBar: "flex flex-wrap justify-end gap-2 border-t border-subtle pt-3",
+  actionBar:
+    "flex flex-wrap items-center justify-end gap-3 rounded-xl border border-default bg-raised/40 p-4",
   relation: "m-0 text-sm",
+  documentFooter:
+    "rounded-xl border border-default bg-surface p-5 shadow-sm [&>p+section]:mt-4",
 } as const;
 
 export default styles;

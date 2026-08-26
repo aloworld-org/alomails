@@ -33,6 +33,7 @@ export function ListToolbar({
   onCreate,
   busy,
   showCreate = true,
+  beforeCreate,
 }: {
   label: string;
   search: string;
@@ -44,6 +45,7 @@ export function ListToolbar({
   onCreate: () => void;
   busy: boolean;
   showCreate?: boolean;
+  beforeCreate?: ReactNode;
 }) {
   return (
     <Toolbar label={label} className={styles.listBar}>
@@ -65,6 +67,7 @@ export function ListToolbar({
         label={strings.billingShowArchived}
       />
       {busy && <Spinner size={16} />}
+      {beforeCreate}
       {showCreate && (
         <Button icon={<Plus aria-hidden="true" />} onClick={onCreate}>
           {createLabel}
@@ -198,6 +201,7 @@ export function DialogFrame({
   submitLabel,
   onClose,
   onSubmit,
+  wide = false,
   children,
 }: {
   Icon: LucideIcon;
@@ -209,6 +213,7 @@ export function DialogFrame({
   submitLabel: string;
   onClose: () => void;
   onSubmit: () => void;
+  wide?: boolean;
   children: ReactNode;
 }) {
   function submit(e: FormEvent) {
@@ -222,7 +227,7 @@ export function DialogFrame({
       onMouseDown={onClose}
     >
       <form
-        className="flex max-h-[calc(100dvh-3rem)] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-subtle bg-surface shadow-lg max-sm:max-h-[calc(100dvh-1.5rem)]"
+        className={`flex max-h-[calc(100dvh-3rem)] w-full ${wide ? "max-w-4xl" : "max-w-2xl"} flex-col overflow-hidden rounded-xl border border-subtle bg-surface shadow-lg max-sm:max-h-[calc(100dvh-1.5rem)]`}
         role="dialog"
         aria-modal="true"
         aria-label={title}

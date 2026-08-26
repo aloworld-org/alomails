@@ -9,9 +9,9 @@
 // saved**. A net next to a quantity the server has not seen yet would be a
 // figure the browser had made up, which is the one thing the billing surface
 // never does.
-import { Plus, Trash2 } from "lucide-react";
+import { PackageOpen, Plus, Trash2 } from "lucide-react";
 
-import { IconButton, Input, Select, Table, Td, Th, cx } from "../ds";
+import { ChoicePicker, IconButton, Input, Table, Td, Th, cx } from "../ds";
 import { strings, useLocale } from "../i18n";
 import { formatAmount, formatQty, formatRate } from "./money";
 import { blankRow, isBlankRow, rowFromProduct, rowProblem } from "./lineRows";
@@ -80,6 +80,50 @@ export function DocumentLines({
     onChange(rows.map((r, i) => (i === index ? row : r)));
   }
 
+  if (!readOnly) {
+    return (
+      <section className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-primary">{strings.billingLines}</h2>
+            <p className="mt-1 text-sm text-secondary">Describe what the customer receives, then set quantity and price.</p>
+          </div>
+          <ButtonLine onClick={() => onChange([...rows, blankRow(nextKey())])} />
+        </div>
+        {rows.length === 0 ? (
+          <div className="flex min-h-40 flex-col items-center justify-center rounded-xl border border-dashed border-default bg-surface px-6 text-center">
+            <PackageOpen className="size-6 text-accent" aria-hidden="true" />
+            <p className="mt-3 font-semibold text-primary">{strings.billingNoLines}</p>
+            <p className="mt-1 text-sm text-secondary">Add a service, product, fee, or discount to continue.</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {rows.map((row, index) => {
+              const problem = isBlankRow(row) ? null : rowProblem(row);
+              const line = stored.get(row.key);
+              return <article key={row.key} className="rounded-xl border border-default bg-surface p-4 shadow-sm">
+                <div className="grid gap-4 xl:grid-cols-[minmax(280px,2fr)_minmax(120px,.6fr)_minmax(110px,.5fr)_minmax(130px,.65fr)_minmax(110px,.5fr)_minmax(130px,.7fr)_40px] xl:items-end">
+                  <div className="flex min-w-0 flex-col gap-2 xl:row-span-2">
+                    <label className="text-xs font-semibold uppercase tracking-wide text-tertiary">{strings.billingColDescription}</label>
+                    <Input value={row.description} onChange={(event) => replace(index, { ...row, description: event.target.value })} placeholder={strings.billingDescriptionPlaceholder} invalid={problem === "description"} />
+                    {products.length > 0 && <ChoicePicker value="" label={strings.billingPickProduct} placeholder={strings.billingPickProduct} options={products.filter((product) => !product.archived).map((product) => ({ value: product.id, label: product.name }))} onChange={(productId) => { const picked = products.find((product) => product.id === productId); if (picked) replace(index, rowFromProduct(row, picked)); }} />}
+                    {problem !== null && <span className={styles.fieldError}>{problemMessage(problem)}</span>}
+                  </div>
+                  <LineField label={strings.billingColUnit}><Input value={row.unit} onChange={(event) => replace(index, { ...row, unit: event.target.value })} placeholder={strings.billingUnitPlaceholder} /></LineField>
+                  <LineField label={strings.billingColQty}><Input className={styles.numeric} value={row.qty} onChange={(event) => replace(index, { ...row, qty: event.target.value })} placeholder={strings.billingQtyPlaceholder} inputMode="decimal" invalid={problem === "qty"} /></LineField>
+                  <LineField label={strings.billingColUnitPrice}><Input className={styles.numeric} value={row.price} onChange={(event) => replace(index, { ...row, price: event.target.value })} placeholder={strings.billingAmountPlaceholder} inputMode="decimal" invalid={problem === "price"} /></LineField>
+                  <LineField label={strings.billingColVatRate}><Input className={styles.numeric} value={row.rate} onChange={(event) => replace(index, { ...row, rate: event.target.value })} placeholder={strings.billingRatePlaceholder} inputMode="decimal" invalid={problem === "rate"} /></LineField>
+                  <div className="min-w-0"><span className="block text-xs font-semibold uppercase tracking-wide text-tertiary">{strings.billingColNet}</span><strong className={cx("mt-3 block truncate text-base font-semibold tabular-nums text-primary", !saved && styles.stale)}>{line === undefined ? "—" : formatAmount(line.netCents, locale, currency)}</strong></div>
+                  <IconButton label={strings.billingRemoveLine} icon={<Trash2 size={16} />} onClick={() => onChange(rows.filter((_, itemIndex) => itemIndex !== index))} />
+                </div>
+              </article>;
+            })}
+          </div>
+        )}
+      </section>
+    );
+  }
+
   return (
     <section className={styles.lines}>
       <div className={styles.linesHead}>
@@ -98,7 +142,7 @@ export function DocumentLines({
       {rows.length === 0 ? (
         <p className={styles.noMatches}>{strings.billingNoLines}</p>
       ) : (
-        <Table label={strings.billingLines}>
+        <Table label={strings.billingLines} className="bg-[var(--quote-table-row,var(--bg-surface))] [&_thead_th]:!bg-[var(--quote-table-header,var(--bg-surface))] [&_td]:!text-[var(--quote-text,var(--text-primary))]">
           <thead>
             <tr>
               <Th>{strings.billingColDescription}</Th>
@@ -140,26 +184,22 @@ export function DocumentLines({
                           invalid={problem === "description"}
                         />
                         {products.length > 0 && (
-                          <Select
+                          <ChoicePicker
                             value=""
-                            aria-label={strings.billingPickProduct}
-                            onChange={(e) => {
+                            label={strings.billingPickProduct}
+                            placeholder={strings.billingPickProduct}
+                            options={products.map((product) => ({
+                              value: product.id,
+                              label: product.name,
+                            }))}
+                            onChange={(productId) => {
                               const picked = products.find(
-                                (p) => p.id === e.target.value,
+                                (product) => product.id === productId,
                               );
                               if (picked !== undefined)
                                 replace(index, rowFromProduct(row, picked));
                             }}
-                          >
-                            <option value="">
-                              {strings.billingPickProduct}
-                            </option>
-                            {products.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.name}
-                              </option>
-                            ))}
-                          </Select>
+                          />
                         )}
                         {problem !== null && (
                           <span className={styles.fieldError}>
@@ -271,4 +311,12 @@ export function DocumentLines({
       )}
     </section>
   );
+}
+
+function LineField({ label, children }: { label: string; children: React.ReactNode }) {
+  return <label className="min-w-0"><span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-tertiary">{label}</span>{children}</label>;
+}
+
+function ButtonLine({ onClick }: { onClick: () => void }) {
+  return <button type="button" className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" onClick={onClick}><Plus className="size-4" aria-hidden="true" />{strings.billingAddLine}</button>;
 }

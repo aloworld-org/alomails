@@ -48,7 +48,7 @@
 //     row — got no indication of where they were (WCAG 2.4.7). The ring is
 //     drawn on the track, since the control the eye sees is the track.
 //   * **A visible off state.** Both filled the off track with `--border-strong`
-//     (#cbd5e1), which is 1.7:1 against the surface it sits on — under the 3:1
+  //     (the old cool-gray border), which was 1.7:1 against the surface it sits on — under the 3:1
 //     that WCAG 1.4.11 asks of a control's own boundary, and the white knob was
 //     1.7:1 against the track it sits in. `--text-tertiary` is the same quiet
 //     role in a fill that it plays in type, and it is 4.8:1. The on track keeps

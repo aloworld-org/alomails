@@ -1780,6 +1780,32 @@ export const nl: Partial<Catalog> = {
   // zegt, en bewust dezelfde woorden overal waar de twee schermen het eens
   // zijn.
   billingQuotes: "Offertes",
+  billingQuotation: "Offerte",
+  billingPreparedFor: "Exclusief opgesteld voor deze klant",
+  billingIncludingVat: "Inclusief btw",
+  billingQuoteTemplate: "Offertesjabloon",
+  billingQuoteStartFrom: "Begin met een sjabloon",
+  billingQuoteTemplateHint: "Gebruik je actuele prijslijst als nuttig vertrekpunt.",
+  billingQuoteTemplateBlank: "Lege offerte",
+  billingQuoteTemplateBlankDescription: "Begin met een lege prijstabel.",
+  billingQuoteTemplateServices: "Diensten",
+  billingQuoteTemplateServicesDescription: "Een gericht aanbod met twee kerndiensten.",
+  billingQuoteTemplateProject: "Projectvoorstel",
+  billingQuoteTemplateProjectDescription: "Een bredere scope met drie leveringsonderdelen.",
+  billingQuoteTemplateRetainer: "Maandabonnement",
+  billingQuoteTemplateRetainerDescription: "Begin met een terugkerende maandelijkse dienst.",
+  billingQuoteIncludedItems: (count: number) =>
+    `${count} item${count === 1 ? "" : "s"}`,
+  billingQuoteIncludedTitle: "Inbegrepen in dit sjabloon",
+  billingQuoteIncludedHelp:
+    "Deze prijslijstitems worden aan het concept toegevoegd. In de editor kun je aantallen, prijzen en beschrijvingen aanpassen.",
+  billingQuoteRemoveIncludedItem: (name: string) => `${name} verwijderen`,
+  billingQuoteAddFromPriceList: "Items toevoegen",
+  billingQuoteSearchPriceList: "Prijslijst doorzoeken",
+  billingQuoteAllItemsIncluded: "Alle actieve prijslijstitems zijn al inbegrepen.",
+  billingQuoteNoMatchingItems: "Geen prijslijstitems gevonden voor deze zoekopdracht.",
+  billingQuotePerItem: "per stuk",
+  billingQuoteContinueToEditor: "Verder naar editor",
   billingNewQuote: "Nieuwe offerte",
   billingSearchQuotes: "Zoeken op nummer, klant of referentie…",
   billingNoQuotesTitle: "Nog geen offertes",
@@ -1815,15 +1841,15 @@ export const nl: Partial<Catalog> = {
   billingSendQuoteTitle: "Deze offerte versturen?",
   billingSendQuoteConfirm:
     "Dit neemt het volgende offertenummer, dateert de offerte en zet de prijzen vast, zodat wat de klant in handen heeft niet onder hem kan veranderen. Er wordt niets gemaild — verstuur hem zelf en leg het hier vast.",
-  billingAcceptQuote: "Geaccepteerd",
+  billingAcceptQuote: "Offerte accepteren",
   billingAcceptQuoteTitle: "Heeft de klant geaccepteerd?",
   billingAcceptQuoteConfirm:
     "Dit sluit de offerte en maakt een conceptfactuur met dezelfde regels tegen dezelfde prijzen. Er wordt nog niets uitgegeven — u komt op het concept uit.",
-  billingDeclineQuote: "Afgewezen",
+  billingDeclineQuote: "Offerte afwijzen",
   billingDeclineQuoteTitle: "Heeft de klant afgewezen?",
   billingDeclineQuoteConfirm:
     "De offerte sluit definitief en blijft leesbaar. Van gedachten veranderen is een nieuwe offerte, geen heropende.",
-  billingExpireQuote: "Loslaten",
+  billingExpireQuote: "Als verlopen markeren",
   billingExpireQuoteTitle: "Stoppen met deze offerte?",
   billingExpireQuoteConfirm:
     "De offerte sluit als verlopen, met vandaag als de dag waarop u ermee stopte. Er kan daarna niet meer op worden geantwoord.",

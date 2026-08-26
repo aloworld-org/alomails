@@ -87,13 +87,13 @@ export function FlagDueControl({ due, onSet }: FlagDueControlProps) {
       </Chip>
       {open && (
         <div className={styles.menu} role="menu">
-          <button type="button" className={styles.item} onClick={() => choose(daysFromNow(0))}>
+          <button type="button" className={`${styles.item} hover:!bg-accent-soft hover:!text-accent`} onClick={() => choose(daysFromNow(0))}>
             {strings.flagDueToday}
           </button>
-          <button type="button" className={styles.item} onClick={() => choose(daysFromNow(1))}>
+          <button type="button" className={`${styles.item} hover:!bg-accent-soft hover:!text-accent`} onClick={() => choose(daysFromNow(1))}>
             {strings.flagDueTomorrow}
           </button>
-          <button type="button" className={styles.item} onClick={() => choose(daysFromNow(7))}>
+          <button type="button" className={`${styles.item} hover:!bg-accent-soft hover:!text-accent`} onClick={() => choose(daysFromNow(7))}>
             {strings.flagDueNextWeek}
           </button>
           <label className={styles.pick}>
@@ -115,7 +115,7 @@ export function FlagDueControl({ due, onSet }: FlagDueControlProps) {
               <div className={styles.divider} />
               <button
                 type="button"
-                className={cx(styles.item, styles.clear)}
+                className={cx(styles.item, styles.clear, "hover:!bg-accent-soft hover:!text-accent")}
                 onClick={() => choose(null)}
               >
                 {strings.flagDueClear}

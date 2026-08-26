@@ -1820,6 +1820,32 @@ export const fr: Partial<Catalog> = {
   // dise oui, et délibérément les mêmes mots partout où les deux écrans
   // s’accordent.
   billingQuotes: "Devis",
+  billingQuotation: "Proposition commerciale",
+  billingPreparedFor: "Préparée exclusivement pour ce client",
+  billingIncludingVat: "TVA comprise",
+  billingQuoteTemplate: "Modèle de devis",
+  billingQuoteStartFrom: "Partir d’un modèle",
+  billingQuoteTemplateHint: "Utilisez votre catalogue de prix pour préparer une base utile.",
+  billingQuoteTemplateBlank: "Devis vierge",
+  billingQuoteTemplateBlankDescription: "Commencer avec un tableau de prix vide.",
+  billingQuoteTemplateServices: "Services",
+  billingQuoteTemplateServicesDescription: "Une offre ciblée avec deux services principaux.",
+  billingQuoteTemplateProject: "Proposition de projet",
+  billingQuoteTemplateProjectDescription: "Un périmètre plus large avec trois livrables.",
+  billingQuoteTemplateRetainer: "Forfait mensuel",
+  billingQuoteTemplateRetainerDescription: "Commencer avec un service mensuel récurrent.",
+  billingQuoteIncludedItems: (count: number) =>
+    `${count} élément${count === 1 ? "" : "s"}`,
+  billingQuoteIncludedTitle: "Inclus dans ce modèle",
+  billingQuoteIncludedHelp:
+    "Ces éléments du catalogue seront ajoutés au brouillon. Vous pourrez modifier leurs quantités, prix et descriptions dans l’éditeur.",
+  billingQuoteRemoveIncludedItem: (name: string) => `Retirer ${name}`,
+  billingQuoteAddFromPriceList: "Ajouter des éléments",
+  billingQuoteSearchPriceList: "Rechercher dans le catalogue",
+  billingQuoteAllItemsIncluded: "Tous les éléments actifs du catalogue sont déjà inclus.",
+  billingQuoteNoMatchingItems: "Aucun élément ne correspond à cette recherche.",
+  billingQuotePerItem: "unité",
+  billingQuoteContinueToEditor: "Continuer dans l’éditeur",
   billingNewQuote: "Nouveau devis",
   billingSearchQuotes: "Rechercher par numéro, client ou référence…",
   billingNoQuotesTitle: "Aucun devis pour l’instant",
@@ -1855,15 +1881,15 @@ export const fr: Partial<Catalog> = {
   billingSendQuoteTitle: "Envoyer ce devis ?",
   billingSendQuoteConfirm:
     "Ceci consomme le numéro de devis suivant, date l’offre et fige ses prix, pour que ce que détient le client ne puisse pas changer sous ses yeux. Rien n’est envoyé par courriel — envoyez-le vous-même et notez-le ici.",
-  billingAcceptQuote: "Accepté",
+  billingAcceptQuote: "Accepter le devis",
   billingAcceptQuoteTitle: "Le client a accepté ?",
   billingAcceptQuoteConfirm:
     "Ceci clôt l’offre et établit une facture en brouillon avec les mêmes lignes aux mêmes prix. Rien n’est encore émis — vous arriverez sur le brouillon.",
-  billingDeclineQuote: "Refusé",
+  billingDeclineQuote: "Refuser le devis",
   billingDeclineQuoteTitle: "Le client a refusé ?",
   billingDeclineQuoteConfirm:
     "L’offre se clôt définitivement et reste lisible. Un changement d’avis est un nouveau devis, pas une offre rouverte.",
-  billingExpireQuote: "Y renoncer",
+  billingExpireQuote: "Marquer comme expiré",
   billingExpireQuoteTitle: "Cesser de relancer cette offre ?",
   billingExpireQuoteConfirm:
     "L’offre se clôt comme expirée, avec la date du jour comme jour où vous avez cessé de la relancer. Elle ne pourra plus recevoir de réponse.",

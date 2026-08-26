@@ -74,7 +74,7 @@ export interface DraftPorts<T extends StoredDocument, A> {
   /** The id being edited, or `undefined` on the "new document" screen. */
   id: string | undefined;
   load: (id: string) => Promise<{ document: T; aside: A }>;
-  create: (header: Partial<DocumentHeader>) => Promise<T>;
+  create: (draft: Partial<DocumentHeader> & { lines?: LineDraft[] }) => Promise<T>;
   save: (id: string, patch: DocumentPatch) => Promise<T>;
   /** Whether the stored document still takes edits. False freezes the form. */
   editable: (document: T) => boolean;
@@ -274,7 +274,10 @@ export function useDocumentDraft<T extends StoredDocument, A>(
       const draft: Partial<DocumentHeader> = { customerId: editRef.current.header.customerId };
       if (editRef.current.header.reference !== "") draft.reference = editRef.current.header.reference;
       if (editRef.current.header.note !== "") draft.note = editRef.current.header.note;
-      return await createPort(draft);
+      const lines = rowsDraft(editRef.current.rows);
+      const createDraft: Partial<DocumentHeader> & { lines?: LineDraft[] } = { ...draft };
+      if (lines !== null && lines.length > 0) createDraft.lines = lines;
+      return await createPort(createDraft);
     } catch (err) {
       setError(billingMessage(err, strings.billingSaveFailed));
       return null;

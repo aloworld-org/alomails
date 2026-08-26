@@ -29,7 +29,7 @@ export function ComposerShareMenu({
 
 function ShareItem({ icon, name, hint, onClick }: { icon: ReactNode; name: string; hint: string; onClick: () => void }) {
   return (
-    <button type="button" role="menuitem" className="flex min-h-14 items-start gap-3 rounded-md border-0 bg-transparent p-3 text-left hover:bg-raised focus-visible:outline-2 focus-visible:outline-accent" onClick={onClick}>
+    <button type="button" role="menuitem" className="flex min-h-14 items-start gap-3 rounded-md border-0 bg-transparent p-3 text-left transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-2 focus-visible:outline-accent" onClick={onClick}>
       <span className="mt-1 shrink-0 text-accent">{icon}</span>
       <span className="min-w-0"><strong className="block text-sm text-primary">{name}</strong><span className="mt-1 block text-xs leading-snug text-tertiary">{hint}</span></span>
     </button>

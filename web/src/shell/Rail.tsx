@@ -19,9 +19,10 @@ import styles from "./Rail.module.css";
 interface RailProps {
   /** ✦AI action (assistant panel — placeholder until the AI layer). */
   onAskAi: () => void;
+  className?: string;
 }
 
-export function Rail({ onAskAi }: RailProps) {
+export function Rail({ onAskAi, className }: RailProps) {
   // Apps this person was actually given (migration 0208). Filtered before the
   // favourites are computed, so a switched-off app cannot occupy one of the
   // six shortcut slots and cannot be "recently used" into the top of the rail.
@@ -73,7 +74,7 @@ export function Rail({ onAskAi }: RailProps) {
   });
 
   return (
-    <nav className={styles.rail} aria-label={strings.appName}>
+    <nav className={cx(styles.rail, className)} aria-label={strings.appName}>
       <div className={styles.top}>
         <NavLink
           to="/mail"

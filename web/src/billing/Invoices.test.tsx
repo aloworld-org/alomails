@@ -270,7 +270,8 @@ describe("raising a draft", () => {
     ui("/billing/invoices/new");
 
     const picker = await screen.findByLabelText(strings.billingFieldCustomer);
-    fireEvent.change(picker, { target: { value: "c-1" } });
+    fireEvent.click(picker);
+    fireEvent.click(screen.getByRole("option", { name: "Acme GmbH" }));
     reply("/billing/invoices", "POST", { invoice: { ...DRAFT, lines: [], reference: "" } });
     fireEvent.click(screen.getByRole("button", { name: strings.billingCreateDraft }));
 
@@ -398,9 +399,8 @@ describe("the draft editor", () => {
 
     fireEvent.click(screen.getByRole("button", { name: strings.billingAddLine }));
     reply("/billing/invoices/inv-1", "PATCH", { invoice: DRAFT });
-    fireEvent.change(screen.getByLabelText(strings.billingPickProduct), {
-      target: { value: "p-1" },
-    });
+    fireEvent.click(screen.getByLabelText(strings.billingPickProduct));
+    fireEvent.click(screen.getByRole("option", { name: "Consulting" }));
 
     await waitFor(() => expect(lastWrite()).toBeTruthy(), { timeout: 3000 });
     expect(lastWrite()?.body).toHaveProperty("lines.0", {

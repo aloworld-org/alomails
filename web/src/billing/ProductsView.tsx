@@ -5,13 +5,14 @@
 // tenant's own currency, and it is the document that carries the currency it
 // was raised in (`docs/design/billing.md`).
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Package } from "lucide-react";
+import { Package, Upload } from "lucide-react";
 
 import { strings, useLocale } from "../i18n";
-import { Badge, Table, Td, Th, useDialogs } from "../ds";
+import { Badge, Button, Table, Td, Th, useDialogs } from "../ds";
 import { billingMessage, useBillingApi } from "./api";
 import { formatAmount, formatRate } from "./money";
 import { ProductDialog } from "./ProductDialog";
+import { PriceImportDialog } from "./PriceImportDialog";
 import { BillingLoading, EmptyState, ErrorBanner, ListToolbar } from "./parts";
 import type { BillingProduct } from "./types";
 import styles from "./billingStyles";
@@ -29,6 +30,7 @@ export function ProductsView() {
   const [editing, setEditing] = useState<BillingProduct | null | undefined>(
     undefined,
   );
+  const [importing, setImporting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -86,6 +88,7 @@ export function ProductsView() {
         onCreate={() => setEditing(null)}
         busy={loading}
         showCreate={products.length > 0}
+        beforeCreate={<Button variant="ghost" icon={<Upload aria-hidden="true" />} onClick={() => setImporting(true)}>Import prices</Button>}
       />
 
       {error !== null && <ErrorBanner message={error} />}
@@ -168,6 +171,7 @@ export function ProductsView() {
           }}
         />
       )}
+      {importing && <PriceImportDialog existing={products} onClose={() => setImporting(false)} onImported={() => { setImporting(false); void load(); }} />}
     </div>
   );
 }

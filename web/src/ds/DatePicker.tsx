@@ -28,8 +28,8 @@ const TRIGGER =
   "border border-default rounded-md bg-surface text-primary text-left " +
   "transition-colors duration-[var(--duration-fast)] " +
   "ease-standard hover:border-strong " +
-  "focus-visible:outline-2 focus-visible:outline-accent " +
-  "focus-visible:outline-offset-1 focus-visible:border-strong";
+  "focus-visible:outline-none focus:border-accent focus-visible:border-accent " +
+  "focus-visible:shadow-[inset_0_0_0_1px_var(--accent)]";
 
 /** The calendar. `w-[264px]` is seven cells and the padding around them — one
  *  drawing's width — and `z-60` is where the stylesheet put it: above the

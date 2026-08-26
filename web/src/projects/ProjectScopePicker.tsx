@@ -145,7 +145,7 @@ function ScopeOption({
       type="button"
       role="option"
       aria-selected={selected}
-      className={`flex min-h-10 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${selected ? "bg-[var(--accent-soft)] font-medium text-accent" : "text-primary"}`}
+      className={`flex min-h-10 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:!bg-accent-soft hover:!text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${selected ? "!bg-accent-soft font-medium !text-accent" : "text-primary"}`}
       onClick={onChoose}
     >
       {portfolio ? (

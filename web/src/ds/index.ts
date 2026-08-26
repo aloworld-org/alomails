@@ -24,6 +24,8 @@ export { Input } from "./Input";
 export type { InputProps } from "./Input";
 export { Select } from "./Select";
 export type { SelectProps } from "./Select";
+export { ChoicePicker } from "./ChoicePicker";
+export type { ChoiceOption, ChoicePickerProps } from "./ChoicePicker";
 export { Modal } from "./Modal";
 export type { ModalProps } from "./Modal";
 export { Card } from "./Card";

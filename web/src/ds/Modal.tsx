@@ -103,8 +103,8 @@ const HEIGHT = {
  *  panel's side. */
 const BODY = {
   auto: "flex flex-col gap-4 p-5 overflow-y-auto",
-  tall: "flex flex-col gap-4 p-5 overflow-hidden",
-  page: "flex flex-col gap-0 p-0 overflow-hidden",
+  tall: "flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-5",
+  page: "flex min-h-0 flex-1 flex-col gap-0 overflow-hidden p-0",
 } as const;
 
 const HEAD = "flex items-center gap-2 px-5 py-4 border-b border-subtle";

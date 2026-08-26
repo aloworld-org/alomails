@@ -76,7 +76,7 @@ function CustomerPicker({ customers, value, onChange }: {
                 type="button"
                 role="option"
                 aria-selected={active}
-                className={`min-h-10 w-full rounded-md text-left text-sm font-medium transition-colors ${active ? "bg-accent-soft text-accent" : "text-primary hover:bg-raised"}`}
+                className={`min-h-10 w-full rounded-md text-left text-sm font-medium transition-colors hover:!bg-accent-soft hover:!text-accent ${active ? "!bg-accent-soft !text-accent" : "text-primary"}`}
                 onClick={() => {
                   onChange(customer.id);
                   setOpen(false);

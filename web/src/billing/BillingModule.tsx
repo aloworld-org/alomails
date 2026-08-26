@@ -14,6 +14,7 @@ import {
   FileText,
   IdCard,
   Package,
+  PlugZap,
   ReceiptText,
   RefreshCw,
   Tags,
@@ -25,6 +26,7 @@ import { CustomersView } from "./CustomersView";
 import { InvoiceEditor } from "./InvoiceEditor";
 import { InvoicesView } from "./InvoicesView";
 import { ProductsView } from "./ProductsView";
+import { PriceConnectionsView } from "./PriceConnectionsView";
 import { QuoteEditor } from "./QuoteEditor";
 import { QuotesView } from "./QuotesView";
 import { SchedulesView } from "./SchedulesView";
@@ -38,6 +40,7 @@ import { SettingsView } from "./SettingsView";
 const TABS = [
   { path: "customers", label: () => strings.billingCustomers, Icon: Building2 },
   { path: "products", label: () => strings.billingProducts, Icon: Tags },
+  { path: "connections", label: () => "Price connections", Icon: PlugZap },
   { path: "quotes", label: () => strings.billingQuotes, Icon: FileText },
   { path: "invoices", label: () => strings.billingInvoices, Icon: ReceiptText },
   // What bills itself again on a rhythm (B2.11). After the documents it
@@ -119,6 +122,7 @@ export function BillingModule() {
         <Route path="recurring" element={<SchedulesView />} />
         <Route path="customers" element={<CustomersView />} />
         <Route path="products" element={<ProductsView />} />
+        <Route path="connections" element={<PriceConnectionsView />} />
         <Route path="reports" element={<VatReportView />} />
         <Route path="details" element={<SettingsView />} />
         {/* Keep old bookmarks working while exposing a clear, user-facing URL. */}

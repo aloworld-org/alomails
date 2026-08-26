@@ -6,7 +6,7 @@
  * and primary text (~55% of the surface). Terracotta (#E76F51) is the human
  * accent — buttons, links, unread, AI, active state — kept deliberately scarce
  * (~5%) so it always means "that's alo". Cream (#FAF7F2) is the comfortable
- * reading ground; stone/slate stay out of the way on borders and metadata.
+ * reading ground; warm stone stays out of the way on borders and metadata.
  *
  * The raw scale variable names are historical (verdigris/copper/warm) but now
  * hold the aloworld palette, so every component that reads them re-themes from
@@ -58,10 +58,10 @@
   --warm-200: #e3ddd4;
   --warm-300: #d4ccbe; /* scrollbar / spinner track */
   --warm-400: #b3a48f;
-  --warm-500: #6b7280; /* metadata / tertiary text */
-  --warm-600: #4b5563;
-  --warm-700: #374151;
-  --warm-800: #1f2937;
+  --warm-500: #7a6f62; /* metadata / tertiary text */
+  --warm-600: #5f554b;
+  --warm-700: #463f38;
+  --warm-800: #2d2925;
   --warm-900: #102a43;
 
   /* ---- semantic: backgrounds ---- */
@@ -73,11 +73,11 @@
   --bg-rail-hover: #2a3237; /* graphite hover */
   --bg-rail-active: #343d42; /* lifted active surface */
   --bg-selected: var(--verdigris-100); /* selected list row — soft terracotta */
-  --bg-overlay: rgba(16, 42, 67, 0.45);
+  --bg-overlay: rgba(31, 37, 41, 0.48); /* warm charcoal, never blue-gray */
 
   /* ---- semantic: text ---- */
   --text-primary: var(--ink); /* navy */
-  --text-secondary: #475569; /* softened slate */
+  --text-secondary: var(--warm-600);
   --text-tertiary: var(--warm-500);
   --text-on-accent: #ffffff;
   --text-on-rail: #f7f3ef;
@@ -87,7 +87,7 @@
   /* ---- semantic: borders ---- */
   --border-subtle: #e8e2d9;
   --border-default: #ded7cd;
-  --border-strong: #cbd5e1; /* stone */
+  --border-strong: #b3a48f; /* warm stone; never browser-blue */
   /* The unfilled part of a ring: the spinner's track, and the scrollbar's.
      `Spinner` reached straight into the raw scale for this (`--warm-300`) —
      the one raw-scale reference left in `ds/` — which the semantic layer has

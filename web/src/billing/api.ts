@@ -151,6 +151,16 @@ export class BillingApi {
     ).then((r) => r.products ?? []);
   }
 
+  /** Proposes price rows from an image through the tenant's configured AI.
+   *  Nothing is written until the user reviews and imports the returned rows. */
+  extractPriceListImage(dataUrl: string): Promise<Array<{ name: string; unit: string; unitPrice: number; vatRate: number; sku: string }>> {
+    return this.#write<{ rows?: Array<{ name: string; unit: string; unitPrice: number; vatRate: number; sku: string }> }>(
+      "POST",
+      "/ai/extract-price-list",
+      { dataUrl },
+    ).then((response) => response.rows ?? []);
+  }
+
   /** Creates a price-list item. */
   createProduct(draft: ProductDraft): Promise<BillingProduct> {
     return this.#write<{ product: BillingProduct }>("POST", "/billing/products", draft).then(

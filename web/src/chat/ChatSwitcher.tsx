@@ -14,7 +14,7 @@ export function ChatSwitcher({ query, rooms, onQuery, onChoose, onClose }: { que
         }} />
         <ul className="m-0 max-h-80 list-none overflow-y-auto p-2">
           {rooms.length === 0 ? <li className="px-3 py-6 text-center text-sm text-tertiary">{strings.chatNoRoom}</li> : rooms.map((room, index) => (
-            <li key={room.id}><button type="button" className={`flex min-h-11 w-full items-center gap-2 rounded-md border-0 px-3 text-left text-sm ${index === 0 ? "bg-selected text-primary" : "bg-transparent text-secondary hover:bg-raised"}`} onClick={() => onChoose(room.id)}>{room.kind === "agent_dm" ? <Bot size={15} className="text-accent" /> : room.kind === "dm" ? <Users size={15} className="text-tertiary" /> : <Hash size={15} className="text-tertiary" />}{channelLabel(room)}</button></li>
+            <li key={room.id}><button type="button" className={`flex min-h-11 w-full items-center gap-2 rounded-md border-0 px-3 text-left text-sm transition-colors hover:bg-accent-soft hover:text-accent ${index === 0 ? "bg-accent-soft text-accent" : "bg-transparent text-secondary"}`} onClick={() => onChoose(room.id)}>{room.kind === "agent_dm" ? <Bot size={15} className="text-accent" /> : room.kind === "dm" ? <Users size={15} className="text-tertiary" /> : <Hash size={15} className="text-tertiary" />}{channelLabel(room)}</button></li>
           ))}
         </ul>
       </div>

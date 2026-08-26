@@ -118,7 +118,7 @@ export function UserMenu() {
               <Link
                 key={c.path}
                 to={menu.to}
-                className={styles.item}
+                className={`${styles.item} hover:!bg-accent-soft hover:!text-accent`}
                 role="menuitem"
                 onClick={() => setOpen(false)}
               >
@@ -129,7 +129,7 @@ export function UserMenu() {
           })}
           <button
             type="button"
-            className={styles.item}
+            className={`${styles.item} hover:!bg-accent-soft hover:!text-accent`}
             role="menuitem"
             onClick={() => {
               setOpen(false);
@@ -141,7 +141,7 @@ export function UserMenu() {
           </button>
           <button
             type="button"
-            className={styles.item}
+            className={`${styles.item} hover:!bg-accent-soft hover:!text-accent`}
             role="menuitem"
             onClick={() => {
               setOpen(false);
@@ -153,7 +153,7 @@ export function UserMenu() {
           </button>
           <button
             type="button"
-            className={styles.item}
+            className={`${styles.item} hover:!bg-accent-soft hover:!text-accent`}
             role="menuitem"
             onClick={() => {
               setOpen(false);
@@ -183,7 +183,7 @@ export function UserMenu() {
           <div className={styles.menuDivider} />
           <button
             type="button"
-            className={styles.item}
+            className={`${styles.item} hover:!bg-accent-soft hover:!text-accent`}
             role="menuitem"
             onClick={() => {
               setOpen(false);

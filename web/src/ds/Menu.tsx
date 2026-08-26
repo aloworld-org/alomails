@@ -52,7 +52,7 @@ const ITEM =
   "flex items-center gap-3 w-full py-2 px-3 rounded-md " +
   "text-base text-left whitespace-nowrap " +
   "transition-colors duration-[var(--duration-fast)] ease-standard " +
-  "enabled:hover:bg-raised disabled:opacity-45 disabled:cursor-not-allowed";
+  "enabled:hover:!bg-accent-soft enabled:hover:!text-accent disabled:opacity-45 disabled:cursor-not-allowed";
 
 export interface MenuItem {
   key: string;

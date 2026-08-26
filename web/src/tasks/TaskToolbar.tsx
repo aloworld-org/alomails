@@ -70,7 +70,7 @@ function Dropdown({
 
 function Choice({ on, label, onClick }: { on: boolean; label: string; onClick: () => void }) {
   return (
-    <button type="button" role="menuitemradio" aria-checked={on} className="flex min-h-9 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-primary !no-underline hover:bg-raised hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent" onClick={onClick}>
+    <button type="button" role="menuitemradio" aria-checked={on} className="flex min-h-9 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-primary !no-underline transition-colors hover:!bg-accent-soft hover:!text-accent hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent" onClick={onClick}>
       <span className="inline-flex w-4 shrink-0 justify-center text-accent">{on && <Check size={14} />}</span>
       {label}
     </button>
@@ -118,7 +118,7 @@ export function TaskToolbar({ config, onChange, summary }: Props) {
             type="button"
             role="menuitemcheckbox"
             aria-checked={config.priorities.has(p.key)}
-            className="flex min-h-9 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-primary !no-underline hover:bg-raised hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+            className="flex min-h-9 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-primary !no-underline transition-colors hover:!bg-accent-soft hover:!text-accent hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
             onClick={() => togglePriority(p.key)}
           >
             <span className="inline-flex w-4 shrink-0 justify-center text-accent">{config.priorities.has(p.key) && <Check size={14} />}</span>

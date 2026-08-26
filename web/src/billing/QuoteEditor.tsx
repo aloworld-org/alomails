@@ -15,8 +15,9 @@
 // A lapsed offer can still be accepted. The store refuses on state, never on a
 // date, and honouring an offer a few days late is a decision a tenant is
 // entitled to make — so "Lapsed" is a chip here, not a locked door.
-import { useCallback } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { CalendarDays, Eye, FileText, Palette, Pencil } from "lucide-react";
 
 import { RecordHistory } from "../audit";
 import { strings, useLocale } from "../i18n";
@@ -24,11 +25,15 @@ import { useBillingApi } from "./api";
 import { formatDocumentDate } from "./dates";
 import type { DocumentAction } from "./DocumentActions";
 import { DocumentEditor } from "./DocumentEditor";
+import type { CreationTemplate } from "./DocumentEditor";
 import type { DocumentHeader, DocumentPatch } from "./documentDraft";
 import { useDocumentDraft } from "./documentDraft";
+import { blankRow, rowFromProduct } from "./lineRows";
+import { formatAmount } from "./money";
 import { Field } from "./parts";
 import { usePickers } from "./pickers";
 import { QuoteChips } from "./status";
+import { QuoteContentStudio, type QuoteContentStudioHandle } from "./QuoteContentStudio";
 import type { BillingQuote } from "./types";
 import styles from "./billingStyles";
 
@@ -38,6 +43,8 @@ export function QuoteEditor() {
   const locale = useLocale();
   const navigate = useNavigate();
   const pickers = usePickers();
+  const quoteStudio = useRef<QuoteContentStudioHandle>(null);
+  const [preview, setPreview] = useState(false);
 
   /** The invoice screen for an id, from inside `/billing/quotes/{id}`. */
   const openInvoice = useCallback(
@@ -136,6 +143,42 @@ export function QuoteEditor() {
   }
 
   const invoiceId = draft.aside;
+  const customerName =
+    quote === null
+      ? ""
+      : (pickers.customers.find((customer) => customer.id === quote.customerId)?.name ?? "");
+  const services = pickers.products.filter((product) => !product.stocked && !product.archived);
+  const rowsFromProducts = (products: typeof services) => (nextKey: () => string) =>
+    products.map((product) =>
+      rowFromProduct({ ...blankRow(nextKey()), qty: "1" }, product),
+    );
+  const monthly = services.find((product) => product.unit.toLowerCase() === "month");
+  const creationTemplates: CreationTemplate[] = [
+    {
+      key: "blank",
+      name: strings.billingQuoteTemplateBlank,
+      description: strings.billingQuoteTemplateBlankDescription,
+      buildRows: () => [],
+    },
+    {
+      key: "services",
+      name: strings.billingQuoteTemplateServices,
+      description: strings.billingQuoteTemplateServicesDescription,
+      buildRows: rowsFromProducts(services.slice(0, 2)),
+    },
+    {
+      key: "project",
+      name: strings.billingQuoteTemplateProject,
+      description: strings.billingQuoteTemplateProjectDescription,
+      buildRows: rowsFromProducts(services.slice(0, 3)),
+    },
+    {
+      key: "retainer",
+      name: strings.billingQuoteTemplateRetainer,
+      description: strings.billingQuoteTemplateRetainerDescription,
+      buildRows: rowsFromProducts(monthly === undefined ? services.slice(0, 1) : [monthly]),
+    },
+  ];
 
   return (
     <DocumentEditor
@@ -148,7 +191,7 @@ export function QuoteEditor() {
         gone: strings.billingQuoteGone,
         customerHint: strings.billingQuoteCustomerHint,
         createHint: strings.billingCreateQuoteHint,
-        createLabel: strings.billingCreateDraft,
+        createLabel: strings.billingQuoteContinueToEditor,
         discardLabel: strings.billingDeleteQuoteDraft,
         discardMessage: strings.billingDeleteQuoteDraftConfirm,
         frozenNotice:
@@ -157,6 +200,55 @@ export function QuoteEditor() {
             : strings.billingQuoteClosedNotice,
       }}
       chips={quote === null ? null : <QuoteChips quote={quote} />}
+      lead={
+        quote === null ? null : (
+          <section className={styles.quoteHero}>
+            <div className={styles.quoteHeroIdentity}>
+              <span className={styles.quoteHeroIcon} aria-hidden="true">
+                <FileText size={22} />
+              </span>
+              <div className="min-w-0">
+                <p className={styles.quoteEyebrow}>{strings.billingQuotation}</p>
+                <h1 className={styles.quoteCustomer}>{customerName}</h1>
+                <p className={styles.quotePreparedFor}>{strings.billingPreparedFor}</p>
+              </div>
+            </div>
+            <div className={styles.quoteHeroMetrics}>
+              <div className={styles.quoteMetric}>
+                <span>{strings.billingTotalsGross}</span>
+                <strong>
+                  {formatAmount(quote.totals.grossCents, locale, quote.currency)} {quote.currency}
+                </strong>
+                <small>{strings.billingIncludingVat}</small>
+              </div>
+              <div className={styles.quoteMetric}>
+                <span className="inline-flex items-center gap-1.5">
+                  <CalendarDays size={14} aria-hidden="true" />
+                  {strings.billingFieldValidUntil}
+                </span>
+                <strong>
+                  {formatDocumentDate(quote.validUntil, locale, strings.billingNoDate)}
+                </strong>
+                <small>{strings.billingValidForDays(quote.validDays)}</small>
+              </div>
+            </div>
+          </section>
+        )
+      }
+      documentBody={
+        id === undefined ? null : (
+          <QuoteContentStudio ref={quoteStudio} quoteId={id} readOnly={draft.readOnly || preview} preview={preview} />
+        )
+      }
+      editorActions={
+        quote === null ? null : (
+          <div className="flex items-center gap-1">
+            <button type="button" className={styles.linkAction} onClick={() => quoteStudio.current?.customize()}><Palette size={15} aria-hidden="true" /> Customize</button>
+            <button type="button" className={styles.linkAction} aria-pressed={preview} onClick={() => setPreview((value) => !value)}>{preview ? <Pencil size={15} aria-hidden="true" /> : <Eye size={15} aria-hidden="true" />}{preview ? "Edit" : "Preview"}</button>
+          </div>
+        )
+      }
+      presentationReadOnly={preview}
       dates={
         quote === null ? null : (
           <>
@@ -177,6 +269,7 @@ export function QuoteEditor() {
         )
       }
       actions={actions}
+      creationTemplates={creationTemplates}
       footer={
         quote === null ? null : (
           <>

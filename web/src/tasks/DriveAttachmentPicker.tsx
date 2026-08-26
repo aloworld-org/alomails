@@ -112,7 +112,7 @@ export function DriveAttachmentPicker({ onAttach, onClose }: Props) {
               <button
                 key={node.id}
                 type="button"
-                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${chosen ? "bg-accent-tint text-accent" : "text-primary hover:bg-raised"}`}
+                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors hover:bg-accent-soft hover:text-accent ${chosen ? "bg-accent-soft text-accent" : "text-primary"}`}
                 onClick={() => {
                   if (folder) {
                     setCrumbs((currentCrumbs) => [...currentCrumbs, { id: node.id, name: node.name }]);

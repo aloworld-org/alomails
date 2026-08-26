@@ -107,7 +107,7 @@ const TEXTAREA =
   "w-full resize-y rounded-md border border-default bg-surface px-3 py-2 " +
   "font-[inherit] text-base text-primary placeholder:text-tertiary " +
   "transition-colors duration-[var(--duration-fast)] ease-standard " +
-  "focus-visible:border-strong focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent";
+  "focus:border-accent focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent";
 
 interface ContactsModalProps {
   onClose: () => void;
