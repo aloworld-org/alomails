@@ -75,10 +75,36 @@ const IMAGE_POSITION = {
   right: "object-right",
 } as const;
 const IMAGE_ZOOM = {
+  50: "scale-50",
+  60: "scale-[.6]",
+  70: "scale-[.7]",
+  75: "scale-75",
+  80: "scale-[.8]",
+  90: "scale-90",
   100: "scale-100",
+  110: "scale-110",
+  120: "scale-[1.2]",
   125: "scale-125",
+  130: "scale-[1.3]",
+  140: "scale-[1.4]",
   150: "scale-150",
+  160: "scale-[1.6]",
+  170: "scale-[1.7]",
+  175: "scale-[1.75]",
+  180: "scale-[1.8]",
+  190: "scale-[1.9]",
+  200: "scale-200",
 } as const;
+
+function normalizeZoom(value: number): keyof typeof IMAGE_ZOOM {
+  if (!Number.isFinite(value)) return 100;
+  const supported = Object.keys(IMAGE_ZOOM).map(Number);
+  return supported.reduce((closest, candidate) =>
+    Math.abs(candidate - value) < Math.abs(closest - value)
+      ? candidate
+      : closest,
+  ) as keyof typeof IMAGE_ZOOM;
+}
 
 function imageDraft(key: string, content: QuoteLineContent): ImageDraft {
   return {
@@ -100,7 +126,7 @@ function imageClasses(
     "size-full transition-transform",
     content.imageFit === "contain" ? "object-contain" : "object-cover",
     IMAGE_POSITION[content.imagePosition ?? "center"],
-    IMAGE_ZOOM[content.imageZoom ?? 100],
+    IMAGE_ZOOM[normalizeZoom(content.imageZoom ?? 100)],
   );
 }
 
@@ -160,12 +186,59 @@ function ProductImageEditor({
             choices={[["cover", "Fill frame"], ["contain", "Show full image"]]}
             onChange={(imageFit) => onChange({ ...draft, imageFit })}
           />
-          <EditorChoice
-            label="Zoom"
-            value={String(draft.imageZoom)}
-            choices={[["100", "100%"], ["125", "125%"], ["150", "150%"]]}
-            onChange={(value) => onChange({ ...draft, imageZoom: Number(value) as ImageDraft["imageZoom"] })}
-          />
+          <fieldset>
+            <legend className="mb-2 text-xs font-semibold uppercase tracking-wide text-tertiary">
+              Zoom
+            </legend>
+            <div className="grid grid-cols-3 gap-2">
+              {[75, 100, 125, 150, 200].map((zoom) => (
+                <button
+                  key={zoom}
+                  type="button"
+                  className={cx(
+                    "min-h-10 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                    draft.imageZoom === zoom
+                      ? "border-accent bg-accent-soft text-accent"
+                      : "border-default bg-surface text-primary hover:border-accent/50 hover:bg-raised",
+                  )}
+                  aria-pressed={draft.imageZoom === zoom}
+                  onClick={() => onChange({ ...draft, imageZoom: zoom })}
+                >
+                  {zoom}%
+                </button>
+              ))}
+              <label className="relative">
+                <span className="sr-only">Custom zoom percentage</span>
+                <input
+                  aria-label="Custom zoom percentage"
+                  type="number"
+                  min="50"
+                  max="200"
+                  step="10"
+                  value={draft.imageZoom}
+                  className="min-h-10 w-full rounded-lg border border-default bg-surface px-3 pr-7 text-sm font-medium text-primary focus:border-accent focus:outline-none"
+                  onChange={(event) =>
+                    onChange({
+                      ...draft,
+                      imageZoom: event.currentTarget.valueAsNumber,
+                    })
+                  }
+                  onBlur={(event) =>
+                    onChange({
+                      ...draft,
+                      imageZoom: normalizeZoom(event.currentTarget.valueAsNumber),
+                    })
+                  }
+                />
+                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-tertiary">
+                  %
+                </span>
+              </label>
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-secondary">
+              Use 50–90% to show more of the image, or more than 100% for a tighter crop.
+            </p>
+          </fieldset>
           <EditorChoice
             label="Focus area"
             value={draft.imagePosition}

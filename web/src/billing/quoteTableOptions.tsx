@@ -10,7 +10,8 @@ export interface QuoteLineContent {
   image: string;
   imageFit?: "cover" | "contain";
   imagePosition?: "center" | "top" | "bottom" | "left" | "right";
-  imageZoom?: 100 | 125 | 150;
+  /** Percentage scale inside the crop frame. Values below 100 zoom out. */
+  imageZoom?: number;
 }
 
 export interface QuoteTableOptionsValue {

@@ -65,7 +65,9 @@ describe("pricing-table product image editor", () => {
     expect(screen.getByRole("region", { name: "PDF preview" })).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Show full image" }));
-    fireEvent.click(screen.getByRole("button", { name: "150%" }));
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Custom zoom percentage" }), {
+      target: { value: "180" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Top" }));
     fireEvent.click(screen.getByRole("button", { name: "Apply image" }));
 
@@ -73,7 +75,7 @@ describe("pricing-table product image editor", () => {
       image: IMAGE,
       imageFit: "contain",
       imagePosition: "top",
-      imageZoom: 150,
+      imageZoom: 180,
     });
   });
 
