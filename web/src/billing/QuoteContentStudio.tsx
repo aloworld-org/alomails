@@ -2715,7 +2715,7 @@ function CustomizeQuote({
                   type="button"
                   aria-pressed={design.headerAlignment === alignment}
                   className={cx(
-                    "group relative min-h-40 overflow-hidden rounded-2xl border p-4 text-left transition-colors hover:border-accent hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
+                    "group relative min-h-40 overflow-hidden rounded-2xl border !p-4 text-left transition-colors hover:border-accent hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
                     design.headerAlignment === alignment
                       ? "border-accent bg-accent-soft/30 shadow-sm"
                       : "border-default bg-surface shadow-sm",
@@ -2746,7 +2746,7 @@ function CustomizeQuote({
                       <span className="block h-1.5 w-14 rounded-full bg-accent/70" />
                     </span>
                   </span>
-                  <span className="flex items-start justify-between gap-4 px-1 pb-1 pt-3">
+                  <span className="flex items-start justify-between gap-4 px-1 pb-1 pt-4">
                     <span>
                       <strong className="block text-sm font-semibold text-primary">
                         Logo {alignment}
@@ -2869,7 +2869,7 @@ function CustomizeQuote({
                   type="button"
                   aria-pressed={design.theme === theme.id}
                   className={cx(
-                    "group relative min-h-52 overflow-hidden rounded-2xl border p-3 text-left shadow-sm transition-colors hover:border-accent hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
+                    "group relative min-h-52 overflow-hidden rounded-2xl border !p-3 text-left shadow-sm transition-colors hover:border-accent hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
                     design.theme === theme.id
                       ? "border-accent bg-accent-soft/30"
                       : "border-default bg-surface",
