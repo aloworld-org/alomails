@@ -2834,6 +2834,8 @@ export const en = {
   // makes a list of documents ambiguous at a glance.
   billingColSentDate: "Finalized on",
   billingColValidUntil: "Valid until",
+  billingColCreated: "Created",
+  billingColLastEdited: "Last edited",
   billingDraftQuote: "Draft quote",
   billingBackToQuotes: "All quotes",
   billingQuoteGone: "This quote no longer exists.",

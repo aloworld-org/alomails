@@ -25,7 +25,11 @@ import {
 } from "../ds";
 import { strings, useLocale } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
-import { formatDocumentDate } from "./dates";
+import {
+  formatAuditDate,
+  formatAuditDateTime,
+  formatDocumentDate,
+} from "./dates";
 import { formatAmount } from "./money";
 import { BillingLoading, EmptyState, ErrorBanner } from "./parts";
 import { QuoteChips } from "./status";
@@ -106,10 +110,15 @@ export function QuotesView() {
 
   const shown = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    return quotes.filter((q) =>
+    const matchesSearch = quotes.filter((q) =>
       matches(q, names.get(q.customerId) ?? "", needle),
     );
-  }, [quotes, names, search]);
+    if (filter !== "draft") return matchesSearch;
+    return [...matchesSearch].sort(
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    );
+  }, [quotes, names, search, filter]);
 
   return (
     <div className={styles.page}>
@@ -169,6 +178,8 @@ export function QuotesView() {
             <tr>
               <Th>{strings.billingColNumber}</Th>
               <Th>{strings.billingColCustomer}</Th>
+              <Th>{strings.billingColCreated}</Th>
+              <Th>{strings.billingColLastEdited}</Th>
               <Th>{strings.billingColSentDate}</Th>
               <Th>{strings.billingColValidUntil}</Th>
               <Th>{strings.billingColStatus}</Th>
@@ -204,6 +215,22 @@ export function QuotesView() {
                 <td>
                   {names.get(quote.customerId) ??
                     strings.billingUnknownCustomer}
+                </td>
+                <td>
+                  <time
+                    dateTime={quote.createdAt}
+                    title={formatAuditDateTime(quote.createdAt, locale)}
+                  >
+                    {formatAuditDate(quote.createdAt, locale)}
+                  </time>
+                </td>
+                <td>
+                  <time
+                    dateTime={quote.updatedAt}
+                    title={formatAuditDateTime(quote.updatedAt, locale)}
+                  >
+                    {formatAuditDate(quote.updatedAt, locale)}
+                  </time>
                 </td>
                 <td>
                   {formatDocumentDate(

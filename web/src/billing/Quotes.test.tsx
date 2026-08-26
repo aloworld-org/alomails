@@ -305,6 +305,35 @@ describe("the quote list", () => {
       calls.some((call) => call.url.includes(`/billing/quotes/${DRAFT.id}`)),
     ).toBe(true);
   });
+
+  test("quotes show when they were created and last edited", async () => {
+    reply("/billing/quotes", "GET", {
+      quotes: [
+        {
+          ...DRAFT,
+          createdAt: "2026-08-04T08:15:00Z",
+          updatedAt: "2026-08-06T10:30:00Z",
+        },
+      ],
+    });
+    ui("/billing/quotes");
+
+    const table = await screen.findByRole("table", {
+      name: strings.billingQuotes,
+    });
+    expect(
+      within(table).getByRole("columnheader", {
+        name: strings.billingColCreated,
+      }),
+    ).toBeTruthy();
+    expect(
+      within(table).getByRole("columnheader", {
+        name: strings.billingColLastEdited,
+      }),
+    ).toBeTruthy();
+    expect(within(table).getByText("Aug 4, 2026")).toBeTruthy();
+    expect(within(table).getByText("Aug 6, 2026")).toBeTruthy();
+  });
 });
 
 describe("the quote draft editor", () => {

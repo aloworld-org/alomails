@@ -33,3 +33,25 @@ export function formatDocumentDate(date: DocumentDate, locale: string, fallback 
     timeZone: "UTC",
   }).format(new Date(utc));
 }
+
+/** A stored audit instant rendered as a compact date in lists. The complete
+ * local date and time is available to pointer users without making a dense
+ * document table wider than it needs to be. */
+export function formatAuditDate(instant: string, locale: string): string {
+  const date = new Date(instant);
+  if (Number.isNaN(date.getTime())) return instant;
+  return new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+export function formatAuditDateTime(instant: string, locale: string): string {
+  const date = new Date(instant);
+  if (Number.isNaN(date.getTime())) return instant;
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}

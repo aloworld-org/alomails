@@ -1882,6 +1882,8 @@ export const fr: Partial<Catalog> = {
   billingQuoteLapsed: "Date dépassée",
   billingColSentDate: "Finalisé le",
   billingColValidUntil: "Valable jusqu’au",
+  billingColCreated: "Créé le",
+  billingColLastEdited: "Dernière modification",
   billingDraftQuote: "Devis en brouillon",
   billingBackToQuotes: "Tous les devis",
   billingQuoteGone: "Ce devis n’existe plus.",

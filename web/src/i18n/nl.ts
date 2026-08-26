@@ -1842,6 +1842,8 @@ export const nl: Partial<Catalog> = {
   billingQuoteLapsed: "Datum verstreken",
   billingColSentDate: "Definitief op",
   billingColValidUntil: "Geldig tot",
+  billingColCreated: "Aangemaakt",
+  billingColLastEdited: "Laatst bewerkt",
   billingDraftQuote: "Conceptofferte",
   billingBackToQuotes: "Alle offertes",
   billingQuoteGone: "Deze offerte bestaat niet meer.",
