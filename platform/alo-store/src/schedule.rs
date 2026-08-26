@@ -21,6 +21,10 @@ pub struct DueSend {
     pub message_id: MessageId,
     pub mail_from: String,
     pub rcpts: Vec<String>,
+    /// The acting delegate's address for an on-behalf send scheduled from a
+    /// shared mailbox (ADR 0017) — the sweeper prepends it as `Sender:` so the
+    /// disclosure header reaches the wire exactly as an immediate send's would.
+    pub on_behalf_sender: Option<String>,
 }
 
 impl AccountStore {
@@ -66,15 +70,16 @@ impl AccountStore {
         mail_from: &str,
         rcpts: &[String],
         send_at_epoch: i64,
+        on_behalf_sender: Option<&str>,
     ) -> Result<()> {
         let scheduled = self.ensure_scheduled_mailbox().await?;
         sqlx::query(
             "INSERT INTO scheduled_sends \
-                 (tenant_id, user_id, message_id, send_at, mail_from, rcpts) \
-             VALUES ($1, $2, $3, to_timestamp($4), $5, $6) \
+                 (tenant_id, user_id, message_id, send_at, mail_from, rcpts, on_behalf_sender) \
+             VALUES ($1, $2, $3, to_timestamp($4), $5, $6, $7) \
              ON CONFLICT (tenant_id, user_id, message_id) DO UPDATE \
                  SET send_at = EXCLUDED.send_at, mail_from = EXCLUDED.mail_from, \
-                     rcpts = EXCLUDED.rcpts",
+                     rcpts = EXCLUDED.rcpts, on_behalf_sender = EXCLUDED.on_behalf_sender",
         )
         .bind(self.tenant.as_str())
         .bind(self.user.as_str())
@@ -82,6 +87,7 @@ impl AccountStore {
         .bind(send_at_epoch)
         .bind(mail_from)
         .bind(rcpts)
+        .bind(on_behalf_sender)
         .execute(&self.pool)
         .await?;
         // Add to Scheduled first so the draft is never in neither mailbox.
@@ -151,27 +157,31 @@ impl Store {
     /// # Errors
     /// [`StoreError::Db`](crate::error::StoreError::Db) on failure.
     pub async fn claim_due_sends(&self, limit: i64) -> Result<Vec<DueSend>> {
-        let rows: Vec<(String, String, String, String, Vec<String>)> = sqlx::query_as(
-            "DELETE FROM scheduled_sends \
-             WHERE (tenant_id, user_id, message_id) IN ( \
-                 SELECT tenant_id, user_id, message_id FROM scheduled_sends \
-                 WHERE send_at <= now() ORDER BY send_at LIMIT $1 \
-                 FOR UPDATE SKIP LOCKED \
-             ) \
-             RETURNING tenant_id, user_id, message_id, mail_from, rcpts",
-        )
-        .bind(limit)
-        .fetch_all(self.pool())
-        .await?;
+        type DueRow = (String, String, String, String, Vec<String>, Option<String>);
+        let rows: Vec<DueRow> = sqlx::query_as(
+                "DELETE FROM scheduled_sends \
+                 WHERE (tenant_id, user_id, message_id) IN ( \
+                     SELECT tenant_id, user_id, message_id FROM scheduled_sends \
+                     WHERE send_at <= now() ORDER BY send_at LIMIT $1 \
+                     FOR UPDATE SKIP LOCKED \
+                 ) \
+                 RETURNING tenant_id, user_id, message_id, mail_from, rcpts, on_behalf_sender",
+            )
+            .bind(limit)
+            .fetch_all(self.pool())
+            .await?;
         Ok(rows
             .into_iter()
-            .map(|(tenant, user, id, mail_from, rcpts)| DueSend {
-                tenant: TenantId::new(tenant),
-                user: UserId::new(user),
-                message_id: MessageId::new(id),
-                mail_from,
-                rcpts,
-            })
+            .map(
+                |(tenant, user, id, mail_from, rcpts, on_behalf_sender)| DueSend {
+                    tenant: TenantId::new(tenant),
+                    user: UserId::new(user),
+                    message_id: MessageId::new(id),
+                    mail_from,
+                    rcpts,
+                    on_behalf_sender,
+                },
+            )
             .collect())
     }
 }

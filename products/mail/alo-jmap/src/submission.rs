@@ -102,7 +102,12 @@ async fn create_one(account: &Account, props: &Value, state: &AppState) -> Resul
     // recipients never learn who was blind-copied. The sender's own copy (moved
     // to Sent by `post_send`) keeps `bytes` intact; delivery to the bcc'd
     // addresses happens through the envelope `rcptTo`.
-    let wire = strip_bcc_header(prepared.bytes.as_ref());
+    let mut wire = strip_bcc_header(prepared.bytes.as_ref());
+    // On-behalf sending (ADR 0017): the acting delegate is disclosed on the
+    // wire copy only — the stored draft stays as composed.
+    if let Some(sender) = &prepared.on_behalf_sender {
+        wire = prepend_sender_header(&wire, sender);
+    }
     submit(addr, &prepared.mail_from, &prepared.rcpts, &wire)
         .await
         .map_err(|reason| {
@@ -121,6 +126,10 @@ pub(crate) struct Prepared {
     pub bytes: bytes::Bytes,
     pub mail_from: String,
     pub rcpts: Vec<String>,
+    /// The acting delegate's address for an on-behalf send from a shared
+    /// mailbox (ADR 0017) — prepended as `Sender:` to the wire copy at send
+    /// time, whether that is now or at the scheduled sweep.
+    pub on_behalf_sender: Option<String>,
 }
 
 /// Validate a submission request against the authenticated account: the draft
@@ -245,15 +254,16 @@ pub(crate) async fn validate_and_prepare(
         ));
     }
 
-    // On-behalf sending (ADR 0017): prepend a `Sender:` header naming the acting
-    // delegate, so recipients see who actually sent from the shared mailbox
-    // (`From:` stays the shared address). Send-as adds no `Sender:`.
-    let bytes = match &account.delegated {
-        Some(d) if d.send_mode == SendMode::OnBehalf => match ts.email_of(&d.delegate).await {
-            Ok(Some(sender)) => prepend_sender_header(&bytes, &sender),
-            _ => bytes,
-        },
-        _ => bytes,
+    // On-behalf sending (ADR 0017): record the acting delegate so a `Sender:`
+    // header naming them goes on the wire copy — recipients see who actually
+    // sent from the shared mailbox (`From:` stays the shared address). Send-as
+    // adds no `Sender:`. Resolved here, applied at send time (immediate or
+    // scheduled sweep), so the stored draft is never rewritten.
+    let on_behalf_sender = match &account.delegated {
+        Some(d) if d.send_mode == SendMode::OnBehalf => {
+            ts.email_of(&d.delegate).await.ok().flatten()
+        }
+        _ => None,
     };
 
     Ok(Prepared {
@@ -261,16 +271,17 @@ pub(crate) async fn validate_and_prepare(
         bytes,
         mail_from,
         rcpts,
+        on_behalf_sender,
     })
 }
 
 /// Prepend a `Sender:` header to a raw message (header order is unconstrained,
 /// so inserting at the top is valid and keeps the rest of the message intact).
-fn prepend_sender_header(bytes: &[u8], sender: &str) -> bytes::Bytes {
+fn prepend_sender_header(bytes: &[u8], sender: &str) -> Vec<u8> {
     let mut out = Vec::with_capacity(bytes.len() + sender.len() + 12);
     out.extend_from_slice(format!("Sender: {sender}\r\n").as_bytes());
     out.extend_from_slice(bytes);
-    bytes::Bytes::from(out)
+    out
 }
 
 /// Submit every scheduled send that is now due. Called on an interval by the
@@ -303,7 +314,13 @@ pub async fn run_due_scheduled(state: &AppState) {
             Ok(bytes) => bytes,
             Err(_) => continue,
         };
-        let wire = strip_bcc_header(bytes.as_ref());
+        let mut wire = strip_bcc_header(bytes.as_ref());
+        // A send scheduled on-behalf from a shared mailbox (ADR 0017): the
+        // acting delegate recorded at schedule time is disclosed on the wire
+        // exactly as an immediate on-behalf send would be.
+        if let Some(sender) = &send.on_behalf_sender {
+            wire = prepend_sender_header(&wire, sender);
+        }
         match submit(addr, &send.mail_from, &send.rcpts, &wire).await {
             Ok(()) => post_send(&acc, &send.message_id).await,
             Err(reason) => {

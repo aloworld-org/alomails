@@ -2338,8 +2338,12 @@ export class JmapClient {
     emailId: string,
     mailFrom: string,
     rcptTo: string[],
+    accountIdOverride?: string,
   ): Promise<void> {
-    const accountId = await this.accountId();
+    // The caller may pin the account the draft was composed in (a shared
+    // mailbox, ADR 0017), so an account switch during the undo-send window
+    // cannot re-target the submission; otherwise the active account is used.
+    const accountId = accountIdOverride ?? (await this.accountId());
     const res = await this.#request([
       [
         "EmailSubmission/set",
@@ -2383,10 +2387,14 @@ export class JmapClient {
     rcptTo: string[],
     sendAt: number,
   ): Promise<void> {
+    // The draft lives in the active account — the user's own, or a shared
+    // mailbox they're delegated (ADR 0017) — so the schedule must name it.
+    const accountId = await this.accountId();
     const res = await this.#fetch(`${API_BASE}/api/send-later`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        accountId,
         emailId,
         envelope: {
           mailFrom: { email: mailFrom },
@@ -2400,10 +2408,11 @@ export class JmapClient {
 
   /** Cancel a scheduled send: the draft returns to Drafts, editable again. */
   async cancelScheduledSend(emailId: string): Promise<void> {
+    const accountId = await this.accountId();
     const res = await this.#fetch(`${API_BASE}/api/send-later/cancel`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ emailId }),
+      body: JSON.stringify({ accountId, emailId }),
     });
     if (!res.ok) throw new JmapError(`send-later/cancel ${res.status}`);
   }

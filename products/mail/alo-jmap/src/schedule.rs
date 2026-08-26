@@ -12,7 +12,7 @@ use axum::http::{HeaderMap, StatusCode};
 use serde_json::{Value, json};
 
 use crate::error::Problem;
-use crate::state::{AppState, authenticate};
+use crate::state::{Account, AppState, authenticate, resolve_target};
 use crate::submission;
 
 /// A far-future guard on the schedule time (~2 years). A caller cannot pin a
@@ -35,15 +35,37 @@ fn submission_problem(err: &Value) -> Problem {
     Problem::with(status, kind)
 }
 
-/// `POST /send-later` — `{"emailId": "...", "envelope": {...}, "sendAt": <unix>}`
-/// → `{"scheduled": true, "sendAt": <unix>}`. Validates like an immediate send,
-/// then moves the draft to Scheduled and records the send time.
+/// Resolves the account a send-later call targets: the signed-in user's own
+/// (no/own `accountId`), or a shared mailbox they hold a delegation grant on
+/// (ADR 0017). An ungranted or foreign `accountId` is the same 404 as an
+/// unknown draft — no oracle for "exists but not yours".
+async fn target_account(
+    state: &AppState,
+    headers: &HeaderMap,
+    body: &Value,
+) -> Result<Account, Problem> {
+    let signed_in = authenticate(state, headers).await?;
+    match body.get("accountId").and_then(Value::as_str) {
+        None => Ok(signed_in),
+        Some(id) => resolve_target(&signed_in, state, id)
+            .await
+            .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "notFound")),
+    }
+}
+
+/// `POST /send-later` — `{"emailId": "...", "envelope": {...}, "sendAt": <unix>,
+/// "accountId"?: "..."}` → `{"scheduled": true, "sendAt": <unix>}`. Validates
+/// like an immediate send, then moves the draft to Scheduled and records the
+/// send time. `accountId` targets a delegated shared mailbox (ADR 0017): the
+/// draft, the Scheduled folder, and the eventual Sent copy all live in the
+/// shared mailbox, and the send grant is enforced exactly as an immediate
+/// submission's.
 pub async fn send_later(
     State(state): State<AppState>,
     headers: HeaderMap,
     Json(body): Json<Value>,
 ) -> Result<Json<Value>, Problem> {
-    let account = authenticate(&state, &headers).await?;
+    let account = target_account(&state, &headers, &body).await?;
     let now = now_epoch();
     let send_at = body
         .get("sendAt")
@@ -64,22 +86,35 @@ pub async fn send_later(
 
     account
         .acc
-        .schedule_send(&prepared.mid, &prepared.mail_from, &prepared.rcpts, send_at)
+        .schedule_send(
+            &prepared.mid,
+            &prepared.mail_from,
+            &prepared.rcpts,
+            send_at,
+            prepared.on_behalf_sender.as_deref(),
+        )
         .await
         .map_err(|_| Problem::server_error())?;
 
     Ok(Json(json!({ "scheduled": true, "sendAt": send_at })))
 }
 
-/// `POST /send-later/cancel` — `{"emailId": "..."}` → `{"cancelled": <bool>}`.
-/// Deletes the schedule and returns the draft to Drafts; a no-op if the message
-/// wasn't scheduled.
+/// `POST /send-later/cancel` — `{"emailId": "...", "accountId"?: "..."}` →
+/// `{"cancelled": <bool>}`. Deletes the schedule and returns the draft to
+/// Drafts; a no-op if the message wasn't scheduled. On a delegated shared
+/// mailbox (`accountId`, ADR 0017) cancelling is a mutation, so a read-only
+/// delegate is refused.
 pub async fn cancel_send(
     State(state): State<AppState>,
     headers: HeaderMap,
     Json(body): Json<Value>,
 ) -> Result<Json<Value>, Problem> {
-    let account = authenticate(&state, &headers).await?;
+    let account = target_account(&state, &headers, &body).await?;
+    if let Some(d) = &account.delegated
+        && !d.can_write
+    {
+        return Err(Problem::with(StatusCode::FORBIDDEN, "accountReadOnly"));
+    }
     let email_id = body
         .get("emailId")
         .and_then(Value::as_str)

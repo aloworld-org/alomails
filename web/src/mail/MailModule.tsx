@@ -390,19 +390,30 @@ export function MailModule() {
   // Drafts. One send is held at a time.
   const [pendingSend, setPendingSend] = useState<QueuedSend | null>(null);
   const pendingRef = useRef<QueuedSend | null>(null);
+  // The account the draft was composed in, captured when the send is queued —
+  // switching to another mailbox during the undo window must not re-target
+  // the submission (the draft lives where it was written, ADR 0017).
+  const pendingAccountRef = useRef<string | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function flushSend() {
     const queued = pendingRef.current;
     if (queued === null) return;
+    const queuedAccount = pendingAccountRef.current;
     pendingRef.current = null;
+    pendingAccountRef.current = null;
     setPendingSend(null);
     if (undoTimer.current !== null) {
       clearTimeout(undoTimer.current);
       undoTimer.current = null;
     }
     try {
-      await client.submitEmail(queued.emailId, queued.fromEmail, queued.rcpts);
+      await client.submitEmail(
+        queued.emailId,
+        queued.fromEmail,
+        queued.rcpts,
+        queuedAccount ?? undefined,
+      );
       afterChange(strings.composeSent);
       if (threadId !== null) thread.reload(); // a sent reply joins the open thread
     } catch (error) {
@@ -415,6 +426,7 @@ export function MailModule() {
     if (pendingRef.current !== null) void flushSend(); // never hold two at once
     setCompose(null);
     pendingRef.current = queued;
+    pendingAccountRef.current = activeAccount ?? ownId;
     setPendingSend(queued);
     undoTimer.current = setTimeout(() => void flushSend(), 5000);
   }
@@ -425,6 +437,7 @@ export function MailModule() {
       undoTimer.current = null;
     }
     pendingRef.current = null;
+    pendingAccountRef.current = null;
     setPendingSend(null);
     setToast(strings.composeSendUndone);
     emails.reload();

@@ -102,10 +102,27 @@ pub async fn post_send(acc: &alo_store::AccountStore, mid: &MessageId) {
             return;
         }
     };
-    let Some(sent) = boxes.iter().find(|m| m.role.as_deref() == Some("sent")) else {
-        return; // no Sent mailbox: leave the message where it is
+    // Sent is created on first use, exactly as Drafts is on first draft save —
+    // otherwise the first message ever sent from a fresh account (a shared
+    // mailbox nobody composed in before, typically) is left sitting in Drafts
+    // with its keywords changed, which reads as a lost message.
+    let sent = match boxes.iter().find(|m| m.role.as_deref() == Some("sent")) {
+        Some(m) => m.id.clone(),
+        None => match acc.create_mailbox(None, "Sent", Some("sent")).await {
+            Ok(id) => id,
+            Err(error) => {
+                // A concurrent send may have just created it — look once more.
+                match acc.mailbox_by_role("sent").await {
+                    Ok(Some(id)) => id,
+                    _ => {
+                        tracing::warn!(%error, "post-send: no Sent mailbox and could not create one");
+                        return;
+                    }
+                }
+            }
+        },
     };
-    if let Err(error) = acc.add_to_mailbox(mid, &sent.id).await {
+    if let Err(error) = acc.add_to_mailbox(mid, &sent).await {
         tracing::warn!(%error, "post-send: could not file to Sent");
         return;
     }
