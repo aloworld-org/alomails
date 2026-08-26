@@ -17,6 +17,7 @@ import { formatAmount, formatQty, formatRate } from "./money";
 import { blankRow, isBlankRow, rowFromProduct, rowProblem } from "./lineRows";
 import type { LineRow, RowProblem } from "./lineRows";
 import type { BillingProduct, DocumentLine } from "./types";
+import type { QuoteColumns } from "./QuoteContentStudio";
 import styles from "./billingStyles";
 
 /** What to say about the row's first problem. A blank description is the
@@ -45,6 +46,7 @@ interface Props {
   saved: boolean;
   currency: string;
   readOnly: boolean;
+  columns?: QuoteColumns | undefined;
   onChange: (rows: LineRow[]) => void;
   /** Called for a fresh row's key, so identity comes from the editor that owns
    *  the document rather than from a counter that resets on every render. */
@@ -58,6 +60,7 @@ export function DocumentLines({
   saved,
   currency,
   readOnly,
+  columns,
   onChange,
   nextKey,
 }: Props) {
@@ -85,38 +88,151 @@ export function DocumentLines({
       <section className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-primary">{strings.billingLines}</h2>
-            <p className="mt-1 text-sm text-secondary">Describe what the customer receives, then set quantity and price.</p>
+            <h2 className="text-base font-semibold text-primary">
+              {strings.billingLines}
+            </h2>
+            <p className="mt-1 text-sm text-secondary">
+              Describe what the customer receives, then set quantity and price.
+            </p>
           </div>
-          <ButtonLine onClick={() => onChange([...rows, blankRow(nextKey())])} />
+          <ButtonLine
+            onClick={() => onChange([...rows, blankRow(nextKey())])}
+          />
         </div>
         {rows.length === 0 ? (
           <div className="flex min-h-40 flex-col items-center justify-center rounded-xl border border-dashed border-default bg-surface px-6 text-center">
             <PackageOpen className="size-6 text-accent" aria-hidden="true" />
-            <p className="mt-3 font-semibold text-primary">{strings.billingNoLines}</p>
-            <p className="mt-1 text-sm text-secondary">Add a service, product, fee, or discount to continue.</p>
+            <p className="mt-3 font-semibold text-primary">
+              {strings.billingNoLines}
+            </p>
+            <p className="mt-1 text-sm text-secondary">
+              Add a service, product, fee, or discount to continue.
+            </p>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
             {rows.map((row, index) => {
               const problem = isBlankRow(row) ? null : rowProblem(row);
               const line = stored.get(row.key);
-              return <article key={row.key} className="rounded-xl border border-default bg-surface p-4 shadow-sm">
-                <div className="grid gap-4 xl:grid-cols-[minmax(280px,2fr)_minmax(120px,.6fr)_minmax(110px,.5fr)_minmax(130px,.65fr)_minmax(110px,.5fr)_minmax(130px,.7fr)_40px] xl:items-end">
-                  <div className="flex min-w-0 flex-col gap-2 xl:row-span-2">
-                    <label className="text-xs font-semibold uppercase tracking-wide text-tertiary">{strings.billingColDescription}</label>
-                    <Input value={row.description} onChange={(event) => replace(index, { ...row, description: event.target.value })} placeholder={strings.billingDescriptionPlaceholder} invalid={problem === "description"} />
-                    {products.length > 0 && <ChoicePicker value="" label={strings.billingPickProduct} placeholder={strings.billingPickProduct} options={products.filter((product) => !product.archived).map((product) => ({ value: product.id, label: product.name }))} onChange={(productId) => { const picked = products.find((product) => product.id === productId); if (picked) replace(index, rowFromProduct(row, picked)); }} />}
-                    {problem !== null && <span className={styles.fieldError}>{problemMessage(problem)}</span>}
+              return (
+                <article
+                  key={row.key}
+                  className="rounded-xl border border-default bg-surface p-4 shadow-sm"
+                >
+                  <div className="grid gap-4 xl:grid-cols-[minmax(280px,2fr)_minmax(120px,.6fr)_minmax(110px,.5fr)_minmax(130px,.65fr)_minmax(110px,.5fr)_minmax(130px,.7fr)_40px] xl:items-end">
+                    <div className="flex min-w-0 flex-col gap-2 xl:row-span-2">
+                      <label className="text-xs font-semibold uppercase tracking-wide text-tertiary">
+                        {strings.billingColDescription}
+                      </label>
+                      <Input
+                        value={row.description}
+                        onChange={(event) =>
+                          replace(index, {
+                            ...row,
+                            description: event.target.value,
+                          })
+                        }
+                        placeholder={strings.billingDescriptionPlaceholder}
+                        invalid={problem === "description"}
+                      />
+                      {products.length > 0 && (
+                        <ChoicePicker
+                          value=""
+                          label={strings.billingPickProduct}
+                          placeholder={strings.billingPickProduct}
+                          options={products
+                            .filter((product) => !product.archived)
+                            .map((product) => ({
+                              value: product.id,
+                              label: product.name,
+                            }))}
+                          onChange={(productId) => {
+                            const picked = products.find(
+                              (product) => product.id === productId,
+                            );
+                            if (picked)
+                              replace(index, rowFromProduct(row, picked));
+                          }}
+                        />
+                      )}
+                      {problem !== null && (
+                        <span className={styles.fieldError}>
+                          {problemMessage(problem)}
+                        </span>
+                      )}
+                    </div>
+                    <LineField label={strings.billingColUnit}>
+                      <Input
+                        value={row.unit}
+                        onChange={(event) =>
+                          replace(index, { ...row, unit: event.target.value })
+                        }
+                        placeholder={strings.billingUnitPlaceholder}
+                      />
+                    </LineField>
+                    <LineField label={strings.billingColQty}>
+                      <Input
+                        className={styles.numeric}
+                        value={row.qty}
+                        onChange={(event) =>
+                          replace(index, { ...row, qty: event.target.value })
+                        }
+                        placeholder={strings.billingQtyPlaceholder}
+                        inputMode="decimal"
+                        invalid={problem === "qty"}
+                      />
+                    </LineField>
+                    <LineField label={strings.billingColUnitPrice}>
+                      <Input
+                        className={styles.numeric}
+                        value={row.price}
+                        onChange={(event) =>
+                          replace(index, { ...row, price: event.target.value })
+                        }
+                        placeholder={strings.billingAmountPlaceholder}
+                        inputMode="decimal"
+                        invalid={problem === "price"}
+                      />
+                    </LineField>
+                    <LineField label={strings.billingColVatRate}>
+                      <Input
+                        className={styles.numeric}
+                        value={row.rate}
+                        onChange={(event) =>
+                          replace(index, { ...row, rate: event.target.value })
+                        }
+                        placeholder={strings.billingRatePlaceholder}
+                        inputMode="decimal"
+                        invalid={problem === "rate"}
+                      />
+                    </LineField>
+                    <div className="min-w-0">
+                      <span className="block text-xs font-semibold uppercase tracking-wide text-tertiary">
+                        {strings.billingColNet}
+                      </span>
+                      <strong
+                        className={cx(
+                          "mt-3 block truncate text-base font-semibold tabular-nums text-primary",
+                          !saved && styles.stale,
+                        )}
+                      >
+                        {line === undefined
+                          ? "—"
+                          : formatAmount(line.netCents, locale, currency)}
+                      </strong>
+                    </div>
+                    <IconButton
+                      label={strings.billingRemoveLine}
+                      icon={<Trash2 size={16} />}
+                      onClick={() =>
+                        onChange(
+                          rows.filter((_, itemIndex) => itemIndex !== index),
+                        )
+                      }
+                    />
                   </div>
-                  <LineField label={strings.billingColUnit}><Input value={row.unit} onChange={(event) => replace(index, { ...row, unit: event.target.value })} placeholder={strings.billingUnitPlaceholder} /></LineField>
-                  <LineField label={strings.billingColQty}><Input className={styles.numeric} value={row.qty} onChange={(event) => replace(index, { ...row, qty: event.target.value })} placeholder={strings.billingQtyPlaceholder} inputMode="decimal" invalid={problem === "qty"} /></LineField>
-                  <LineField label={strings.billingColUnitPrice}><Input className={styles.numeric} value={row.price} onChange={(event) => replace(index, { ...row, price: event.target.value })} placeholder={strings.billingAmountPlaceholder} inputMode="decimal" invalid={problem === "price"} /></LineField>
-                  <LineField label={strings.billingColVatRate}><Input className={styles.numeric} value={row.rate} onChange={(event) => replace(index, { ...row, rate: event.target.value })} placeholder={strings.billingRatePlaceholder} inputMode="decimal" invalid={problem === "rate"} /></LineField>
-                  <div className="min-w-0"><span className="block text-xs font-semibold uppercase tracking-wide text-tertiary">{strings.billingColNet}</span><strong className={cx("mt-3 block truncate text-base font-semibold tabular-nums text-primary", !saved && styles.stale)}>{line === undefined ? "—" : formatAmount(line.netCents, locale, currency)}</strong></div>
-                  <IconButton label={strings.billingRemoveLine} icon={<Trash2 size={16} />} onClick={() => onChange(rows.filter((_, itemIndex) => itemIndex !== index))} />
-                </div>
-              </article>;
+                </article>
+              );
             })}
           </div>
         )}
@@ -142,21 +258,34 @@ export function DocumentLines({
       {rows.length === 0 ? (
         <p className={styles.noMatches}>{strings.billingNoLines}</p>
       ) : (
-        <Table label={strings.billingLines} className="bg-[var(--quote-table-row,var(--bg-surface))] [&_thead_th]:!bg-[var(--quote-table-header,var(--bg-surface))] [&_td]:!text-[var(--quote-text,var(--text-primary))]">
+        <Table
+          label={strings.billingLines}
+          className="bg-[var(--quote-table-row,var(--bg-surface))] [&_thead_th]:!bg-[var(--quote-table-header,var(--bg-surface))] [&_td]:!text-[var(--quote-text,var(--text-primary))]"
+        >
           <thead>
             <tr>
               <Th>{strings.billingColDescription}</Th>
-              <Th className={styles.narrowCol}>{strings.billingColUnit}</Th>
-              <Th numeric className={styles.narrowCol}>
-                {strings.billingColQty}
-              </Th>
-              <Th numeric className={styles.narrowCol}>
-                {strings.billingColUnitPrice}
-              </Th>
-              <Th numeric className={styles.narrowCol}>
-                {strings.billingColVatRate}
-              </Th>
-              <Th numeric>{strings.billingColNet}</Th>
+              {(columns?.unit ?? true) && (
+                <Th className={styles.narrowCol}>{strings.billingColUnit}</Th>
+              )}
+              {(columns?.quantity ?? true) && (
+                <Th numeric className={styles.narrowCol}>
+                  {strings.billingColQty}
+                </Th>
+              )}
+              {(columns?.unitPrice ?? true) && (
+                <Th numeric className={styles.narrowCol}>
+                  {strings.billingColUnitPrice}
+                </Th>
+              )}
+              {(columns?.vat ?? true) && (
+                <Th numeric className={styles.narrowCol}>
+                  {strings.billingColVatRate}
+                </Th>
+              )}
+              {(columns?.net ?? true) && (
+                <Th numeric>{strings.billingColNet}</Th>
+              )}
               {!readOnly && <Th hideLabel>{strings.billingColActions}</Th>}
             </tr>
           </thead>
@@ -209,88 +338,98 @@ export function DocumentLines({
                       </>
                     )}
                   </td>
-                  <td>
-                    {readOnly ? (
-                      row.unit
-                    ) : (
-                      <Input
-                        value={row.unit}
-                        onChange={(e) =>
-                          replace(index, { ...row, unit: e.target.value })
-                        }
-                        placeholder={strings.billingUnitPlaceholder}
-                        aria-label={strings.billingColUnit}
-                      />
-                    )}
-                  </td>
-                  <Td numeric>
-                    {readOnly ? (
-                      line === undefined ? (
-                        row.qty
+                  {(columns?.unit ?? true) && (
+                    <td>
+                      {readOnly ? (
+                        row.unit
                       ) : (
-                        formatQty(line.qtyMilli, locale)
-                      )
-                    ) : (
-                      <Input
-                        className={styles.numeric}
-                        value={row.qty}
-                        onChange={(e) =>
-                          replace(index, { ...row, qty: e.target.value })
-                        }
-                        placeholder={strings.billingQtyPlaceholder}
-                        inputMode="decimal"
-                        aria-label={strings.billingColQty}
-                        invalid={problem === "qty"}
-                      />
-                    )}
-                  </Td>
-                  <Td numeric>
-                    {readOnly ? (
-                      line === undefined ? (
-                        row.price
+                        <Input
+                          value={row.unit}
+                          onChange={(e) =>
+                            replace(index, { ...row, unit: e.target.value })
+                          }
+                          placeholder={strings.billingUnitPlaceholder}
+                          aria-label={strings.billingColUnit}
+                        />
+                      )}
+                    </td>
+                  )}
+                  {(columns?.quantity ?? true) && (
+                    <Td numeric>
+                      {readOnly ? (
+                        line === undefined ? (
+                          row.qty
+                        ) : (
+                          formatQty(line.qtyMilli, locale)
+                        )
                       ) : (
-                        formatAmount(line.unitPriceCents, locale, currency)
-                      )
-                    ) : (
-                      <Input
-                        className={styles.numeric}
-                        value={row.price}
-                        onChange={(e) =>
-                          replace(index, { ...row, price: e.target.value })
-                        }
-                        placeholder={strings.billingAmountPlaceholder}
-                        inputMode="decimal"
-                        aria-label={strings.billingColUnitPrice}
-                        invalid={problem === "price"}
-                      />
-                    )}
-                  </Td>
-                  <Td numeric>
-                    {readOnly ? (
-                      line === undefined ? (
-                        row.rate
+                        <Input
+                          className={styles.numeric}
+                          value={row.qty}
+                          onChange={(e) =>
+                            replace(index, { ...row, qty: e.target.value })
+                          }
+                          placeholder={strings.billingQtyPlaceholder}
+                          inputMode="decimal"
+                          aria-label={strings.billingColQty}
+                          invalid={problem === "qty"}
+                        />
+                      )}
+                    </Td>
+                  )}
+                  {(columns?.unitPrice ?? true) && (
+                    <Td numeric>
+                      {readOnly ? (
+                        line === undefined ? (
+                          row.price
+                        ) : (
+                          formatAmount(line.unitPriceCents, locale, currency)
+                        )
                       ) : (
-                        formatRate(line.vatRateBp, locale)
-                      )
-                    ) : (
-                      <Input
-                        className={styles.numeric}
-                        value={row.rate}
-                        onChange={(e) =>
-                          replace(index, { ...row, rate: e.target.value })
-                        }
-                        placeholder={strings.billingRatePlaceholder}
-                        inputMode="decimal"
-                        aria-label={strings.billingColVatRate}
-                        invalid={problem === "rate"}
-                      />
-                    )}
-                  </Td>
-                  <Td numeric className={cx(!saved && styles.stale)}>
-                    {line === undefined
-                      ? ""
-                      : formatAmount(line.netCents, locale, currency)}
-                  </Td>
+                        <Input
+                          className={styles.numeric}
+                          value={row.price}
+                          onChange={(e) =>
+                            replace(index, { ...row, price: e.target.value })
+                          }
+                          placeholder={strings.billingAmountPlaceholder}
+                          inputMode="decimal"
+                          aria-label={strings.billingColUnitPrice}
+                          invalid={problem === "price"}
+                        />
+                      )}
+                    </Td>
+                  )}
+                  {(columns?.vat ?? true) && (
+                    <Td numeric>
+                      {readOnly ? (
+                        line === undefined ? (
+                          row.rate
+                        ) : (
+                          formatRate(line.vatRateBp, locale)
+                        )
+                      ) : (
+                        <Input
+                          className={styles.numeric}
+                          value={row.rate}
+                          onChange={(e) =>
+                            replace(index, { ...row, rate: e.target.value })
+                          }
+                          placeholder={strings.billingRatePlaceholder}
+                          inputMode="decimal"
+                          aria-label={strings.billingColVatRate}
+                          invalid={problem === "rate"}
+                        />
+                      )}
+                    </Td>
+                  )}
+                  {(columns?.net ?? true) && (
+                    <Td numeric className={cx(!saved && styles.stale)}>
+                      {line === undefined
+                        ? ""
+                        : formatAmount(line.netCents, locale, currency)}
+                    </Td>
+                  )}
                   {!readOnly && (
                     <td className={styles.rowActions}>
                       <IconButton
@@ -313,10 +452,32 @@ export function DocumentLines({
   );
 }
 
-function LineField({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="min-w-0"><span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-tertiary">{label}</span>{children}</label>;
+function LineField({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="min-w-0">
+      <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-tertiary">
+        {label}
+      </span>
+      {children}
+    </label>
+  );
 }
 
 function ButtonLine({ onClick }: { onClick: () => void }) {
-  return <button type="button" className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" onClick={onClick}><Plus className="size-4" aria-hidden="true" />{strings.billingAddLine}</button>;
+  return (
+    <button
+      type="button"
+      className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+      onClick={onClick}
+    >
+      <Plus className="size-4" aria-hidden="true" />
+      {strings.billingAddLine}
+    </button>
+  );
 }

@@ -32,7 +32,12 @@ import { blankRow, rowFromProduct } from "./lineRows";
 import { Field } from "./parts";
 import { usePickers } from "./pickers";
 import { QuoteChips } from "./status";
-import { QuoteContentStudio, type QuoteContentStudioHandle } from "./QuoteContentStudio";
+import {
+  DEFAULT_QUOTE_COLUMNS,
+  QuoteContentStudio,
+  type QuoteColumns,
+  type QuoteContentStudioHandle,
+} from "./QuoteContentStudio";
 import type { BillingQuote } from "./types";
 import styles from "./billingStyles";
 
@@ -44,6 +49,9 @@ export function QuoteEditor() {
   const pickers = usePickers();
   const quoteStudio = useRef<QuoteContentStudioHandle>(null);
   const [preview, setPreview] = useState(false);
+  const [quoteColumns, setQuoteColumns] = useState<QuoteColumns>(
+    DEFAULT_QUOTE_COLUMNS,
+  );
 
   /** The invoice screen for an id, from inside `/billing/quotes/{id}`. */
   const openInvoice = useCallback(
@@ -62,12 +70,19 @@ export function QuoteEditor() {
     },
     [api],
   );
-  const create = useCallback((header: Partial<DocumentHeader>) => api.createQuote(header), [api]);
-  const save = useCallback(
-    (documentId: string, patch: DocumentPatch) => api.updateQuote(documentId, patch),
+  const create = useCallback(
+    (header: Partial<DocumentHeader>) => api.createQuote(header),
     [api],
   );
-  const editable = useCallback((quote: BillingQuote) => quote.status === "draft", []);
+  const save = useCallback(
+    (documentId: string, patch: DocumentPatch) =>
+      api.updateQuote(documentId, patch),
+    [api],
+  );
+  const editable = useCallback(
+    (quote: BillingQuote) => quote.status === "draft",
+    [],
+  );
 
   const draft = useDocumentDraft<BillingQuote, string | null>({
     id,
@@ -77,6 +92,27 @@ export function QuoteEditor() {
     editable,
   });
   const quote = draft.document;
+
+  const editAsDraft = useCallback(async () => {
+    if (quote === null) return;
+    const revised = await api.createQuote({
+      customerId: quote.customerId,
+      currency: quote.currency,
+      validDays: quote.validDays,
+      reference: quote.reference,
+      note: quote.note,
+      lines: quote.lines.map((line) => ({
+        description: line.description,
+        unit: line.unit,
+        qtyMilli: line.qtyMilli,
+        unitPriceCents: line.unitPriceCents,
+        vatRateBp: line.vatRateBp,
+        ...(line.productId == null ? {} : { productId: line.productId }),
+      })),
+    });
+    await quoteStudio.current?.copyTo(revised.id).catch(() => undefined);
+    await navigate(`../${revised.id}`, { replace: false });
+  }, [api, navigate, quote]);
 
   const actions: DocumentAction[] = [];
   if (quote !== null && id !== undefined) {
@@ -112,7 +148,9 @@ export function QuoteEditor() {
             // that.
             const accepted = await api.acceptQuote(id);
             if (accepted.salesOrder) {
-              await navigate(`/inventory/sales-orders/${accepted.salesOrder.id}`);
+              await navigate(
+                `/inventory/sales-orders/${accepted.salesOrder.id}`,
+              );
             } else if (accepted.invoice) {
               await openInvoice(accepted.invoice.id);
             }
@@ -142,12 +180,17 @@ export function QuoteEditor() {
   }
 
   const invoiceId = draft.aside;
-  const services = pickers.products.filter((product) => !product.stocked && !product.archived);
-  const rowsFromProducts = (products: typeof services) => (nextKey: () => string) =>
-    products.map((product) =>
-      rowFromProduct({ ...blankRow(nextKey()), qty: "1" }, product),
-    );
-  const monthly = services.find((product) => product.unit.toLowerCase() === "month");
+  const services = pickers.products.filter(
+    (product) => !product.stocked && !product.archived,
+  );
+  const rowsFromProducts =
+    (products: typeof services) => (nextKey: () => string) =>
+      products.map((product) =>
+        rowFromProduct({ ...blankRow(nextKey()), qty: "1" }, product),
+      );
+  const monthly = services.find(
+    (product) => product.unit.toLowerCase() === "month",
+  );
   const creationTemplates: CreationTemplate[] = [
     {
       key: "blank",
@@ -171,7 +214,9 @@ export function QuoteEditor() {
       key: "retainer",
       name: strings.billingQuoteTemplateRetainer,
       description: strings.billingQuoteTemplateRetainerDescription,
-      buildRows: rowsFromProducts(monthly === undefined ? services.slice(0, 1) : [monthly]),
+      buildRows: rowsFromProducts(
+        monthly === undefined ? services.slice(0, 1) : [monthly],
+      ),
     },
   ];
 
@@ -190,22 +235,54 @@ export function QuoteEditor() {
         discardLabel: strings.billingDeleteQuoteDraft,
         discardMessage: strings.billingDeleteQuoteDraftConfirm,
         frozenNotice:
-          quote?.status === "sent"
-            ? null
-            : strings.billingQuoteClosedNotice,
+          quote?.status === "sent" ? null : strings.billingQuoteClosedNotice,
       }}
       chips={quote === null ? null : <QuoteChips quote={quote} />}
       showSummary={!draft.readOnly && !preview}
+      lineColumns={quoteColumns}
       documentBody={
         id === undefined ? null : (
-          <QuoteContentStudio ref={quoteStudio} quoteId={id} readOnly={draft.readOnly || preview} preview={preview} />
+          <QuoteContentStudio
+            ref={quoteStudio}
+            quoteId={id}
+            readOnly={preview}
+            preview={preview}
+            onColumnsChange={setQuoteColumns}
+          />
         )
       }
       editorActions={
         quote === null ? null : (
           <div className="flex items-center gap-1">
-            <button type="button" className={styles.linkAction} onClick={() => quoteStudio.current?.customize()}><Palette size={15} aria-hidden="true" /> Customize</button>
-            <button type="button" className={styles.linkAction} aria-pressed={preview} onClick={() => setPreview((value) => !value)}>{preview ? <Pencil size={15} aria-hidden="true" /> : <Eye size={15} aria-hidden="true" />}{preview ? "Edit" : "Preview"}</button>
+            {quote.status !== "draft" && (
+              <button
+                type="button"
+                className={styles.linkAction}
+                onClick={() => void editAsDraft()}
+              >
+                <Pencil size={15} aria-hidden="true" /> Edit quote
+              </button>
+            )}
+            <button
+              type="button"
+              className={styles.linkAction}
+              onClick={() => quoteStudio.current?.customize()}
+            >
+              <Palette size={15} aria-hidden="true" /> Customize
+            </button>
+            <button
+              type="button"
+              className={styles.linkAction}
+              aria-pressed={preview}
+              onClick={() => setPreview((value) => !value)}
+            >
+              {preview ? (
+                <Pencil size={15} aria-hidden="true" />
+              ) : (
+                <Eye size={15} aria-hidden="true" />
+              )}
+              {preview ? "Edit" : "Preview"}
+            </button>
           </div>
         )
       }
@@ -215,7 +292,11 @@ export function QuoteEditor() {
           <>
             <Field label={strings.billingFieldSentDate}>
               <p className={styles.readOnlyValue}>
-                {formatDocumentDate(quote.sentDate, locale, strings.billingNoDate)}
+                {formatDocumentDate(
+                  quote.sentDate,
+                  locale,
+                  strings.billingNoDate,
+                )}
               </p>
             </Field>
             <Field
@@ -223,7 +304,11 @@ export function QuoteEditor() {
               hint={strings.billingValidForDays(quote.validDays)}
             >
               <p className={styles.readOnlyValue}>
-                {formatDocumentDate(quote.validUntil, locale, strings.billingNoDate)}
+                {formatDocumentDate(
+                  quote.validUntil,
+                  locale,
+                  strings.billingNoDate,
+                )}
               </p>
             </Field>
           </>
@@ -251,7 +336,11 @@ export function QuoteEditor() {
               <RecordHistory
                 entityType="billing.quote"
                 entityId={id}
-                note={quote?.status === "sent" ? strings.billingQuoteSentNotice : undefined}
+                note={
+                  quote?.status === "sent"
+                    ? strings.billingQuoteSentNotice
+                    : undefined
+                }
               />
             )}
           </>
@@ -261,7 +350,9 @@ export function QuoteEditor() {
       onCreated={(created) => {
         void navigate(`../${created.id}`, { replace: true });
       }}
-      onPrint={id === undefined ? undefined : () => api.documentHtml("quotes", id)}
+      onPrint={
+        id === undefined ? undefined : () => api.documentHtml("quotes", id)
+      }
       onDiscard={async () => {
         if (id === undefined) return;
         await api.deleteQuote(id);

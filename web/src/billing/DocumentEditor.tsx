@@ -14,7 +14,15 @@
 // create bar, and the read-only rendering of a document that carries a number.
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { ArrowLeft, Check, FilePlus2, Plus, Printer, Search, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  FilePlus2,
+  Plus,
+  Printer,
+  Search,
+  X,
+} from "lucide-react";
 
 import { Button, ChoicePicker, Input, Spinner, cx, useDialogs } from "../ds";
 import { strings } from "../i18n";
@@ -22,6 +30,7 @@ import { billingMessage } from "./api";
 import { DocumentActions } from "./DocumentActions";
 import type { DocumentAction } from "./DocumentActions";
 import { DocumentLines } from "./DocumentLines";
+import type { QuoteColumns } from "./QuoteContentStudio";
 import type { DocumentDraft, StoredDocument } from "./documentDraft";
 import { blankRow, rowFromProduct } from "./lineRows";
 import type { LineRow } from "./lineRows";
@@ -73,6 +82,8 @@ interface Props<T extends StoredDocument, A> {
   lead?: ReactNode;
   /** Whether to show the editable document metadata panel. */
   showSummary?: boolean;
+  /** Optional customer-facing pricing columns chosen for a quotation. */
+  lineColumns?: QuoteColumns;
   /** Rich content between the document details and its commercial lines. */
   documentBody?: ReactNode;
   /** Document-level commands rendered beside save and print. */
@@ -102,6 +113,7 @@ export function DocumentEditor<T extends StoredDocument, A>({
   actions,
   lead,
   showSummary = true,
+  lineColumns,
   documentBody,
   editorActions,
   presentationReadOnly = false,
@@ -194,12 +206,16 @@ export function DocumentEditor<T extends StoredDocument, A>({
   const currency = document?.currency ?? "";
   const saved = draft.saveState === "saved";
   const error = draft.error ?? pickers.error;
-  const selectedProductIds = new Set(rows.flatMap((row) => row.productId ?? []));
+  const selectedProductIds = new Set(
+    rows.flatMap((row) => row.productId ?? []),
+  );
   const availableProducts = pickers.products.filter(
     (product) =>
       !product.archived &&
       !selectedProductIds.has(product.id) &&
-      product.name.toLocaleLowerCase().includes(productSearch.trim().toLocaleLowerCase()),
+      product.name
+        .toLocaleLowerCase()
+        .includes(productSearch.trim().toLocaleLowerCase()),
   );
 
   if (document === null) {
@@ -224,10 +240,17 @@ export function DocumentEditor<T extends StoredDocument, A>({
         wide={creationTemplates !== undefined && creationTemplates.length > 0}
       >
         {creationTemplates !== undefined && creationTemplates.length > 0 && (
-          <section className={styles.templatePicker} aria-label={strings.billingQuoteTemplate}>
+          <section
+            className={styles.templatePicker}
+            aria-label={strings.billingQuoteTemplate}
+          >
             <div>
-              <p className={styles.templatePickerTitle}>{strings.billingQuoteStartFrom}</p>
-              <p className={styles.templatePickerHint}>{strings.billingQuoteTemplateHint}</p>
+              <p className={styles.templatePickerTitle}>
+                {strings.billingQuoteStartFrom}
+              </p>
+              <p className={styles.templatePickerHint}>
+                {strings.billingQuoteTemplateHint}
+              </p>
             </div>
             <div className={styles.templateGrid}>
               {creationTemplates.map((template) => {
@@ -236,116 +259,135 @@ export function DocumentEditor<T extends StoredDocument, A>({
                   <button
                     key={template.key}
                     type="button"
-                    className={cx(styles.templateCard, active && styles.templateCardActive)}
+                    className={cx(
+                      styles.templateCard,
+                      active && styles.templateCardActive,
+                    )}
                     aria-pressed={active}
                     onClick={() => {
                       setSelectedTemplate(template.key);
                       draft.edit({ rows: template.buildRows(draft.nextKey) });
                     }}
                   >
-                    <span className={styles.templateCardName}>{template.name}</span>
-                    <span className={styles.templateCardDescription}>{template.description}</span>
+                    <span className={styles.templateCardName}>
+                      {template.name}
+                    </span>
+                    <span className={styles.templateCardDescription}>
+                      {template.description}
+                    </span>
                   </button>
                 );
               })}
             </div>
             <div className={styles.templateItems}>
-                <div className={styles.templateItemsHead}>
-                  <div>
-                    <p className={styles.templateItemsTitle}>
-                      {strings.billingQuoteIncludedTitle}
-                    </p>
-                    <p className={styles.templateItemsHint}>
-                      {strings.billingQuoteIncludedHelp}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <span className={styles.templateItemsCount}>
-                      {strings.billingQuoteIncludedItems(rows.length)}
-                    </span>
-                    <button
-                      type="button"
-                      className={styles.templateAddItems}
-                      aria-expanded={showProductPicker}
-                      onClick={() => setShowProductPicker((open) => !open)}
-                    >
-                      <Plus className="size-4" aria-hidden="true" />
-                      <span>{strings.billingQuoteAddFromPriceList}</span>
-                    </button>
-                  </div>
+              <div className={styles.templateItemsHead}>
+                <div>
+                  <p className={styles.templateItemsTitle}>
+                    {strings.billingQuoteIncludedTitle}
+                  </p>
+                  <p className={styles.templateItemsHint}>
+                    {strings.billingQuoteIncludedHelp}
+                  </p>
                 </div>
-                {rows.length > 0 && (
-                  <div className={styles.templateItemsList}>
-                    {rows.map((row) => (
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className={styles.templateItemsCount}>
+                    {strings.billingQuoteIncludedItems(rows.length)}
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.templateAddItems}
+                    aria-expanded={showProductPicker}
+                    onClick={() => setShowProductPicker((open) => !open)}
+                  >
+                    <Plus className="size-4" aria-hidden="true" />
+                    <span>{strings.billingQuoteAddFromPriceList}</span>
+                  </button>
+                </div>
+              </div>
+              {rows.length > 0 && (
+                <div className={styles.templateItemsList}>
+                  {rows.map((row) => (
                     <div key={row.key} className={styles.templateItem}>
-                      <Check className="size-4 shrink-0 text-accent" aria-hidden="true" />
-                      <span className="min-w-0 flex-1 truncate">{row.description}</span>
+                      <Check
+                        className="size-4 shrink-0 text-accent"
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0 flex-1 truncate">
+                        {row.description}
+                      </span>
                       <button
                         type="button"
                         className={styles.templateItemRemove}
-                        aria-label={strings.billingQuoteRemoveIncludedItem(row.description)}
+                        aria-label={strings.billingQuoteRemoveIncludedItem(
+                          row.description,
+                        )}
                         onClick={() => {
                           setSelectedTemplate("custom");
-                          draft.edit({ rows: rows.filter((item) => item.key !== row.key) });
+                          draft.edit({
+                            rows: rows.filter((item) => item.key !== row.key),
+                          });
                         }}
                       >
                         <X className="size-4" aria-hidden="true" />
                       </button>
                     </div>
-                    ))}
-                  </div>
-                )}
-                {showProductPicker && (
-                  <div className={styles.templateProductPicker}>
-                    <label className={styles.templateProductSearch}>
-                      <Search className="size-4" aria-hidden="true" />
-                      <Input
-                        value={productSearch}
-                        onChange={(event) => setProductSearch(event.target.value)}
-                        placeholder={strings.billingQuoteSearchPriceList}
-                        aria-label={strings.billingQuoteSearchPriceList}
-                      />
-                    </label>
-                    {availableProducts.length === 0 ? (
-                      <p className={styles.templateProductEmpty}>
-                        {productSearch.trim() === ""
-                          ? strings.billingQuoteAllItemsIncluded
-                          : strings.billingQuoteNoMatchingItems}
-                      </p>
-                    ) : (
-                      <div className={styles.templateProductList}>
-                        {availableProducts.map((product) => (
-                          <button
-                            key={product.id}
-                            type="button"
-                            className={styles.templateProductOption}
-                            onClick={() => {
-                              setSelectedTemplate("custom");
-                              draft.edit({
-                                rows: [
-                                  ...rows,
-                                  rowFromProduct(
-                                    { ...blankRow(draft.nextKey()), qty: "1" },
-                                    product,
-                                  ),
-                                ],
-                              });
-                            }}
-                          >
-                            <span className="min-w-0 flex-1 truncate font-medium text-primary">
-                              {product.name}
-                            </span>
-                            <span className="shrink-0 text-xs text-tertiary">
-                              {product.unit || strings.billingQuotePerItem}
-                            </span>
-                            <Plus className="size-4 shrink-0 text-accent" aria-hidden="true" />
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
+              {showProductPicker && (
+                <div className={styles.templateProductPicker}>
+                  <label className={styles.templateProductSearch}>
+                    <Search className="size-4" aria-hidden="true" />
+                    <Input
+                      value={productSearch}
+                      onChange={(event) => setProductSearch(event.target.value)}
+                      placeholder={strings.billingQuoteSearchPriceList}
+                      aria-label={strings.billingQuoteSearchPriceList}
+                    />
+                  </label>
+                  {availableProducts.length === 0 ? (
+                    <p className={styles.templateProductEmpty}>
+                      {productSearch.trim() === ""
+                        ? strings.billingQuoteAllItemsIncluded
+                        : strings.billingQuoteNoMatchingItems}
+                    </p>
+                  ) : (
+                    <div className={styles.templateProductList}>
+                      {availableProducts.map((product) => (
+                        <button
+                          key={product.id}
+                          type="button"
+                          className={styles.templateProductOption}
+                          onClick={() => {
+                            setSelectedTemplate("custom");
+                            draft.edit({
+                              rows: [
+                                ...rows,
+                                rowFromProduct(
+                                  { ...blankRow(draft.nextKey()), qty: "1" },
+                                  product,
+                                ),
+                              ],
+                            });
+                          }}
+                        >
+                          <span className="min-w-0 flex-1 truncate font-medium text-primary">
+                            {product.name}
+                          </span>
+                          <span className="shrink-0 text-xs text-tertiary">
+                            {product.unit || strings.billingQuotePerItem}
+                          </span>
+                          <Plus
+                            className="size-4 shrink-0 text-accent"
+                            aria-hidden="true"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </section>
         )}
         <div className="grid grid-cols-2 gap-5 max-md:grid-cols-1">
@@ -408,56 +450,56 @@ export function DocumentEditor<T extends StoredDocument, A>({
     <div className={styles.page}>
       <article className={styles.editor}>
         <div className={styles.editorHead}>
-        <button type="button" className={styles.linkAction} onClick={onBack}>
-          <ArrowLeft size={14} aria-hidden="true" /> {labels.back}
-        </button>
-        <h2 className={styles.editorTitle}>
-          {document === null
-            ? labels.newTitle
-            : (document.number ?? labels.draftTitle)}
-        </h2>
-        <span className={styles.chips}>{chips}</span>
-        <span className={styles.saveState} role="status">
-          {document === null
-            ? ""
-            : draft.saveState === "saving"
-              ? strings.billingSaving
-              : draft.saveState === "pending"
-                ? strings.billingUnsaved
-                : draft.saveState === "failed"
-                  ? strings.billingSaveNotDone
-                  : strings.billingSaved}
-        </span>
-        {editorActions}
-        {draft.saveState === "failed" && (
-          <button
-            type="button"
-            className={styles.linkAction}
-            onClick={draft.saveNow}
-          >
-            {strings.billingSaveNow}
+          <button type="button" className={styles.linkAction} onClick={onBack}>
+            <ArrowLeft size={14} aria-hidden="true" /> {labels.back}
           </button>
-        )}
-        {document !== null && onPrint !== undefined && (
-          <button
-            type="button"
-            className={styles.linkAction}
-            onClick={() => void print()}
-            disabled={printing || !saved}
-            title={saved ? undefined : strings.billingPrintUnsaved}
-          >
-            <Printer size={14} aria-hidden="true" /> {strings.billingPrint}
-          </button>
-        )}
-        {document !== null && !readOnly && (
-          <button
-            type="button"
-            className={styles.linkAction}
-            onClick={() => void discard()}
-          >
-            {labels.discardLabel}
-          </button>
-        )}
+          <h2 className={styles.editorTitle}>
+            {document === null
+              ? labels.newTitle
+              : (document.number ?? labels.draftTitle)}
+          </h2>
+          <span className={styles.chips}>{chips}</span>
+          <span className={styles.saveState} role="status">
+            {document === null
+              ? ""
+              : draft.saveState === "saving"
+                ? strings.billingSaving
+                : draft.saveState === "pending"
+                  ? strings.billingUnsaved
+                  : draft.saveState === "failed"
+                    ? strings.billingSaveNotDone
+                    : strings.billingSaved}
+          </span>
+          {editorActions}
+          {draft.saveState === "failed" && (
+            <button
+              type="button"
+              className={styles.linkAction}
+              onClick={draft.saveNow}
+            >
+              {strings.billingSaveNow}
+            </button>
+          )}
+          {document !== null && onPrint !== undefined && (
+            <button
+              type="button"
+              className={styles.linkAction}
+              onClick={() => void print()}
+              disabled={printing || !saved}
+              title={saved ? undefined : strings.billingPrintUnsaved}
+            >
+              <Printer size={14} aria-hidden="true" /> {strings.billingPrint}
+            </button>
+          )}
+          {document !== null && !readOnly && (
+            <button
+              type="button"
+              className={styles.linkAction}
+              onClick={() => void discard()}
+            >
+              {labels.discardLabel}
+            </button>
+          )}
         </div>
 
         {error !== null && <ErrorBanner message={error} />}
@@ -466,117 +508,123 @@ export function DocumentEditor<T extends StoredDocument, A>({
         )}
 
         <div className={styles.editorBody}>
-        {lead}
-        {showSummary && (
-          <section className={styles.documentSummary}>
-          <div className={styles.headerFields}>
-            <Field
-              label={strings.billingFieldCustomer}
-              hint={labels.customerHint}
-            >
-              {readOnly ? (
-                <p className={styles.readOnlyValue}>{customerName}</p>
-              ) : (
-                <ChoicePicker
-                  value={header.customerId}
-                  options={pickable.map((customer) => ({
-                    value: customer.id,
-                    label: customer.name,
-                  }))}
-                  placeholder={strings.billingChooseCustomer}
+          {lead}
+          {showSummary && (
+            <section className={styles.documentSummary}>
+              <div className={styles.headerFields}>
+                <Field
                   label={strings.billingFieldCustomer}
-                  onChange={(customerId) =>
-                    draft.edit({
-                      header: { ...header, customerId },
-                    })
-                  }
-                />
+                  hint={labels.customerHint}
+                >
+                  {readOnly ? (
+                    <p className={styles.readOnlyValue}>{customerName}</p>
+                  ) : (
+                    <ChoicePicker
+                      value={header.customerId}
+                      options={pickable.map((customer) => ({
+                        value: customer.id,
+                        label: customer.name,
+                      }))}
+                      placeholder={strings.billingChooseCustomer}
+                      label={strings.billingFieldCustomer}
+                      onChange={(customerId) =>
+                        draft.edit({
+                          header: { ...header, customerId },
+                        })
+                      }
+                    />
+                  )}
+                </Field>
+
+                <Field
+                  label={strings.billingFieldReference}
+                  hint={strings.billingReferenceHint}
+                >
+                  {readOnly ? (
+                    <p className={styles.readOnlyValue}>{header.reference}</p>
+                  ) : (
+                    <Input
+                      value={header.reference}
+                      onChange={(e) =>
+                        draft.edit({
+                          header: { ...header, reference: e.target.value },
+                        })
+                      }
+                      placeholder={strings.billingReferencePlaceholder}
+                    />
+                  )}
+                </Field>
+
+                {document !== null && dates}
+              </div>
+
+              <div className={styles.documentNote}>
+                <Field
+                  label={strings.billingFieldNote}
+                  hint={strings.billingNoteHint}
+                >
+                  {readOnly ? (
+                    <p className={styles.readOnlyValue}>{header.note}</p>
+                  ) : (
+                    <textarea
+                      className={styles.textarea}
+                      value={header.note}
+                      rows={2}
+                      onChange={(e) =>
+                        draft.edit({
+                          header: { ...header, note: e.target.value },
+                        })
+                      }
+                      placeholder={strings.billingNotePlaceholder}
+                    />
+                  )}
+                </Field>
+              </div>
+            </section>
+          )}
+
+          {documentBody}
+
+          {document === null ? (
+            <div className={styles.createBar}>
+              <p className={styles.hint}>{labels.createHint}</p>
+              <Button
+                onClick={() => void create()}
+                disabled={draft.creating || header.customerId === ""}
+              >
+                {labels.createLabel}
+              </Button>
+            </div>
+          ) : (
+            <>
+              <DocumentLines
+                rows={rows}
+                products={pickers.products}
+                savedLines={document.lines}
+                saved={saved}
+                currency={currency}
+                readOnly={readOnly}
+                columns={lineColumns}
+                onChange={(next) => draft.edit({ rows: next })}
+                nextKey={draft.nextKey}
+              />
+              <TotalsPanel
+                totals={document.totals}
+                currency={currency}
+                stale={!saved}
+              />
+              <DocumentActions
+                actions={actions}
+                unsaved={!saved}
+                onFailed={draft.fail}
+              />
+              {footer !== undefined && (
+                <footer className={styles.documentFooter}>{footer}</footer>
               )}
-            </Field>
-
-            <Field
-              label={strings.billingFieldReference}
-              hint={strings.billingReferenceHint}
-            >
-              {readOnly ? (
-                <p className={styles.readOnlyValue}>{header.reference}</p>
-              ) : (
-                <Input
-                  value={header.reference}
-                  onChange={(e) =>
-                    draft.edit({
-                      header: { ...header, reference: e.target.value },
-                    })
-                  }
-                  placeholder={strings.billingReferencePlaceholder}
-                />
-              )}
-            </Field>
-
-            {document !== null && dates}
-          </div>
-
-          <div className={styles.documentNote}>
-            <Field label={strings.billingFieldNote} hint={strings.billingNoteHint}>
-              {readOnly ? (
-                <p className={styles.readOnlyValue}>{header.note}</p>
-              ) : (
-                <textarea
-                  className={styles.textarea}
-                  value={header.note}
-                  rows={2}
-                  onChange={(e) =>
-                    draft.edit({ header: { ...header, note: e.target.value } })
-                  }
-                  placeholder={strings.billingNotePlaceholder}
-                />
-              )}
-            </Field>
-          </div>
-          </section>
-        )}
-
-        {documentBody}
-
-        {document === null ? (
-          <div className={styles.createBar}>
-            <p className={styles.hint}>{labels.createHint}</p>
-            <Button
-              onClick={() => void create()}
-              disabled={draft.creating || header.customerId === ""}
-            >
-              {labels.createLabel}
-            </Button>
-          </div>
-        ) : (
-          <>
-            <DocumentLines
-              rows={rows}
-              products={pickers.products}
-              savedLines={document.lines}
-              saved={saved}
-              currency={currency}
-              readOnly={readOnly}
-              onChange={(next) => draft.edit({ rows: next })}
-              nextKey={draft.nextKey}
-            />
-            <TotalsPanel
-              totals={document.totals}
-              currency={currency}
-              stale={!saved}
-            />
-            <DocumentActions
-              actions={actions}
-              unsaved={!saved}
-              onFailed={draft.fail}
-            />
-            {footer !== undefined && (
-              <footer className={styles.documentFooter}>{footer}</footer>
-            )}
-          </>
-        )}
+            </>
+          )}
         </div>
       </article>
-      </div>
+    </div>
   );
 }
