@@ -146,6 +146,24 @@ svg {
   box-shadow: inset 0 0 0 1px var(--accent) !important;
 }
 
+/* Password managers and browser autofill must not repaint Alo fields with the
+   platform's blue fill or text. Keep this global because autofill is browser
+   chrome, not a component variant, and apply the fill with an inset shadow so
+   Chromium cannot replace it after the page has rendered. The focused form
+   keeps the same single Terracotta perimeter as an ordinary focused field. */
+:where(input, textarea, select):is(:autofill, :-webkit-autofill) {
+  -webkit-text-fill-color: var(--text-primary) !important;
+  caret-color: var(--text-primary) !important;
+  box-shadow: inset 0 0 0 1000px var(--bg-surface) !important;
+}
+
+:where(input, textarea, select):is(:autofill, :-webkit-autofill):focus {
+  border-color: var(--accent) !important;
+  box-shadow:
+    inset 0 0 0 1px var(--accent),
+    inset 0 0 0 1000px var(--bg-surface) !important;
+}
+
 /* Borderless controls still require one visible keyboard-focus perimeter. */
 :where(:focus-visible):not(input, textarea, select) {
   outline: 2px solid var(--accent);

@@ -44,17 +44,18 @@ describe("the document never scrolls", () => {
 });
 
 describe("the shell owns its absolutely-positioned descendants", () => {
-  test("`.shell` is a containing block, so its overflow clip actually applies", () => {
-    const css = readFileSync(
-      join(dirname(fileURLToPath(import.meta.url)), "AppShell.module.css"),
+  test("the Tailwind shell is a containing block, so its overflow clip actually applies", () => {
+    const component = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "AppShell.tsx"),
       "utf8",
     );
-    const shellRule = css.match(/\.shell\s*\{[^}]*\}/s)?.[0] ?? "";
-    expect(shellRule).toContain("overflow: hidden");
+    const shellClasses =
+      component.match(/<div className="([^"]*grid-template-areas:[^"]*)"/)?.[1] ?? "";
+    expect(shellClasses).toContain("overflow-hidden");
     expect(
-      shellRule,
+      shellClasses,
       "without position: relative, sr-only helpers anchor to the body, " +
         "escape this rule's overflow clip, and grow the document a scrollbar",
-    ).toContain("position: relative");
+    ).toContain("relative");
   });
 });

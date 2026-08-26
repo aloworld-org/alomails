@@ -141,3 +141,19 @@ describe("interface links do not underline", () => {
     );
   });
 });
+
+describe("browser-managed field states remain Alo-branded", () => {
+  test("autofill uses the semantic surface, ink and accent tokens", () => {
+    const globalCss = readFileSync(join(SRC, "ds", "global.css"), "utf8").replace(
+      /\/\*[\s\S]*?\*\//g,
+      "",
+    );
+    const autofillRules = [...globalCss.matchAll(/[^{}]*autofill[^{}]*\{[^}]*\}/gs)]
+      .map((match) => match[0])
+      .join("\n");
+    expect(autofillRules).toContain("var(--bg-surface)");
+    expect(autofillRules).toContain("var(--text-primary)");
+    expect(autofillRules).toContain("var(--accent)");
+    expect(autofillRules).not.toMatch(/\bblue\b|#[0-9a-f]{3,8}|rgb\(/i);
+  });
+});
