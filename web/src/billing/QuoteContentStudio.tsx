@@ -25,6 +25,7 @@ import {
   Plus,
   Quote,
   Rows3,
+  Search,
   Table2,
   Type,
   Trash2,
@@ -801,6 +802,13 @@ export const QuoteContentStudio = forwardRef<
                       )}
                     </div>
                   </article>
+                  {!readOnly && (
+                    <BottomComposer
+                      index={index + 1}
+                      onAdd={addSimpleBlock}
+                      onImage={chooseImage}
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -822,9 +830,9 @@ export const QuoteContentStudio = forwardRef<
           >
             <div className="mt-6">{totals}</div>
           </QuoteTableOptionsProvider>
-          {!readOnly && (
+          {!readOnly && design.blocks.length === 0 && (
             <BottomComposer
-              index={design.blocks.length}
+              index={0}
               onAdd={addSimpleBlock}
               onImage={chooseImage}
             />
@@ -1973,26 +1981,133 @@ function BottomComposer({
   onImage: (index: number) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const add = (kind: InsertKind, ordered = false) => {
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState<
+    "Popular" | "Text" | "Media" | "Tables" | "Layout"
+  >("Popular");
+  const [recent, setRecent] = useState<string[]>([]);
+  const add = (kind: InsertKind, label: string, ordered = false) => {
     onAdd(index, kind, ordered);
+    setRecent((current) => [label, ...current.filter((item) => item !== label)].slice(0, 3));
     setOpen(false);
+    setQuery("");
   };
+  const options: Array<{
+    label: string;
+    help: string;
+    category: "Text" | "Media" | "Tables" | "Layout";
+    popular?: boolean;
+    Icon: typeof AlignLeft;
+    action: () => void;
+  }> = [
+    {
+      label: "Heading",
+      help: "Title a new section",
+      category: "Text",
+      popular: true,
+      Icon: Heading2,
+      action: () => add("heading", "Heading"),
+    },
+    {
+      label: "Paragraph",
+      help: "Add explanatory text",
+      category: "Text",
+      popular: true,
+      Icon: AlignLeft,
+      action: () => add("paragraph", "Paragraph"),
+    },
+    {
+      label: "Quote",
+      help: "Highlight a statement",
+      category: "Text",
+      Icon: Quote,
+      action: () => add("quote", "Quote"),
+    },
+    {
+      label: "Bullet list",
+      help: "List key points",
+      category: "Text",
+      Icon: List,
+      action: () => add("list", "Bullet list"),
+    },
+    {
+      label: "Numbered list",
+      help: "Show ordered steps",
+      category: "Text",
+      Icon: ListOrdered,
+      action: () => add("list", "Numbered list", true),
+    },
+    {
+      label: "Image",
+      help: "Upload and arrange a visual",
+      category: "Media",
+      popular: true,
+      Icon: ImagePlus,
+      action: () => {
+        setRecent((current) => ["Image", ...current.filter((item) => item !== "Image")].slice(0, 3));
+        onImage(index);
+        setOpen(false);
+        setQuery("");
+      },
+    },
+    {
+      label: "Pricing table",
+      help: "Group products and services",
+      category: "Tables",
+      popular: true,
+      Icon: Table2,
+      action: () => add("pricing", "Pricing table"),
+    },
+    {
+      label: "Table",
+      help: "Create flexible rows and columns",
+      category: "Tables",
+      popular: true,
+      Icon: Rows3,
+      action: () => add("table", "Table"),
+    },
+    {
+      label: "Divider",
+      help: "Separate document sections",
+      category: "Layout",
+      Icon: Minus,
+      action: () => add("divider", "Divider"),
+    },
+  ];
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleOptions = options.filter((option) => {
+    if (normalizedQuery !== "")
+      return `${option.label} ${option.help} ${option.category}`
+        .toLowerCase()
+        .includes(normalizedQuery);
+    if (category === "Popular")
+      return option.popular === true || recent.includes(option.label);
+    return option.category === category;
+  });
   return (
     <div
-      className="relative mt-5 flex flex-col items-center"
+      className="relative flex flex-col items-center py-2"
       aria-label="Add quotation content"
     >
-      <button
-        type="button"
-        className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-accent px-5 text-sm font-semibold text-on-accent shadow-sm transition-colors hover:bg-accent-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-      >
-        <Plus className="size-4" aria-hidden="true" /> Add block below
-      </button>
+      <div className="flex w-full items-center gap-3">
+        <span className="h-px flex-1 bg-[var(--quote-table-header)]" aria-hidden="true" />
+        <button
+          type="button"
+          className="group inline-flex min-h-9 items-center gap-2 rounded-full px-3 text-xs font-semibold text-secondary transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
+          aria-expanded={open}
+          aria-label="Add content below"
+          onClick={() => setOpen((value) => !value)}
+        >
+          <span className="grid size-6 place-items-center rounded-full bg-accent-soft text-accent transition-colors group-hover:bg-accent group-hover:text-on-accent">
+            <Plus className="size-3.5" aria-hidden="true" />
+          </span>
+          Add content
+        </button>
+        <span className="h-px flex-1 bg-[var(--quote-table-header)]" aria-hidden="true" />
+      </div>
       {open && (
-        <div className="mt-3 w-full max-w-3xl rounded-2xl border border-default bg-surface p-4 shadow-xl">
-          <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="mt-2 w-full max-w-2xl rounded-2xl border border-default bg-surface p-5 shadow-xl">
+          <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="font-semibold text-primary">Add to quotation</h3>
               <p className="mt-0.5 text-sm text-secondary">
@@ -2008,65 +2123,62 @@ function BottomComposer({
               <X className="size-4" />
             </button>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            <AddButton
-              label="Heading"
-              help="Title a new section"
-              Icon={Heading2}
-              onClick={() => add("heading")}
-            />
-            <AddButton
-              label="Paragraph"
-              help="Add explanatory text"
-              Icon={AlignLeft}
-              onClick={() => add("paragraph")}
-            />
-            <AddButton
-              label="Quote"
-              help="Highlight a statement"
-              Icon={Quote}
-              onClick={() => add("quote")}
-            />
-            <AddButton
-              label="Bullet list"
-              help="List key points"
-              Icon={List}
-              onClick={() => add("list")}
-            />
-            <AddButton
-              label="Numbered list"
-              help="Show ordered steps"
-              Icon={ListOrdered}
-              onClick={() => add("list", true)}
-            />
-            <AddButton
-              label="Image"
-              help="Upload a visual"
-              Icon={ImagePlus}
-              onClick={() => {
-                onImage(index);
-                setOpen(false);
+          <label className="mt-4 flex min-h-11 items-center gap-3 rounded-xl border border-default bg-surface px-3 text-secondary transition-colors focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/10">
+            <Search className="size-4 shrink-0" aria-hidden="true" />
+            <input
+              autoFocus
+              className="min-w-0 flex-1 bg-transparent text-sm text-primary outline-none placeholder:text-tertiary"
+              value={query}
+              placeholder="Search blocksâ€¦"
+              aria-label="Search quotation blocks"
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") setOpen(false);
               }}
             />
-            <AddButton
-              label="Divider"
-              help="Separate sections"
-              Icon={Minus}
-              onClick={() => add("divider")}
-            />
-            <AddButton
-              label="Pricing table"
-              help="Group products and services"
-              Icon={Table2}
-              onClick={() => add("pricing")}
-            />
-            <AddButton
-              label="Table"
-              help="Create rows and columns for any information"
-              Icon={Rows3}
-              onClick={() => add("table")}
-            />
+          </label>
+          <div className="mt-3 flex gap-1 overflow-x-auto pb-1" role="tablist" aria-label="Block categories">
+            {(["Popular", "Text", "Media", "Tables", "Layout"] as const).map((item) => (
+              <button
+                key={item}
+                type="button"
+                role="tab"
+                aria-selected={category === item}
+                className={cx(
+                  "min-h-9 whitespace-nowrap rounded-lg px-3 text-xs font-semibold transition-colors hover:bg-accent-soft hover:text-accent",
+                  category === item ? "bg-accent-soft text-accent" : "text-secondary",
+                )}
+                onClick={() => {
+                  setCategory(item);
+                  setQuery("");
+                }}
+              >
+                {item}
+              </button>
+            ))}
           </div>
+          {category === "Popular" && recent.length > 0 && query === "" && (
+            <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-tertiary">
+              Popular and recently used
+            </p>
+          )}
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {visibleOptions.map(({ label, help, Icon, action }) => (
+              <AddButton
+                key={label}
+                label={label}
+                help={help}
+                Icon={Icon}
+                onClick={action}
+              />
+            ))}
+          </div>
+          {visibleOptions.length === 0 && (
+            <div className="py-8 text-center">
+              <p className="text-sm font-semibold text-primary">No matching blocks</p>
+              <p className="mt-1 text-xs text-secondary">Try a different name or category.</p>
+            </div>
+          )}
         </div>
       )}
     </div>
