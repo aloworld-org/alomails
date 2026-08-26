@@ -17,6 +17,7 @@ use std::sync::Arc;
 use alo_store::{Store, StoreError, TenantId, UserId};
 use tokio::sync::Semaphore;
 
+pub mod app_password;
 pub mod config;
 pub mod jwt;
 pub mod keys;

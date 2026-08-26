@@ -799,6 +799,14 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// One app-specific password a user issued for a legacy mail client
+    /// (IMAP/POP3/SMTP) that cannot carry a second factor. Identifies the
+    /// *credential record* — name, creation, last use — never the secret:
+    /// only an argon2id hash is stored, and revoking deletes the row.
+    AppPasswordId
+);
+
+opaque_id!(
     /// A meeting. Distinct from the opaque room name the media engine is told:
     /// that is generated separately so the engine cannot be correlated back to
     /// a workspace record by anyone reading its logs.

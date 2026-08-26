@@ -65,3 +65,58 @@ async fn unknown_user_and_wrong_password_are_timing_comparable() {
         "unknown-user path is far slower than wrong-password (ratio {ratio:.3}); unexpected extra work"
     );
 }
+
+/// The same property for app passwords (mail M1.1): an unknown username
+/// pays one dummy argon2 verify on `verify_app_password`, so it is not
+/// measurably faster than a known user's wrong app password. The user
+/// under test holds exactly one app password — the paths then run one
+/// argon2 pass each, and a missing dummy hash collapses the unknown-user
+/// minimum to a bare DB miss.
+#[tokio::test]
+async fn unknown_user_and_wrong_app_password_are_timing_comparable() {
+    let (store, id) = setup().await;
+    let u = make_user(&store, &id, "ap-timing").await;
+    id.create_app_password(&u.tenant, &u.user, "timing probe")
+        .await
+        .unwrap();
+
+    // Warm up (pool warm, first argon2 allocation, page-ins).
+    for _ in 0..3 {
+        let _ = id
+            .verify_app_password(&u.email, "aaaa-bbbb-cccc-dddd")
+            .await;
+        let _ = id
+            .verify_app_password("nobody@ex.test", "aaaa-bbbb-cccc-dddd")
+            .await;
+    }
+
+    let iterations = 15;
+    let mut wrong_min = u128::MAX;
+    let mut unknown_min = u128::MAX;
+    for _ in 0..iterations {
+        let start = Instant::now();
+        let _ = id
+            .verify_app_password(&u.email, "aaaa-bbbb-cccc-dddd")
+            .await;
+        wrong_min = wrong_min.min(start.elapsed().as_nanos());
+
+        let start = Instant::now();
+        let _ = id
+            .verify_app_password("nobody-unknown@ex.test", "aaaa-bbbb-cccc-dddd")
+            .await;
+        unknown_min = unknown_min.min(start.elapsed().as_nanos());
+    }
+
+    let ratio = unknown_min as f64 / wrong_min as f64;
+    println!(
+        "constant-time: wrong_app_password_min={wrong_min}ns unknown_user_min={unknown_min}ns ratio={ratio:.3}"
+    );
+    assert!(
+        ratio > 0.35,
+        "unknown-user path is suspiciously fast (ratio {ratio:.3}); the dummy argon2 hash may be missing"
+    );
+    assert!(
+        ratio < 3.0,
+        "unknown-user path is far slower than wrong-app-password (ratio {ratio:.3}); unexpected extra work"
+    );
+}

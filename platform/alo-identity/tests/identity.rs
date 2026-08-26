@@ -249,6 +249,123 @@ async fn recovery_codes_are_single_use_and_account_scoped() {
 }
 
 #[tokio::test]
+async fn app_password_roundtrip_verify_and_revoke() {
+    let (store, id) = setup().await;
+    let u = make_user(&store, &id, "ap").await;
+
+    let (record, secret) = id
+        .create_app_password(&u.tenant, &u.user, "Thunderbird on the desk machine")
+        .await
+        .unwrap();
+    // The displayed secret is 16 lowercase letters in 4 dash-groups.
+    assert_eq!(secret.reveal().len(), 19);
+
+    // The secret verifies to the owning principal…
+    let p = id
+        .verify_app_password(&u.email, secret.reveal())
+        .await
+        .unwrap()
+        .expect("app password verifies");
+    assert_eq!(p.tenant, u.tenant);
+    assert_eq!(p.user, u.user);
+    // …with or without the display grouping (clipboard reality).
+    assert!(
+        id.verify_app_password(&u.email, &secret.reveal().replace('-', ""))
+            .await
+            .unwrap()
+            .is_some()
+    );
+
+    // The account's primary password is NOT an app password, a wrong
+    // secret fails, and an unknown user fails — all indistinguishably.
+    assert!(
+        id.verify_app_password(&u.email, &u.password)
+            .await
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        id.verify_app_password(&u.email, "aaaa-bbbb-cccc-dddd")
+            .await
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        id.verify_app_password("nobody@ex.test", secret.reveal())
+            .await
+            .unwrap()
+            .is_none()
+    );
+
+    // The list shows the record — name, created, last-used — never a secret.
+    let rows = id.list_app_passwords(&u.tenant, &u.user).await.unwrap();
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].name, "Thunderbird on the desk machine");
+    assert!(
+        rows[0].last_used_at.is_some(),
+        "a successful verify stamps last_used_at"
+    );
+
+    // Revocation is immediate: the next verify fails.
+    id.revoke_app_password(&u.tenant, &u.user, &record)
+        .await
+        .unwrap();
+    assert!(
+        id.verify_app_password(&u.email, secret.reveal())
+            .await
+            .unwrap()
+            .is_none(),
+        "a revoked app password must fail on the next connection"
+    );
+    assert!(
+        id.list_app_passwords(&u.tenant, &u.user)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+}
+
+#[tokio::test]
+async fn app_passwords_do_not_cross_tenant_or_account() {
+    let (store, id) = setup().await;
+    let a = make_user(&store, &id, "ap-iso-a").await; // tenant A
+    let b = make_user(&store, &id, "ap-iso-b").await; // tenant B
+
+    let (record_a, secret_a) = id
+        .create_app_password(&a.tenant, &a.user, "A's laptop")
+        .await
+        .unwrap();
+
+    // A's app password never authenticates B's username.
+    assert!(
+        id.verify_app_password(&b.email, secret_a.reveal())
+            .await
+            .unwrap()
+            .is_none()
+    );
+    // B's tenant door can neither see nor revoke A's record.
+    assert!(
+        id.list_app_passwords(&b.tenant, &b.user)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        id.revoke_app_password(&b.tenant, &b.user, &record_a)
+            .await
+            .is_err(),
+        "a foreign tenant revoking A's record must get a clean denial"
+    );
+    // The failed foreign revoke deleted nothing: A still authenticates.
+    assert!(
+        id.verify_app_password(&a.email, secret_a.reveal())
+            .await
+            .unwrap()
+            .is_some()
+    );
+}
+
+#[tokio::test]
 async fn password_login_backs_off_after_repeated_failures() {
     let (store, id) = setup().await;
     let u = make_user(&store, &id, "backoff").await;
