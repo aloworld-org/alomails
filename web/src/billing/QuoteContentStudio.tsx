@@ -1574,11 +1574,12 @@ function ImageOptionGroup<T extends string | number>({
           <button
             key={id}
             type="button"
+            aria-label={name}
             aria-pressed={value === id}
             className={cx(
-              "relative whitespace-nowrap border text-center text-sm font-medium transition-all hover:border-accent hover:bg-accent-soft hover:text-accent",
+              "group relative whitespace-nowrap border text-center text-sm font-medium transition-all hover:border-accent hover:bg-accent-soft hover:text-accent",
               visual
-                ? "min-h-[5.75rem] rounded-xl bg-surface p-2 shadow-sm hover:-translate-y-px hover:shadow-md"
+                ? "min-h-[4.25rem] rounded-xl bg-surface p-2 shadow-sm hover:-translate-y-px hover:shadow-md"
                 : "min-h-11 rounded-lg px-3",
               value === id
                 ? "border-accent/30 bg-accent-soft font-semibold text-accent shadow-sm ring-1 ring-inset ring-accent/15"
@@ -1591,7 +1592,12 @@ function ImageOptionGroup<T extends string | number>({
             {visual && (
               <ImageOptionPreview kind={visual} option={String(id)} />
             )}
-            <span className={cx(visual && "mt-2 block")}>{name}</span>
+            {!visual && <span>{name}</span>}
+            {visual && (
+              <span className="pointer-events-none absolute bottom-[calc(100%+.5rem)] left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-lg bg-primary px-2.5 py-1.5 text-xs font-medium text-surface opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+                {name}
+              </span>
+            )}
           </button>
         ))}
       </div>
