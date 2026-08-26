@@ -547,14 +547,26 @@ export const QuoteContentStudio = forwardRef<
                     {!readOnly && (
                       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--quote-table-header)] bg-raised/40 px-4 py-2.5">
                         {block.kind === "pricing" ? (
-                          <input
-                            className="min-h-9 max-w-64 rounded-lg border border-default bg-surface px-3 text-sm font-semibold text-primary placeholder:text-tertiary focus:border-accent focus:outline-none"
-                            value={block.title ?? "Pricing table"}
-                            aria-label="Pricing table name"
-                            onChange={(event) =>
-                              update(block.id, { title: event.target.value })
-                            }
-                          />
+                          <label className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+                            <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-tertiary">
+                              Table name
+                            </span>
+                            <span className="relative block min-w-0">
+                              <Pencil
+                                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-tertiary"
+                                aria-hidden="true"
+                              />
+                              <input
+                                className="min-h-10 w-full min-w-52 rounded-lg border border-default bg-surface py-2 pl-9 pr-3 text-sm font-semibold text-primary placeholder:text-tertiary hover:border-accent focus:border-accent focus:outline-none"
+                                value={block.title ?? "Pricing table"}
+                                aria-label="Table name"
+                                placeholder="Pricing table"
+                                onChange={(event) =>
+                                  update(block.id, { title: event.target.value })
+                                }
+                              />
+                            </span>
+                          </label>
                         ) : (
                           <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
                             {blockName(block)}

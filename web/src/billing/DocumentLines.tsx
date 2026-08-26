@@ -776,7 +776,8 @@ export function DocumentLines({
                       )}
                     </td>
                   )}
-                  <td className={styles.lineDescription}>
+                  <td className="min-w-[260px]">
+                    <div className="flex flex-col gap-1">
                     {readOnly ? (
                       <div>
                         <strong className="font-medium text-primary">
@@ -829,6 +830,7 @@ export function DocumentLines({
                         )}
                       </>
                     )}
+                    </div>
                   </td>
                   {(columns?.unit ?? true) && (
                     <td>
