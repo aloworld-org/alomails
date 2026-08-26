@@ -559,7 +559,7 @@ export const QuoteContentStudio = forwardRef<
                 )
                 .map((block, index) => (
                 <div key={block.id}>
-                  <article className="overflow-hidden rounded-xl border border-[var(--quote-table-header)] bg-[var(--quote-background)] text-[var(--quote-text)] shadow-sm">
+                  <article className="group/quote-block overflow-hidden rounded-xl border border-[var(--quote-table-header)] bg-[var(--quote-background)] text-[var(--quote-text)] shadow-sm">
                     {!readOnly && (
                       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--quote-table-header)] bg-raised/40 px-4 py-2.5">
                         {block.kind === "pricing" ? (
@@ -588,7 +588,7 @@ export const QuoteContentStudio = forwardRef<
                             {blockName(block)}
                           </span>
                         )}
-                        <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex flex-wrap items-center gap-3 opacity-0 transition-opacity group-hover/quote-block:opacity-100 group-focus-within/quote-block:opacity-100 max-md:opacity-100">
                           {(block.kind === "pricing" || block.kind === "image") && (
                             <div className="flex flex-wrap items-center gap-2 border-r border-default pr-3">
                               {block.kind === "pricing" && (
@@ -1043,18 +1043,19 @@ function ListBlockEditor({
         {rows.map((item, index) => (
           <div
             key={index}
-            className="grid grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-default bg-surface p-3 shadow-sm"
+            className="group/list-item relative grid grid-cols-[2.25rem_minmax(0,1fr)] items-center gap-3 rounded-xl border border-default bg-surface p-3 shadow-sm transition-colors hover:border-accent/30 focus-within:border-accent/30"
           >
             <span className="grid size-9 place-items-center rounded-lg bg-raised text-sm font-semibold text-secondary">
               {ordered ? index + 1 : "•"}
             </span>
             <Input
+              className="pr-32 max-md:pr-3"
               value={item}
               aria-label={`${ordered ? "Numbered" : "Bullet"} item ${index + 1}`}
               placeholder="Write an item"
               onChange={(event) => replace(index, event.target.value)}
             />
-            <div className="flex items-center gap-1">
+            <div className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1 rounded-lg bg-surface/95 p-1 opacity-0 shadow-sm transition-opacity group-hover/list-item:opacity-100 group-focus-within/list-item:opacity-100 max-md:static max-md:col-span-2 max-md:translate-y-0 max-md:justify-self-end max-md:opacity-100 max-md:shadow-none">
               <BlockCommand
                 label="Move item up"
                 disabled={index === 0}
@@ -1985,7 +1986,7 @@ function GeneralTableBlock({
           <thead className="bg-raised/50">
             <tr>
               {block.columns.map((column, columnIndex) => (
-                <th key={column.id} className="min-w-44 border-r border-default p-2 last:border-r-0">
+                <th key={column.id} className="group/table-column min-w-44 border-r border-default p-2 last:border-r-0">
                   <div className="flex items-center gap-2">
                     <Input
                       value={column.label}
@@ -2002,7 +2003,7 @@ function GeneralTableBlock({
                     />
                     <button
                       type="button"
-                      className="grid size-9 shrink-0 place-items-center rounded-lg text-secondary transition-colors hover:bg-danger-tint hover:text-danger disabled:cursor-not-allowed disabled:opacity-35"
+                      className="grid size-9 shrink-0 place-items-center rounded-lg text-secondary opacity-0 transition-[color,background-color,opacity] hover:bg-danger-tint hover:text-danger focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 group-hover/table-column:opacity-100 group-focus-within/table-column:opacity-100 disabled:cursor-not-allowed disabled:opacity-35 max-md:opacity-100"
                       aria-label={`Remove ${column.label || `column ${columnIndex + 1}`}`}
                       disabled={block.columns.length === 1}
                       onClick={() => removeColumn(column.id)}
@@ -2017,7 +2018,7 @@ function GeneralTableBlock({
           </thead>
           <tbody>
             {block.rows.map((row, rowIndex) => (
-              <tr key={row.id} className="border-t border-default">
+              <tr key={row.id} className="group/table-row border-t border-default">
                 {block.columns.map((column) => (
                   <td key={column.id} className="border-r border-default p-2 last:border-r-0">
                     <Input
@@ -2045,7 +2046,7 @@ function GeneralTableBlock({
                 <td className="p-2 text-center">
                   <button
                     type="button"
-                    className="grid size-9 place-items-center rounded-lg text-secondary transition-colors hover:bg-danger-tint hover:text-danger"
+                    className="grid size-9 place-items-center rounded-lg text-secondary opacity-0 transition-[color,background-color,opacity] hover:bg-danger-tint hover:text-danger focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 group-hover/table-row:opacity-100 group-focus-within/table-row:opacity-100 max-md:opacity-100"
                     aria-label={`Remove row ${rowIndex + 1}`}
                     onClick={() =>
                       onChange({
@@ -2380,8 +2381,10 @@ function BlockCommand({
     <button
       type="button"
       disabled={disabled}
+      aria-label={label}
+      title={label}
       className={cx(
-        "inline-flex min-h-10 items-center gap-2 rounded-lg border border-transparent px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 disabled:cursor-not-allowed disabled:text-tertiary disabled:opacity-45",
+        "inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-transparent text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 disabled:cursor-not-allowed disabled:text-tertiary disabled:opacity-45",
         danger
           ? "text-danger hover:border-danger/20 hover:bg-danger-tint"
           : accent
@@ -2391,7 +2394,7 @@ function BlockCommand({
       onClick={onClick}
     >
       {children}
-      {label}
+      <span className="sr-only">{label}</span>
     </button>
   );
 }
