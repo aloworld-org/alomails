@@ -342,6 +342,116 @@ async fn delivered_body_survives_a_store_restart() {
 }
 
 #[tokio::test]
+async fn list_address_fans_out_per_member_and_a_leaver_stops_getting_mail() {
+    // One tenant, two members, one list address. A single inbound message
+    // fans out to one copy per member THROUGH each member's own Sieve
+    // script — and the envelope recipient a member's script sees is the
+    // LIST address, not their personal one. After a member leaves, the next
+    // message no longer reaches them.
+    let store = test_store().await;
+    let tenant = store.create_tenant("ld-list").await.unwrap();
+    let ts = store.for_tenant(tenant.clone());
+    let alice_email = format!("lista-{tenant}@alo.test");
+    let bob_email = format!("listb-{tenant}@alo.test");
+    let alice_id = ts.create_user(&alice_email).await.unwrap();
+    let bob_id = ts.create_user(&bob_email).await.unwrap();
+    let alice = store.for_account(tenant.clone(), alice_id.clone());
+    let bob = store.for_account(tenant.clone(), bob_id.clone());
+    let alice_inbox = alice.inbox().await.unwrap();
+    let bob_inbox = bob.inbox().await.unwrap();
+
+    let group = ts.create_group("Everyone").await.unwrap();
+    ts.add_group_member(&group, &alice_id).await.unwrap();
+    ts.add_group_member(&group, &bob_id).await.unwrap();
+    let list = format!("all-{tenant}@alo.test");
+    ts.set_group_address(&group, Some(&list)).await.unwrap();
+
+    // Bob's Sieve files on the ENVELOPE recipient being the list address —
+    // the assertion that members can filter list mail as list mail.
+    let bob_list_mb = bob.create_mailbox(None, "List", None).await.unwrap();
+    bob.put_sieve_script(
+        "list",
+        &format!(
+            "require [\"envelope\",\"fileinto\"]; \
+             if envelope :is \"to\" \"{list}\" {{ fileinto \"List\"; }}"
+        ),
+    )
+    .await
+    .unwrap();
+    bob.activate_sieve_script(Some("list")).await.unwrap();
+
+    let h = spawn(store.clone()).await;
+    let mut c = Client::connect(h.addr).await;
+    c.hello().await;
+    assert!(c.cmd("MAIL FROM:<s@ext.test>").await.starts_with("250"));
+    assert!(
+        c.cmd(&format!("RCPT TO:<{list}>")).await.starts_with("250"),
+        "a list address with members is a valid recipient"
+    );
+    assert!(
+        c.data("From: s@ext.test\r\nSubject: to the list\r\n\r\nx\r\n")
+            .await
+            .starts_with("250")
+    );
+
+    assert_eq!(count(&alice, &alice_inbox).await, 1, "one copy for Alice");
+    assert_eq!(
+        count(&bob, &bob_list_mb).await,
+        1,
+        "Bob's copy was filed by his Sieve on the list address as envelope recipient"
+    );
+    assert_eq!(count(&bob, &bob_inbox).await, 0, "not duplicated to Inbox");
+
+    // Bob leaves; the next message stops reaching him immediately.
+    ts.remove_group_member(&group, &bob_id).await.unwrap();
+    let mut c2 = Client::connect(h.addr).await;
+    c2.hello().await;
+    c2.cmd("MAIL FROM:<s@ext.test>").await;
+    assert!(
+        c2.cmd(&format!("RCPT TO:<{list}>"))
+            .await
+            .starts_with("250")
+    );
+    assert!(
+        c2.data("From: s@ext.test\r\nSubject: after leaving\r\n\r\nx\r\n")
+            .await
+            .starts_with("250")
+    );
+    assert_eq!(
+        count(&alice, &alice_inbox).await,
+        2,
+        "Alice keeps receiving"
+    );
+    assert_eq!(
+        count(&bob, &bob_list_mb).await + count(&bob, &bob_inbox).await,
+        1,
+        "no new copy for Bob after he left"
+    );
+}
+
+#[tokio::test]
+async fn a_memberless_list_is_refused_at_rcpt() {
+    // A list with nobody behind it is not a deliverable destination: the MX
+    // says so at RCPT time (550), rather than accepting and black-holing.
+    let store = test_store().await;
+    let tenant = store.create_tenant("ld-empty-list").await.unwrap();
+    let ts = store.for_tenant(tenant.clone());
+    let group = ts.create_group("Ghosts").await.unwrap();
+    let list = format!("ghosts-{tenant}@alo.test");
+    ts.set_group_address(&group, Some(&list)).await.unwrap();
+
+    let h = spawn(store.clone()).await;
+    let mut c = Client::connect(h.addr).await;
+    c.hello().await;
+    assert!(c.cmd("MAIL FROM:<s@ext.test>").await.starts_with("250"));
+    let reply = c.cmd(&format!("RCPT TO:<{list}>")).await;
+    assert!(
+        reply.starts_with("550"),
+        "a memberless list must be refused, got: {reply}"
+    );
+}
+
+#[tokio::test]
 async fn transient_store_failure_defers_rather_than_loses() {
     // deliver() to a recipient that cannot be resolved returns Transient,
     // which the DATA handler maps to 451 — the sender retries, mail is not

@@ -752,7 +752,7 @@ pub async fn delete_group(
         .for_tenant(account.tenant.clone())
         .delete_group(&GroupId::new(id.clone()))
         .await
-        .map_err(|_| Problem::server_error())?;
+        .map_err(store_admin_err)?;
     audit(&state, &account, "group.delete", Some(&id), None).await;
     Ok(Json(json!({ "ok": true })))
 }
@@ -857,7 +857,7 @@ pub async fn remove_group_member(
         .for_tenant(account.tenant.clone())
         .remove_group_member(&GroupId::new(group_id), &UserId::new(user_id))
         .await
-        .map_err(|_| Problem::server_error())?;
+        .map_err(store_admin_err)?;
     Ok(Json(json!({ "ok": true })))
 }
 

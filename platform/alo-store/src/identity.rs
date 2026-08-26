@@ -860,6 +860,11 @@ impl TenantStore {
 
     /// Adds a user to a group (both in this tenant). Idempotent.
     ///
+    /// Members are always **users** — a group id presented as the member is
+    /// refused (`NotFound`), so a distribution list can never contain another
+    /// list and inbound expansion is single-level and loop-free by
+    /// construction.
+    ///
     /// # Errors
     /// [`StoreError::NotFound`] if the user or group is not in this tenant.
     pub async fn add_group_member(&self, group: &GroupId, user: &UserId) -> Result<()> {
@@ -880,8 +885,10 @@ impl TenantStore {
     /// Removes a user from a group. Silent if not a member.
     ///
     /// # Errors
+    /// [`StoreError::NotFound`] if the group is not this tenant's;
     /// [`StoreError::Db`] on a database failure.
     pub async fn remove_group_member(&self, group: &GroupId, user: &UserId) -> Result<()> {
+        self.assert_group(group).await?;
         sqlx::query!(
             "DELETE FROM group_members WHERE group_id = $1 AND tenant_id = $2 AND user_id = $3",
             group.as_str(),
@@ -896,8 +903,10 @@ impl TenantStore {
     /// Lists the user ids in a group within this tenant.
     ///
     /// # Errors
+    /// [`StoreError::NotFound`] if the group is not this tenant's;
     /// [`StoreError::Db`] on a database failure.
     pub async fn group_members(&self, group: &GroupId) -> Result<Vec<UserId>> {
+        self.assert_group(group).await?;
         let rows = sqlx::query!(
             "SELECT user_id FROM group_members WHERE group_id = $1 AND tenant_id = $2",
             group.as_str(),
@@ -936,13 +945,17 @@ impl TenantStore {
     /// Deletes a group (its memberships cascade). Runtime-checked query.
     ///
     /// # Errors
+    /// [`StoreError::NotFound`] if the group is not this tenant's;
     /// [`StoreError::Db`] on failure.
     pub async fn delete_group(&self, group: &GroupId) -> Result<()> {
-        sqlx::query("DELETE FROM groups WHERE tenant_id = $1 AND id = $2")
+        let done = sqlx::query("DELETE FROM groups WHERE tenant_id = $1 AND id = $2")
             .bind(self.tenant().as_str())
             .bind(group.as_str())
             .execute(self.pool())
             .await?;
+        if done.rows_affected() == 0 {
+            return Err(StoreError::NotFound);
+        }
         Ok(())
     }
 
@@ -950,11 +963,12 @@ impl TenantStore {
     /// lowercase. Runtime-checked query.
     ///
     /// # Errors
+    /// [`StoreError::NotFound`] if the group is not this tenant's;
     /// [`StoreError::Conflict`] if the address is already in use;
     /// [`StoreError::Db`] on other failure.
     pub async fn set_group_address(&self, group: &GroupId, address: Option<&str>) -> Result<()> {
         let normalized = address.map(|a| a.trim().to_lowercase());
-        sqlx::query("UPDATE groups SET address = $3 WHERE tenant_id = $1 AND id = $2")
+        let done = sqlx::query("UPDATE groups SET address = $3 WHERE tenant_id = $1 AND id = $2")
             .bind(self.tenant().as_str())
             .bind(group.as_str())
             .bind(normalized)
@@ -966,6 +980,9 @@ impl TenantStore {
                 }
                 _ => StoreError::Db(e),
             })?;
+        if done.rows_affected() == 0 {
+            return Err(StoreError::NotFound);
+        }
         Ok(())
     }
 
@@ -973,8 +990,10 @@ impl TenantStore {
     /// admin UI. Runtime-checked query.
     ///
     /// # Errors
+    /// [`StoreError::NotFound`] if the group is not this tenant's;
     /// [`StoreError::Db`] on failure.
     pub async fn group_members_detailed(&self, group: &GroupId) -> Result<Vec<(String, String)>> {
+        self.assert_group(group).await?;
         let rows = sqlx::query_as::<_, (String, String)>(
             "SELECT u.id, u.email FROM group_members m \
              JOIN users u ON u.id = m.user_id AND u.tenant_id = m.tenant_id \

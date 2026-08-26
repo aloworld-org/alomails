@@ -401,16 +401,12 @@ async fn groups_are_tenant_scoped() {
     let members = ts.group_members(&g).await.unwrap();
     assert_eq!(members, vec![a.user.clone()]);
 
-    // A different tenant's view of that group id is empty (not another
-    // tenant's members) — group ids are unguessable and tenant-scoped.
+    // A different tenant's view of that group id is a clean NotFound (never
+    // another tenant's members) — group ids are unguessable and tenant-scoped.
     let b = make_user(&store, &id, "grp-b").await;
-    let members_from_b = store
-        .for_tenant(b.tenant.clone())
-        .group_members(&g)
-        .await
-        .unwrap();
+    let members_from_b = store.for_tenant(b.tenant.clone()).group_members(&g).await;
     assert!(
-        members_from_b.is_empty(),
+        matches!(members_from_b, Err(alo_store::StoreError::NotFound)),
         "a group must be invisible to another tenant"
     );
 }
