@@ -45,7 +45,6 @@ import {
 } from "./quoteTableOptions";
 
 type Theme = "modern" | "editorial" | "minimal";
-type HeaderAlignment = "left" | "right";
 type Block =
   | { id: string; kind: "text"; heading: string; body: string }
   | { id: string; kind: "heading"; level: 1 | 2 | 3; text: string }
@@ -87,7 +86,6 @@ type Block =
 interface Colors {
   accent: string;
   background: string;
-  headerBackground: string;
   text: string;
   tableHeader: string;
   tableRows: string;
@@ -108,7 +106,6 @@ export const DEFAULT_QUOTE_COLUMNS: QuoteColumns = {
 };
 interface Design {
   logo: string;
-  headerAlignment: HeaderAlignment;
   theme: Theme;
   colors: Colors;
   columns: QuoteColumns;
@@ -126,14 +123,12 @@ interface Design {
 const DEFAULT_COLORS: Colors = {
   accent: "#e76f51",
   background: "#fffefc",
-  headerBackground: "#fffefc",
   text: "#102a43",
   tableHeader: "#f3f0ea",
   tableRows: "#fffefc",
 };
 const EMPTY: Design = {
   logo: "",
-  headerAlignment: "left",
   theme: "modern",
   colors: DEFAULT_COLORS,
   columns: DEFAULT_QUOTE_COLUMNS,
@@ -181,12 +176,10 @@ function normalizeDesign(design: Design): Design {
 }
 
 function hasPreviewText(value: string): boolean {
-  return (
-    value
-      .replace(/<[^>]*>/g, "")
-      .replaceAll("&nbsp;", " ")
-      .trim().length > 0
-  );
+  return value
+    .replace(/<[^>]*>/g, "")
+    .replaceAll("&nbsp;", " ")
+    .trim().length > 0;
 }
 
 function blockHasPreviewContent(block: Block): boolean {
@@ -381,7 +374,6 @@ export const QuoteContentStudio = forwardRef<
     const values = {
       "--quote-accent": design.colors.accent,
       "--quote-background": design.colors.background,
-      "--quote-header-background": design.colors.headerBackground,
       "--quote-text": design.colors.text,
       "--quote-table-header": design.colors.tableHeader,
       "--quote-table-row": design.colors.tableRows,
@@ -429,30 +421,25 @@ export const QuoteContentStudio = forwardRef<
       setDesign((current) => ({
         ...current,
         blocks: [
-          ...current.blocks
-            .slice(0, index)
-            .map((block) =>
-              block.kind === "pricing" && block.rowKeys === undefined
-                ? { ...block, rowKeys: lineKeys }
-                : block,
-            ),
+          ...current.blocks.slice(0, index).map((block) =>
+            block.kind === "pricing" && block.rowKeys === undefined
+              ? { ...block, rowKeys: lineKeys }
+              : block,
+          ),
           {
             id,
             kind,
             rowKeys: [],
             showSubtotal: true,
             title: `Pricing table ${
-              current.blocks.filter((block) => block.kind === "pricing")
-                .length + 1
+              current.blocks.filter((block) => block.kind === "pricing").length + 1
             }`,
           },
-          ...current.blocks
-            .slice(index)
-            .map((block) =>
-              block.kind === "pricing" && block.rowKeys === undefined
-                ? { ...block, rowKeys: lineKeys }
-                : block,
-            ),
+          ...current.blocks.slice(index).map((block) =>
+            block.kind === "pricing" && block.rowKeys === undefined
+              ? { ...block, rowKeys: lineKeys }
+              : block,
+          ),
         ],
       }));
     }
@@ -558,9 +545,7 @@ export const QuoteContentStudio = forwardRef<
         ref={root}
         className={cx(
           "overflow-hidden bg-[var(--quote-background)]",
-          preview
-            ? "rounded-none"
-            : "rounded-2xl border border-default shadow-sm",
+          preview ? "rounded-none" : "rounded-2xl border border-default shadow-sm",
         )}
       >
         {!preview && (
@@ -584,12 +569,7 @@ export const QuoteContentStudio = forwardRef<
           )}
         >
           {design.logo && (
-            <div
-              className={cx(
-                "mb-8 flex min-h-28 items-center justify-between gap-8 rounded-2xl bg-[var(--quote-header-background)] px-6 py-5 max-sm:px-4",
-                design.headerAlignment === "right" && "flex-row-reverse",
-              )}
-            >
+            <div className="mb-8 flex items-center justify-between">
               <img
                 src={design.logo}
                 alt="Company logo"
@@ -614,334 +594,310 @@ export const QuoteContentStudio = forwardRef<
                           : "overflow-hidden rounded-xl border border-[var(--quote-table-header)] shadow-sm",
                       )}
                     >
-                      {!readOnly && (
-                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--quote-table-header)] bg-raised/40 px-4 py-2.5">
-                          {block.kind === "pricing" ? (
-                            <label className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
-                              <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-tertiary">
-                                Table name
-                              </span>
-                              <span className="relative block min-w-0">
-                                <Pencil
-                                  className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-tertiary"
-                                  aria-hidden="true"
-                                />
-                                <input
-                                  className="min-h-10 w-full min-w-52 rounded-lg border border-default bg-surface py-2 pl-9 pr-3 text-sm font-semibold text-primary placeholder:text-tertiary hover:border-accent focus:border-accent focus:outline-none"
-                                  value={block.title ?? "Pricing table"}
-                                  aria-label="Table name"
-                                  placeholder="Pricing table"
-                                  onChange={(event) =>
-                                    update(block.id, {
-                                      title: event.target.value,
-                                    })
-                                  }
-                                />
-                              </span>
-                            </label>
-                          ) : (
-                            <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
-                              {blockName(block)}
+                    {!readOnly && (
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--quote-table-header)] bg-raised/40 px-4 py-2.5">
+                        {block.kind === "pricing" ? (
+                          <label className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+                            <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-tertiary">
+                              Table name
                             </span>
-                          )}
-                          <div className="flex flex-wrap items-center gap-3 opacity-0 transition-opacity group-hover/quote-block:opacity-100 group-focus-within/quote-block:opacity-100 max-md:opacity-100">
-                            {(block.kind === "pricing" ||
-                              block.kind === "image") && (
-                              <div className="flex flex-wrap items-center gap-2 border-r border-default pr-3">
-                                {block.kind === "pricing" && (
-                                  <>
-                                    {design.blocks.filter(
-                                      (item) => item.kind === "pricing",
-                                    ).length > 1 && (
-                                      <BlockCommand
-                                        accent
-                                        label={
-                                          block.showSubtotal === false
-                                            ? "Show subtotal"
-                                            : "Hide subtotal"
-                                        }
-                                        onClick={() =>
-                                          update(block.id, {
-                                            showSubtotal:
-                                              block.showSubtotal === false,
-                                          })
-                                        }
-                                      >
-                                        <Rows3 className="size-4" />
-                                      </BlockCommand>
-                                    )}
+                            <span className="relative block min-w-0">
+                              <Pencil
+                                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-tertiary"
+                                aria-hidden="true"
+                              />
+                              <input
+                                className="min-h-10 w-full min-w-52 rounded-lg border border-default bg-surface py-2 pl-9 pr-3 text-sm font-semibold text-primary placeholder:text-tertiary hover:border-accent focus:border-accent focus:outline-none"
+                                value={block.title ?? "Pricing table"}
+                                aria-label="Table name"
+                                placeholder="Pricing table"
+                                onChange={(event) =>
+                                  update(block.id, { title: event.target.value })
+                                }
+                              />
+                            </span>
+                          </label>
+                        ) : (
+                          <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
+                            {blockName(block)}
+                          </span>
+                        )}
+                        <div className="flex flex-wrap items-center gap-3 opacity-0 transition-opacity group-hover/quote-block:opacity-100 group-focus-within/quote-block:opacity-100 max-md:opacity-100">
+                          {(block.kind === "pricing" || block.kind === "image") && (
+                            <div className="flex flex-wrap items-center gap-2 border-r border-default pr-3">
+                              {block.kind === "pricing" && (
+                                <>
+                                  {design.blocks.filter(
+                                    (item) => item.kind === "pricing",
+                                  ).length > 1 && (
                                     <BlockCommand
                                       accent
-                                      label="Table settings"
-                                      onClick={() => setTableSettings(true)}
+                                      label={
+                                        block.showSubtotal === false
+                                          ? "Show subtotal"
+                                          : "Hide subtotal"
+                                      }
+                                      onClick={() =>
+                                        update(block.id, {
+                                          showSubtotal:
+                                            block.showSubtotal === false,
+                                        })
+                                      }
                                     >
-                                      <Palette className="size-4" />
+                                      <Rows3 className="size-4" />
                                     </BlockCommand>
-                                  </>
-                                )}
-                                {block.kind === "image" && (
+                                  )}
                                   <BlockCommand
                                     accent
-                                    label="Edit block"
-                                    onClick={() => setEditingImageId(block.id)}
+                                    label="Table settings"
+                                    onClick={() => setTableSettings(true)}
                                   >
-                                    <Pencil className="size-4" />
+                                    <Palette className="size-4" />
                                   </BlockCommand>
-                                )}
-                              </div>
-                            )}
-                            <div className="flex flex-wrap items-center gap-2">
-                              <BlockCommand
-                                label="Move up"
-                                disabled={index === 0}
-                                onClick={() => moveBlock(index, -1)}
-                              >
-                                <ArrowUp className="size-4" />
-                              </BlockCommand>
-                              <BlockCommand
-                                label="Move down"
-                                disabled={index === design.blocks.length - 1}
-                                onClick={() => moveBlock(index, 1)}
-                              >
-                                <ArrowDown className="size-4" />
-                              </BlockCommand>
-                              {block.kind !== "pricing" && (
+                                </>
+                              )}
+                              {block.kind === "image" && (
                                 <BlockCommand
-                                  label="Duplicate"
-                                  onClick={() => duplicateBlock(index)}
+                                  accent
+                                  label="Edit block"
+                                  onClick={() => setEditingImageId(block.id)}
                                 >
-                                  <Copy className="size-4" />
+                                  <Pencil className="size-4" />
                                 </BlockCommand>
                               )}
                             </div>
+                          )}
+                          <div className="flex flex-wrap items-center gap-2">
                             <BlockCommand
-                              label="Delete"
-                              danger
-                              disabled={
-                                block.kind === "pricing" &&
-                                design.blocks.filter(
-                                  (item) => item.kind === "pricing",
-                                ).length === 1
-                              }
-                              onClick={() => removeBlock(block.id)}
+                              label="Move up"
+                              disabled={index === 0}
+                              onClick={() => moveBlock(index, -1)}
                             >
-                              <Trash2 className="size-4" />
+                              <ArrowUp className="size-4" />
                             </BlockCommand>
+                            <BlockCommand
+                              label="Move down"
+                              disabled={index === design.blocks.length - 1}
+                              onClick={() => moveBlock(index, 1)}
+                            >
+                              <ArrowDown className="size-4" />
+                            </BlockCommand>
+                            {block.kind !== "pricing" && (
+                              <BlockCommand
+                                label="Duplicate"
+                                onClick={() => duplicateBlock(index)}
+                              >
+                                <Copy className="size-4" />
+                              </BlockCommand>
+                            )}
                           </div>
+                          <BlockCommand
+                            label="Delete"
+                            danger
+                            disabled={
+                              block.kind === "pricing" &&
+                              design.blocks.filter(
+                                (item) => item.kind === "pricing",
+                              ).length === 1
+                            }
+                            onClick={() => removeBlock(block.id)}
+                          >
+                            <Trash2 className="size-4" />
+                          </BlockCommand>
                         </div>
-                      )}
-                      <div className={readOnly ? "py-1" : "p-5"}>
-                        {block.kind === "pricing" ? (
-                          <QuoteTableOptionsProvider
-                            value={{
-                              enabled: true,
-                              layout: design.tableLayout,
-                              showImages: design.showProductImages,
-                              showDescriptions: design.showProductDescriptions,
-                              totalsPlacement: design.totalsPlacement,
-                              totalsDetail: design.totalsDetail,
+                      </div>
+                    )}
+                    <div className={readOnly ? "py-1" : "p-5"}>
+                      {block.kind === "pricing" ? (
+                        <QuoteTableOptionsProvider
+                          value={{
+                            enabled: true,
+                            layout: design.tableLayout,
+                            showImages: design.showProductImages,
+                            showDescriptions: design.showProductDescriptions,
+                            totalsPlacement: design.totalsPlacement,
+                            totalsDetail: design.totalsDetail,
+                            showCurrencyCode: design.showCurrencyCode,
+                            emphasizeTotal: design.emphasizeTotal,
+                            showTaxNote: design.showTaxNote,
+                            lineContent: design.lineContent,
+                            updateLineContent,
+                          }}
+                        >
+                          {pricingTable({
+                            ...(block.rowKeys === undefined
+                              ? {}
+                              : { rowKeys: block.rowKeys }),
+                            title: block.title ?? "Pricing table",
+                            onRowKeysChange: (rowKeys) =>
+                              update(block.id, { rowKeys }),
+                          })}
+                          {block.showSubtotal !== false &&
+                            tableSubtotal(block.rowKeys, {
+                              placement: design.totalsPlacement,
+                              detail: design.totalsDetail,
                               showCurrencyCode: design.showCurrencyCode,
                               emphasizeTotal: design.emphasizeTotal,
                               showTaxNote: design.showTaxNote,
-                              lineContent: design.lineContent,
-                              updateLineContent,
-                            }}
-                          >
-                            {pricingTable({
-                              ...(block.rowKeys === undefined
-                                ? {}
-                                : { rowKeys: block.rowKeys }),
-                              title: block.title ?? "Pricing table",
-                              onRowKeysChange: (rowKeys) =>
-                                update(block.id, { rowKeys }),
                             })}
-                            {block.showSubtotal !== false &&
-                              tableSubtotal(block.rowKeys, {
-                                placement: design.totalsPlacement,
-                                detail: design.totalsDetail,
-                                showCurrencyCode: design.showCurrencyCode,
-                                emphasizeTotal: design.emphasizeTotal,
-                                showTaxNote: design.showTaxNote,
-                              })}
-                          </QuoteTableOptionsProvider>
-                        ) : block.kind === "table" ? (
-                          <GeneralTableBlock
-                            block={block}
-                            readOnly={readOnly}
-                            onChange={(patch) => update(block.id, patch)}
-                          />
-                        ) : block.kind === "heading" ? (
-                          readOnly ? (
-                            block.level === 1 ? (
-                              <h1 className="text-3xl font-semibold leading-tight">
-                                <InlineRichTextContent value={block.text} />
-                              </h1>
-                            ) : block.level === 2 ? (
-                              <h2 className="text-2xl font-semibold leading-tight">
-                                <InlineRichTextContent value={block.text} />
-                              </h2>
-                            ) : (
-                              <h3 className="text-xl font-semibold leading-tight">
-                                <InlineRichTextContent value={block.text} />
-                              </h3>
-                            )
+                        </QuoteTableOptionsProvider>
+                      ) : block.kind === "table" ? (
+                        <GeneralTableBlock
+                          block={block}
+                          readOnly={readOnly}
+                          onChange={(patch) => update(block.id, patch)}
+                        />
+                      ) : block.kind === "heading" ? (
+                        readOnly ? (
+                          block.level === 1 ? (
+                            <h1 className="text-3xl font-semibold leading-tight"><InlineRichTextContent value={block.text} /></h1>
+                          ) : block.level === 2 ? (
+                            <h2 className="text-2xl font-semibold leading-tight"><InlineRichTextContent value={block.text} /></h2>
                           ) : (
-                            <div className="grid gap-3 sm:grid-cols-[7rem_minmax(0,1fr)]">
-                              <Select
-                                fullWidth
-                                value={String(block.level)}
-                                aria-label="Heading level"
-                                onChange={(event) =>
-                                  update(block.id, {
-                                    level: Number(event.target.value) as
-                                      1 | 2 | 3,
-                                  })
-                                }
-                              >
-                                <option value="1">Heading 1</option>
-                                <option value="2">Heading 2</option>
-                                <option value="3">Heading 3</option>
-                              </Select>
-                              <InlineRichTextEditor
-                                value={block.text}
-                                placeholder="Section heading"
-                                aria-label="Section heading"
-                                onChange={(text) => update(block.id, { text })}
-                              />
-                            </div>
-                          )
-                        ) : block.kind === "paragraph" ? (
-                          readOnly ? (
-                            <RichTextContent value={block.text} />
-                          ) : (
-                            <RichTextEditor
-                              value={block.text}
-                              label="Paragraph"
-                              placeholder="Write a paragraph…"
-                              onChange={(text) => update(block.id, { text })}
-                            />
-                          )
-                        ) : block.kind === "quote" ? (
-                          readOnly ? (
-                            <blockquote className="border-l-4 border-[var(--quote-accent)] pl-5 text-lg italic">
-                              <RichTextContent value={block.text} />
-                              {block.attribution && (
-                                <footer className="mt-2 text-sm not-italic opacity-70">
-                                  <InlineRichTextContent
-                                    value={block.attribution}
-                                  />
-                                </footer>
-                              )}
-                            </blockquote>
-                          ) : (
-                            <div className="grid gap-3">
-                              <RichTextEditor
-                                value={block.text}
-                                label="Quotation"
-                                placeholder="Add a customer quote or important statement…"
-                                onChange={(text) => update(block.id, { text })}
-                              />
-                              <InlineRichTextEditor
-                                value={block.attribution}
-                                placeholder="Attribution (optional)"
-                                aria-label="Quote attribution"
-                                onChange={(attribution) =>
-                                  update(block.id, { attribution })
-                                }
-                              />
-                            </div>
-                          )
-                        ) : block.kind === "list" ? (
-                          readOnly ? (
-                            block.ordered ? (
-                              <ol
-                                className={cx(
-                                  "grid list-decimal gap-x-10 gap-y-2 pl-6",
-                                  (block.columns ?? 1) === 2 &&
-                                    "md:grid-cols-2",
-                                  (block.columns ?? 1) === 3 &&
-                                    "md:grid-cols-3",
-                                )}
-                              >
-                                {block.items
-                                  .split("\n")
-                                  .filter(Boolean)
-                                  .map((item, itemIndex) => (
-                                    <li key={itemIndex}>
-                                      <InlineRichTextContent value={item} />
-                                    </li>
-                                  ))}
-                              </ol>
-                            ) : (
-                              <ul
-                                className={cx(
-                                  "grid list-disc gap-x-10 gap-y-2 pl-6",
-                                  (block.columns ?? 1) === 2 &&
-                                    "md:grid-cols-2",
-                                  (block.columns ?? 1) === 3 &&
-                                    "md:grid-cols-3",
-                                )}
-                              >
-                                {block.items
-                                  .split("\n")
-                                  .filter(Boolean)
-                                  .map((item, itemIndex) => (
-                                    <li key={itemIndex}>
-                                      <InlineRichTextContent value={item} />
-                                    </li>
-                                  ))}
-                              </ul>
-                            )
-                          ) : (
-                            <ListBlockEditor
-                              ordered={block.ordered}
-                              items={block.items}
-                              columns={block.columns ?? 1}
-                              onChange={(patch) => update(block.id, patch)}
-                            />
-                          )
-                        ) : block.kind === "divider" ? (
-                          <hr className="border-0 border-t border-[var(--quote-table-header)]" />
-                        ) : block.kind === "text" ? (
-                          readOnly ? (
-                            <>
-                              <h3 className="text-lg font-semibold">
-                                <InlineRichTextContent value={block.heading} />
-                              </h3>
-                              <div className="mt-2 opacity-80">
-                                <RichTextContent value={block.body} />
-                              </div>
-                            </>
-                          ) : (
-                            <div>
-                              <InlineRichTextEditor
-                                value={block.heading}
-                                placeholder="Section heading"
-                                aria-label="Section heading"
-                                onChange={(heading) =>
-                                  update(block.id, { heading })
-                                }
-                              />
-                              <div className="mt-3">
-                                <RichTextEditor
-                                  value={block.body}
-                                  label="Section text"
-                                  placeholder="Write the information your customer needs…"
-                                  onChange={(body) =>
-                                    update(block.id, { body })
-                                  }
-                                />
-                              </div>
-                            </div>
+                            <h3 className="text-xl font-semibold leading-tight"><InlineRichTextContent value={block.text} /></h3>
                           )
                         ) : (
-                          <ImageContentBlock
-                            block={block}
-                            readOnly={readOnly}
-                            onEdit={() => setEditingImageId(block.id)}
+                          <div className="grid gap-3 sm:grid-cols-[7rem_minmax(0,1fr)]">
+                            <Select
+                              fullWidth
+                              value={String(block.level)}
+                              aria-label="Heading level"
+                              onChange={(event) =>
+                                update(block.id, {
+                                  level: Number(event.target.value) as 1 | 2 | 3,
+                                })
+                              }
+                            >
+                              <option value="1">Heading 1</option>
+                              <option value="2">Heading 2</option>
+                              <option value="3">Heading 3</option>
+                            </Select>
+                            <InlineRichTextEditor
+                              value={block.text}
+                              placeholder="Section heading"
+                              aria-label="Section heading"
+                              onChange={(text) => update(block.id, { text })}
+                            />
+                          </div>
+                        )
+                      ) : block.kind === "paragraph" ? (
+                        readOnly ? (
+                          <RichTextContent value={block.text} />
+                        ) : (
+                          <RichTextEditor
+                            value={block.text}
+                            label="Paragraph"
+                            placeholder="Write a paragraph…"
+                            onChange={(text) => update(block.id, { text })}
                           />
-                        )}
-                      </div>
+                        )
+                      ) : block.kind === "quote" ? (
+                        readOnly ? (
+                          <blockquote className="border-l-4 border-[var(--quote-accent)] pl-5 text-lg italic">
+                            <RichTextContent value={block.text} />
+                            {block.attribution && (
+                              <footer className="mt-2 text-sm not-italic opacity-70">
+                                <InlineRichTextContent value={block.attribution} />
+                              </footer>
+                            )}
+                          </blockquote>
+                        ) : (
+                          <div className="grid gap-3">
+                            <RichTextEditor
+                              value={block.text}
+                              label="Quotation"
+                              placeholder="Add a customer quote or important statement…"
+                              onChange={(text) => update(block.id, { text })}
+                            />
+                            <InlineRichTextEditor
+                              value={block.attribution}
+                              placeholder="Attribution (optional)"
+                              aria-label="Quote attribution"
+                              onChange={(attribution) => update(block.id, { attribution })}
+                            />
+                          </div>
+                        )
+                      ) : block.kind === "list" ? (
+                        readOnly ? (
+                          block.ordered ? (
+                            <ol
+                              className={cx(
+                                "grid list-decimal gap-x-10 gap-y-2 pl-6",
+                                (block.columns ?? 1) === 2 && "md:grid-cols-2",
+                                (block.columns ?? 1) === 3 && "md:grid-cols-3",
+                              )}
+                            >
+                              {block.items
+                                .split("\n")
+                                .filter(Boolean)
+                                .map((item, itemIndex) => (
+                                  <li key={itemIndex}>
+                                    <InlineRichTextContent value={item} />
+                                  </li>
+                                ))}
+                            </ol>
+                          ) : (
+                            <ul
+                              className={cx(
+                                "grid list-disc gap-x-10 gap-y-2 pl-6",
+                                (block.columns ?? 1) === 2 && "md:grid-cols-2",
+                                (block.columns ?? 1) === 3 && "md:grid-cols-3",
+                              )}
+                            >
+                              {block.items
+                                .split("\n")
+                                .filter(Boolean)
+                                .map((item, itemIndex) => (
+                                  <li key={itemIndex}>
+                                    <InlineRichTextContent value={item} />
+                                  </li>
+                                ))}
+                            </ul>
+                          )
+                        ) : (
+                          <ListBlockEditor
+                            ordered={block.ordered}
+                            items={block.items}
+                            columns={block.columns ?? 1}
+                            onChange={(patch) => update(block.id, patch)}
+                          />
+                        )
+                      ) : block.kind === "divider" ? (
+                        <hr className="border-0 border-t border-[var(--quote-table-header)]" />
+                      ) : block.kind === "text" ? (
+                        readOnly ? (
+                          <>
+                            <h3 className="text-lg font-semibold">
+                              <InlineRichTextContent value={block.heading} />
+                            </h3>
+                            <div className="mt-2 opacity-80"><RichTextContent value={block.body} /></div>
+                          </>
+                        ) : (
+                          <div>
+                            <InlineRichTextEditor
+                              value={block.heading}
+                              placeholder="Section heading"
+                              aria-label="Section heading"
+                              onChange={(heading) => update(block.id, { heading })}
+                            />
+                            <div className="mt-3">
+                              <RichTextEditor
+                                value={block.body}
+                                label="Section text"
+                                placeholder="Write the information your customer needs…"
+                                onChange={(body) => update(block.id, { body })}
+                              />
+                            </div>
+                          </div>
+                        )
+                      ) : (
+                        <ImageContentBlock
+                          block={block}
+                          readOnly={readOnly}
+                          onEdit={() => setEditingImageId(block.id)}
+                        />
+                      )}
+                    </div>
                     </article>
                     {!readOnly && (
                       <BottomComposer
@@ -1017,20 +973,19 @@ export const QuoteContentStudio = forwardRef<
           onClose={() => setTableSettings(false)}
         />
       )}
-      {editingImageId !== null &&
-        (() => {
-          const imageBlock = design.blocks.find(
-            (block) => block.id === editingImageId && block.kind === "image",
-          );
-          return imageBlock?.kind === "image" ? (
-            <ImageBlockEditor
-              block={imageBlock}
-              onChange={(patch) => update(imageBlock.id, patch)}
-              onReplace={() => replaceImageInput.current?.click()}
-              onClose={() => setEditingImageId(null)}
-            />
-          ) : null;
-        })()}
+      {editingImageId !== null && (() => {
+        const imageBlock = design.blocks.find(
+          (block) => block.id === editingImageId && block.kind === "image",
+        );
+        return imageBlock?.kind === "image" ? (
+          <ImageBlockEditor
+            block={imageBlock}
+            onChange={(patch) => update(imageBlock.id, patch)}
+            onReplace={() => replaceImageInput.current?.click()}
+            onClose={() => setEditingImageId(null)}
+          />
+        ) : null;
+      })()}
     </>
   );
 });
@@ -1131,11 +1086,7 @@ function ListBlockEditor({
               >
                 <ArrowDown className="size-4" />
               </BlockCommand>
-              <BlockCommand
-                label="Remove item"
-                danger
-                onClick={() => remove(index)}
-              >
+              <BlockCommand label="Remove item" danger onClick={() => remove(index)}>
                 <Trash2 className="size-4" />
               </BlockCommand>
             </div>
@@ -1145,7 +1096,9 @@ function ListBlockEditor({
       <button
         type="button"
         className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-default bg-surface px-4 text-sm font-semibold text-primary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
-        onClick={() => onChange({ items: items === "" ? "\n" : `${items}\n` })}
+        onClick={() =>
+          onChange({ items: items === "" ? "\n" : `${items}\n` })
+        }
       >
         <Plus className="size-4" aria-hidden="true" /> Add item below
       </button>
@@ -1317,8 +1270,7 @@ function QuotationBlockImage({
 }) {
   const aspect = block.aspect ?? "landscape";
   const fit = block.fit ?? "cover";
-  const zoom =
-    fit === "cover" ? Math.max(100, block.zoom ?? 100) : (block.zoom ?? 100);
+  const zoom = fit === "cover" ? Math.max(100, block.zoom ?? 100) : block.zoom ?? 100;
   return (
     <div
       className={cx(
@@ -1435,73 +1387,73 @@ function ImageBlockEditor({
         <div className="mt-5 flex flex-col gap-5">
           <div className="grid items-start gap-6 md:grid-cols-[minmax(0,3fr)_minmax(0,5fr)]">
             <div>
-              <ImageOptionGroup
-                label="Composition"
-                visual="composition"
-                value={block.placement ?? "full"}
-                options={[
-                  ["full", "Below image"],
-                  ["left", "Image left"],
-                  ["right", "Image right"],
-                ]}
-                onChange={(placement) => onChange({ placement })}
-              />
+            <ImageOptionGroup
+              label="Composition"
+              visual="composition"
+              value={block.placement ?? "full"}
+              options={[
+                ["full", "Below image"],
+                ["left", "Image left"],
+                ["right", "Image right"],
+              ]}
+              onChange={(placement) => onChange({ placement })}
+            />
             </div>
             <div>
-              <ImageColumnRatioPicker
-                value={block.columnRatio ?? "50-50"}
-                placement={block.placement ?? "full"}
-                onChange={(columnRatio) => onChange({ columnRatio })}
-              />
+            <ImageColumnRatioPicker
+              value={block.columnRatio ?? "50-50"}
+              placement={block.placement ?? "full"}
+              onChange={(columnRatio) => onChange({ columnRatio })}
+            />
             </div>
           </div>
           <div className="grid items-start gap-6 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)_minmax(0,3fr)]">
             <div>
-              <ImageOptionGroup
-                label="Image frame"
-                visual="frame"
-                value={block.aspect ?? "landscape"}
-                options={[
-                  ["natural", "Natural"],
-                  ["landscape", "Wide"],
-                  ["square", "Square"],
-                ]}
-                onChange={(aspect) => onChange({ aspect })}
-              />
+            <ImageOptionGroup
+              label="Image frame"
+              visual="frame"
+              value={block.aspect ?? "landscape"}
+              options={[
+                ["natural", "Natural"],
+                ["landscape", "Wide"],
+                ["square", "Square"],
+              ]}
+              onChange={(aspect) => onChange({ aspect })}
+            />
             </div>
             <div>
-              <ImageOptionGroup
-                label="Fit"
-                visual="fit"
-                value={block.fit ?? "cover"}
-                options={[
-                  ["cover", "Fill frame"],
-                  ["contain", "Whole image"],
-                ]}
-                onChange={(fit) =>
-                  onChange({
-                    fit,
-                    zoom:
-                      fit === "cover" && (block.zoom ?? 100) < 100
-                        ? 100
-                        : (block.zoom ?? 100),
-                  })
-                }
-              />
+            <ImageOptionGroup
+              label="Fit"
+              visual="fit"
+              value={block.fit ?? "cover"}
+              options={[
+                ["cover", "Fill frame"],
+                ["contain", "Whole image"],
+              ]}
+              onChange={(fit) =>
+                onChange({
+                  fit,
+                  zoom:
+                    fit === "cover" && (block.zoom ?? 100) < 100
+                      ? 100
+                      : (block.zoom ?? 100),
+                })
+              }
+            />
             </div>
             <div>
-              <ImageZoomControl
-                value={
-                  block.fit === "cover"
-                    ? (Math.max(100, block.zoom ?? 100) as Exclude<
-                        ImageBlock["zoom"],
-                        undefined
-                      >)
-                    : (block.zoom ?? 100)
-                }
-                minimum={block.fit === "cover" ? 100 : 50}
-                onChange={(zoom) => onChange({ zoom })}
-              />
+            <ImageZoomControl
+              value={
+                block.fit === "cover"
+                  ? (Math.max(100, block.zoom ?? 100) as Exclude<
+                      ImageBlock["zoom"],
+                      undefined
+                    >)
+                  : (block.zoom ?? 100)
+              }
+              minimum={block.fit === "cover" ? 100 : 50}
+              onChange={(zoom) => onChange({ zoom })}
+            />
             </div>
           </div>
         </div>
@@ -1658,77 +1610,77 @@ function RichTextEditor({
       </div>
       <div className="relative">
         {showTools && (
-          <div
-            className="absolute -top-12 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-default bg-surface p-1.5 shadow-lg"
-            role="toolbar"
-            aria-label="Text formatting"
-            onMouseDown={(event) => event.preventDefault()}
+        <div
+          className="absolute -top-12 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-default bg-surface p-1.5 shadow-lg"
+          role="toolbar"
+          aria-label="Text formatting"
+          onMouseDown={(event) => event.preventDefault()}
+        >
+          <RichTextCommand label="Bold" onClick={() => command("bold")}>
+            <Bold className="size-4" />
+          </RichTextCommand>
+          <RichTextCommand label="Italic" onClick={() => command("italic")}>
+            <Italic className="size-4" />
+          </RichTextCommand>
+          <RichTextCommand
+            label="Heading 1"
+            onClick={() => command("formatBlock", "h1")}
           >
-            <RichTextCommand label="Bold" onClick={() => command("bold")}>
-              <Bold className="size-4" />
-            </RichTextCommand>
-            <RichTextCommand label="Italic" onClick={() => command("italic")}>
-              <Italic className="size-4" />
-            </RichTextCommand>
-            <RichTextCommand
-              label="Heading 1"
-              onClick={() => command("formatBlock", "h1")}
-            >
-              <Heading1 className="size-4" />
-            </RichTextCommand>
-            <RichTextCommand
-              label="Heading 2"
-              onClick={() => command("formatBlock", "h2")}
-            >
-              <Heading2 className="size-4" />
-            </RichTextCommand>
-            <RichTextCommand
-              label="Heading 3"
-              onClick={() => command("formatBlock", "h3")}
-            >
-              <Heading3 className="size-4" />
-            </RichTextCommand>
-            <RichTextCommand
-              label="Paragraph"
-              onClick={() => command("formatBlock", "p")}
-            >
-              <Pilcrow className="size-4" />
-            </RichTextCommand>
-            <RichTextCommand
-              label="Bullet list"
-              onClick={() => command("insertUnorderedList")}
-            >
-              <List className="size-4" />
-            </RichTextCommand>
-            <RichTextCommand
-              label="Numbered list"
-              onClick={() => command("insertOrderedList")}
-            >
-              <ListOrdered className="size-4" />
-            </RichTextCommand>
-          </div>
+            <Heading1 className="size-4" />
+          </RichTextCommand>
+          <RichTextCommand
+            label="Heading 2"
+            onClick={() => command("formatBlock", "h2")}
+          >
+            <Heading2 className="size-4" />
+          </RichTextCommand>
+          <RichTextCommand
+            label="Heading 3"
+            onClick={() => command("formatBlock", "h3")}
+          >
+            <Heading3 className="size-4" />
+          </RichTextCommand>
+          <RichTextCommand
+            label="Paragraph"
+            onClick={() => command("formatBlock", "p")}
+          >
+            <Pilcrow className="size-4" />
+          </RichTextCommand>
+          <RichTextCommand
+            label="Bullet list"
+            onClick={() => command("insertUnorderedList")}
+          >
+            <List className="size-4" />
+          </RichTextCommand>
+          <RichTextCommand
+            label="Numbered list"
+            onClick={() => command("insertOrderedList")}
+          >
+            <ListOrdered className="size-4" />
+          </RichTextCommand>
+        </div>
         )}
         <div
-          ref={editor}
-          contentEditable
-          suppressContentEditableWarning
-          role="textbox"
-          aria-multiline="true"
-          aria-label={label}
-          data-placeholder={placeholder}
-          className="min-h-32 w-full overflow-y-auto rounded-lg bg-transparent px-2 py-3 text-sm font-normal leading-relaxed text-primary transition-colors selection:bg-accent-soft selection:text-primary empty:before:pointer-events-none empty:before:text-tertiary empty:before:content-[attr(data-placeholder)] hover:bg-raised/50 focus:bg-accent-soft/30 focus:outline-none [&_h1]:my-2 [&_h1]:text-2xl [&_h1]:font-semibold [&_h2]:my-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:my-2 [&_h3]:text-lg [&_h3]:font-semibold [&_ol]:list-decimal [&_ol]:pl-6 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-6"
-          onInput={emit}
-          onMouseUp={inspectSelection}
-          onKeyUp={inspectSelection}
-          onBlur={() => {
-            if (editor.current !== null) {
-              const clean = sanitizeRichText(editor.current.innerHTML);
-              editor.current.innerHTML = clean;
-              lastEmitted.current = clean;
-              onChange(clean);
-            }
-            setShowTools(false);
-          }}
+        ref={editor}
+        contentEditable
+        suppressContentEditableWarning
+        role="textbox"
+        aria-multiline="true"
+        aria-label={label}
+        data-placeholder={placeholder}
+        className="min-h-32 w-full overflow-y-auto rounded-lg bg-transparent px-2 py-3 text-sm font-normal leading-relaxed text-primary transition-colors selection:bg-accent-soft selection:text-primary empty:before:pointer-events-none empty:before:text-tertiary empty:before:content-[attr(data-placeholder)] hover:bg-raised/50 focus:bg-accent-soft/30 focus:outline-none [&_h1]:my-2 [&_h1]:text-2xl [&_h1]:font-semibold [&_h2]:my-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:my-2 [&_h3]:text-lg [&_h3]:font-semibold [&_ol]:list-decimal [&_ol]:pl-6 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-6"
+        onInput={emit}
+        onMouseUp={inspectSelection}
+        onKeyUp={inspectSelection}
+        onBlur={() => {
+          if (editor.current !== null) {
+            const clean = sanitizeRichText(editor.current.innerHTML);
+            editor.current.innerHTML = clean;
+            lastEmitted.current = clean;
+            onChange(clean);
+          }
+          setShowTools(false);
+        }}
         />
       </div>
     </div>
@@ -1863,7 +1815,9 @@ function ImageOptionGroup<T extends string | number>({
 }) {
   return (
     <fieldset className="min-w-0">
-      <legend className="sr-only">{label}</legend>
+      <legend className="sr-only">
+        {label}
+      </legend>
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-tertiary">
         {label}
       </p>
@@ -1897,7 +1851,9 @@ function ImageOptionGroup<T extends string | number>({
             )}
             onClick={() => onChange(id)}
           >
-            {visual && <ImageOptionPreview kind={visual} option={String(id)} />}
+            {visual && (
+              <ImageOptionPreview kind={visual} option={String(id)} />
+            )}
             {!visual && <span>{name}</span>}
             {visual && (
               <span className="pointer-events-none absolute bottom-[calc(100%+.5rem)] left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-lg bg-primary px-2.5 py-1.5 text-xs font-medium text-surface opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
@@ -1988,8 +1944,7 @@ function ImageZoomControl({
 }) {
   const index = IMAGE_ZOOM_STEPS.indexOf(value);
   const minimumIndex = IMAGE_ZOOM_STEPS.indexOf(minimum);
-  const previous =
-    IMAGE_ZOOM_STEPS[Math.max(minimumIndex, index - 1)] ?? minimum;
+  const previous = IMAGE_ZOOM_STEPS[Math.max(minimumIndex, index - 1)] ?? minimum;
   const next =
     IMAGE_ZOOM_STEPS[Math.min(IMAGE_ZOOM_STEPS.length - 1, index + 1)] ?? 200;
   return (
@@ -2069,7 +2024,10 @@ function GeneralTableBlock({
       rows: block.rows.map((row) => ({
         ...row,
         cells: Object.fromEntries(
-          columns.map((column) => [column.id, row.cells[column.id] ?? ""]),
+          columns.map((column) => [
+            column.id,
+            row.cells[column.id] ?? "",
+          ]),
         ),
       })),
     });
@@ -2133,12 +2091,9 @@ function GeneralTableBlock({
     <div>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-primary">
-            Information table
-          </h3>
+          <h3 className="text-sm font-semibold text-primary">Information table</h3>
           <p className="mt-1 text-xs text-secondary">
-            Rename columns, then add as many rows or columns as the document
-            needs.
+            Rename columns, then add as many rows or columns as the document needs.
           </p>
         </div>
         <label className="grid min-w-40 gap-1 text-xs font-semibold text-secondary">
@@ -2162,10 +2117,7 @@ function GeneralTableBlock({
           <thead className="bg-raised/50">
             <tr>
               {block.columns.map((column, columnIndex) => (
-                <th
-                  key={column.id}
-                  className="group/table-column min-w-44 border-r border-default p-2 last:border-r-0"
-                >
+                <th key={column.id} className="group/table-column min-w-44 border-r border-default p-2 last:border-r-0">
                   <div className="flex items-center gap-2">
                     <InlineRichTextEditor
                       value={column.label}
@@ -2174,7 +2126,9 @@ function GeneralTableBlock({
                       onChange={(label) =>
                         onChange({
                           columns: block.columns.map((item) =>
-                            item.id === column.id ? { ...item, label } : item,
+                            item.id === column.id
+                              ? { ...item, label }
+                              : item,
                           ),
                         })
                       }
@@ -2196,15 +2150,9 @@ function GeneralTableBlock({
           </thead>
           <tbody>
             {block.rows.map((row, rowIndex) => (
-              <tr
-                key={row.id}
-                className="group/table-row border-t border-default"
-              >
+              <tr key={row.id} className="group/table-row border-t border-default">
                 {block.columns.map((column) => (
-                  <td
-                    key={column.id}
-                    className="border-r border-default p-2 last:border-r-0"
-                  >
+                  <td key={column.id} className="border-r border-default p-2 last:border-r-0">
                     <InlineRichTextEditor
                       value={row.cells[column.id] ?? ""}
                       aria-label={`${column.label || "Column"}, row ${rowIndex + 1}`}
@@ -2286,7 +2234,13 @@ function blockName(block: Block): string {
 }
 
 type InsertKind =
-  "heading" | "paragraph" | "quote" | "list" | "divider" | "pricing" | "table";
+  | "heading"
+  | "paragraph"
+  | "quote"
+  | "list"
+  | "divider"
+  | "pricing"
+  | "table";
 
 function BottomComposer({
   index,
@@ -2392,10 +2346,7 @@ function BottomComposer({
       aria-label="Add quotation content"
     >
       <div className="flex w-full items-center gap-3">
-        <span
-          className="h-px flex-1 bg-[var(--quote-table-header)]"
-          aria-hidden="true"
-        />
+        <span className="h-px flex-1 bg-[var(--quote-table-header)]" aria-hidden="true" />
         <button
           type="button"
           className="group inline-flex min-h-9 items-center gap-2 rounded-full px-3 text-xs font-semibold text-secondary transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
@@ -2408,10 +2359,7 @@ function BottomComposer({
           </span>
           Add content
         </button>
-        <span
-          className="h-px flex-1 bg-[var(--quote-table-header)]"
-          aria-hidden="true"
-        />
+        <span className="h-px flex-1 bg-[var(--quote-table-header)]" aria-hidden="true" />
       </div>
       {open && (
         <div className="mt-2 w-full max-w-2xl rounded-2xl border border-default bg-surface shadow-xl">
@@ -2448,52 +2396,47 @@ function BottomComposer({
             </label>
           </div>
           <div className="max-h-[min(65vh,40rem)] overflow-y-auto border-t border-default px-5">
-            {(normalizedQuery === ""
-              ? categories
-              : (["Search results"] as const)
-            ).map((section, sectionIndex) => {
-              const sectionOptions =
-                section === "Search results"
-                  ? visibleOptions
-                  : visibleOptions.filter(
-                      (option) => option.category === section,
-                    );
-              if (sectionOptions.length === 0) return null;
-              return (
-                <section
-                  key={section}
-                  className={cx(
-                    "py-4",
-                    sectionIndex > 0 && "border-t border-default",
-                  )}
-                  aria-labelledby={`quote-blocks-${section.toLowerCase().replace(" ", "-")}`}
-                >
-                  <h4
-                    id={`quote-blocks-${section.toLowerCase().replace(" ", "-")}`}
-                    className="mb-2 text-xs font-semibold uppercase tracking-wide text-tertiary"
+            {(normalizedQuery === "" ? categories : ["Search results"] as const).map(
+              (section, sectionIndex) => {
+                const sectionOptions =
+                  section === "Search results"
+                    ? visibleOptions
+                    : visibleOptions.filter((option) => option.category === section);
+                if (sectionOptions.length === 0) return null;
+                return (
+                  <section
+                    key={section}
+                    className={cx(
+                      "py-4",
+                      sectionIndex > 0 && "border-t border-default",
+                    )}
+                    aria-labelledby={`quote-blocks-${section.toLowerCase().replace(" ", "-")}`}
                   >
-                    {section}
-                  </h4>
-                  <div className="grid gap-1 sm:grid-cols-2">
-                    {sectionOptions.map(({ label, help, Icon, action }) => (
-                      <AddButton
-                        key={label}
-                        label={label}
-                        help={help}
-                        Icon={Icon}
-                        onClick={action}
-                      />
-                    ))}
-                  </div>
-                </section>
-              );
-            })}
+                    <h4
+                      id={`quote-blocks-${section.toLowerCase().replace(" ", "-")}`}
+                      className="mb-2 text-xs font-semibold uppercase tracking-wide text-tertiary"
+                    >
+                      {section}
+                    </h4>
+                    <div className="grid gap-1 sm:grid-cols-2">
+                      {sectionOptions.map(({ label, help, Icon, action }) => (
+                        <AddButton
+                          key={label}
+                          label={label}
+                          help={help}
+                          Icon={Icon}
+                          onClick={action}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                );
+              },
+            )}
           </div>
           {visibleOptions.length === 0 && (
             <div className="border-t border-default px-5 py-8 text-center">
-              <p className="text-sm font-semibold text-primary">
-                No matching blocks
-              </p>
+              <p className="text-sm font-semibold text-primary">No matching blocks</p>
               <p className="mt-1 text-xs text-secondary">Try another name.</p>
             </div>
           )}
@@ -2703,126 +2646,52 @@ function CustomizeQuote({
           />
         </section>
         <div className="min-w-0 space-y-8">
-          <section>
+          <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="text-base font-semibold text-primary">
-                Header arrangement
+                Document palette
               </h3>
               <p className="mt-1 text-sm text-secondary">
-                Choose which side carries your company identity.
+                Control the customer-facing page and pricing table colours.
               </p>
             </div>
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              {(["left", "right"] as const).map((alignment) => (
-                <button
-                  key={alignment}
-                  type="button"
-                  aria-pressed={design.headerAlignment === alignment}
-                  className={cx(
-                    "group rounded-2xl border bg-surface p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
-                    design.headerAlignment === alignment
-                      ? "border-accent bg-accent-soft/35"
-                      : "border-default",
-                  )}
-                  onClick={() =>
-                    onChange((current) => ({
-                      ...current,
-                      headerAlignment: alignment,
-                    }))
-                  }
-                >
-                  <span
-                    className={cx(
-                      "flex h-20 items-center justify-between gap-4 rounded-xl bg-raised px-4",
-                      alignment === "right" && "flex-row-reverse",
-                    )}
-                    aria-hidden="true"
-                  >
-                    <span className="h-8 w-16 rounded-lg bg-accent-soft ring-1 ring-accent/20" />
-                    <span className="h-1 w-12 rounded-full bg-accent" />
-                  </span>
-                  <span className="mt-3 flex items-center justify-between gap-3">
-                    <span>
-                      <strong className="block text-sm font-semibold text-primary">
-                        Identity {alignment}
-                      </strong>
-                      <small className="mt-0.5 block font-normal text-secondary">
-                        Logo and company details align {alignment}.
-                      </small>
-                    </span>
-                    <span
-                      className={cx(
-                        "grid size-6 shrink-0 place-items-center rounded-full border",
-                        design.headerAlignment === alignment
-                          ? "border-accent bg-accent text-white"
-                          : "border-default bg-surface",
-                      )}
-                    >
-                      {design.headerAlignment === alignment && (
-                        <Check className="size-3.5" />
-                      )}
-                    </span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
-          <section className="border-t border-subtle pt-7">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h3 className="text-base font-semibold text-primary">
-                  Document palette
-                </h3>
-                <p className="mt-1 text-sm text-secondary">
-                  Control the customer-facing page and pricing table colours.
-                </p>
-              </div>
-              <button
-                type="button"
-                className="min-h-9 rounded-lg px-3 text-sm font-semibold text-accent transition-colors hover:bg-accent-soft hover:text-accent-hover"
-                onClick={() =>
-                  onChange((current) => ({
-                    ...current,
-                    colors: DEFAULT_COLORS,
-                  }))
-                }
-              >
-                Reset
-              </button>
-            </div>
-            <div className="mt-5 grid gap-x-4 gap-y-5 sm:grid-cols-2">
-              <ColorField
-                label="Accent"
-                value={design.colors.accent}
-                onChange={(value) => setColor("accent", value)}
-              />
-              <ColorField
-                label="Page"
-                value={design.colors.background}
-                onChange={(value) => setColor("background", value)}
-              />
-              <ColorField
-                label="Header background"
-                value={design.colors.headerBackground}
-                onChange={(value) => setColor("headerBackground", value)}
-              />
-              <ColorField
-                label="Text"
-                value={design.colors.text}
-                onChange={(value) => setColor("text", value)}
-              />
-              <ColorField
-                label="Table heading"
-                value={design.colors.tableHeader}
-                onChange={(value) => setColor("tableHeader", value)}
-              />
-              <ColorField
-                label="Table rows"
-                value={design.colors.tableRows}
-                onChange={(value) => setColor("tableRows", value)}
-              />
-            </div>
-          </section>
+            <button
+              type="button"
+              className="min-h-9 rounded-lg px-3 text-sm font-semibold text-accent transition-colors hover:bg-accent-soft hover:text-accent-hover"
+              onClick={() =>
+                onChange((current) => ({ ...current, colors: DEFAULT_COLORS }))
+              }
+            >
+              Reset
+            </button>
+          </div>
+          <div className="mt-5 grid gap-x-4 gap-y-5 sm:grid-cols-2">
+            <ColorField
+              label="Accent"
+              value={design.colors.accent}
+              onChange={(value) => setColor("accent", value)}
+            />
+            <ColorField
+              label="Page"
+              value={design.colors.background}
+              onChange={(value) => setColor("background", value)}
+            />
+            <ColorField
+              label="Text"
+              value={design.colors.text}
+              onChange={(value) => setColor("text", value)}
+            />
+            <ColorField
+              label="Table heading"
+              value={design.colors.tableHeader}
+              onChange={(value) => setColor("tableHeader", value)}
+            />
+            <ColorField
+              label="Table rows"
+              value={design.colors.tableRows}
+              onChange={(value) => setColor("tableRows", value)}
+            />
+          </div>
           <section className="border-t border-subtle pt-7">
             <div>
               <h3 className="text-base font-semibold text-primary">
