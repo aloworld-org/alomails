@@ -218,6 +218,7 @@ export const QuoteContentStudio = forwardRef<
   const [ready, setReady] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [customize, setCustomize] = useState(false);
+  const [tableSettings, setTableSettings] = useState(false);
   const root = useRef<HTMLElement>(null);
   const imageInput = useRef<HTMLInputElement>(null);
   const pendingImageIndex = useRef<number | null>(null);
@@ -416,7 +417,7 @@ export const QuoteContentStudio = forwardRef<
                           {block.kind === "pricing" && (
                             <BlockCommand
                               label="Table settings"
-                              onClick={() => setCustomize(true)}
+                              onClick={() => setTableSettings(true)}
                             >
                               <Palette className="size-4" />
                             </BlockCommand>
@@ -671,6 +672,14 @@ export const QuoteContentStudio = forwardRef<
           saveError={saveError}
           onChange={setDesign}
           onClose={() => setCustomize(false)}
+        />
+      )}
+      {tableSettings && (
+        <CustomizeTable
+          design={design}
+          saveError={saveError}
+          onChange={setDesign}
+          onClose={() => setTableSettings(false)}
         />
       )}
     </>
@@ -1061,136 +1070,202 @@ function CustomizeQuote({
               </button>
             ))}
           </div>
-          <h3 className="mt-6 text-sm font-semibold text-primary">
-            Pricing table layout
-          </h3>
-          <p className="mt-1 text-xs text-secondary">
-            Start simple, then reveal richer product information only when it
-            helps the customer.
-          </p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-3">
-            {(
-              [
-                ["compact", "Compact", "Names and prices only"],
-                ["detailed", "Detailed", "Descriptions with optional images"],
-                ["catalogue", "Catalogue", "Larger product images and details"],
-              ] as const
-            ).map(([layout, label, help]) => (
-              <button
-                key={layout}
-                type="button"
-                className={cx(
-                  "rounded-xl border px-3 py-3 text-left transition-colors hover:border-accent hover:bg-accent-soft",
-                  design.tableLayout === layout
-                    ? "border-accent bg-accent-soft"
-                    : "border-default bg-surface",
-                )}
-                onClick={() =>
-                  onChange((current) => ({
-                    ...current,
-                    tableLayout: layout,
-                    showProductDescriptions: layout !== "compact",
-                    showProductImages: layout === "catalogue",
-                  }))
-                }
-              >
-                <strong className="block text-sm font-semibold text-primary">
-                  {label}
-                </strong>
-                <span className="mt-1 block text-xs text-secondary">
-                  {help}
-                </span>
-              </button>
-            ))}
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {(
-              [
-                ["showProductImages", "Product images"],
-                ["showProductDescriptions", "Product descriptions"],
-              ] as const
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                aria-pressed={design[key]}
-                className={cx(
-                  "inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 text-sm font-semibold transition-colors hover:border-accent hover:bg-accent-soft",
-                  design[key]
-                    ? "border-accent bg-accent-soft text-accent"
-                    : "border-default bg-surface text-secondary",
-                )}
-                onClick={() =>
-                  onChange((current) => ({ ...current, [key]: !current[key] }))
-                }
-              >
-                <span
-                  className={cx(
-                    "flex size-4 items-center justify-center rounded border",
-                    design[key]
-                      ? "border-accent bg-accent text-on-accent"
-                      : "border-default bg-surface",
-                  )}
-                >
-                  {design[key] && <Check className="size-3" />}
-                </span>
-                {label}
-              </button>
-            ))}
-          </div>
-          <h3 className="mt-6 text-sm font-semibold text-primary">
-            Pricing table columns
-          </h3>
-          <p className="mt-1 text-xs text-secondary">
-            Description and the quotation total always remain visible.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {(
-              [
-                ["unit", "Unit"],
-                ["quantity", "Quantity"],
-                ["unitPrice", "Unit price"],
-                ["vat", "VAT rate"],
-                ["net", "Line total"],
-              ] as const
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                aria-pressed={design.columns[key]}
-                className={cx(
-                  "inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 text-sm font-semibold transition-colors hover:border-accent hover:bg-accent-soft",
-                  design.columns[key]
-                    ? "border-accent bg-accent-soft text-accent"
-                    : "border-default bg-surface text-secondary",
-                )}
-                onClick={() =>
-                  onChange((current) => ({
-                    ...current,
-                    columns: {
-                      ...current.columns,
-                      [key]: !current.columns[key],
-                    },
-                  }))
-                }
-              >
-                <span
-                  className={cx(
-                    "flex size-4 items-center justify-center rounded border",
-                    design.columns[key]
-                      ? "border-accent bg-accent text-on-accent"
-                      : "border-default bg-surface",
-                  )}
-                >
-                  {design.columns[key] && <Check className="size-3" />}
-                </span>
-                {label}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
     </Modal>
+  );
+}
+
+function CustomizeTable({
+  design,
+  saveError,
+  onChange,
+  onClose,
+}: {
+  design: Design;
+  saveError: string;
+  onChange: React.Dispatch<React.SetStateAction<Design>>;
+  onClose: () => void;
+}) {
+  return (
+    <Modal
+      title="Table settings"
+      icon={<Table2 className="size-5" />}
+      onClose={onClose}
+      wide
+      actions={
+        <button
+          type="button"
+          className="flex size-9 items-center justify-center rounded-lg text-tertiary hover:bg-accent-soft hover:text-accent"
+          aria-label="Close table settings"
+          onClick={onClose}
+        >
+          <X className="size-4" />
+        </button>
+      }
+      footer={
+        <>
+          <p
+            className={cx(
+              "mr-auto text-xs",
+              saveError ? "text-danger" : "text-secondary",
+            )}
+          >
+            {saveError || "Table changes are saved automatically."}
+          </p>
+          <Button onClick={onClose}>Done</Button>
+        </>
+      }
+    >
+      <section>
+        <h3 className="text-sm font-semibold text-primary">Choose a layout</h3>
+        <p className="mt-1 text-sm text-secondary">
+          Select a starting point, then adjust the visible content and columns
+          below.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          {(
+            [
+              ["compact", "Compact", "Names and prices only"],
+              ["detailed", "Detailed", "Descriptions with optional images"],
+              ["catalogue", "Catalogue", "Larger product images and details"],
+            ] as const
+          ).map(([layout, label, help]) => (
+            <button
+              key={layout}
+              type="button"
+              className={cx(
+                "relative min-h-24 rounded-xl border px-4 py-4 text-left transition-colors hover:border-accent hover:bg-accent-soft",
+                design.tableLayout === layout
+                  ? "border-accent bg-accent-soft"
+                  : "border-default bg-surface",
+              )}
+              onClick={() =>
+                onChange((current) => ({
+                  ...current,
+                  tableLayout: layout,
+                  showProductDescriptions: layout !== "compact",
+                  showProductImages: layout === "catalogue",
+                }))
+              }
+            >
+              <strong className="block text-sm font-semibold text-primary">
+                {label}
+              </strong>
+              <span className="mt-1 block text-xs leading-relaxed text-secondary">
+                {help}
+              </span>
+              {design.tableLayout === layout && (
+                <Check className="absolute right-3 top-3 size-4 text-accent" />
+              )}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-6 border-t border-subtle pt-6">
+        <h3 className="text-sm font-semibold text-primary">Product content</h3>
+        <p className="mt-1 text-sm text-secondary">
+          Optional information shown with each product or service.
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <TableToggle
+            label="Product images"
+            help="Upload an image for each table row"
+            checked={design.showProductImages}
+            onClick={() =>
+              onChange((current) => ({
+                ...current,
+                showProductImages: !current.showProductImages,
+              }))
+            }
+          />
+          <TableToggle
+            label="Product descriptions"
+            help="Add specifications or scope beneath each item"
+            checked={design.showProductDescriptions}
+            onClick={() =>
+              onChange((current) => ({
+                ...current,
+                showProductDescriptions: !current.showProductDescriptions,
+              }))
+            }
+          />
+        </div>
+      </section>
+
+      <section className="mt-6 border-t border-subtle pt-6">
+        <h3 className="text-sm font-semibold text-primary">Visible columns</h3>
+        <p className="mt-1 text-sm text-secondary">
+          Product name and quotation total always remain visible.
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {(
+            [
+              ["unit", "Unit"],
+              ["quantity", "Quantity"],
+              ["unitPrice", "Unit price"],
+              ["vat", "VAT rate"],
+              ["net", "Line total"],
+            ] as const
+          ).map(([key, label]) => (
+            <TableToggle
+              key={key}
+              label={label}
+              help={`Show the ${label.toLowerCase()} column`}
+              checked={design.columns[key]}
+              onClick={() =>
+                onChange((current) => ({
+                  ...current,
+                  columns: { ...current.columns, [key]: !current.columns[key] },
+                }))
+              }
+            />
+          ))}
+        </div>
+      </section>
+    </Modal>
+  );
+}
+
+function TableToggle({
+  label,
+  help,
+  checked,
+  onClick,
+}: {
+  label: string;
+  help: string;
+  checked: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={checked}
+      className={cx(
+        "flex min-h-16 items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors hover:border-accent hover:bg-accent-soft",
+        checked ? "border-accent bg-accent-soft" : "border-default bg-surface",
+      )}
+      onClick={onClick}
+    >
+      <span
+        className={cx(
+          "flex size-5 shrink-0 items-center justify-center rounded border",
+          checked
+            ? "border-accent bg-accent text-on-accent"
+            : "border-default bg-surface",
+        )}
+      >
+        {checked && <Check className="size-3.5" />}
+      </span>
+      <span>
+        <strong className="block text-sm font-semibold text-primary">
+          {label}
+        </strong>
+        <span className="mt-0.5 block text-xs text-secondary">{help}</span>
+      </span>
+    </button>
   );
 }
 
