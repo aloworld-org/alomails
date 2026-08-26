@@ -1064,33 +1064,33 @@ function ImageContentBlock({
 }) {
   const placement = block.placement ?? "full";
   const image = (
-    <QuotationBlockImage
-      block={block}
-      {...(readOnly ? {} : { onDoubleClick: onEdit })}
-    />
-  );
-  const copy = (block.body || block.caption) && (
-    <div className="flex flex-col justify-center px-1 py-2">
-      {block.body && (
-        <RichTextContent value={block.body} />
-      )}
+    <figure>
+      <QuotationBlockImage
+        block={block}
+        {...(readOnly ? {} : { onDoubleClick: onEdit })}
+      />
       {block.caption && (
-        <p className={cx("text-xs opacity-65", block.body && "mt-3")}>
+        <figcaption className="mt-2 px-1 text-xs leading-relaxed opacity-65">
           {block.caption}
-        </p>
+        </figcaption>
       )}
+    </figure>
+  );
+  const copy = block.body && (
+    <div className="flex flex-col justify-center px-1 py-2">
+      <RichTextContent value={block.body} />
     </div>
   );
 
   if (placement === "full")
     return (
-      <figure>
+      <div>
         {image}
-        {copy && <figcaption className="mt-3">{copy}</figcaption>}
-      </figure>
+        {copy && <div className="mt-4">{copy}</div>}
+      </div>
     );
   return (
-    <figure
+    <div
       className={cx(
         "grid items-center gap-6",
         IMAGE_COLUMN_GRID[block.columnRatio ?? "50-50"][placement],
@@ -1098,7 +1098,7 @@ function ImageContentBlock({
     >
       {placement === "left" ? image : copy}
       {placement === "left" ? copy : image}
-    </figure>
+    </div>
   );
 }
 
