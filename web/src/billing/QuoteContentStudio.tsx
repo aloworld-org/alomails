@@ -175,6 +175,35 @@ function normalizeDesign(design: Design): Design {
       };
 }
 
+function hasPreviewText(value: string): boolean {
+  return value
+    .replace(/<[^>]*>/g, "")
+    .replaceAll("&nbsp;", " ")
+    .trim().length > 0;
+}
+
+function blockHasPreviewContent(block: Block): boolean {
+  switch (block.kind) {
+    case "pricing":
+      return block.rowKeys === undefined || block.rowKeys.length > 0;
+    case "table":
+      return generalTableHasContent(block);
+    case "heading":
+    case "paragraph":
+      return hasPreviewText(block.text);
+    case "quote":
+      return hasPreviewText(block.text) || hasPreviewText(block.attribution);
+    case "list":
+      return block.items.split("\n").some(hasPreviewText);
+    case "text":
+      return hasPreviewText(block.heading) || hasPreviewText(block.body);
+    case "image":
+      return block.src.trim().length > 0;
+    case "divider":
+      return true;
+  }
+}
+
 function designDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DESIGN_DATABASE, 1);
@@ -514,7 +543,10 @@ export const QuoteContentStudio = forwardRef<
     <>
       <section
         ref={root}
-        className="overflow-hidden rounded-2xl border border-default bg-surface shadow-sm"
+        className={cx(
+          "overflow-hidden bg-[var(--quote-background)]",
+          preview ? "rounded-none" : "rounded-2xl border border-default shadow-sm",
+        )}
       >
         {!preview && (
           <header className="flex flex-wrap items-center justify-between gap-4 border-b border-subtle px-6 py-4 max-md:px-4">
@@ -537,7 +569,7 @@ export const QuoteContentStudio = forwardRef<
           )}
         >
           {design.logo && (
-            <div className="mb-6 flex items-center justify-between border-b border-[var(--quote-table-header)] pb-5">
+            <div className="mb-8 flex items-center justify-between">
               <img
                 src={design.logo}
                 alt="Company logo"
@@ -549,17 +581,19 @@ export const QuoteContentStudio = forwardRef<
           {design.blocks.length === 0 ? (
             <EmptyBuilder readOnly={readOnly} />
           ) : (
-            <div className="flex flex-col gap-5">
+            <div className={cx("flex flex-col", readOnly ? "gap-8" : "gap-5")}>
               {design.blocks
-                .filter(
-                  (block) =>
-                    !readOnly ||
-                    block.kind !== "table" ||
-                    generalTableHasContent(block),
-                )
+                .filter((block) => !readOnly || blockHasPreviewContent(block))
                 .map((block, index) => (
-                <div key={block.id}>
-                  <article className="group/quote-block overflow-hidden rounded-xl border border-[var(--quote-table-header)] bg-[var(--quote-background)] text-[var(--quote-text)] shadow-sm">
+                  <div key={block.id}>
+                    <article
+                      className={cx(
+                        "group/quote-block bg-[var(--quote-background)] text-[var(--quote-text)]",
+                        readOnly
+                          ? "overflow-visible"
+                          : "overflow-hidden rounded-xl border border-[var(--quote-table-header)] shadow-sm",
+                      )}
+                    >
                     {!readOnly && (
                       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--quote-table-header)] bg-raised/40 px-4 py-2.5">
                         {block.kind === "pricing" ? (
@@ -673,7 +707,7 @@ export const QuoteContentStudio = forwardRef<
                         </div>
                       </div>
                     )}
-                    <div className="p-5">
+                    <div className={readOnly ? "py-1" : "p-5"}>
                       {block.kind === "pricing" ? (
                         <QuoteTableOptionsProvider
                           value={{
@@ -864,15 +898,15 @@ export const QuoteContentStudio = forwardRef<
                         />
                       )}
                     </div>
-                  </article>
-                  {!readOnly && (
-                    <BottomComposer
-                      index={index + 1}
-                      onAdd={addSimpleBlock}
-                      onImage={chooseImage}
-                    />
-                  )}
-                </div>
+                    </article>
+                    {!readOnly && (
+                      <BottomComposer
+                        index={index + 1}
+                        onAdd={addSimpleBlock}
+                        onImage={chooseImage}
+                      />
+                    )}
+                  </div>
                 ))}
             </div>
           )}
