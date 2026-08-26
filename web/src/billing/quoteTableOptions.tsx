@@ -8,7 +8,6 @@ export type QuoteTotalsDetail = "total" | "summary" | "breakdown";
 export interface QuoteLineContent {
   description: string;
   image: string;
-  imageSize?: "small" | "medium" | "large";
   imageFit?: "cover" | "contain";
   imagePosition?: "center" | "top" | "bottom" | "left" | "right";
   imageZoom?: 100 | 125 | 150;

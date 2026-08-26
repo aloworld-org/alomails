@@ -59,7 +59,7 @@ interface Props {
 
 type ImageDraft = Required<Pick<
   QuoteLineContent,
-  "image" | "imageSize" | "imageFit" | "imagePosition" | "imageZoom"
+  "image" | "imageFit" | "imagePosition" | "imageZoom"
 >> & { key: string };
 
 const IMAGE_SIZE = {
@@ -84,7 +84,6 @@ function imageDraft(key: string, content: QuoteLineContent): ImageDraft {
   return {
     key,
     image: content.image,
-    imageSize: content.imageSize ?? "medium",
     imageFit: content.imageFit ?? "cover",
     imagePosition: content.imagePosition ?? "center",
     imageZoom: content.imageZoom ?? 100,
@@ -141,7 +140,7 @@ function ProductImageEditor({
               <span className="text-xs font-medium text-tertiary">A4</span>
             </div>
             <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 rounded-lg border border-subtle p-4">
-              <div className={cx("overflow-hidden rounded-lg border border-default bg-raised/30", IMAGE_SIZE[draft.imageSize])}>
+              <div className="size-24 overflow-hidden rounded-lg border border-default bg-raised/30">
                 <img src={draft.image} alt="Product PDF preview" className={imageClasses(draft)} />
               </div>
               <div className="min-w-0">
@@ -155,12 +154,6 @@ function ProductImageEditor({
         </section>
 
         <aside className="flex flex-col gap-5">
-          <EditorChoice
-            label="Image size"
-            value={draft.imageSize}
-            choices={[["small", "Small"], ["medium", "Medium"], ["large", "Large"]]}
-            onChange={(imageSize) => onChange({ ...draft, imageSize })}
-          />
           <EditorChoice
             label="Crop style"
             value={draft.imageFit}
@@ -399,7 +392,11 @@ export function DocumentLines({
                       <div
                         className={cx(
                           "group/image relative grid shrink-0 place-items-center overflow-hidden rounded-lg border border-default bg-surface",
-                          IMAGE_SIZE[content.imageSize ?? (tableOptions.layout === "catalogue" ? "large" : "medium")],
+                          IMAGE_SIZE[
+                            tableOptions.layout === "catalogue"
+                              ? "large"
+                              : "medium"
+                          ],
                         )}
                         onDoubleClick={() => {
                           if (content.image) setEditingImage(imageDraft(detailKey, content));
@@ -687,10 +684,9 @@ export function DocumentLines({
                           className={cx(
                             "block overflow-hidden rounded-lg border border-default bg-raised/30",
                             IMAGE_SIZE[
-                              content.imageSize ??
-                                (tableOptions.layout === "catalogue"
-                                  ? "medium"
-                                  : "small")
+                              tableOptions.layout === "catalogue"
+                                ? "medium"
+                                : "small"
                             ],
                           )}
                         >

@@ -64,7 +64,6 @@ describe("pricing-table product image editor", () => {
     expect(screen.getByRole("dialog", { name: "Edit product image" })).toBeTruthy();
     expect(screen.getByRole("region", { name: "PDF preview" })).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Large" }));
     fireEvent.click(screen.getByRole("button", { name: "Show full image" }));
     fireEvent.click(screen.getByRole("button", { name: "150%" }));
     fireEvent.click(screen.getByRole("button", { name: "Top" }));
@@ -72,7 +71,6 @@ describe("pricing-table product image editor", () => {
 
     expect(update).toHaveBeenCalledWith("product:p-1", {
       image: IMAGE,
-      imageSize: "large",
       imageFit: "contain",
       imagePosition: "top",
       imageZoom: 150,
