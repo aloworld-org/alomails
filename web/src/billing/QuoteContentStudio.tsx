@@ -255,7 +255,16 @@ export const QuoteContentStudio = forwardRef<
       title?: string;
       onRowKeysChange: (keys: string[]) => void;
     }) => ReactNode;
-    tableSubtotal: (rowKeys?: string[]) => ReactNode;
+    tableSubtotal: (
+      rowKeys?: string[],
+      presentation?: {
+        placement: QuoteTotalsPlacement;
+        detail: QuoteTotalsDetail;
+        showCurrencyCode: boolean;
+        emphasizeTotal: boolean;
+        showTaxNote: boolean;
+      },
+    ) => ReactNode;
     lineKeys: string[];
     onColumnsChange?: (columns: QuoteColumns) => void;
   }
@@ -674,7 +683,13 @@ export const QuoteContentStudio = forwardRef<
                               update(block.id, { rowKeys }),
                           })}
                           {block.showSubtotal !== false &&
-                            tableSubtotal(block.rowKeys)}
+                            tableSubtotal(block.rowKeys, {
+                              placement: design.totalsPlacement,
+                              detail: design.totalsDetail,
+                              showCurrencyCode: design.showCurrencyCode,
+                              emphasizeTotal: design.emphasizeTotal,
+                              showTaxNote: design.showTaxNote,
+                            })}
                         </QuoteTableOptionsProvider>
                       ) : block.kind === "table" ? (
                         <GeneralTableBlock
@@ -2662,11 +2677,11 @@ function CustomizeTable({
 
       <section className="mt-8 border-t border-subtle pt-7">
         <h3 className="text-sm font-semibold text-primary">
-          Quotation total
+          Pricing table totals
         </h3>
         <p className="mt-1 text-sm text-secondary">
-          Choose how the final total across every pricing table appears. Each
-          pricing table controls its own subtotal from the table toolbar.
+          Choose how the amount summary appears beneath each pricing table.
+          Every table keeps its own subtotal.
         </p>
         <div className="mt-5 grid gap-5 sm:grid-cols-3">
           {(

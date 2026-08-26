@@ -34,10 +34,14 @@ import type { QuoteColumns } from "./QuoteContentStudio";
 import type { DocumentDraft, StoredDocument } from "./documentDraft";
 import { blankRow, isBlankRow, rowFromProduct } from "./lineRows";
 import type { LineRow } from "./lineRows";
-import { formatAmount } from "./money";
+import { formatAmount, formatRate } from "./money";
 import { DialogFrame, ErrorBanner, Field } from "./parts";
 import type { Pickers } from "./pickers";
 import { printSheet } from "./printSheet";
+import type {
+  QuoteTotalsDetail,
+  QuoteTotalsPlacement,
+} from "./quoteTableOptions";
 import { TotalsPanel } from "./TotalsPanel";
 import styles from "./billingStyles";
 
@@ -98,7 +102,16 @@ interface Props<T extends StoredDocument, A> {
         }) => ReactNode,
         totals: ReactNode,
         lineKeys: string[],
-        tableSubtotal: (rowKeys?: string[]) => ReactNode,
+        tableSubtotal: (
+          rowKeys?: string[],
+          presentation?: {
+            placement: QuoteTotalsPlacement;
+            detail: QuoteTotalsDetail;
+            showCurrencyCode: boolean;
+            emphasizeTotal: boolean;
+            showTaxNote: boolean;
+          },
+        ) => ReactNode,
       ) => ReactNode);
   /** Document-level commands rendered beside save and print. */
   editorActions?: ReactNode;
@@ -274,7 +287,16 @@ export function DocumentEditor<T extends StoredDocument, A>({
           stale={!saved}
       />
     );
-  const renderTableSubtotal = (rowKeys?: string[]) => {
+  const renderTableSubtotal = (
+    rowKeys?: string[],
+    presentation = {
+      placement: "summary" as QuoteTotalsPlacement,
+      detail: "summary" as QuoteTotalsDetail,
+      showCurrencyCode: false,
+      emphasizeTotal: true,
+      showTaxNote: false,
+    },
+  ) => {
     if (document === null) return null;
     const owned = new Set(rowKeys ?? rows.map((row) => row.key));
     let lineIndex = 0;
@@ -303,18 +325,80 @@ export function DocumentEditor<T extends StoredDocument, A>({
       : netCents + vatCents;
     const amount = (cents: number) =>
       saved ? formatAmount(cents, locale, currency) : "—";
+    const totalAmount = `${amount(grossCents)}${
+      presentation.showCurrencyCode && currency ? ` ${currency}` : ""
+    }`;
+    const rowsToShow: Array<{ label: string; value: string; total?: boolean }> =
+      presentation.detail === "total"
+        ? [{ label: "Total", value: totalAmount, total: true }]
+        : [
+            { label: "Net", value: amount(netCents) },
+            ...(presentation.detail === "breakdown"
+              ? Array.from(netByRate)
+                  .sort(([left], [right]) => left - right)
+                  .map(([rate, net]) => ({
+                    label: `VAT at ${formatRate(rate, locale)}`,
+                    value: amount(Math.round((net * rate) / 10_000)),
+                  }))
+              : [{ label: "VAT", value: amount(vatCents) }]),
+            { label: "Total", value: totalAmount, total: true },
+          ];
     return (
-      <div className="mt-4 rounded-xl bg-raised/45 px-4 py-3 text-sm">
-        <dl className="ml-auto grid max-w-sm grid-cols-[1fr_auto] gap-x-8 gap-y-2">
-          <dt className="text-secondary">Net</dt>
-          <dd className="text-right tabular-nums text-primary">{amount(netCents)}</dd>
-          <dt className="text-secondary">VAT</dt>
-          <dd className="text-right tabular-nums text-primary">{amount(vatCents)}</dd>
-          <dt className="border-t border-default pt-2 font-semibold text-primary">Total</dt>
-          <dd className="border-t border-default pt-2 text-right font-semibold tabular-nums text-primary">
-            {amount(grossCents)}
-          </dd>
-        </dl>
+      <div
+        className={cx(
+          "text-sm",
+          presentation.placement === "summary" && "mt-4 flex justify-end",
+          presentation.placement === "full" && "mt-4",
+          presentation.placement === "footer" && "-mt-3",
+        )}
+      >
+        <div
+          className={cx(
+            "bg-raised/45 px-5 py-4",
+            presentation.placement === "summary" &&
+              "w-full max-w-md rounded-xl border border-default shadow-sm",
+            presentation.placement === "full" &&
+              "w-full rounded-xl border border-default",
+            presentation.placement === "footer" &&
+              "w-full rounded-b-xl border border-t-0 border-default",
+          )}
+        >
+          <dl
+            className={cx(
+              "grid grid-cols-[1fr_auto] gap-x-8 gap-y-2",
+              presentation.placement === "summary" && "ml-auto max-w-sm",
+              presentation.placement === "full" && "mx-auto max-w-2xl",
+            )}
+          >
+            {rowsToShow.map((row) => (
+              <div className="contents" key={row.label}>
+                <dt
+                  className={cx(
+                    "text-secondary",
+                    row.total &&
+                      "border-t border-default pt-3 font-semibold text-primary",
+                  )}
+                >
+                  {row.label}
+                </dt>
+                <dd
+                  className={cx(
+                    "text-right tabular-nums text-primary",
+                    row.total && "border-t border-default pt-3 font-semibold",
+                    row.total && presentation.emphasizeTotal && "text-base",
+                  )}
+                >
+                  {row.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          {presentation.showTaxNote && (
+            <p className="mt-3 text-xs text-tertiary">
+              VAT is shown separately and included in the total.
+            </p>
+          )}
+        </div>
       </div>
     );
   };
