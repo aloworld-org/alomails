@@ -1084,30 +1084,17 @@ function ImageBlockEditor({
         </p>
       </div>
       <div className="grid items-start gap-5 md:grid-cols-[minmax(0,1.1fr)_minmax(18rem,.9fr)]">
-        <section className="overflow-hidden rounded-2xl border border-default bg-raised shadow-sm">
-          <div className="flex items-center justify-between gap-3 border-b border-subtle px-4 py-3">
-            <div>
-              <h4 className="text-sm font-semibold text-primary">Live preview</h4>
-              <p className="mt-0.5 text-xs text-secondary">
-                Uses the customer quotation proportions.
-              </p>
-            </div>
-            <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-medium text-secondary">
-              PDF safe
-            </span>
-          </div>
-          <div className="bg-surface p-4">
+        <section className="min-w-0">
+          <div className="rounded-2xl border border-default bg-surface p-5 shadow-sm">
             <ImageContentBlock block={block} readOnly onEdit={() => undefined} />
           </div>
-          <div className="border-t border-subtle px-4 py-3">
-            <button
-              type="button"
-              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-default bg-surface px-4 text-sm font-semibold text-primary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
-              onClick={onReplace}
-            >
-              <Upload className="size-4" aria-hidden="true" /> Replace image
-            </button>
-          </div>
+          <button
+            type="button"
+            className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-default bg-surface px-4 text-sm font-semibold text-primary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
+            onClick={onReplace}
+          >
+            <Upload className="size-4" aria-hidden="true" /> Replace image
+          </button>
         </section>
         <div className="flex flex-col gap-3">
           <ImageOptionGroup
