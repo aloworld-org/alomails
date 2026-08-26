@@ -549,7 +549,7 @@ export const QuoteContentStudio = forwardRef<
           {design.blocks.length === 0 ? (
             <EmptyBuilder readOnly={readOnly} />
           ) : (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-5">
               {design.blocks
                 .filter(
                   (block) =>
@@ -588,66 +588,75 @@ export const QuoteContentStudio = forwardRef<
                             {blockName(block)}
                           </span>
                         )}
-                        <div className="flex flex-wrap items-center gap-1">
-                          {block.kind === "pricing" && (
-                            <>
-                              {design.blocks.filter(
-                                (item) => item.kind === "pricing",
-                              ).length > 1 && (
+                        <div className="flex flex-wrap items-center gap-3">
+                          {(block.kind === "pricing" || block.kind === "image") && (
+                            <div className="flex flex-wrap items-center gap-2 border-r border-default pr-3">
+                              {block.kind === "pricing" && (
+                                <>
+                                  {design.blocks.filter(
+                                    (item) => item.kind === "pricing",
+                                  ).length > 1 && (
+                                    <BlockCommand
+                                      accent
+                                      label={
+                                        block.showSubtotal === false
+                                          ? "Show subtotal"
+                                          : "Hide subtotal"
+                                      }
+                                      onClick={() =>
+                                        update(block.id, {
+                                          showSubtotal:
+                                            block.showSubtotal === false,
+                                        })
+                                      }
+                                    >
+                                      <Rows3 className="size-4" />
+                                    </BlockCommand>
+                                  )}
+                                  <BlockCommand
+                                    accent
+                                    label="Table settings"
+                                    onClick={() => setTableSettings(true)}
+                                  >
+                                    <Palette className="size-4" />
+                                  </BlockCommand>
+                                </>
+                              )}
+                              {block.kind === "image" && (
                                 <BlockCommand
-                                  label={
-                                    block.showSubtotal === false
-                                      ? "Show subtotal"
-                                      : "Hide subtotal"
-                                  }
-                                  onClick={() =>
-                                    update(block.id, {
-                                      showSubtotal:
-                                        block.showSubtotal === false,
-                                    })
-                                  }
+                                  accent
+                                  label="Edit block"
+                                  onClick={() => setEditingImageId(block.id)}
                                 >
-                                  <Rows3 className="size-4" />
+                                  <Pencil className="size-4" />
                                 </BlockCommand>
                               )}
+                            </div>
+                          )}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <BlockCommand
+                              label="Move up"
+                              disabled={index === 0}
+                              onClick={() => moveBlock(index, -1)}
+                            >
+                              <ArrowUp className="size-4" />
+                            </BlockCommand>
+                            <BlockCommand
+                              label="Move down"
+                              disabled={index === design.blocks.length - 1}
+                              onClick={() => moveBlock(index, 1)}
+                            >
+                              <ArrowDown className="size-4" />
+                            </BlockCommand>
+                            {block.kind !== "pricing" && (
                               <BlockCommand
-                                label="Table settings"
-                                onClick={() => setTableSettings(true)}
+                                label="Duplicate"
+                                onClick={() => duplicateBlock(index)}
                               >
-                                <Palette className="size-4" />
+                                <Copy className="size-4" />
                               </BlockCommand>
-                            </>
-                          )}
-                          {block.kind === "image" && (
-                            <BlockCommand
-                              label="Edit block"
-                              onClick={() => setEditingImageId(block.id)}
-                            >
-                              <Pencil className="size-4" />
-                            </BlockCommand>
-                          )}
-                          <BlockCommand
-                            label="Move up"
-                            disabled={index === 0}
-                            onClick={() => moveBlock(index, -1)}
-                          >
-                            <ArrowUp className="size-4" />
-                          </BlockCommand>
-                          <BlockCommand
-                            label="Move down"
-                            disabled={index === design.blocks.length - 1}
-                            onClick={() => moveBlock(index, 1)}
-                          >
-                            <ArrowDown className="size-4" />
-                          </BlockCommand>
-                          {block.kind !== "pricing" && (
-                            <BlockCommand
-                              label="Duplicate"
-                              onClick={() => duplicateBlock(index)}
-                            >
-                              <Copy className="size-4" />
-                            </BlockCommand>
-                          )}
+                            )}
+                          </div>
                           <BlockCommand
                             label="Delete"
                             danger
@@ -2358,22 +2367,26 @@ function BlockCommand({
   onClick,
   disabled = false,
   danger = false,
+  accent = false,
 }: {
   label: string;
   children: ReactNode;
   onClick: () => void;
   disabled?: boolean;
   danger?: boolean;
+  accent?: boolean;
 }) {
   return (
     <button
       type="button"
       disabled={disabled}
       className={cx(
-        "inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-35",
+        "inline-flex min-h-10 items-center gap-2 rounded-lg border border-transparent px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 disabled:cursor-not-allowed disabled:text-tertiary disabled:opacity-45",
         danger
-          ? "text-danger hover:bg-danger-tint"
-          : "text-secondary hover:bg-surface hover:text-primary",
+          ? "text-danger hover:border-danger/20 hover:bg-danger-tint"
+          : accent
+            ? "bg-accent-soft text-accent hover:border-accent/25 hover:bg-accent hover:text-on-accent"
+            : "text-secondary hover:border-accent/25 hover:bg-accent-soft hover:text-accent",
       )}
       onClick={onClick}
     >
