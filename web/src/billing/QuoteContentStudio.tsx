@@ -26,6 +26,7 @@ import {
   Pencil,
   Plus,
   Quote,
+  RotateCcw,
   Rows3,
   Search,
   Table2,
@@ -2788,7 +2789,7 @@ function CustomizeQuote({
               </div>
               <button
                 type="button"
-                className="min-h-9 rounded-lg px-3 text-sm font-semibold text-accent transition-colors hover:bg-accent-soft hover:text-accent-hover"
+                className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-default bg-surface px-3.5 text-sm font-semibold text-secondary shadow-sm transition-all hover:border-accent hover:bg-accent-soft hover:text-accent"
                 onClick={() =>
                   onChange((current) => ({
                     ...current,
@@ -2796,40 +2797,65 @@ function CustomizeQuote({
                   }))
                 }
               >
+                <RotateCcw className="size-4" aria-hidden="true" />
                 Reset
               </button>
             </div>
-            <div className="mt-5 grid gap-x-4 gap-y-5 sm:grid-cols-2">
-              <ColorField
-                label="Accent"
-                value={design.colors.accent}
-                onChange={(value) => setColor("accent", value)}
-              />
-              <ColorField
-                label="Page"
-                value={design.colors.background}
-                onChange={(value) => setColor("background", value)}
-              />
-              <ColorField
-                label="Header background"
-                value={design.colors.headerBackground}
-                onChange={(value) => setColor("headerBackground", value)}
-              />
-              <ColorField
-                label="Text"
-                value={design.colors.text}
-                onChange={(value) => setColor("text", value)}
-              />
-              <ColorField
-                label="Table heading"
-                value={design.colors.tableHeader}
-                onChange={(value) => setColor("tableHeader", value)}
-              />
-              <ColorField
-                label="Table rows"
-                value={design.colors.tableRows}
-                onChange={(value) => setColor("tableRows", value)}
-              />
+            <div className="mt-5 grid gap-4 xl:grid-cols-2">
+              <div className="rounded-2xl border border-default bg-raised/35 p-4">
+                <div className="mb-4">
+                  <h4 className="text-sm font-semibold text-primary">
+                    Document
+                  </h4>
+                  <p className="mt-0.5 text-xs text-secondary">
+                    Brand, page, header, and copy.
+                  </p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                  <ColorField
+                    label="Accent"
+                    value={design.colors.accent}
+                    onChange={(value) => setColor("accent", value)}
+                  />
+                  <ColorField
+                    label="Page"
+                    value={design.colors.background}
+                    onChange={(value) => setColor("background", value)}
+                  />
+                  <ColorField
+                    label="Header"
+                    value={design.colors.headerBackground}
+                    onChange={(value) => setColor("headerBackground", value)}
+                  />
+                  <ColorField
+                    label="Text"
+                    value={design.colors.text}
+                    onChange={(value) => setColor("text", value)}
+                  />
+                </div>
+              </div>
+              <div className="rounded-2xl border border-default bg-raised/35 p-4">
+                <div className="mb-4">
+                  <h4 className="text-sm font-semibold text-primary">
+                    Pricing tables
+                  </h4>
+                  <p className="mt-0.5 text-xs text-secondary">
+                    Keep headings and rows easy to scan.
+                  </p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                  <ColorField
+                    label="Table heading"
+                    value={design.colors.tableHeader}
+                    onChange={(value) => setColor("tableHeader", value)}
+                  />
+                  <ColorField
+                    label="Table rows"
+                    value={design.colors.tableRows}
+                    onChange={(value) => setColor("tableRows", value)}
+                  />
+                </div>
+              </div>
             </div>
           </section>
           <section className="border-t border-subtle pt-7">
@@ -3302,28 +3328,35 @@ function ColorField({
   onChange: (value: string) => void;
 }) {
   const valid = /^#[0-9a-f]{6}$/i.test(value);
+  const fieldId = `quote-colour-${label.replace(/\s+/g, "-").toLowerCase()}`;
   return (
-    <div>
+    <div className="flex min-h-16 items-center gap-3 rounded-xl border border-default bg-surface p-2.5 shadow-sm transition-all hover:border-accent hover:shadow-md focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/10">
       <label
-        className="block text-sm font-semibold text-primary"
-        htmlFor={`quote-colour-${label.replace(/\s+/g, "-").toLowerCase()}`}
+        className="relative grid size-11 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-lg border border-default bg-surface shadow-sm"
+        htmlFor={`${fieldId}-picker`}
+        title={`Choose ${label.toLowerCase()} colour`}
       >
-        {label}
-      </label>
-      <div className="mt-2 flex min-h-12 items-center gap-2 rounded-xl border border-default bg-surface p-1.5 shadow-sm transition-colors hover:border-accent focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/10">
         <input
+          id={`${fieldId}-picker`}
           type="color"
           value={valid ? value : DEFAULT_COLORS.accent}
           aria-label={`Choose ${label.toLowerCase()} colour`}
-          title={`Choose ${label.toLowerCase()} colour`}
-          className="size-9 shrink-0 cursor-pointer rounded-lg border-0 bg-transparent p-0"
+          className="size-8 cursor-pointer rounded-md border-0 bg-transparent p-0 [&::-moz-color-swatch]:rounded-md [&::-moz-color-swatch]:border [&::-moz-color-swatch]:border-black/10 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-md [&::-webkit-color-swatch]:border [&::-webkit-color-swatch]:border-black/10"
           onChange={(event) => onChange(event.target.value)}
         />
+      </label>
+      <div className="min-w-0 flex-1">
+        <label
+          className="block text-xs font-semibold text-secondary"
+          htmlFor={fieldId}
+        >
+          {label}
+        </label>
         <input
-          id={`quote-colour-${label.replace(/\s+/g, "-").toLowerCase()}`}
+          id={fieldId}
           value={value.toUpperCase()}
           aria-label={`${label} hex colour`}
-          className="h-9 min-w-0 w-full border-0 bg-transparent px-2 font-mono text-sm font-medium uppercase text-primary shadow-none outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0"
+          className="mt-0.5 h-6 min-w-0 w-full border-0 bg-transparent p-0 font-mono text-sm font-semibold uppercase text-primary shadow-none outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0"
           maxLength={7}
           spellCheck={false}
           onChange={(event) => {
