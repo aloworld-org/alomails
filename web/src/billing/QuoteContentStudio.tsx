@@ -35,7 +35,7 @@ import {
   X,
 } from "lucide-react";
 
-import { Button, ChoicePicker, Input, Modal, Select, cx } from "../ds";
+import { Button, ChoicePicker, Modal, Select, cx } from "../ds";
 import {
   QuoteTableOptionsProvider,
   type QuoteLineContent,
@@ -716,11 +716,11 @@ export const QuoteContentStudio = forwardRef<
                       ) : block.kind === "heading" ? (
                         readOnly ? (
                           block.level === 1 ? (
-                            <h1 className="text-3xl font-semibold leading-tight">{block.text}</h1>
+                            <h1 className="text-3xl font-semibold leading-tight"><InlineRichTextContent value={block.text} /></h1>
                           ) : block.level === 2 ? (
-                            <h2 className="text-2xl font-semibold leading-tight">{block.text}</h2>
+                            <h2 className="text-2xl font-semibold leading-tight"><InlineRichTextContent value={block.text} /></h2>
                           ) : (
-                            <h3 className="text-xl font-semibold leading-tight">{block.text}</h3>
+                            <h3 className="text-xl font-semibold leading-tight"><InlineRichTextContent value={block.text} /></h3>
                           )
                         ) : (
                           <div className="grid gap-3 sm:grid-cols-[7rem_minmax(0,1fr)]">
@@ -738,62 +738,48 @@ export const QuoteContentStudio = forwardRef<
                               <option value="2">Heading 2</option>
                               <option value="3">Heading 3</option>
                             </Select>
-                            <Input
+                            <InlineRichTextEditor
                               value={block.text}
                               placeholder="Section heading"
                               aria-label="Section heading"
-                              onChange={(event) =>
-                                update(block.id, { text: event.target.value })
-                              }
+                              onChange={(text) => update(block.id, { text })}
                             />
                           </div>
                         )
                       ) : block.kind === "paragraph" ? (
                         readOnly ? (
-                          <p className="whitespace-pre-wrap leading-relaxed">
-                            {block.text}
-                          </p>
+                          <RichTextContent value={block.text} />
                         ) : (
-                          <textarea
-                            className="min-h-28 w-full resize-y rounded-md border border-default bg-surface px-3 py-3 text-sm leading-relaxed text-primary placeholder:text-tertiary focus:border-accent focus:outline-none"
+                          <RichTextEditor
                             value={block.text}
+                            label="Paragraph"
                             placeholder="Write a paragraph…"
-                            aria-label="Paragraph"
-                            onChange={(event) =>
-                              update(block.id, { text: event.target.value })
-                            }
+                            onChange={(text) => update(block.id, { text })}
                           />
                         )
                       ) : block.kind === "quote" ? (
                         readOnly ? (
                           <blockquote className="border-l-4 border-[var(--quote-accent)] pl-5 text-lg italic">
-                            <p>{block.text}</p>
+                            <RichTextContent value={block.text} />
                             {block.attribution && (
                               <footer className="mt-2 text-sm not-italic opacity-70">
-                                {block.attribution}
+                                <InlineRichTextContent value={block.attribution} />
                               </footer>
                             )}
                           </blockquote>
                         ) : (
                           <div className="grid gap-3">
-                            <textarea
-                              className="min-h-24 w-full resize-y rounded-md border border-default bg-surface px-3 py-3 text-sm text-primary placeholder:text-tertiary focus:border-accent focus:outline-none"
+                            <RichTextEditor
                               value={block.text}
+                              label="Quotation"
                               placeholder="Add a customer quote or important statement…"
-                              aria-label="Quote text"
-                              onChange={(event) =>
-                                update(block.id, { text: event.target.value })
-                              }
+                              onChange={(text) => update(block.id, { text })}
                             />
-                            <Input
+                            <InlineRichTextEditor
                               value={block.attribution}
                               placeholder="Attribution (optional)"
                               aria-label="Quote attribution"
-                              onChange={(event) =>
-                                update(block.id, {
-                                  attribution: event.target.value,
-                                })
-                              }
+                              onChange={(attribution) => update(block.id, { attribution })}
                             />
                           </div>
                         )
@@ -848,33 +834,26 @@ export const QuoteContentStudio = forwardRef<
                         readOnly ? (
                           <>
                             <h3 className="text-lg font-semibold">
-                              {block.heading}
+                              <InlineRichTextContent value={block.heading} />
                             </h3>
-                            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed opacity-80">
-                              {block.body}
-                            </p>
+                            <div className="mt-2 opacity-80"><RichTextContent value={block.body} /></div>
                           </>
                         ) : (
                           <div>
-                            <Input
+                            <InlineRichTextEditor
                               value={block.heading}
                               placeholder="Section heading"
                               aria-label="Section heading"
-                              onChange={(event) =>
-                                update(block.id, {
-                                  heading: event.target.value,
-                                })
-                              }
+                              onChange={(heading) => update(block.id, { heading })}
                             />
-                            <textarea
-                              className="mt-3 min-h-28 w-full resize-y rounded-md border border-default bg-surface px-3 py-3 text-sm leading-relaxed text-primary placeholder:text-tertiary focus:border-accent focus:outline-none"
-                              value={block.body}
-                              placeholder="Write the information your customer needs…"
-                              aria-label="Section paragraph"
-                              onChange={(event) =>
-                                update(block.id, { body: event.target.value })
-                              }
-                            />
+                            <div className="mt-3">
+                              <RichTextEditor
+                                value={block.body}
+                                label="Section text"
+                                placeholder="Write the information your customer needs…"
+                                onChange={(body) => update(block.id, { body })}
+                              />
+                            </div>
                           </div>
                         )
                       ) : (
@@ -1052,7 +1031,7 @@ function ListBlockEditor({
             <span className="grid size-9 place-items-center rounded-lg bg-raised text-sm font-semibold text-secondary">
               {ordered ? index + 1 : "•"}
             </span>
-            <InlineListTextEditor
+            <InlineRichTextEditor
               value={item}
               aria-label={`${ordered ? "Numbered" : "Bullet"} item ${index + 1}`}
               placeholder="Write an item"
@@ -1117,7 +1096,7 @@ function InlineRichTextContent({ value }: { value: string }) {
   );
 }
 
-function InlineListTextEditor({
+function InlineRichTextEditor({
   value,
   placeholder,
   onChange,
@@ -1300,7 +1279,7 @@ function ImageContentBlock({
       />
       {block.caption && (
         <figcaption className="mt-2 px-1 text-xs leading-relaxed opacity-65">
-          {block.caption}
+          <RichTextContent value={block.caption} />
         </figcaption>
       )}
     </figure>
@@ -1476,15 +1455,14 @@ function ImageBlockEditor({
             placeholder="Explain the product, project, or result shown in the image."
             onChange={(body) => onChange({ body })}
           />
-          <label className="mt-4 block text-sm font-semibold text-primary">
-            Caption
-            <textarea
-              className="mt-2 min-h-24 w-full resize-y rounded-md border border-default bg-surface px-4 py-3 text-sm font-normal leading-relaxed text-primary placeholder:text-tertiary focus:border-accent focus:outline-none"
+          <div className="mt-4">
+            <RichTextEditor
               value={block.caption}
+              label="Caption"
               placeholder="Optional short caption"
-              onChange={(event) => onChange({ caption: event.target.value })}
+              onChange={(caption) => onChange({ caption })}
             />
-          </label>
+          </div>
         </section>
       </div>
     </Modal>
@@ -1534,10 +1512,12 @@ function RichTextContent({ value }: { value: string }) {
 
 function RichTextEditor({
   value,
+  label = "Supporting text",
   placeholder,
   onChange,
 }: {
   value: string;
+  label?: string;
   placeholder: string;
   onChange: (value: string) => void;
 }) {
@@ -1578,7 +1558,7 @@ function RichTextEditor({
   return (
     <div>
       <div className="mb-2 flex items-center justify-between gap-3">
-        <p className="text-sm font-semibold text-primary">Supporting text</p>
+        <p className="text-sm font-semibold text-primary">{label}</p>
         <button
           type="button"
           className={cx(
@@ -1652,7 +1632,7 @@ function RichTextEditor({
         suppressContentEditableWarning
         role="textbox"
         aria-multiline="true"
-        aria-label="Supporting text"
+        aria-label={label}
         data-placeholder={placeholder}
         className="min-h-32 w-full overflow-y-auto rounded-md border border-default bg-surface px-4 py-3 text-sm font-normal leading-relaxed text-primary selection:bg-accent-soft selection:text-primary empty:before:pointer-events-none empty:before:text-tertiary empty:before:content-[attr(data-placeholder)] focus:border-accent focus:outline-none [&_h1]:my-2 [&_h1]:text-2xl [&_h1]:font-semibold [&_h2]:my-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:my-2 [&_h3]:text-lg [&_h3]:font-semibold [&_ol]:list-decimal [&_ol]:pl-6 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-6"
         onInput={emit}
@@ -2052,7 +2032,7 @@ function GeneralTableBlock({
             <tr>
               {block.columns.map((column) => (
                 <th key={column.id} className="px-4 py-3 font-semibold">
-                  {column.label}
+                  <InlineRichTextContent value={column.label} />
                 </th>
               ))}
             </tr>
@@ -2062,7 +2042,7 @@ function GeneralTableBlock({
               <tr key={row.id} className="border-t border-default">
                 {block.columns.map((column) => (
                   <td key={column.id} className="px-4 py-3 align-top">
-                    {row.cells[column.id]}
+                    <RichTextContent value={row.cells[column.id] ?? ""} />
                   </td>
                 ))}
               </tr>
@@ -2105,14 +2085,15 @@ function GeneralTableBlock({
               {block.columns.map((column, columnIndex) => (
                 <th key={column.id} className="group/table-column min-w-44 border-r border-default p-2 last:border-r-0">
                   <div className="flex items-center gap-2">
-                    <Input
+                    <InlineRichTextEditor
                       value={column.label}
                       aria-label={`Column ${columnIndex + 1} name`}
-                      onChange={(event) =>
+                      placeholder={`Column ${columnIndex + 1}`}
+                      onChange={(label) =>
                         onChange({
                           columns: block.columns.map((item) =>
                             item.id === column.id
-                              ? { ...item, label: event.target.value }
+                              ? { ...item, label }
                               : item,
                           ),
                         })
@@ -2138,11 +2119,11 @@ function GeneralTableBlock({
               <tr key={row.id} className="group/table-row border-t border-default">
                 {block.columns.map((column) => (
                   <td key={column.id} className="border-r border-default p-2 last:border-r-0">
-                    <Input
+                    <InlineRichTextEditor
                       value={row.cells[column.id] ?? ""}
                       aria-label={`${column.label || "Column"}, row ${rowIndex + 1}`}
                       placeholder="Enter value"
-                      onChange={(event) =>
+                      onChange={(value) =>
                         onChange({
                           rows: block.rows.map((item) =>
                             item.id === row.id
@@ -2150,7 +2131,7 @@ function GeneralTableBlock({
                                   ...item,
                                   cells: {
                                     ...item.cells,
-                                    [column.id]: event.target.value,
+                                    [column.id]: value,
                                   },
                                 }
                               : item,
