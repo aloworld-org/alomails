@@ -1075,27 +1075,42 @@ function ImageBlockEditor({
         </>
       }
     >
-      <div className="grid gap-6 md:grid-cols-[minmax(0,1.15fr)_minmax(18rem,.85fr)]">
-        <div className="overflow-hidden rounded-2xl border border-default bg-raised p-4">
-          <img
-            src={block.src}
-            alt={block.caption || "Quotation image preview"}
-            className={cx(
-              "w-full rounded-xl bg-surface transition-transform duration-200",
-              IMAGE_ASPECT[block.aspect ?? "landscape"],
-              block.fit === "contain" ? "object-contain" : "object-cover",
-              IMAGE_BLOCK_ZOOM[block.zoom ?? 100],
-            )}
-          />
-          <button
-            type="button"
-            className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-default bg-surface px-4 text-sm font-semibold text-primary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
-            onClick={onReplace}
-          >
-            <Upload className="size-4" aria-hidden="true" /> Replace image
-          </button>
-        </div>
-        <div className="flex flex-col gap-6">
+      <div>
+        <h3 className="text-base font-semibold text-primary">
+          Compose image and text
+        </h3>
+        <p className="mt-1 text-sm text-secondary">
+          Arrange the block once and see exactly how it will appear in the
+          quotation.
+        </p>
+      </div>
+      <div className="grid items-start gap-5 md:grid-cols-[minmax(0,1.1fr)_minmax(18rem,.9fr)]">
+        <section className="overflow-hidden rounded-2xl border border-default bg-raised shadow-sm">
+          <div className="flex items-center justify-between gap-3 border-b border-subtle px-4 py-3">
+            <div>
+              <h4 className="text-sm font-semibold text-primary">Live preview</h4>
+              <p className="mt-0.5 text-xs text-secondary">
+                Uses the customer quotation proportions.
+              </p>
+            </div>
+            <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-medium text-secondary">
+              PDF safe
+            </span>
+          </div>
+          <div className="bg-surface p-4">
+            <ImageContentBlock block={block} readOnly onEdit={() => undefined} />
+          </div>
+          <div className="border-t border-subtle px-4 py-3">
+            <button
+              type="button"
+              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-default bg-surface px-4 text-sm font-semibold text-primary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
+              onClick={onReplace}
+            >
+              <Upload className="size-4" aria-hidden="true" /> Replace image
+            </button>
+          </div>
+        </section>
+        <div className="flex flex-col gap-3">
           <ImageOptionGroup
             label="Place text"
             value={block.placement ?? "full"}
@@ -1125,40 +1140,37 @@ function ImageBlockEditor({
             ]}
             onChange={(fit) => onChange({ fit })}
           />
-          <ImageOptionGroup
-            label="Zoom"
+          <ImageZoomControl
             value={block.zoom ?? 100}
-            options={[
-              [50, "50%"],
-              [75, "75%"],
-              [100, "100%"],
-              [125, "125%"],
-              [150, "150%"],
-              [175, "175%"],
-              [200, "200%"],
-            ]}
             onChange={(zoom) => onChange({ zoom })}
           />
         </div>
       </div>
-      <div className="grid gap-4 md:grid-cols-2">
-        <div>
+      <section className="rounded-2xl border border-default bg-raised/35 p-4">
+        <div className="mb-4">
+          <h4 className="text-sm font-semibold text-primary">Block content</h4>
+          <p className="mt-1 text-xs text-secondary">
+            Supporting text follows the selected layout; the caption remains
+            visually secondary.
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1.35fr)_minmax(14rem,.65fr)]">
           <RichTextEditor
             value={block.body ?? ""}
             placeholder="Explain the product, project, or result shown in the image."
             onChange={(body) => onChange({ body })}
           />
+          <label className="text-sm font-semibold text-primary">
+            Caption
+            <textarea
+              className="mt-2 min-h-32 w-full resize-y rounded-md border border-default bg-surface px-4 py-3 text-sm font-normal leading-relaxed text-primary placeholder:text-tertiary focus:border-accent focus:outline-none"
+              value={block.caption}
+              placeholder="Optional short caption"
+              onChange={(event) => onChange({ caption: event.target.value })}
+            />
+          </label>
         </div>
-        <label className="text-sm font-semibold text-primary">
-          Caption
-          <textarea
-            className="mt-2 min-h-28 w-full resize-y rounded-md border border-default bg-surface px-3 py-3 text-sm font-normal leading-relaxed text-primary placeholder:text-tertiary focus:border-accent focus:outline-none"
-            value={block.caption}
-            placeholder="Optional short caption"
-            onChange={(event) => onChange({ caption: event.target.value })}
-          />
-        </label>
-      </div>
+      </section>
     </Modal>
   );
 }
@@ -1380,28 +1392,102 @@ function ImageOptionGroup<T extends string | number>({
   onChange: (value: T) => void;
 }) {
   return (
-    <fieldset>
-      <legend className="text-xs font-semibold uppercase tracking-wide text-tertiary">
+    <fieldset className="rounded-2xl border border-default bg-raised/40 p-4">
+      <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-tertiary">
         {label}
       </legend>
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div
+        className={cx(
+          "mt-2 grid gap-2",
+          options.length === 3 ? "grid-cols-3" : "grid-cols-2",
+        )}
+      >
         {options.map(([id, name]) => (
           <button
             key={id}
             type="button"
+            aria-pressed={value === id}
             className={cx(
-              "min-h-11 rounded-xl border px-3 text-left text-sm font-semibold transition-colors",
+              "relative min-h-12 rounded-xl border px-3 text-center text-xs font-semibold shadow-sm ring-1 ring-inset transition-all hover:-translate-y-px hover:border-accent hover:bg-accent-soft hover:text-accent hover:shadow-md",
               value === id
-                ? "border-accent bg-accent-soft text-accent"
-                : "border-default bg-surface text-primary hover:border-accent hover:bg-accent-soft",
+                ? "border-accent bg-accent-soft text-accent ring-accent/25"
+                : "border-default bg-surface text-primary ring-default",
             )}
             onClick={() => onChange(id)}
           >
             {name}
+            {value === id && (
+              <span className="absolute right-1.5 top-1.5 grid size-4 place-items-center rounded-full bg-accent text-on-accent">
+                <Check className="size-3" aria-hidden="true" />
+              </span>
+            )}
           </button>
         ))}
       </div>
     </fieldset>
+  );
+}
+
+const IMAGE_ZOOM_STEPS = [50, 75, 100, 125, 150, 175, 200] as const;
+
+function ImageZoomControl({
+  value,
+  onChange,
+}: {
+  value: ImageBlock["zoom"] extends infer Z ? Exclude<Z, undefined> : never;
+  onChange: (value: Exclude<ImageBlock["zoom"], undefined>) => void;
+}) {
+  const index = IMAGE_ZOOM_STEPS.indexOf(value);
+  const previous = IMAGE_ZOOM_STEPS[Math.max(0, index - 1)] ?? 50;
+  const next =
+    IMAGE_ZOOM_STEPS[Math.min(IMAGE_ZOOM_STEPS.length - 1, index + 1)] ?? 200;
+  return (
+    <section className="rounded-2xl border border-default bg-raised/40 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-tertiary">
+            Zoom
+          </h4>
+          <p className="mt-1 text-xs text-secondary">Scale inside the frame</p>
+        </div>
+        <button
+          type="button"
+          className="text-xs font-semibold text-secondary transition-colors hover:text-accent disabled:opacity-40"
+          disabled={value === 100}
+          onClick={() => onChange(100)}
+        >
+          Reset
+        </button>
+      </div>
+      <div className="mt-3 grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-2 rounded-xl border border-default bg-surface p-2 shadow-sm">
+        <button
+          type="button"
+          className="grid size-10 place-items-center rounded-lg text-primary transition-colors hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-35"
+          aria-label="Zoom out"
+          disabled={index <= 0}
+          onClick={() => onChange(previous)}
+        >
+          <Minus className="size-4" aria-hidden="true" />
+        </button>
+        <strong className="text-center text-sm font-semibold tabular-nums text-primary">
+          {value}%
+        </strong>
+        <button
+          type="button"
+          className="grid size-10 place-items-center rounded-lg text-primary transition-colors hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-35"
+          aria-label="Zoom in"
+          disabled={index === IMAGE_ZOOM_STEPS.length - 1}
+          onClick={() => onChange(next)}
+        >
+          <Plus className="size-4" aria-hidden="true" />
+        </button>
+      </div>
+      <div className="mt-2 flex justify-between px-1 text-[11px] text-tertiary">
+        <span>50%</span>
+        <span>100%</span>
+        <span>200%</span>
+      </div>
+    </section>
   );
 }
 
