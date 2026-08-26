@@ -25,15 +25,16 @@ import {
 } from "lucide-react";
 
 import { Button, ChoicePicker, Input, Spinner, cx, useDialogs } from "../ds";
-import { strings } from "../i18n";
+import { strings, useLocale } from "../i18n";
 import { billingMessage } from "./api";
 import { DocumentActions } from "./DocumentActions";
 import type { DocumentAction } from "./DocumentActions";
 import { DocumentLines } from "./DocumentLines";
 import type { QuoteColumns } from "./QuoteContentStudio";
 import type { DocumentDraft, StoredDocument } from "./documentDraft";
-import { blankRow, rowFromProduct } from "./lineRows";
+import { blankRow, isBlankRow, rowFromProduct } from "./lineRows";
 import type { LineRow } from "./lineRows";
+import { formatAmount } from "./money";
 import { DialogFrame, ErrorBanner, Field } from "./parts";
 import type { Pickers } from "./pickers";
 import { printSheet } from "./printSheet";
@@ -87,7 +88,18 @@ interface Props<T extends StoredDocument, A> {
   /** Rich content between the document details and its commercial lines. A
    *  quotation canvas receives the pricing table so it can place it like any
    *  other document block. */
-  documentBody?: ReactNode | ((pricingTable: ReactNode) => ReactNode);
+  documentBody?:
+    | ReactNode
+    | ((
+        pricingTable: (options: {
+          rowKeys?: string[];
+          title?: string;
+          onRowKeysChange: (keys: string[]) => void;
+        }) => ReactNode,
+        totals: ReactNode,
+        lineKeys: string[],
+        tableSubtotal: (rowKeys?: string[]) => ReactNode,
+      ) => ReactNode);
   /** Document-level commands rendered beside save and print. */
   editorActions?: ReactNode;
   /** Temporarily render the editable draft as a customer-facing preview. */
@@ -126,6 +138,7 @@ export function DocumentEditor<T extends StoredDocument, A>({
   onDiscard,
   onPrint,
 }: Props<T, A>) {
+  const locale = useLocale();
   const { confirm } = useDialogs();
   const [printing, setPrinting] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState("blank");
@@ -206,30 +219,82 @@ export function DocumentEditor<T extends StoredDocument, A>({
 
   const currency = document?.currency ?? "";
   const saved = draft.saveState === "saved";
-  const pricingTable =
-    document === null ? null : (
-      <>
-        <DocumentLines
-          rows={rows}
+  const renderPricingTable = ({
+    rowKeys,
+    title,
+    onRowKeysChange,
+  }: {
+    rowKeys?: string[];
+    title?: string;
+    onRowKeysChange: (keys: string[]) => void;
+  }) => {
+    if (document === null) return null;
+    const owned = new Set(rowKeys ?? rows.map((row) => row.key));
+    const tableRows = rows.filter((row) => owned.has(row.key));
+    let savedLineIndex = 0;
+    const savedByRowKey = new Map<string, (typeof document.lines)[number]>();
+    for (const row of rows) {
+      if (isBlankRow(row)) continue;
+      const line = document.lines[savedLineIndex];
+      savedLineIndex += 1;
+      if (line !== undefined) savedByRowKey.set(row.key, line);
+    }
+    const tableSavedLines = tableRows.flatMap((row) => {
+      const line = savedByRowKey.get(row.key);
+      return line === undefined ? [] : [line];
+    });
+    return (
+      <DocumentLines
+          rows={tableRows}
           products={pickers.products}
-          savedLines={document.lines}
+          savedLines={tableSavedLines}
           saved={saved}
           currency={currency}
           readOnly={readOnly}
           columns={lineColumns}
           title={
-            typeof documentBody === "function" ? "Pricing table" : undefined
+            typeof documentBody === "function"
+              ? title ?? "Pricing table"
+              : undefined
           }
-          onChange={(next) => draft.edit({ rows: next })}
+          onChange={(next) => {
+            const merged = rows.filter((row) => !owned.has(row.key)).concat(next);
+            draft.edit({ rows: merged });
+            onRowKeysChange(next.map((row) => row.key));
+          }}
           nextKey={draft.nextKey}
         />
-        <TotalsPanel
+    );
+  };
+  const totalsPanel =
+    document === null ? null : (
+      <TotalsPanel
           totals={document.totals}
           currency={currency}
           stale={!saved}
-        />
-      </>
+      />
     );
+  const renderTableSubtotal = (rowKeys?: string[]) => {
+    if (document === null) return null;
+    const owned = new Set(rowKeys ?? rows.map((row) => row.key));
+    let lineIndex = 0;
+    const subtotal = rows.reduce((sum, row) => {
+      if (isBlankRow(row)) return sum;
+      const line = document.lines[lineIndex];
+      lineIndex += 1;
+      return owned.has(row.key) && line !== undefined
+        ? sum + line.netCents
+        : sum;
+    }, 0);
+    return (
+      <div className="mt-4 flex items-center justify-between rounded-xl bg-raised/45 px-4 py-3 text-sm">
+        <span className="font-medium text-secondary">Table subtotal</span>
+        <strong className="font-semibold tabular-nums text-primary">
+          {saved ? formatAmount(subtotal, locale, currency) : "—"}
+        </strong>
+      </div>
+    );
+  };
   const error = draft.error ?? pickers.error;
   const selectedProductIds = new Set(
     rows.flatMap((row) => row.productId ?? []),
@@ -609,7 +674,12 @@ export function DocumentEditor<T extends StoredDocument, A>({
           )}
 
           {typeof documentBody === "function"
-            ? documentBody(pricingTable)
+            ? documentBody(
+                renderPricingTable,
+                totalsPanel,
+                rows.map((row) => row.key),
+                renderTableSubtotal,
+              )
             : documentBody}
 
           {document === null ? (
@@ -624,7 +694,12 @@ export function DocumentEditor<T extends StoredDocument, A>({
             </div>
           ) : (
             <>
-              {typeof documentBody === "function" ? null : pricingTable}
+              {typeof documentBody === "function"
+                ? null
+                : renderPricingTable({
+                    onRowKeysChange: () => undefined,
+                  })}
+              {typeof documentBody === "function" ? null : totalsPanel}
               <DocumentActions
                 actions={actions}
                 unsaved={!saved}

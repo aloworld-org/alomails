@@ -20,6 +20,7 @@ import {
   Palette,
   Plus,
   Quote,
+  Rows3,
   Table2,
   Trash2,
   Upload,
@@ -44,7 +45,19 @@ type Block =
   | { id: string; kind: "list"; ordered: boolean; items: string }
   | { id: string; kind: "divider" }
   | { id: string; kind: "image"; src: string; caption: string }
-  | { id: string; kind: "pricing" };
+  | {
+      id: string;
+      kind: "pricing";
+      rowKeys?: string[];
+      showSubtotal?: boolean;
+      title?: string;
+    }
+  | {
+      id: string;
+      kind: "table";
+      columns: Array<{ id: string; label: string }>;
+      rows: Array<{ id: string; cells: Record<string, string> }>;
+    };
 interface Colors {
   accent: string;
   background: string;
@@ -218,11 +231,27 @@ export const QuoteContentStudio = forwardRef<
     quoteId: string;
     readOnly: boolean;
     preview?: boolean;
-    pricingTable: ReactNode;
+    pricingTable: (options: {
+      rowKeys?: string[];
+      title?: string;
+      onRowKeysChange: (keys: string[]) => void;
+    }) => ReactNode;
+    totals: ReactNode;
+    tableSubtotal: (rowKeys?: string[]) => ReactNode;
+    lineKeys: string[];
     onColumnsChange?: (columns: QuoteColumns) => void;
   }
 >(function QuoteContentStudio(
-  { quoteId, readOnly, preview = false, pricingTable, onColumnsChange },
+  {
+    quoteId,
+    readOnly,
+    preview = false,
+    pricingTable,
+    totals,
+    tableSubtotal,
+    lineKeys,
+    onColumnsChange,
+  },
   ref,
 ) {
   const storageKey = `alo:quote-design:${quoteId}`;
@@ -306,7 +335,14 @@ export const QuoteContentStudio = forwardRef<
     }));
   const addSimpleBlock = (
     index: number,
-    kind: "heading" | "paragraph" | "quote" | "list" | "divider" | "pricing",
+    kind:
+      | "heading"
+      | "paragraph"
+      | "quote"
+      | "list"
+      | "divider"
+      | "pricing"
+      | "table",
     ordered = false,
   ) => {
     const id = crypto.randomUUID();
@@ -317,11 +353,48 @@ export const QuoteContentStudio = forwardRef<
       insertBlock(index, { id, kind, text: "", attribution: "" });
     if (kind === "list") insertBlock(index, { id, kind, ordered, items: "" });
     if (kind === "divider") insertBlock(index, { id, kind });
-    if (
-      kind === "pricing" &&
-      !design.blocks.some((block) => block.kind === "pricing")
-    )
-      insertBlock(index, { id, kind });
+    if (kind === "pricing") {
+      setDesign((current) => ({
+        ...current,
+        blocks: [
+          ...current.blocks.slice(0, index).map((block) =>
+            block.kind === "pricing" && block.rowKeys === undefined
+              ? { ...block, rowKeys: lineKeys }
+              : block,
+          ),
+          {
+            id,
+            kind,
+            rowKeys: [],
+            showSubtotal: true,
+            title: `Pricing table ${
+              current.blocks.filter((block) => block.kind === "pricing").length + 1
+            }`,
+          },
+          ...current.blocks.slice(index).map((block) =>
+            block.kind === "pricing" && block.rowKeys === undefined
+              ? { ...block, rowKeys: lineKeys }
+              : block,
+          ),
+        ],
+      }));
+    }
+    if (kind === "table")
+      insertBlock(index, {
+        id,
+        kind,
+        columns: [
+          { id: crypto.randomUUID(), label: "Column 1" },
+          { id: crypto.randomUUID(), label: "Column 2" },
+          { id: crypto.randomUUID(), label: "Column 3" },
+        ],
+        rows: [
+          {
+            id: crypto.randomUUID(),
+            cells: {},
+          },
+        ],
+      });
   };
   const chooseImage = (index: number) => {
     pendingImageIndex.current = index;
@@ -347,10 +420,35 @@ export const QuoteContentStudio = forwardRef<
       },
     }));
   const removeBlock = (id: string) =>
-    setDesign((current) => ({
-      ...current,
-      blocks: current.blocks.filter((block) => block.id !== id),
-    }));
+    setDesign((current) => {
+      const removed = current.blocks.find((block) => block.id === id);
+      if (removed?.kind !== "pricing")
+        return {
+          ...current,
+          blocks: current.blocks.filter((block) => block.id !== id),
+        };
+
+      const remainingPricing = current.blocks.find(
+        (block) => block.kind === "pricing" && block.id !== id,
+      );
+      if (remainingPricing?.kind !== "pricing") return current;
+      const reassignedKeys = removed.rowKeys ?? [];
+      return {
+        ...current,
+        blocks: current.blocks
+          .filter((block) => block.id !== id)
+          .map((block) =>
+            block.kind === "pricing" && block.id === remainingPricing.id
+              ? {
+                  ...block,
+                  rowKeys: Array.from(
+                    new Set([...(block.rowKeys ?? []), ...reassignedKeys]),
+                  ),
+                }
+              : block,
+          ),
+      };
+    });
   const duplicateBlock = (index: number) =>
     setDesign((current) => {
       const source = current.blocks[index];
@@ -422,17 +520,49 @@ export const QuoteContentStudio = forwardRef<
                   <article className="overflow-hidden rounded-xl border border-[var(--quote-table-header)] bg-[var(--quote-background)] text-[var(--quote-text)] shadow-sm">
                     {!readOnly && (
                       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--quote-table-header)] bg-raised/40 px-4 py-2.5">
-                        <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
-                          {blockName(block)}
-                        </span>
+                        {block.kind === "pricing" ? (
+                          <input
+                            className="min-h-9 max-w-64 rounded-lg border border-default bg-surface px-3 text-sm font-semibold text-primary placeholder:text-tertiary focus:border-accent focus:outline-none"
+                            value={block.title ?? "Pricing table"}
+                            aria-label="Pricing table name"
+                            onChange={(event) =>
+                              update(block.id, { title: event.target.value })
+                            }
+                          />
+                        ) : (
+                          <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
+                            {blockName(block)}
+                          </span>
+                        )}
                         <div className="flex flex-wrap items-center gap-1">
                           {block.kind === "pricing" && (
-                            <BlockCommand
-                              label="Table settings"
-                              onClick={() => setTableSettings(true)}
-                            >
-                              <Palette className="size-4" />
-                            </BlockCommand>
+                            <>
+                              {design.blocks.filter(
+                                (item) => item.kind === "pricing",
+                              ).length > 1 && (
+                                <BlockCommand
+                                  label={
+                                    block.showSubtotal === false
+                                      ? "Show subtotal"
+                                      : "Hide subtotal"
+                                  }
+                                  onClick={() =>
+                                    update(block.id, {
+                                      showSubtotal:
+                                        block.showSubtotal === false,
+                                    })
+                                  }
+                                >
+                                  <Rows3 className="size-4" />
+                                </BlockCommand>
+                              )}
+                              <BlockCommand
+                                label="Table settings"
+                                onClick={() => setTableSettings(true)}
+                              >
+                                <Palette className="size-4" />
+                              </BlockCommand>
+                            </>
                           )}
                           <BlockCommand
                             label="Move up"
@@ -459,6 +589,12 @@ export const QuoteContentStudio = forwardRef<
                           <BlockCommand
                             label="Delete"
                             danger
+                            disabled={
+                              block.kind === "pricing" &&
+                              design.blocks.filter(
+                                (item) => item.kind === "pricing",
+                              ).length === 1
+                            }
                             onClick={() => removeBlock(block.id)}
                           >
                             <Trash2 className="size-4" />
@@ -483,8 +619,26 @@ export const QuoteContentStudio = forwardRef<
                             updateLineContent,
                           }}
                         >
-                          {pricingTable}
+                          {pricingTable({
+                            ...(block.rowKeys === undefined
+                              ? {}
+                              : { rowKeys: block.rowKeys }),
+                            title: block.title ?? "Pricing table",
+                            onRowKeysChange: (rowKeys) =>
+                              update(block.id, { rowKeys }),
+                          })}
+                          {design.blocks.filter(
+                            (item) => item.kind === "pricing",
+                          ).length > 1 &&
+                            block.showSubtotal !== false &&
+                            tableSubtotal(block.rowKeys)}
                         </QuoteTableOptionsProvider>
+                      ) : block.kind === "table" ? (
+                        <GeneralTableBlock
+                          block={block}
+                          readOnly={readOnly}
+                          onChange={(patch) => update(block.id, patch)}
+                        />
                       ) : block.kind === "heading" ? (
                         readOnly ? (
                           <h3 className="text-xl font-semibold">
@@ -650,14 +804,28 @@ export const QuoteContentStudio = forwardRef<
               ))}
             </div>
           )}
+          <QuoteTableOptionsProvider
+            value={{
+              enabled: true,
+              layout: design.tableLayout,
+              showImages: design.showProductImages,
+              showDescriptions: design.showProductDescriptions,
+              totalsPlacement: design.totalsPlacement,
+              totalsDetail: design.totalsDetail,
+              showCurrencyCode: design.showCurrencyCode,
+              emphasizeTotal: design.emphasizeTotal,
+              showTaxNote: design.showTaxNote,
+              lineContent: design.lineContent,
+              updateLineContent,
+            }}
+          >
+            <div className="mt-6">{totals}</div>
+          </QuoteTableOptionsProvider>
           {!readOnly && (
             <BottomComposer
               index={design.blocks.length}
               onAdd={addSimpleBlock}
               onImage={chooseImage}
-              hasPricing={design.blocks.some(
-                (block) => block.kind === "pricing",
-              )}
             />
           )}
         </div>
@@ -703,6 +871,197 @@ export const QuoteContentStudio = forwardRef<
   );
 });
 
+type GeneralTable = Extract<Block, { kind: "table" }>;
+
+function GeneralTableBlock({
+  block,
+  readOnly,
+  onChange,
+}: {
+  block: GeneralTable;
+  readOnly: boolean;
+  onChange: (patch: Partial<GeneralTable>) => void;
+}) {
+  const addColumn = () => {
+    const id = crypto.randomUUID();
+    onChange({
+      columns: [
+        ...block.columns,
+        { id, label: `Column ${block.columns.length + 1}` },
+      ],
+      rows: block.rows.map((row) => ({
+        ...row,
+        cells: { ...row.cells, [id]: "" },
+      })),
+    });
+  };
+  const removeColumn = (id: string) => {
+    if (block.columns.length === 1) return;
+    onChange({
+      columns: block.columns.filter((column) => column.id !== id),
+      rows: block.rows.map((row) => {
+        const cells = { ...row.cells };
+        delete cells[id];
+        return { ...row, cells };
+      }),
+    });
+  };
+  const addRow = () =>
+    onChange({
+      rows: [
+        ...block.rows,
+        {
+          id: crypto.randomUUID(),
+          cells: Object.fromEntries(
+            block.columns.map((column) => [column.id, ""]),
+          ),
+        },
+      ],
+    });
+
+  if (readOnly) {
+    return (
+      <div className="overflow-x-auto rounded-xl border border-default">
+        <table className="w-full border-collapse text-left text-sm">
+          <thead className="bg-[var(--quote-table-header)]">
+            <tr>
+              {block.columns.map((column) => (
+                <th key={column.id} className="px-4 py-3 font-semibold">
+                  {column.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {block.rows.map((row) => (
+              <tr key={row.id} className="border-t border-default">
+                {block.columns.map((column) => (
+                  <td key={column.id} className="px-4 py-3 align-top">
+                    {row.cells[column.id]}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-primary">Information table</h3>
+          <p className="mt-1 text-xs text-secondary">
+            Rename columns, then add as many rows or columns as the document needs.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-default bg-surface px-3 text-sm font-semibold text-primary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
+          onClick={addColumn}
+        >
+          <Plus className="size-4" aria-hidden="true" /> Add column
+        </button>
+      </div>
+      <div className="overflow-x-auto rounded-xl border border-default">
+        <table className="min-w-full border-collapse text-left text-sm">
+          <thead className="bg-raised/50">
+            <tr>
+              {block.columns.map((column, columnIndex) => (
+                <th key={column.id} className="min-w-44 border-r border-default p-2 last:border-r-0">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={column.label}
+                      aria-label={`Column ${columnIndex + 1} name`}
+                      onChange={(event) =>
+                        onChange({
+                          columns: block.columns.map((item) =>
+                            item.id === column.id
+                              ? { ...item, label: event.target.value }
+                              : item,
+                          ),
+                        })
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="grid size-9 shrink-0 place-items-center rounded-lg text-secondary transition-colors hover:bg-danger-tint hover:text-danger disabled:cursor-not-allowed disabled:opacity-35"
+                      aria-label={`Remove ${column.label || `column ${columnIndex + 1}`}`}
+                      disabled={block.columns.length === 1}
+                      onClick={() => removeColumn(column.id)}
+                    >
+                      <Trash2 className="size-4" aria-hidden="true" />
+                    </button>
+                  </div>
+                </th>
+              ))}
+              <th className="w-12" aria-label="Row actions" />
+            </tr>
+          </thead>
+          <tbody>
+            {block.rows.map((row, rowIndex) => (
+              <tr key={row.id} className="border-t border-default">
+                {block.columns.map((column) => (
+                  <td key={column.id} className="border-r border-default p-2 last:border-r-0">
+                    <Input
+                      value={row.cells[column.id] ?? ""}
+                      aria-label={`${column.label || "Column"}, row ${rowIndex + 1}`}
+                      placeholder="Enter value"
+                      onChange={(event) =>
+                        onChange({
+                          rows: block.rows.map((item) =>
+                            item.id === row.id
+                              ? {
+                                  ...item,
+                                  cells: {
+                                    ...item.cells,
+                                    [column.id]: event.target.value,
+                                  },
+                                }
+                              : item,
+                          ),
+                        })
+                      }
+                    />
+                  </td>
+                ))}
+                <td className="p-2 text-center">
+                  <button
+                    type="button"
+                    className="grid size-9 place-items-center rounded-lg text-secondary transition-colors hover:bg-danger-tint hover:text-danger"
+                    aria-label={`Remove row ${rowIndex + 1}`}
+                    onClick={() =>
+                      onChange({
+                        rows: block.rows.filter((item) => item.id !== row.id),
+                      })
+                    }
+                  >
+                    <Trash2 className="size-4" aria-hidden="true" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {block.rows.length === 0 && (
+          <div className="px-5 py-8 text-center text-sm text-secondary">
+            Add the first row to begin this table.
+          </div>
+        )}
+      </div>
+      <button
+        type="button"
+        className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-default bg-surface px-4 text-sm font-semibold text-primary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
+        onClick={addRow}
+      >
+        <Plus className="size-4" aria-hidden="true" /> Add row below
+      </button>
+    </div>
+  );
+}
+
 function blockName(block: Block): string {
   switch (block.kind) {
     case "heading":
@@ -719,24 +1078,30 @@ function blockName(block: Block): string {
       return "Image";
     case "pricing":
       return "Pricing table";
+    case "table":
+      return "Table";
     default:
       return "Text";
   }
 }
 
 type InsertKind =
-  "heading" | "paragraph" | "quote" | "list" | "divider" | "pricing";
+  | "heading"
+  | "paragraph"
+  | "quote"
+  | "list"
+  | "divider"
+  | "pricing"
+  | "table";
 
 function BottomComposer({
   index,
   onAdd,
   onImage,
-  hasPricing,
 }: {
   index: number;
   onAdd: (index: number, kind: InsertKind, ordered?: boolean) => void;
   onImage: (index: number) => void;
-  hasPricing: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const add = (kind: InsertKind, ordered = false) => {
@@ -822,14 +1187,15 @@ function BottomComposer({
             />
             <AddButton
               label="Pricing table"
-              help={
-                hasPricing
-                  ? "Already in this quotation"
-                  : "Add products, prices and totals"
-              }
+              help="Group products and services"
               Icon={Table2}
-              disabled={hasPricing}
               onClick={() => add("pricing")}
+            />
+            <AddButton
+              label="Table"
+              help="Create rows and columns for any information"
+              Icon={Rows3}
+              onClick={() => add("table")}
             />
           </div>
         </div>
@@ -1260,10 +1626,12 @@ function CustomizeTable({
       </section>
 
       <section className="mt-8 border-t border-subtle pt-7">
-        <h3 className="text-sm font-semibold text-primary">Totals display</h3>
+        <h3 className="text-sm font-semibold text-primary">
+          Quotation total
+        </h3>
         <p className="mt-1 text-sm text-secondary">
-          Choose where the totals sit and how much financial detail the customer
-          sees.
+          Choose how the final total across every pricing table appears. Each
+          pricing table controls its own subtotal from the table toolbar.
         </p>
         <div className="mt-5 grid gap-5 sm:grid-cols-3">
           {(
