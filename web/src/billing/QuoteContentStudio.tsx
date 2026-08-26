@@ -1164,7 +1164,7 @@ function InlineRichTextEditor({
         suppressContentEditableWarning
         role="textbox"
         data-placeholder={placeholder}
-        className="min-h-11 w-full rounded-md border border-default bg-surface px-4 py-2.5 text-sm leading-6 text-primary selection:bg-accent-soft selection:text-primary empty:before:pointer-events-none empty:before:text-tertiary empty:before:content-[attr(data-placeholder)] focus:border-accent focus:outline-none [&_strong]:font-semibold"
+        className="min-h-11 w-full rounded-lg bg-transparent px-2 py-2.5 text-sm leading-6 text-primary transition-colors selection:bg-accent-soft selection:text-primary empty:before:pointer-events-none empty:before:text-tertiary empty:before:content-[attr(data-placeholder)] hover:bg-raised/50 focus:bg-accent-soft/30 focus:outline-none [&_strong]:font-semibold"
         onInput={emit}
         onMouseUp={inspectSelection}
         onKeyUp={inspectSelection}
@@ -1634,7 +1634,7 @@ function RichTextEditor({
         aria-multiline="true"
         aria-label={label}
         data-placeholder={placeholder}
-        className="min-h-32 w-full overflow-y-auto rounded-md border border-default bg-surface px-4 py-3 text-sm font-normal leading-relaxed text-primary selection:bg-accent-soft selection:text-primary empty:before:pointer-events-none empty:before:text-tertiary empty:before:content-[attr(data-placeholder)] focus:border-accent focus:outline-none [&_h1]:my-2 [&_h1]:text-2xl [&_h1]:font-semibold [&_h2]:my-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:my-2 [&_h3]:text-lg [&_h3]:font-semibold [&_ol]:list-decimal [&_ol]:pl-6 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-6"
+        className="min-h-32 w-full overflow-y-auto rounded-lg bg-transparent px-2 py-3 text-sm font-normal leading-relaxed text-primary transition-colors selection:bg-accent-soft selection:text-primary empty:before:pointer-events-none empty:before:text-tertiary empty:before:content-[attr(data-placeholder)] hover:bg-raised/50 focus:bg-accent-soft/30 focus:outline-none [&_h1]:my-2 [&_h1]:text-2xl [&_h1]:font-semibold [&_h2]:my-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:my-2 [&_h3]:text-lg [&_h3]:font-semibold [&_ol]:list-decimal [&_ol]:pl-6 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-6"
         onInput={emit}
         onMouseUp={inspectSelection}
         onKeyUp={inspectSelection}
