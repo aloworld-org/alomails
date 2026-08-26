@@ -1140,7 +1140,7 @@ function CustomizeTable({
           Select a starting point, then adjust the visible content and columns
           below.
         </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="mt-5 grid gap-5 sm:grid-cols-3">
           {(
             [
               ["compact", "Compact", "Names and prices only"],
@@ -1152,7 +1152,7 @@ function CustomizeTable({
               key={layout}
               type="button"
               className={cx(
-                "group relative overflow-hidden rounded-2xl border bg-surface p-3 text-left shadow-sm ring-1 transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-md",
+                "group relative min-h-64 overflow-hidden rounded-2xl border bg-surface p-4 text-left shadow-sm ring-1 transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-md",
                 design.tableLayout === layout
                   ? "border-accent bg-accent-soft ring-accent/25"
                   : "border-default ring-default hover:bg-accent-soft/30",
@@ -1170,7 +1170,7 @@ function CustomizeTable({
                 layout={layout}
                 selected={design.tableLayout === layout}
               />
-              <span className="mt-3 flex items-start justify-between gap-3 px-1 pb-1">
+              <span className="mt-4 flex items-start justify-between gap-4 px-1 pb-2">
                 <span>
                   <strong className="block text-sm font-semibold text-primary">
                     {label}
@@ -1197,7 +1197,7 @@ function CustomizeTable({
         </div>
       </section>
 
-      <section className="mt-6 border-t border-subtle pt-6">
+      <section className="mt-8 border-t border-subtle pt-7">
         <h3 className="text-sm font-semibold text-primary">Product content</h3>
         <p className="mt-1 text-sm text-secondary">
           Optional information shown with each product or service.
@@ -1228,7 +1228,7 @@ function CustomizeTable({
         </div>
       </section>
 
-      <section className="mt-6 border-t border-subtle pt-6">
+      <section className="mt-8 border-t border-subtle pt-7">
         <h3 className="text-sm font-semibold text-primary">Visible columns</h3>
         <p className="mt-1 text-sm text-secondary">
           Product name and quotation total always remain visible.
@@ -1259,13 +1259,13 @@ function CustomizeTable({
         </div>
       </section>
 
-      <section className="mt-6 border-t border-subtle pt-6">
+      <section className="mt-8 border-t border-subtle pt-7">
         <h3 className="text-sm font-semibold text-primary">Totals display</h3>
         <p className="mt-1 text-sm text-secondary">
           Choose where the totals sit and how much financial detail the customer
           sees.
         </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="mt-5 grid gap-5 sm:grid-cols-3">
           {(
             [
               ["summary", "Summary card", "Compact and right aligned"],
@@ -1277,7 +1277,7 @@ function CustomizeTable({
               key={placement}
               type="button"
               className={cx(
-                "group rounded-xl border p-3 text-left transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-sm",
+                "group min-h-40 rounded-2xl border p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-md",
                 design.totalsPlacement === placement
                   ? "border-accent bg-accent-soft ring-1 ring-accent/20"
                   : "border-default bg-surface",
@@ -1290,7 +1290,7 @@ function CustomizeTable({
               }
             >
               <TotalsPreview placement={placement} />
-              <span className="mt-3 flex items-start justify-between gap-2">
+              <span className="mt-4 flex items-start justify-between gap-4 px-1 pb-1">
                 <span>
                   <strong className="block text-sm font-semibold text-primary">
                     {label}
@@ -1316,10 +1316,10 @@ function CustomizeTable({
           ))}
         </div>
 
-        <h4 className="mt-5 text-xs font-semibold uppercase tracking-wide text-tertiary">
+        <h4 className="mt-7 text-xs font-semibold uppercase tracking-wide text-tertiary">
           Amount details
         </h4>
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
           {(
             [
               ["total", "Total only", "The shortest summary"],
@@ -1338,7 +1338,7 @@ function CustomizeTable({
             />
           ))}
         </div>
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <TableToggle
             label="Currency code"
             help="Show EUR, USD, or the quote currency"
@@ -1381,7 +1381,7 @@ function CustomizeTable({
 function TotalsPreview({ placement }: { placement: QuoteTotalsPlacement }) {
   return (
     <span
-      className="block h-20 rounded-lg border border-subtle bg-raised/40 p-2"
+      className="block h-20 rounded-xl border border-subtle bg-raised/40 p-3"
       aria-hidden="true"
     >
       <span className="block h-5 rounded bg-surface" />
@@ -1463,7 +1463,7 @@ function TableToggle({
       type="button"
       aria-pressed={checked}
       className={cx(
-        "flex min-h-16 items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors hover:border-accent hover:bg-accent-soft",
+        "flex min-h-20 items-center gap-4 rounded-xl border px-5 py-4 text-left shadow-sm transition-all hover:border-accent hover:bg-accent-soft hover:shadow-md",
         checked ? "border-accent bg-accent-soft" : "border-default bg-surface",
       )}
       onClick={onClick}
