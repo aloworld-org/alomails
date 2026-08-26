@@ -12,9 +12,13 @@
 
 /* ---- public collaborator setup (S2.03b) ---- */
 .invitationPage {
-  min-height: 100dvh;
+  height: 100%;
+  /* Own scrolling — #root clips the document (ds/global.css). `safe` keeps the
+     card's top reachable when it is taller than a short window; plain center
+     would push it above the scroll start. */
+  overflow-y: auto;
   display: grid;
-  place-items: center;
+  place-items: safe center;
   padding: var(--space-6);
   background: var(--bg-sunken);
 }

@@ -3,9 +3,12 @@
 
 .wrap {
   display: flex;
-  align-items: center;
+  /* Own scrolling — #root clips the document (ds/global.css); `safe` keeps the
+     card's top reachable when it exceeds a short window. */
+  align-items: safe center;
   justify-content: center;
-  min-height: 100vh;
+  height: 100%;
+  overflow-y: auto;
   padding: var(--space-6);
   background: var(--bg-app);
 }

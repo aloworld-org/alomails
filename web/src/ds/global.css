@@ -16,6 +16,36 @@ body,
   height: 100%;
 }
 
+/* The document never scrolls; every screen owns its own scrolling.
+ *
+ * This is the app-wide backstop for a whole class of bug found on the wire
+ * (2026-08-26): an absolutely-positioned element with no positioned ancestor —
+ * a table's `sr-only` caption is the canonical case — anchors to the body,
+ * escapes every `overflow` clip on the way (overflow only clips descendants
+ * whose containing block is inside the clipper), lands at the y-coordinate its
+ * flow position implies, and stretches the document. The page grows a
+ * scrollbar over a dead band of background below the app.
+ *
+ * With #root positioned AND clipping, no element inside the app can ever do
+ * that again: whatever a future layout forgets, the escapee anchors here and
+ * is clipped here, and the document stays exactly one viewport tall. The cost
+ * is a duty stated at the top of this comment: a screen taller than the
+ * viewport must scroll itself (`overflow-y: auto` on its root) — the standalone
+ * pages (login/signup/reset, invitations, unsubscribe) all do. */
+#root {
+  position: relative;
+  overflow: clip;
+}
+
+/* Printing flows the document across pages; a viewport clip would truncate a
+ * printed alo Doc to its first page. Print media gets the clip lifted — the
+ * scrollbar symptom cannot exist on paper. */
+@media print {
+  #root {
+    overflow: visible;
+  }
+}
+
 body {
   margin: 0;
   background: var(--bg-app);

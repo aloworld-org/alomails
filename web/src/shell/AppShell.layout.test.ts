@@ -21,6 +21,28 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, test } from "vitest";
 
+describe("the document never scrolls", () => {
+  test("#root is a positioned, clipping box — the app-wide backstop", () => {
+    // The invariant behind every screen: whatever a future layout forgets, an
+    // absolutely-positioned escapee anchors to #root and is clipped by #root,
+    // so the document can never grow a scrollbar over dead background. Proven
+    // geometrically in Chromium (2026-08-26): a layout WITHOUT its own
+    // position:relative leaked the document to 1203px against a 600px
+    // viewport; under this #root rule the same layout clipped at 600px. The
+    // duty it creates — screens taller than the viewport must scroll
+    // themselves — is carried by the standalone pages' own roots.
+    const css = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "..", "ds", "global.css"),
+      "utf8",
+    );
+    const rootRules = [...css.matchAll(/#root\s*\{[^}]*\}/gs)].map((m) => m[0]);
+    expect(rootRules.some((r) => r.includes("position: relative"))).toBe(true);
+    expect(rootRules.some((r) => r.includes("overflow: clip"))).toBe(true);
+    // And printing must lift the clip, or an alo Doc prints one page.
+    expect(css).toMatch(/@media print\s*\{\s*#root\s*\{\s*overflow: visible/s);
+  });
+});
+
 describe("the shell owns its absolutely-positioned descendants", () => {
   test("`.shell` is a containing block, so its overflow clip actually applies", () => {
     const css = readFileSync(
