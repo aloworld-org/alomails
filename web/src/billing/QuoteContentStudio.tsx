@@ -534,7 +534,14 @@ export const QuoteContentStudio = forwardRef<
             <EmptyBuilder readOnly={readOnly} />
           ) : (
             <div className="flex flex-col gap-3">
-              {design.blocks.map((block, index) => (
+              {design.blocks
+                .filter(
+                  (block) =>
+                    !readOnly ||
+                    block.kind !== "table" ||
+                    generalTableHasContent(block),
+                )
+                .map((block, index) => (
                 <div key={block.id}>
                   <article className="overflow-hidden rounded-xl border border-[var(--quote-table-header)] bg-[var(--quote-background)] text-[var(--quote-text)] shadow-sm">
                     {!readOnly && (
@@ -827,7 +834,7 @@ export const QuoteContentStudio = forwardRef<
                     />
                   )}
                 </div>
-              ))}
+                ))}
             </div>
           )}
           {!readOnly && design.blocks.length === 0 && (
@@ -1763,6 +1770,12 @@ function ImageZoomControl({
 
 type GeneralTable = Extract<Block, { kind: "table" }>;
 
+function generalTableHasContent(block: GeneralTable): boolean {
+  return block.rows.some((row) =>
+    block.columns.some((column) => (row.cells[column.id] ?? "").trim() !== ""),
+  );
+}
+
 function GeneralTableBlock({
   block,
   readOnly,
@@ -1814,6 +1827,8 @@ function GeneralTableBlock({
         },
       ],
     });
+
+  if (readOnly && !generalTableHasContent(block)) return null;
 
   if (readOnly) {
     return (
