@@ -1152,7 +1152,7 @@ function CustomizeTable({
               key={layout}
               type="button"
               className={cx(
-                "group relative min-h-64 overflow-hidden rounded-2xl border bg-surface p-4 text-left shadow-sm ring-1 transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-md",
+                "group relative min-h-64 overflow-hidden rounded-2xl border bg-surface !p-5 text-left shadow-sm ring-1 transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-md",
                 design.tableLayout === layout
                   ? "border-accent bg-accent-soft ring-accent/25"
                   : "border-default ring-default hover:bg-accent-soft/30",
@@ -1277,7 +1277,7 @@ function CustomizeTable({
               key={placement}
               type="button"
               className={cx(
-                "group min-h-40 rounded-2xl border p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-md",
+                "group min-h-40 rounded-2xl border !p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-md",
                 design.totalsPlacement === placement
                   ? "border-accent bg-accent-soft ring-1 ring-accent/20"
                   : "border-default bg-surface",
@@ -1463,7 +1463,7 @@ function TableToggle({
       type="button"
       aria-pressed={checked}
       className={cx(
-        "flex min-h-20 items-center gap-4 rounded-xl border px-5 py-4 text-left shadow-sm transition-all hover:border-accent hover:bg-accent-soft hover:shadow-md",
+        "flex min-h-20 items-center gap-5 rounded-xl border !px-6 !py-5 text-left shadow-sm transition-all hover:border-accent hover:bg-accent-soft hover:shadow-md",
         checked ? "border-accent bg-accent-soft" : "border-default bg-surface",
       )}
       onClick={onClick}
