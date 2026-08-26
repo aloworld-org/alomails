@@ -26,6 +26,7 @@ import {
   Quote,
   Rows3,
   Table2,
+  Type,
   Trash2,
   Upload,
   X,
@@ -1142,7 +1143,6 @@ function ImageBlockEditor({
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <div>
-          <p className="text-sm font-semibold text-primary">Supporting text</p>
           <RichTextEditor
             value={block.body ?? ""}
             placeholder="Explain the product, project, or result shown in the image."
@@ -1256,8 +1256,26 @@ function RichTextEditor({
   };
 
   return (
-    <div className="relative mt-2">
-      {showTools && (
+    <div>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-primary">Supporting text</p>
+        <button
+          type="button"
+          className={cx(
+            "inline-flex min-h-9 items-center gap-2 rounded-lg border px-3 text-xs font-semibold transition-colors",
+            showTools
+              ? "border-accent bg-accent-soft text-accent"
+              : "border-default bg-surface text-secondary hover:border-accent hover:bg-accent-soft hover:text-accent",
+          )}
+          aria-expanded={showTools}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => setShowTools((current) => !current)}
+        >
+          <Type className="size-4" aria-hidden="true" /> Text tools
+        </button>
+      </div>
+      <div className="relative">
+        {showTools && (
         <div
           className="absolute -top-12 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-default bg-surface p-1.5 shadow-lg"
           role="toolbar"
@@ -1295,8 +1313,8 @@ function RichTextEditor({
             <ListOrdered className="size-4" />
           </RichTextCommand>
         </div>
-      )}
-      <div
+        )}
+        <div
         ref={editor}
         contentEditable
         suppressContentEditableWarning
@@ -1317,7 +1335,8 @@ function RichTextEditor({
           }
           setShowTools(false);
         }}
-      />
+        />
+      </div>
     </div>
   );
 }
@@ -1334,12 +1353,17 @@ function RichTextCommand({
   return (
     <button
       type="button"
-      className="grid size-9 place-items-center rounded-lg text-secondary transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
+      className="group relative grid size-9 place-items-center rounded-lg text-secondary transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
       aria-label={label}
-      title={label}
       onClick={onClick}
     >
       {children}
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute bottom-[calc(100%+.5rem)] left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-lg bg-primary px-2.5 py-1.5 text-xs font-medium text-surface opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+      >
+        {label}
+      </span>
     </button>
   );
 }
