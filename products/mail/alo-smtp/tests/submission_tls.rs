@@ -562,3 +562,65 @@ async fn write_all(tcp: &mut TcpStream, bytes: &[u8]) {
         .expect("write timed out")
         .expect("write failed");
 }
+
+/// SMTP AUTH accepts an app-specific password for a 2FA account while the
+/// account's primary password stays refused (fail closed) — the same
+/// `authenticate_legacy` seam IMAP/POP3 use, proven on the submission wire.
+#[tokio::test]
+async fn auth_accepts_app_password_for_2fa_account() {
+    let (addr, _spool, _dir) = spawn_submission().await;
+
+    // A dedicated 2FA user — never alice, who is the shared fixture the
+    // other tests authenticate as with her primary password.
+    let store = shared_store().await;
+    let identity = Identity::new(Arc::clone(&store), fast_config()).unwrap();
+    let tenant = store.create_tenant("submission-2fa").await.unwrap();
+    // The random tenant id keeps the global login username unique across
+    // reruns against the shared database.
+    let email = format!("app-pw-{tenant}@alo.test");
+    let user = store
+        .for_tenant(tenant.clone())
+        .create_user(&email)
+        .await
+        .unwrap();
+    identity
+        .set_password(&tenant, &user, &email, "primary-s3cret")
+        .await
+        .unwrap();
+    let (_record, secret) = identity
+        .create_app_password(&tenant, &user, "old mail client")
+        .await
+        .unwrap();
+    let app_pw = secret.reveal().to_owned();
+    let e = identity.enroll_totp(&tenant, &user, &email).await.unwrap();
+    let code = alo_identity::totp::current_code(&e.secret_base32).unwrap();
+    identity.confirm_totp(&tenant, &user, &code).await.unwrap();
+
+    // Connect, upgrade to TLS, authenticate.
+    let tcp = TcpStream::connect(addr).await.unwrap();
+    let mut plain = Client::new(tcp);
+    assert!(plain.read_reply().await.starts_with("220 "));
+    plain.cmd_multiline("EHLO client.example").await;
+    assert!(plain.cmd("STARTTLS").await.starts_with("220 "));
+    let tcp = plain.into_inner();
+    let server_name = rustls::pki_types::ServerName::try_from("localhost").unwrap();
+    let tls: TlsStream<TcpStream> = tls_connector().connect(server_name, tcp).await.unwrap();
+    let mut sec = Client::new(tls);
+    sec.cmd_multiline("EHLO client.example").await;
+
+    // The primary password is refused (fail closed for 2FA)…
+    let primary = BASE64.encode(format!("\u{0}{email}\u{0}primary-s3cret"));
+    assert!(
+        sec.cmd(&format!("AUTH PLAIN {primary}"))
+            .await
+            .starts_with("535 ")
+    );
+    // …the app password authenticates.
+    let app = BASE64.encode(format!("\u{0}{email}\u{0}{app_pw}"));
+    assert!(
+        sec.cmd(&format!("AUTH PLAIN {app}"))
+            .await
+            .starts_with("235 ")
+    );
+    assert!(sec.cmd("QUIT").await.starts_with("221 "));
+}

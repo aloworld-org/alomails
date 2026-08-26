@@ -453,12 +453,85 @@ async fn two_factor_is_enforced_on_every_token_issuing_and_legacy_path() {
     // Legacy protocols (SMTP/IMAP/POP3) FAIL CLOSED for a 2FA account: a
     // bare password can't carry the second factor, so it is refused —
     // indistinguishably from a wrong password (no oracle). The user must use
-    // the OIDC flow. This closes the "2FA bypassable over IMAP/SMTP" gap.
+    // an app password or the OIDC flow. This closes the "2FA bypassable over
+    // IMAP/SMTP" gap.
     assert!(
         id.authenticate_legacy(&u.email, &u.password)
             .await
             .unwrap()
             .is_none(),
-        "legacy auth must refuse a 2FA-enabled account (fail closed)"
+        "legacy auth must refuse a 2FA-enabled account's primary (fail closed)"
+    );
+}
+
+/// The M1.2 seam: `authenticate_legacy` accepts app passwords, keeps the
+/// 2FA account's primary refused, and a 2FA user retrying their (refused)
+/// primary is never struck into backoff — so their app password keeps
+/// working.
+#[tokio::test]
+async fn legacy_seam_accepts_app_passwords_and_keeps_primary_refused_under_2fa() {
+    let (store, id) = setup().await;
+    let u = make_user(&store, &id, "app-pw-seam").await;
+
+    // A non-2FA account: primary works on legacy exactly as before, and an
+    // issued app password is a second valid credential beside it.
+    let (record, secret) = id
+        .create_app_password(&u.tenant, &u.user, "Thunderbird on the desk machine")
+        .await
+        .unwrap();
+    let app_pw = secret.reveal().to_owned();
+    assert!(
+        id.authenticate_legacy(&u.email, &u.password)
+            .await
+            .unwrap()
+            .is_some(),
+        "a non-2FA account's primary must keep working on legacy"
+    );
+    let p = id
+        .authenticate_legacy(&u.email, &app_pw)
+        .await
+        .unwrap()
+        .expect("app password must authenticate on legacy");
+    assert_eq!(p.tenant, u.tenant);
+    assert_eq!(p.user, u.user);
+    assert!(p.scope.is_empty(), "protocol logins grant no OAuth scope");
+
+    // Enable 2FA.
+    let e = id.enroll_totp(&u.tenant, &u.user, &u.email).await.unwrap();
+    let code = current_code(&e.secret_base32).unwrap();
+    id.confirm_totp(&u.tenant, &u.user, &code).await.unwrap();
+
+    // The primary is now refused on legacy — repeatedly, past the backoff's
+    // free-attempt budget: a correct-password policy refusal must never
+    // count as a guessing strike…
+    // (6 attempts: one past the backoff's free-attempt budget, so a
+    // wrongly-counted strike would arm it and fail the assertion below.)
+    for _ in 0..6 {
+        assert!(
+            id.authenticate_legacy(&u.email, &u.password)
+                .await
+                .unwrap()
+                .is_none(),
+            "a 2FA account's primary must stay refused on legacy"
+        );
+    }
+    // …so the app password still works afterwards (no backoff armed).
+    let p = id
+        .authenticate_legacy(&u.email, &app_pw)
+        .await
+        .unwrap()
+        .expect("app password must authenticate a 2FA account on legacy");
+    assert_eq!(p.user, u.user);
+
+    // Revoked → refused on the next connection, indistinguishably.
+    id.revoke_app_password(&u.tenant, &u.user, &record)
+        .await
+        .unwrap();
+    assert!(
+        id.authenticate_legacy(&u.email, &app_pw)
+            .await
+            .unwrap()
+            .is_none(),
+        "a revoked app password must fail on the next connection"
     );
 }

@@ -84,3 +84,37 @@ async fn pop3_rejects_bad_credentials() {
     c.write(b"PASS whatever\r\n").await;
     assert!(c.read_line().await.starts_with("-ERR"));
 }
+
+/// A 2FA account over POP3: the primary password is refused (fail
+/// closed), an app-specific password authenticates — the same
+/// `authenticate_legacy` seam IMAP and SMTP AUTH use.
+#[tokio::test]
+async fn pop3_accepts_app_password_for_2fa_account() {
+    let store = test_store().await;
+    let (tenant, user, email, pw) = make_user(&store, "pop3app").await;
+    let identity = test_identity(store.clone());
+    let (_record, secret) = identity
+        .create_app_password(&tenant, &user, "phone mail app")
+        .await
+        .unwrap();
+    let app_pw = secret.reveal().to_owned();
+    let e = identity.enroll_totp(&tenant, &user, &email).await.unwrap();
+    let code = alo_identity::totp::current_code(&e.secret_base32).unwrap();
+    identity.confirm_totp(&tenant, &user, &code).await.unwrap();
+
+    let addr = spawn_pop3(store.clone()).await;
+    let mut c = Client::attach(connect_tls(addr).await);
+    assert!(c.read_line().await.starts_with("+OK"));
+    // Primary refused (fail closed for 2FA)…
+    c.write(format!("USER {email}\r\n").as_bytes()).await;
+    c.read_line().await;
+    c.write(format!("PASS {pw}\r\n").as_bytes()).await;
+    assert!(c.read_line().await.starts_with("-ERR"));
+    // …app password accepted.
+    c.write(format!("USER {email}\r\n").as_bytes()).await;
+    c.read_line().await;
+    c.write(format!("PASS {app_pw}\r\n").as_bytes()).await;
+    assert!(c.read_line().await.starts_with("+OK"));
+    c.write(b"QUIT\r\n").await;
+    assert!(c.read_line().await.starts_with("+OK"));
+}

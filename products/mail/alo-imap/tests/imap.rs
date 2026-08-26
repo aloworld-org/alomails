@@ -418,6 +418,48 @@ async fn create_rejects_control_chars_in_name() {
     assert!(!resp.iter().any(|l| l.contains("9999 EXISTS")), "{resp:?}");
 }
 
+/// A 2FA account over real TLS IMAP: the primary password is refused
+/// (fail closed — a phished primary cannot bypass 2FA over IMAP), an
+/// app-specific password logs in and reaches the mailbox, and a revoked
+/// app password fails on the next connection. Non-2FA accounts logging in
+/// with their primary are every other test in this suite.
+#[tokio::test]
+async fn app_password_opens_legacy_login_for_2fa_accounts() {
+    let store = test_store().await;
+    let (tenant, user, email, pw) = make_user(&store, "app-pw").await;
+    let identity = test_identity(store.clone());
+
+    // Issue an app password, then enable TOTP on the account.
+    let (record, secret) = identity
+        .create_app_password(&tenant, &user, "Thunderbird on the desk machine")
+        .await
+        .unwrap();
+    let app_pw = secret.reveal().to_owned();
+    let e = identity.enroll_totp(&tenant, &user, &email).await.unwrap();
+    let code = alo_identity::totp::current_code(&e.secret_base32).unwrap();
+    identity.confirm_totp(&tenant, &user, &code).await.unwrap();
+
+    let addr = spawn_imap(store.clone()).await;
+
+    // The primary password is refused over IMAP (fail closed)…
+    let mut c = Client::connect(addr).await;
+    assert_no(&c.login(&email, &pw).await);
+
+    // …but the app password logs in and reaches the mailbox.
+    let mut c = Client::connect(addr).await;
+    assert_ok(&c.login(&email, &app_pw).await);
+    assert_ok(&c.command("SELECT INBOX").await);
+    assert_ok(&c.command("LOGOUT").await);
+
+    // Revoked → the next connection is refused.
+    identity
+        .revoke_app_password(&tenant, &user, &record)
+        .await
+        .unwrap();
+    let mut c = Client::connect(addr).await;
+    assert_no(&c.login(&email, &app_pw).await);
+}
+
 /// Extracts a numeric response code value (e.g. UIDVALIDITY) from lines.
 fn extract_code(lines: &[String], code: &str) -> String {
     for l in lines {

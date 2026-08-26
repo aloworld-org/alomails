@@ -833,9 +833,10 @@ async fn do_auth(
         write_reply(conn, &Reply::auth_failed()).await?;
         return Ok(false);
     };
-    // Legacy-protocol auth: constant-time verify, fails closed for 2FA
-    // accounts (they must use the OIDC flow), with per-username backoff on
-    // top of the per-connection cap. See docs/design/identity.md.
+    // Legacy-protocol auth: constant-time verify of the primary or an app
+    // password; a 2FA account's primary is refused (fail closed — app
+    // password or OIDC instead), with per-username backoff on top of the
+    // per-connection cap. See docs/design/identity.md.
     match identity
         .authenticate_legacy(&credentials.username, &credentials.password)
         .await

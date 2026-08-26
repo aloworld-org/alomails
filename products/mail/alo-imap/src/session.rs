@@ -406,8 +406,10 @@ impl Session {
     }
 
     async fn try_login(&mut self, tag: &str, user: &str, pass: &str) -> std::io::Result<()> {
-        // Legacy-protocol auth: fails closed for 2FA accounts (they must use
-        // the OIDC flow), with per-username backoff. See docs/design/identity.md.
+        // Legacy-protocol auth: accepts the primary password or an app
+        // password; a 2FA account's primary is refused (fail closed — app
+        // password or OIDC instead), with per-username backoff. See
+        // docs/design/identity.md.
         match self.identity.authenticate_legacy(user, pass).await {
             Ok(Some(principal)) => {
                 let acc = self.store.for_account(principal.tenant, principal.user);

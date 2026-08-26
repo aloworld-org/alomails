@@ -144,8 +144,10 @@ impl Identity {
     /// (`Ok(None)`). Returns a scope-less [`Principal`] on success.
     ///
     /// Note: for a 2FA-enabled user this still authenticates on the account
-    /// password (2FA is enforced on the OIDC browser flow until
-    /// app-specific passwords land — see `docs/design/identity.md`).
+    /// password — the fail-closed 2FA policy (and the app-password
+    /// alternative) lives one level up in
+    /// [`Identity::authenticate_legacy`], the entry point the protocols
+    /// actually call (see `docs/design/identity.md`).
     ///
     /// # Errors
     /// [`IdentityError::Store`] on a persistence failure.
@@ -174,18 +176,26 @@ impl Identity {
         }
     }
 
-    /// Authenticates a legacy mail protocol (SMTP AUTH, IMAP/POP3 `LOGIN`)
-    /// where there is nowhere to prompt for a second factor. On top of
-    /// [`Identity::authenticate_password`] it adds two protections the bare
-    /// password check lacks:
+    /// Authenticates a legacy mail protocol (SMTP AUTH, IMAP/POP3 `LOGIN`,
+    /// DAV HTTP Basic) where there is nowhere to prompt for a second
+    /// factor. On top of [`Identity::authenticate_password`] it adds the
+    /// protections the bare password check lacks:
     ///
-    /// - **Fail closed for 2FA accounts.** A basic-auth exchange cannot
-    ///   carry a TOTP code, so if the account has TOTP **enabled** this
-    ///   refuses (returns `None`, indistinguishable from a wrong password —
-    ///   no oracle). Such a user must authenticate via the OIDC flow (or, in
-    ///   future, an app-specific password). This closes the "2FA is
-    ///   bypassable over IMAP/SMTP" gap rather than leaving it to a
-    ///   deployment note.
+    /// - **Fail closed for a 2FA account's primary password.** A basic-auth
+    ///   exchange cannot carry a TOTP code, so if the account has TOTP
+    ///   **enabled** the primary password is refused (returns `None`,
+    ///   indistinguishable from a wrong password — no oracle). A phished
+    ///   primary therefore cannot bypass 2FA over IMAP/SMTP. Such a user
+    ///   connects a legacy client with an app-specific password instead.
+    /// - **App-specific passwords.** A secret that is not an accepted
+    ///   primary is tried against the user's app passwords
+    ///   ([`Identity::verify_app_password`]) — server-generated per-client
+    ///   credentials that carry no second-factor obligation, because they
+    ///   are issued from inside an already-authenticated session and are
+    ///   never a phishable, human-chosen secret. The 2FA-refusal path runs
+    ///   the same check, so "correct primary, policy-refused" costs the
+    ///   same argon2 work as "wrong password" and timing cannot say which
+    ///   happened.
     /// - **Per-username backoff across connections.** The protocols already
     ///   cap failures per connection; this adds a shared exponential backoff
     ///   keyed on the username so an attacker rotating TCP connections is
@@ -206,22 +216,45 @@ impl Identity {
         }
         match self.authenticate_password(username, password).await? {
             Some(principal) => {
-                if self
+                if !self
                     .totp_enabled(&principal.tenant, &principal.user)
                     .await?
                 {
-                    tracing::info!(
-                        "legacy auth refused: account has 2FA enabled — use the OIDC flow or an app password"
-                    );
-                    // Correct password, but policy-refused: no failure strike.
-                    return Ok(None);
+                    self.rate.record_success(&key);
+                    return Ok(Some(principal));
                 }
-                self.rate.record_success(&key);
-                Ok(Some(principal))
+                tracing::info!(
+                    "legacy auth refused primary password: account has 2FA enabled — use an app password or the OIDC flow"
+                );
+                // Run the app-password check anyway: it keeps this path's
+                // cost equal to the wrong-password path below (no "correct
+                // primary" timing oracle), and in the astronomically
+                // unlikely case the secret also IS an app password, that
+                // credential is valid in its own right.
+                match self.verify_app_password(username, password).await? {
+                    Some(principal) => {
+                        self.rate.record_success(&key);
+                        Ok(Some(principal))
+                    }
+                    // Correct password, but policy-refused: no failure
+                    // strike — the user is not guessing.
+                    None => Ok(None),
+                }
             }
             None => {
-                self.rate.record_failure(&key);
-                Ok(None)
+                // Not the primary password (or an unknown user): try the
+                // app passwords. The unknown-user path pays the dummy hash
+                // inside, so timing still never reveals user existence.
+                match self.verify_app_password(username, password).await? {
+                    Some(principal) => {
+                        self.rate.record_success(&key);
+                        Ok(Some(principal))
+                    }
+                    None => {
+                        self.rate.record_failure(&key);
+                        Ok(None)
+                    }
+                }
             }
         }
     }
