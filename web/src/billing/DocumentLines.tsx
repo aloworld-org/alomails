@@ -10,15 +10,16 @@
 // figure the browser had made up, which is the one thing the billing surface
 // never does.
 import { useState } from "react";
-import { GripVertical, PackageOpen, Plus, Trash2 } from "lucide-react";
+import { Crop, GripVertical, PackageOpen, Pencil, Plus, Trash2, X } from "lucide-react";
 
-import { ChoicePicker, IconButton, Input, Table, Td, Th, cx } from "../ds";
+import { Button, ChoicePicker, IconButton, Input, Modal, Table, Td, Th, cx } from "../ds";
 import { strings, useLocale } from "../i18n";
 import { formatAmount, formatQty, formatRate } from "./money";
 import { blankRow, isBlankRow, rowFromProduct, rowProblem } from "./lineRows";
 import type { LineRow, RowProblem } from "./lineRows";
 import type { BillingProduct, DocumentLine } from "./types";
 import type { QuoteColumns } from "./QuoteContentStudio";
+import type { QuoteLineContent } from "./quoteTableOptions";
 import { useQuoteTableOptions } from "./quoteTableOptions";
 import styles from "./billingStyles";
 
@@ -56,6 +57,170 @@ interface Props {
   nextKey: () => string;
 }
 
+type ImageDraft = Required<Pick<
+  QuoteLineContent,
+  "image" | "imageSize" | "imageFit" | "imagePosition" | "imageZoom"
+>> & { key: string };
+
+const IMAGE_SIZE = {
+  small: "size-16",
+  medium: "size-24",
+  large: "size-32",
+} as const;
+const IMAGE_POSITION = {
+  center: "object-center",
+  top: "object-top",
+  bottom: "object-bottom",
+  left: "object-left",
+  right: "object-right",
+} as const;
+const IMAGE_ZOOM = {
+  100: "scale-100",
+  125: "scale-125",
+  150: "scale-150",
+} as const;
+
+function imageDraft(key: string, content: QuoteLineContent): ImageDraft {
+  return {
+    key,
+    image: content.image,
+    imageSize: content.imageSize ?? "medium",
+    imageFit: content.imageFit ?? "cover",
+    imagePosition: content.imagePosition ?? "center",
+    imageZoom: content.imageZoom ?? 100,
+  };
+}
+
+function imageClasses(
+  content: Pick<
+    QuoteLineContent,
+    "imageFit" | "imagePosition" | "imageZoom"
+  >,
+): string {
+  return cx(
+    "size-full transition-transform",
+    content.imageFit === "contain" ? "object-contain" : "object-cover",
+    IMAGE_POSITION[content.imagePosition ?? "center"],
+    IMAGE_ZOOM[content.imageZoom ?? 100],
+  );
+}
+
+function ProductImageEditor({
+  draft,
+  onChange,
+  onApply,
+  onClose,
+}: {
+  draft: ImageDraft;
+  onChange: (draft: ImageDraft) => void;
+  onApply: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal
+      title="Edit product image"
+      icon={<Crop className="size-5" />}
+      onClose={onClose}
+      wide
+      actions={<IconButton label="Close image editor" icon={<X />} onClick={onClose} />}
+      footer={
+        <div className="ml-auto flex items-center gap-3">
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button onClick={onApply}>Apply image</Button>
+        </div>
+      }
+    >
+      <div className="grid min-h-0 gap-5 lg:grid-cols-[minmax(0,1fr)_15rem]">
+        <section className="rounded-xl border border-default bg-app p-5" aria-label="PDF preview">
+          <div className="mx-auto max-w-xl rounded-lg border border-default bg-surface p-8 shadow-sm">
+            <div className="mb-5 flex items-center justify-between border-b border-subtle pb-4">
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-wide text-accent">Quotation preview</span>
+                <p className="mt-1 text-sm text-secondary">This is the image size and crop used in the PDF.</p>
+              </div>
+              <span className="text-xs font-medium text-tertiary">A4</span>
+            </div>
+            <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 rounded-lg border border-subtle p-4">
+              <div className={cx("overflow-hidden rounded-lg border border-default bg-raised/30", IMAGE_SIZE[draft.imageSize])}>
+                <img src={draft.image} alt="Product PDF preview" className={imageClasses(draft)} />
+              </div>
+              <div className="min-w-0">
+                <div className="h-3 w-3/4 rounded-full bg-default" />
+                <div className="mt-3 h-2 w-full rounded-full bg-raised" />
+                <div className="mt-2 h-2 w-2/3 rounded-full bg-raised" />
+              </div>
+              <div className="h-3 w-20 rounded-full bg-accent-soft" />
+            </div>
+          </div>
+        </section>
+
+        <aside className="flex flex-col gap-5">
+          <EditorChoice
+            label="Image size"
+            value={draft.imageSize}
+            choices={[["small", "Small"], ["medium", "Medium"], ["large", "Large"]]}
+            onChange={(imageSize) => onChange({ ...draft, imageSize })}
+          />
+          <EditorChoice
+            label="Crop style"
+            value={draft.imageFit}
+            choices={[["cover", "Fill frame"], ["contain", "Show full image"]]}
+            onChange={(imageFit) => onChange({ ...draft, imageFit })}
+          />
+          <EditorChoice
+            label="Zoom"
+            value={String(draft.imageZoom)}
+            choices={[["100", "100%"], ["125", "125%"], ["150", "150%"]]}
+            onChange={(value) => onChange({ ...draft, imageZoom: Number(value) as ImageDraft["imageZoom"] })}
+          />
+          <EditorChoice
+            label="Focus area"
+            value={draft.imagePosition}
+            choices={[["center", "Centre"], ["top", "Top"], ["bottom", "Bottom"], ["left", "Left"], ["right", "Right"]]}
+            onChange={(imagePosition) => onChange({ ...draft, imagePosition })}
+          />
+        </aside>
+      </div>
+    </Modal>
+  );
+}
+
+function EditorChoice<T extends string>({
+  label,
+  value,
+  choices,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  choices: ReadonlyArray<readonly [T, string]>;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <fieldset>
+      <legend className="mb-2 text-xs font-semibold uppercase tracking-wide text-tertiary">{label}</legend>
+      <div className="grid grid-cols-2 gap-2">
+        {choices.map(([id, name]) => (
+          <button
+            key={id}
+            type="button"
+            className={cx(
+              "min-h-10 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+              value === id
+                ? "border-accent bg-accent-soft text-accent"
+                : "border-default bg-surface text-primary hover:border-accent/50 hover:bg-raised",
+            )}
+            aria-pressed={value === id}
+            onClick={() => onChange(id)}
+          >
+            {name}
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
 export function DocumentLines({
   rows,
   products,
@@ -72,6 +237,7 @@ export function DocumentLines({
   const tableOptions = useQuoteTableOptions();
   const [draggedKey, setDraggedKey] = useState<string | null>(null);
   const [dropTargetKey, setDropTargetKey] = useState<string | null>(null);
+  const [editingImage, setEditingImage] = useState<ImageDraft | null>(null);
 
   // The server replaces the whole set in the order sent, so the n-th line it
   // stored is the n-th row that was worth sending. That pairing is what lets a
@@ -232,18 +398,26 @@ export function DocumentLines({
                     <div className="mb-4 flex items-center gap-3 rounded-xl bg-raised/35 p-3">
                       <div
                         className={cx(
-                          "grid shrink-0 place-items-center overflow-hidden rounded-lg border border-default bg-surface",
-                          tableOptions.layout === "catalogue"
-                            ? "size-28"
-                            : "size-20",
+                          "group/image relative grid shrink-0 place-items-center overflow-hidden rounded-lg border border-default bg-surface",
+                          IMAGE_SIZE[content.imageSize ?? (tableOptions.layout === "catalogue" ? "large" : "medium")],
                         )}
+                        onDoubleClick={() => {
+                          if (content.image) setEditingImage(imageDraft(detailKey, content));
+                        }}
                       >
                         {content.image ? (
-                          <img
-                            src={content.image}
-                            alt="Product"
-                            className="size-full object-cover"
-                          />
+                          <>
+                            <img src={content.image} alt="Product" className={imageClasses(content)} />
+                            <button
+                              type="button"
+                              className="absolute right-2 top-2 grid size-9 place-items-center rounded-lg border border-default bg-surface text-primary shadow-sm transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
+                              aria-label="Edit product image"
+                              title="Edit product image"
+                              onClick={() => setEditingImage(imageDraft(detailKey, content))}
+                            >
+                              <Pencil className="size-4" aria-hidden="true" />
+                            </button>
+                          </>
                         ) : (
                           <PackageOpen
                             className="size-5 text-tertiary"
@@ -428,6 +602,18 @@ export function DocumentLines({
             onClick={() => onChange([...rows, blankRow(nextKey())])}
           />
         </div>
+        {editingImage !== null && (
+          <ProductImageEditor
+            draft={editingImage}
+            onChange={setEditingImage}
+            onClose={() => setEditingImage(null)}
+            onApply={() => {
+              const { key, ...image } = editingImage;
+              tableOptions.updateLineContent(key, image);
+              setEditingImage(null);
+            }}
+          />
+        )}
       </section>
     );
   }
@@ -497,16 +683,23 @@ export function DocumentLines({
                   {tableOptions.enabled && tableOptions.showImages && (
                     <td className="w-28">
                       {content.image ? (
-                        <img
-                          src={content.image}
-                          alt=""
+                        <span
                           className={cx(
-                            "rounded-lg object-cover",
-                            tableOptions.layout === "catalogue"
-                              ? "size-24"
-                              : "size-16",
+                            "block overflow-hidden rounded-lg border border-default bg-raised/30",
+                            IMAGE_SIZE[
+                              content.imageSize ??
+                                (tableOptions.layout === "catalogue"
+                                  ? "medium"
+                                  : "small")
+                            ],
                           )}
-                        />
+                        >
+                          <img
+                            src={content.image}
+                            alt=""
+                            className={imageClasses(content)}
+                          />
+                        </span>
                       ) : (
                         <span className="grid size-16 place-items-center rounded-lg bg-raised/40">
                           <PackageOpen className="size-5 text-tertiary" />
