@@ -581,6 +581,14 @@ export const QuoteContentStudio = forwardRef<
                               </BlockCommand>
                             </>
                           )}
+                          {block.kind === "image" && (
+                            <BlockCommand
+                              label="Edit block"
+                              onClick={() => setEditingImageId(block.id)}
+                            >
+                              <Pencil className="size-4" />
+                            </BlockCommand>
+                          )}
                           <BlockCommand
                             label="Move up"
                             disabled={index === 0}
@@ -1010,15 +1018,6 @@ function ImageContentBlock({
         )}
         onDoubleClick={readOnly ? undefined : onEdit}
       />
-      {!readOnly && (
-        <button
-          type="button"
-          className="absolute right-3 top-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-default bg-surface/95 px-3 text-sm font-semibold text-primary shadow-md transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
-          onClick={onEdit}
-        >
-          <Pencil className="size-4" aria-hidden="true" /> Edit image
-        </button>
-      )}
     </div>
   );
   const copy = (block.body || block.caption) && (
@@ -1062,10 +1061,10 @@ function ImageBlockEditor({
 }) {
   return (
     <Modal
-      title="Edit image block"
+      title="Edit content block"
       icon={<ImagePlus className="size-5" />}
       onClose={onClose}
-      wide
+      wide="extra"
       footer={
         <>
           <p className="mr-auto text-xs text-secondary">
@@ -1189,18 +1188,8 @@ const RICH_TEXT_TAGS = new Set([
   "UL",
 ]);
 
-function escapeRichText(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;")
-    .replaceAll("\n", "<br>");
-}
-
 function sanitizeRichText(value: string): string {
-  if (!value.includes("<")) return escapeRichText(value);
+  const hadMarkup = value.includes("<");
   const template = document.createElement("template");
   template.innerHTML = value;
   const elements = [...template.content.querySelectorAll("*")];
@@ -1212,7 +1201,8 @@ function sanitizeRichText(value: string): string {
     for (const attribute of [...element.attributes])
       element.removeAttribute(attribute.name);
   }
-  return template.innerHTML;
+  const sanitized = template.innerHTML;
+  return hadMarkup ? sanitized : sanitized.replaceAll("\n", "<br>");
 }
 
 function RichTextContent({ value }: { value: string }) {

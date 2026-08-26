@@ -32,8 +32,8 @@ export interface ModalProps {
   /** Header controls — a close button, usually. */
   actions?: ReactNode | undefined;
   footer?: ReactNode | undefined;
-  /** 720px instead of 480px, for a dialog that carries a table or two columns. */
-  wide?: boolean | undefined;
+  /** A wider dialog for tables/two columns, or an extra-wide document composer. */
+  wide?: boolean | "extra" | undefined;
   /** A dialog with a browser inside it — a symbol palette, a language list.
    *  Its content changes size with every keystroke, and a dialog that resizes
    *  under the pointer while you type is unusable, so the panel takes a fixed
@@ -184,9 +184,11 @@ export function Modal({
         ref={panel}
         className={[
           PANEL,
-          wide === true
-            ? "max-w-[var(--modal-width-wide)]"
-            : "max-w-[var(--modal-width)]",
+          wide === "extra"
+            ? "max-w-[64rem]"
+            : wide === true
+              ? "max-w-[var(--modal-width-wide)]"
+              : "max-w-[var(--modal-width)]",
           HEIGHT[shape],
         ]
           .filter(Boolean)
