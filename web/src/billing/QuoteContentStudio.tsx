@@ -1146,6 +1146,7 @@ function ImageBlockEditor({
           <div className="md:col-span-4">
             <ImageOptionGroup
               label="Composition"
+              visual="composition"
               value={block.placement ?? "full"}
               options={[
                 ["full", "Below image"],
@@ -1165,6 +1166,7 @@ function ImageBlockEditor({
           <div className="md:col-span-4">
             <ImageOptionGroup
               label="Image frame"
+              visual="frame"
               value={block.aspect ?? "landscape"}
               options={[
                 ["natural", "Natural"],
@@ -1177,6 +1179,7 @@ function ImageBlockEditor({
           <div className="md:col-span-4">
             <ImageOptionGroup
               label="Fit"
+              visual="fit"
               value={block.fit ?? "cover"}
               options={[
                 ["cover", "Fill frame"],
@@ -1539,11 +1542,13 @@ function ImageColumnRatioPicker({
 
 function ImageOptionGroup<T extends string | number>({
   label,
+  visual,
   value,
   options,
   onChange,
 }: {
   label: string;
+  visual?: "composition" | "frame" | "fit";
   value: T;
   options: Array<readonly [T, string]>;
   onChange: (value: T) => void;
@@ -1558,7 +1563,10 @@ function ImageOptionGroup<T extends string | number>({
       </p>
       <div
         className={cx(
-          "grid gap-1 rounded-xl border border-default bg-raised/60 p-1 shadow-sm",
+          "grid",
+          visual
+            ? "gap-2"
+            : "gap-1 rounded-xl border border-default bg-raised/60 p-1 shadow-sm",
           options.length === 3 ? "grid-cols-3" : "grid-cols-2",
         )}
       >
@@ -1568,18 +1576,90 @@ function ImageOptionGroup<T extends string | number>({
             type="button"
             aria-pressed={value === id}
             className={cx(
-              "relative min-h-11 whitespace-nowrap rounded-lg border px-3 text-center text-sm font-medium transition-colors hover:bg-accent-soft hover:text-accent",
+              "relative whitespace-nowrap border text-center text-sm font-medium transition-all hover:border-accent hover:bg-accent-soft hover:text-accent",
+              visual
+                ? "min-h-[5.75rem] rounded-xl bg-surface p-2 shadow-sm hover:-translate-y-px hover:shadow-md"
+                : "min-h-11 rounded-lg px-3",
               value === id
                 ? "border-accent/30 bg-accent-soft font-semibold text-accent shadow-sm ring-1 ring-inset ring-accent/15"
-                : "border-transparent bg-transparent text-secondary",
+                : visual
+                  ? "border-default text-secondary"
+                  : "border-transparent bg-transparent text-secondary",
             )}
             onClick={() => onChange(id)}
           >
-            {name}
+            {visual && (
+              <ImageOptionPreview kind={visual} option={String(id)} />
+            )}
+            <span className={cx(visual && "mt-2 block")}>{name}</span>
           </button>
         ))}
       </div>
     </fieldset>
+  );
+}
+
+function ImageOptionPreview({
+  kind,
+  option,
+}: {
+  kind: "composition" | "frame" | "fit";
+  option: string;
+}) {
+  if (kind === "composition") {
+    if (option === "full")
+      return (
+        <span className="mx-auto flex h-10 max-w-24 flex-col gap-1 rounded-md bg-raised p-1.5">
+          <span className="h-4 rounded-sm bg-accent/25" />
+          <span className="h-1 rounded-full bg-tertiary/30" />
+          <span className="h-1 w-3/4 rounded-full bg-tertiary/20" />
+        </span>
+      );
+    const imageFirst = option === "left";
+    return (
+      <span className="mx-auto flex h-10 max-w-24 gap-1 rounded-md bg-raised p-1.5">
+        <span
+          className={cx(
+            "w-2/5 rounded-sm bg-accent/25",
+            imageFirst ? "order-1" : "order-2",
+          )}
+        />
+        <span
+          className={cx(
+            "flex w-3/5 flex-col justify-center gap-1",
+            imageFirst ? "order-2" : "order-1",
+          )}
+        >
+          <span className="h-1 rounded-full bg-tertiary/30" />
+          <span className="h-1 w-4/5 rounded-full bg-tertiary/20" />
+          <span className="h-1 w-2/3 rounded-full bg-tertiary/20" />
+        </span>
+      </span>
+    );
+  }
+  if (kind === "frame") {
+    return (
+      <span className="mx-auto flex h-10 max-w-24 items-center justify-center rounded-md bg-raised p-1.5">
+        <span
+          className={cx(
+            "border border-accent/30 bg-accent/25",
+            option === "natural" && "h-7 w-5 rounded-sm",
+            option === "landscape" && "h-5 w-full rounded-sm",
+            option === "square" && "size-7 rounded-sm",
+          )}
+        />
+      </span>
+    );
+  }
+  return (
+    <span className="mx-auto flex h-10 max-w-24 items-center justify-center overflow-hidden rounded-md border border-subtle bg-surface p-1">
+      <span
+        className={cx(
+          "bg-accent/25",
+          option === "cover" ? "size-full rounded-sm" : "h-6 w-3/5 rounded-sm",
+        )}
+      />
+    </span>
   );
 }
 
