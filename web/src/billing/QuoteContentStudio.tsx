@@ -56,6 +56,7 @@ type Block =
       caption: string;
       body?: string;
       placement?: "full" | "left" | "right";
+      columnRatio?: "33-67" | "40-60" | "50-50" | "60-40" | "67-33";
       aspect?: "natural" | "landscape" | "square";
       fit?: "cover" | "contain";
       zoom?: 50 | 75 | 100 | 125 | 150 | 175 | 200;
@@ -995,6 +996,29 @@ const IMAGE_BLOCK_ZOOM = {
   200: "scale-200",
 } as const;
 
+const IMAGE_COLUMN_GRID = {
+  "33-67": {
+    left: "md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]",
+    right: "md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]",
+  },
+  "40-60": {
+    left: "md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]",
+    right: "md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]",
+  },
+  "50-50": {
+    left: "md:grid-cols-2",
+    right: "md:grid-cols-2",
+  },
+  "60-40": {
+    left: "md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]",
+    right: "md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]",
+  },
+  "67-33": {
+    left: "md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]",
+    right: "md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]",
+  },
+} as const;
+
 function QuotationBlockImage({
   block,
   onDoubleClick,
@@ -1042,7 +1066,7 @@ function ImageContentBlock({
   const image = (
     <QuotationBlockImage
       block={block}
-      onDoubleClick={readOnly ? undefined : onEdit}
+      {...(readOnly ? {} : { onDoubleClick: onEdit })}
     />
   );
   const copy = (block.body || block.caption) && (
@@ -1066,7 +1090,12 @@ function ImageContentBlock({
       </figure>
     );
   return (
-    <figure className="grid items-center gap-6 md:grid-cols-2">
+    <figure
+      className={cx(
+        "grid items-center gap-6",
+        IMAGE_COLUMN_GRID[block.columnRatio ?? "50-50"][placement],
+      )}
+    >
       {placement === "left" ? image : copy}
       {placement === "left" ? copy : image}
     </figure>
@@ -1113,59 +1142,83 @@ function ImageBlockEditor({
         <p className="mt-1 text-xs text-secondary">
           Choose how this content block will appear in the quotation.
         </p>
-        <div className="mt-5 grid items-start gap-x-7 gap-y-5 md:grid-cols-2 xl:grid-cols-[1.25fr_1fr_1fr_1.05fr]">
-          <ImageOptionGroup
-            label="Place text"
-            value={block.placement ?? "full"}
-            options={[
-              ["full", "Below image"],
-              ["left", "Image left"],
-              ["right", "Image right"],
-            ]}
-            onChange={(placement) => onChange({ placement })}
-          />
-          <ImageOptionGroup
-            label="Image frame"
-            value={block.aspect ?? "landscape"}
-            options={[
-              ["natural", "Natural"],
-              ["landscape", "Wide"],
-              ["square", "Square"],
-            ]}
-            onChange={(aspect) => onChange({ aspect })}
-          />
-          <ImageOptionGroup
-            label="Fit"
-            value={block.fit ?? "cover"}
-            options={[
-              ["cover", "Fill frame"],
-              ["contain", "Whole image"],
-            ]}
-            onChange={(fit) =>
-              onChange({
-                fit,
-                zoom:
-                  fit === "cover" && (block.zoom ?? 100) < 100
-                    ? 100
-                    : block.zoom,
-              })
-            }
-          />
-          <ImageZoomControl
-            value={
-              block.fit === "cover"
-                ? (Math.max(100, block.zoom ?? 100) as Exclude<
-                    ImageBlock["zoom"],
-                    undefined
-                  >)
-                : (block.zoom ?? 100)
-            }
-            minimum={block.fit === "cover" ? 100 : 50}
-            onChange={(zoom) => onChange({ zoom })}
-          />
+        <div className="mt-5 grid items-start gap-x-6 gap-y-5 md:grid-cols-12">
+          <div className="md:col-span-4">
+            <ImageOptionGroup
+              label="Composition"
+              value={block.placement ?? "full"}
+              options={[
+                ["full", "Below image"],
+                ["left", "Image left"],
+                ["right", "Image right"],
+              ]}
+              onChange={(placement) => onChange({ placement })}
+            />
+          </div>
+          <div className="md:col-span-8">
+            <ImageColumnRatioPicker
+              value={block.columnRatio ?? "50-50"}
+              placement={block.placement ?? "full"}
+              onChange={(columnRatio) => onChange({ columnRatio })}
+            />
+          </div>
+          <div className="md:col-span-4">
+            <ImageOptionGroup
+              label="Image frame"
+              value={block.aspect ?? "landscape"}
+              options={[
+                ["natural", "Natural"],
+                ["landscape", "Wide"],
+                ["square", "Square"],
+              ]}
+              onChange={(aspect) => onChange({ aspect })}
+            />
+          </div>
+          <div className="md:col-span-4">
+            <ImageOptionGroup
+              label="Fit"
+              value={block.fit ?? "cover"}
+              options={[
+                ["cover", "Fill frame"],
+                ["contain", "Whole image"],
+              ]}
+              onChange={(fit) =>
+                onChange({
+                  fit,
+                  zoom:
+                    fit === "cover" && (block.zoom ?? 100) < 100
+                      ? 100
+                      : (block.zoom ?? 100),
+                })
+              }
+            />
+          </div>
+          <div className="md:col-span-4">
+            <ImageZoomControl
+              value={
+                block.fit === "cover"
+                  ? (Math.max(100, block.zoom ?? 100) as Exclude<
+                      ImageBlock["zoom"],
+                      undefined
+                    >)
+                  : (block.zoom ?? 100)
+              }
+              minimum={block.fit === "cover" ? 100 : 50}
+              onChange={(zoom) => onChange({ zoom })}
+            />
+          </div>
         </div>
       </section>
-      <div className="grid items-start gap-6 md:grid-cols-2">
+      <div
+        className={cx(
+          "grid items-start gap-6",
+          (block.placement ?? "full") === "full"
+            ? "md:grid-cols-2"
+            : IMAGE_COLUMN_GRID[block.columnRatio ?? "50-50"][
+                block.placement === "right" ? "right" : "left"
+              ],
+        )}
+      >
         <section className="min-w-0">
           <div className="mb-2 flex min-h-10 items-center justify-between gap-3">
             <h4 className="text-sm font-semibold text-primary">Image</h4>
@@ -1395,6 +1448,92 @@ function RichTextCommand({
         {label}
       </span>
     </button>
+  );
+}
+
+const IMAGE_COLUMN_RATIOS = [
+  ["33-67", 33, 67],
+  ["40-60", 40, 60],
+  ["50-50", 50, 50],
+  ["60-40", 60, 40],
+  ["67-33", 67, 33],
+] as const;
+const IMAGE_RATIO_WIDTH = {
+  33: "w-1/3",
+  40: "w-2/5",
+  50: "w-1/2",
+  60: "w-3/5",
+  67: "w-2/3",
+} as const;
+
+function ImageColumnRatioPicker({
+  value,
+  placement,
+  onChange,
+}: {
+  value: NonNullable<ImageBlock["columnRatio"]>;
+  placement: NonNullable<ImageBlock["placement"]>;
+  onChange: (value: NonNullable<ImageBlock["columnRatio"]>) => void;
+}) {
+  const disabled = placement === "full";
+  return (
+    <fieldset className="min-w-0" disabled={disabled}>
+      <legend className="sr-only">Column width</legend>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-tertiary">
+          Column width
+        </p>
+        {disabled && (
+          <span className="text-[11px] text-tertiary">Side-by-side only</span>
+        )}
+      </div>
+      <div className="grid grid-cols-5 gap-1.5">
+        {IMAGE_COLUMN_RATIOS.map(([id, image, text]) => {
+          const selected = value === id;
+          const imageFirst = placement !== "right";
+          return (
+            <button
+              key={id}
+              type="button"
+              aria-label={`Image ${image}%, text ${text}%`}
+              aria-pressed={selected}
+              className={cx(
+                "group rounded-lg border bg-surface p-1.5 transition-colors hover:border-accent hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40",
+                selected
+                  ? "border-accent ring-1 ring-inset ring-accent/15"
+                  : "border-default",
+              )}
+              onClick={() => onChange(id)}
+            >
+              <span className="flex h-7 gap-1 overflow-hidden rounded bg-raised p-1">
+                <span
+                  className={cx(
+                    "rounded-sm bg-accent/25",
+                    imageFirst ? "order-1" : "order-2",
+                    IMAGE_RATIO_WIDTH[image],
+                  )}
+                />
+                <span
+                  className={cx(
+                    "rounded-sm bg-surface shadow-sm",
+                    imageFirst ? "order-2" : "order-1",
+                    IMAGE_RATIO_WIDTH[text],
+                  )}
+                />
+              </span>
+              <span
+                className={cx(
+                  "mt-1 block text-center text-[10px] font-semibold tabular-nums",
+                  selected ? "text-accent" : "text-tertiary",
+                )}
+              >
+                {image}:{text}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
   );
 }
 
