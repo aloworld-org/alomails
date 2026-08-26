@@ -17,7 +17,7 @@
 // entitled to make — so "Lapsed" is a chip here, not a locked door.
 import { useCallback, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { CalendarDays, Eye, FileText, Palette, Pencil } from "lucide-react";
+import { Eye, Palette, Pencil } from "lucide-react";
 
 import { RecordHistory } from "../audit";
 import { strings, useLocale } from "../i18n";
@@ -29,7 +29,6 @@ import type { CreationTemplate } from "./DocumentEditor";
 import type { DocumentHeader, DocumentPatch } from "./documentDraft";
 import { useDocumentDraft } from "./documentDraft";
 import { blankRow, rowFromProduct } from "./lineRows";
-import { formatAmount } from "./money";
 import { Field } from "./parts";
 import { usePickers } from "./pickers";
 import { QuoteChips } from "./status";
@@ -143,10 +142,6 @@ export function QuoteEditor() {
   }
 
   const invoiceId = draft.aside;
-  const customerName =
-    quote === null
-      ? ""
-      : (pickers.customers.find((customer) => customer.id === quote.customerId)?.name ?? "");
   const services = pickers.products.filter((product) => !product.stocked && !product.archived);
   const rowsFromProducts = (products: typeof services) => (nextKey: () => string) =>
     products.map((product) =>
@@ -200,41 +195,7 @@ export function QuoteEditor() {
             : strings.billingQuoteClosedNotice,
       }}
       chips={quote === null ? null : <QuoteChips quote={quote} />}
-      lead={
-        quote === null ? null : (
-          <section className={styles.quoteHero}>
-            <div className={styles.quoteHeroIdentity}>
-              <span className={styles.quoteHeroIcon} aria-hidden="true">
-                <FileText size={22} />
-              </span>
-              <div className="min-w-0">
-                <p className={styles.quoteEyebrow}>{strings.billingQuotation}</p>
-                <h1 className={styles.quoteCustomer}>{customerName}</h1>
-                <p className={styles.quotePreparedFor}>{strings.billingPreparedFor}</p>
-              </div>
-            </div>
-            <div className={styles.quoteHeroMetrics}>
-              <div className={styles.quoteMetric}>
-                <span>{strings.billingTotalsGross}</span>
-                <strong>
-                  {formatAmount(quote.totals.grossCents, locale, quote.currency)} {quote.currency}
-                </strong>
-                <small>{strings.billingIncludingVat}</small>
-              </div>
-              <div className={styles.quoteMetric}>
-                <span className="inline-flex items-center gap-1.5">
-                  <CalendarDays size={14} aria-hidden="true" />
-                  {strings.billingFieldValidUntil}
-                </span>
-                <strong>
-                  {formatDocumentDate(quote.validUntil, locale, strings.billingNoDate)}
-                </strong>
-                <small>{strings.billingValidForDays(quote.validDays)}</small>
-              </div>
-            </div>
-          </section>
-        )
-      }
+      showSummary={!draft.readOnly && !preview}
       documentBody={
         id === undefined ? null : (
           <QuoteContentStudio ref={quoteStudio} quoteId={id} readOnly={draft.readOnly || preview} preview={preview} />

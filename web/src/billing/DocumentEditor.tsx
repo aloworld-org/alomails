@@ -71,6 +71,8 @@ interface Props<T extends StoredDocument, A> {
   actions: DocumentAction[];
   /** Optional document-specific presentation above the accounting fields. */
   lead?: ReactNode;
+  /** Whether to show the editable document metadata panel. */
+  showSummary?: boolean;
   /** Rich content between the document details and its commercial lines. */
   documentBody?: ReactNode;
   /** Document-level commands rendered beside save and print. */
@@ -99,6 +101,7 @@ export function DocumentEditor<T extends StoredDocument, A>({
   dates,
   actions,
   lead,
+  showSummary = true,
   documentBody,
   editorActions,
   presentationReadOnly = false,
@@ -464,7 +467,8 @@ export function DocumentEditor<T extends StoredDocument, A>({
 
         <div className={styles.editorBody}>
         {lead}
-        <section className={styles.documentSummary}>
+        {showSummary && (
+          <section className={styles.documentSummary}>
           <div className={styles.headerFields}>
             <Field
               label={strings.billingFieldCustomer}
@@ -529,7 +533,8 @@ export function DocumentEditor<T extends StoredDocument, A>({
               )}
             </Field>
           </div>
-        </section>
+          </section>
+        )}
 
         {documentBody}
 
