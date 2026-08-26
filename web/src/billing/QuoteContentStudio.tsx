@@ -2623,7 +2623,7 @@ function CustomizeQuote({
         </button>
       }
       footer={
-        <>
+        <div className="flex w-full items-center gap-3 px-1">
           <p
             className={cx(
               "mr-auto text-xs",
@@ -2633,11 +2633,11 @@ function CustomizeQuote({
             {saveError || "Changes are saved automatically."}
           </p>
           <Button onClick={onClose}>Done</Button>
-        </>
+        </div>
       }
     >
-      <div className="space-y-7">
-        <section className="flex flex-wrap items-center gap-5 rounded-2xl border border-default bg-raised/35 p-4">
+      <div className="space-y-7 p-2">
+        <section className="flex flex-wrap items-center gap-5 rounded-2xl border border-default bg-raised/35 p-5">
           <div className="min-w-52 flex-1">
             <h3 className="text-base font-semibold text-primary">Brand mark</h3>
             <p className="mt-1 text-sm leading-relaxed text-secondary">
@@ -2715,7 +2715,7 @@ function CustomizeQuote({
                   type="button"
                   aria-pressed={design.headerAlignment === alignment}
                   className={cx(
-                    "group relative min-h-40 overflow-hidden rounded-2xl border p-3 text-left transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
+                    "group relative min-h-40 overflow-hidden rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
                     design.headerAlignment === alignment
                       ? "border-accent bg-accent-soft/30 shadow-sm"
                       : "border-default bg-surface shadow-sm",
