@@ -1043,19 +1043,18 @@ function ListBlockEditor({
         {rows.map((item, index) => (
           <div
             key={index}
-            className="group/list-item relative grid grid-cols-[2.25rem_minmax(0,1fr)] items-center gap-3 rounded-xl border border-default bg-surface p-3 shadow-sm transition-colors hover:border-accent/30 focus-within:border-accent/30"
+            className="group/list-item grid grid-cols-[2.25rem_minmax(0,1fr)_7.75rem] items-center gap-3 rounded-xl border border-default bg-surface p-3 shadow-sm transition-colors hover:border-accent/30 focus-within:border-accent/30 max-md:grid-cols-[2.25rem_minmax(0,1fr)]"
           >
             <span className="grid size-9 place-items-center rounded-lg bg-raised text-sm font-semibold text-secondary">
               {ordered ? index + 1 : "•"}
             </span>
             <Input
-              className="pr-32 max-md:pr-3"
               value={item}
               aria-label={`${ordered ? "Numbered" : "Bullet"} item ${index + 1}`}
               placeholder="Write an item"
               onChange={(event) => replace(index, event.target.value)}
             />
-            <div className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1 rounded-lg bg-surface/95 p-1 opacity-0 shadow-sm transition-opacity group-hover/list-item:opacity-100 group-focus-within/list-item:opacity-100 max-md:static max-md:col-span-2 max-md:translate-y-0 max-md:justify-self-end max-md:opacity-100 max-md:shadow-none">
+            <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover/list-item:opacity-100 group-focus-within/list-item:opacity-100 max-md:col-span-2 max-md:justify-self-end max-md:opacity-100">
               <BlockCommand
                 label="Move item up"
                 disabled={index === 0}
