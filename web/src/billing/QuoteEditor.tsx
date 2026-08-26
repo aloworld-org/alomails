@@ -258,16 +258,20 @@ export function QuoteEditor() {
       }
       editorActions={
         quote === null ? null : (
-          <div className="flex items-center gap-1">
-            {quote.status !== "draft" && (
-              <button
-                type="button"
-                className={styles.linkAction}
-                onClick={() => void editAsDraft()}
-              >
-                <Pencil size={15} aria-hidden="true" /> Edit quote
-              </button>
-            )}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className={styles.linkAction}
+              onClick={() => void editAsDraft()}
+              disabled={quote.status === "draft"}
+              title={
+                quote.status === "draft"
+                  ? "This quote is already editable"
+                  : "Create an editable revision"
+              }
+            >
+              <Pencil size={15} aria-hidden="true" /> Edit quote
+            </button>
             <button
               type="button"
               className={styles.linkAction}
@@ -281,12 +285,7 @@ export function QuoteEditor() {
               aria-pressed={preview}
               onClick={() => setPreview((value) => !value)}
             >
-              {preview ? (
-                <Pencil size={15} aria-hidden="true" />
-              ) : (
-                <Eye size={15} aria-hidden="true" />
-              )}
-              {preview ? "Edit" : "Preview"}
+              <Eye size={15} aria-hidden="true" /> Preview
             </button>
           </div>
         )

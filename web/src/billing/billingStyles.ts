@@ -43,7 +43,7 @@ const styles = {
   archivedRow: "opacity-60",
   rowActions: "whitespace-nowrap text-right",
   linkAction:
-    "inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-transparent !px-3 !py-2 text-sm font-medium !text-secondary !no-underline transition-colors hover:bg-raised hover:!text-accent hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+    "inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-transparent !px-3 !py-2 text-sm font-medium !text-secondary !no-underline transition-colors hover:bg-raised hover:!text-accent hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:bg-transparent disabled:!text-tertiary disabled:opacity-55 disabled:hover:bg-transparent disabled:hover:!text-tertiary",
   empty:
     "flex min-h-72 flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-subtle bg-surface p-8 text-center",
   customerEmptyLayout: "flex min-h-0 flex-1 overflow-auto pb-2",

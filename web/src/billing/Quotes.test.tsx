@@ -490,6 +490,23 @@ describe("the quote draft editor", () => {
 });
 
 describe("the offer's transitions", () => {
+  test("keeps the quotation action bar stable and disables unavailable actions", async () => {
+    reply("/billing/quotes/quo-1", "GET", { quote: DRAFT, invoiceId: null });
+    ui("/billing/quotes/quo-1");
+
+    const title = await screen.findByRole("heading", {
+      name: strings.billingDraftQuote,
+    });
+    const actions = within(title.parentElement as HTMLElement);
+    const edit = actions.getByRole("button", { name: "Edit quote" });
+    expect((edit as HTMLButtonElement).disabled).toBe(true);
+    expect(actions.getByRole("button", { name: "Customize" })).toBeTruthy();
+    expect(actions.getByRole("button", { name: "Preview" })).toBeTruthy();
+    expect(
+      actions.getByRole("button", { name: strings.billingPrint }),
+    ).toBeTruthy();
+  });
+
   test("editing a finalized quote creates an editable revision with the same lines", async () => {
     reply("/billing/quotes/quo-2", "GET", { quote: SENT, invoiceId: null });
     ui("/billing/quotes/quo-2");

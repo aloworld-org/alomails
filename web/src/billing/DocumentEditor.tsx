@@ -677,13 +677,17 @@ export function DocumentEditor<T extends StoredDocument, A>({
               {strings.billingSaveNow}
             </button>
           )}
-          {document !== null && onPrint !== undefined && (
+          {document !== null && (
             <button
               type="button"
               className={styles.linkAction}
               onClick={() => void print()}
-              disabled={printing || !saved}
-              title={saved ? undefined : strings.billingPrintUnsaved}
+              disabled={onPrint === undefined || printing || !saved}
+              title={
+                onPrint === undefined || !saved
+                  ? strings.billingPrintUnsaved
+                  : undefined
+              }
             >
               <Printer size={14} aria-hidden="true" /> {strings.billingPrint}
             </button>
