@@ -415,6 +415,50 @@ pub fn uid_of(text: &str) -> Option<String> {
     None
 }
 
+/// The `RECURRENCE-ID` of the first `VEVENT`, if present — the single instance
+/// an iMIP `CANCEL` (or update) names, as the UTC instant of that occurrence's
+/// original slot. Read on its own (not via [`from_ics`], whose parsed events
+/// deliberately keep `recurrence_id: None` — the CalDAV override-sync
+/// contract). Accepts the same value shapes the serializer emits: a UTC
+/// date-time, a `VALUE=DATE` date, or a `TZID=<zone>` wall-clock time.
+pub fn recurrence_id_of(text: &str) -> Option<OffsetDateTime> {
+    let unfolded = unfold(text);
+    let mut in_event = false;
+    for line in unfolded.lines() {
+        let upper = line.to_ascii_uppercase();
+        if upper == "BEGIN:VEVENT" {
+            in_event = true;
+            continue;
+        }
+        if upper == "END:VEVENT" {
+            break;
+        }
+        if !in_event {
+            continue;
+        }
+        let Some((spec, value)) = line.split_once(':') else {
+            continue;
+        };
+        let mut segs = spec.split(';');
+        if !segs
+            .next()
+            .unwrap_or("")
+            .eq_ignore_ascii_case("RECURRENCE-ID")
+        {
+            continue;
+        }
+        let params: Vec<&str> = segs.collect();
+        let is_date = params.iter().any(|p| p.eq_ignore_ascii_case("VALUE=DATE"));
+        let tzid = params.iter().find_map(|p| {
+            p.split_once('=')
+                .filter(|(k, _)| k.eq_ignore_ascii_case("TZID"))
+                .map(|(_, v)| v)
+        });
+        return parse_dt(value.trim(), is_date, tzid).map(|(dt, _)| dt);
+    }
+    None
+}
+
 /// The `ORGANIZER` address of the first `VEVENT` (any `mailto:` prefix and
 /// parameters stripped), if present. A REPLY must be addressed here, and the
 /// stored event does not keep it — it is read from the inbound invitation.
@@ -1011,6 +1055,33 @@ mod tests {
         assert_eq!(e.rdates.len(), 1, "the PERIOD value is skipped");
         assert_eq!(fmt_utc(e.rdates[0]), "20260806T090000Z");
         assert!(to_ics(&e).contains("RDATE:20260806T090000Z"));
+    }
+
+    #[test]
+    fn recurrence_id_of_reads_all_value_shapes() {
+        let at = |h: u8| {
+            OffsetDateTime::new_utc(
+                Date::from_calendar_date(2026, time::Month::September, 8).unwrap(),
+                Time::from_hms(h, 0, 0).unwrap(),
+            )
+        };
+        // A one-instance CANCEL: same UID, RECURRENCE-ID at the cancelled slot.
+        let utc = "BEGIN:VCALENDAR\r\nMETHOD:CANCEL\r\nBEGIN:VEVENT\r\nUID:e1\r\n\
+                   RECURRENCE-ID:20260908T090000Z\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+        assert_eq!(recurrence_id_of(utc), Some(at(9)));
+        // All-day instance (VALUE=DATE) → midnight UTC of that date.
+        let date = "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\n\
+                    RECURRENCE-ID;VALUE=DATE:20260908\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+        assert_eq!(recurrence_id_of(date), Some(at(0)));
+        // Zoned wall-clock: 09:00 Brussels in CEST is 07:00Z.
+        let zoned = "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\n\
+                     RECURRENCE-ID;TZID=Europe/Brussels:20260908T090000\r\n\
+                     END:VEVENT\r\nEND:VCALENDAR\r\n";
+        assert_eq!(recurrence_id_of(zoned), Some(at(7)));
+        // A series-level CANCEL names no instance.
+        let series = "BEGIN:VCALENDAR\r\nMETHOD:CANCEL\r\nBEGIN:VEVENT\r\nUID:e1\r\n\
+                      END:VEVENT\r\nEND:VCALENDAR\r\n";
+        assert_eq!(recurrence_id_of(series), None);
     }
 
     #[test]

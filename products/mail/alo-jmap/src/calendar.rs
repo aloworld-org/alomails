@@ -365,12 +365,15 @@ struct CancelBody {
 }
 
 /// `POST /calendar/cancel` — apply an organizer's cancellation. Loads the
-/// message (account-scoped), confirms it is a `METHOD:CANCEL`, and removes the
-/// matching event (by `UID`) from the caller's calendar. Removing an event that
-/// isn't there (declined, or already removed) is success with `removed:false` —
-/// the cancellation is honoured either way. Re-reading the message server-side
-/// means a client can't ask to delete an arbitrary id: only the `UID` named by
-/// a real cancellation the user received is acted on.
+/// message (account-scoped), confirms it is a `METHOD:CANCEL`, and applies it
+/// to the caller's calendar: a CANCEL naming a single instance (`RECURRENCE-ID`,
+/// RFC 5546 §3.2.5) excludes just that occurrence of the stored series (an
+/// `EXDATE` — the rest of the series stays), while one without removes the
+/// whole event (by `UID`). Cancelling what isn't there (declined, or already
+/// removed) is success with `removed:false` — the cancellation is honoured
+/// either way; the response's `scope` says which shape was applied. Re-reading
+/// the message server-side means a client can't ask to delete an arbitrary id:
+/// only what a real cancellation the user received names is acted on.
 pub async fn cancel(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -395,12 +398,29 @@ pub async fn cancel(
         return Err(not_cancel());
     }
     let uid = alo_store::ical::uid_of(&ics).ok_or_else(not_cancel)?;
+    // A CANCEL naming one instance excludes that occurrence; the series stays.
+    if let Some(recurrence_id) = alo_store::ical::recurrence_id_of(&ics) {
+        let removed = match account
+            .acc
+            .exclude_occurrence(&EventId::new(uid), recurrence_id)
+            .await
+        {
+            Ok(()) => true,
+            Err(StoreError::NotFound) => false,
+            Err(_) => return Err(Problem::server_error()),
+        };
+        return Ok(Json(
+            json!({ "status": "ok", "removed": removed, "scope": "occurrence" }),
+        ));
+    }
     let removed = match account.acc.delete_event(&EventId::new(uid)).await {
         Ok(()) => true,
         Err(StoreError::NotFound) => false,
         Err(_) => return Err(Problem::server_error()),
     };
-    Ok(Json(json!({ "status": "ok", "removed": removed })))
+    Ok(Json(
+        json!({ "status": "ok", "removed": removed, "scope": "series" }),
+    ))
 }
 
 /// `POST /calendar/apply-reply` — record a guest's reply on the organizer's

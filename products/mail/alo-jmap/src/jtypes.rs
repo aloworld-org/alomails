@@ -306,6 +306,10 @@ pub fn email_json(
             "endsAt": inv.ends_at,
             "allDay": inv.all_day,
             "location": inv.location,
+            // For a REPLY: who responded and how, so the reply card can say
+            // "Ann accepted" instead of a nameless "someone responded".
+            "attendee": inv.attendee,
+            "partstat": inv.partstat,
         });
     }
     email
