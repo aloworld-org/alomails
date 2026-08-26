@@ -2,6 +2,16 @@
   height: 100%;
   min-height: 0;
   overflow: hidden;
+  /* The shell is the containing block for every absolutely-positioned
+     descendant that has no nearer positioned ancestor. Without this, such an
+     element — a table's `sr-only` caption is the canonical case — anchors to
+     the BODY instead, and `overflow: hidden` cannot clip it, because overflow
+     only clips descendants whose containing block is inside the clipper. The
+     escaped 1px caption then lands at the y-coordinate it would have had in
+     flow, stretches the document past the viewport, and the page grows a
+     scrollbar with dead background below the shell. Found by auditing exactly
+     that symptom (2026-08-25); `relative` pins the whole class shut. */
+  position: relative;
   display: grid;
   grid-template-columns: var(--rail-width) 1fr auto;
   grid-template-areas: "rail main panel";
