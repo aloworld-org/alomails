@@ -13,7 +13,9 @@ import {
   Bold,
   Check,
   Copy,
+  Heading1,
   Heading2,
+  Heading3,
   ImagePlus,
   Italic,
   List,
@@ -33,7 +35,7 @@ import {
   X,
 } from "lucide-react";
 
-import { Button, Input, Modal, cx } from "../ds";
+import { Button, Input, Modal, Select, cx } from "../ds";
 import {
   QuoteTableOptionsProvider,
   type QuoteLineContent,
@@ -659,6 +661,12 @@ export const QuoteContentStudio = forwardRef<
                           ).length > 1 &&
                             block.showSubtotal !== false &&
                             tableSubtotal(block.rowKeys)}
+                          {block.id ===
+                            [...design.blocks]
+                              .reverse()
+                              .find((item) => item.kind === "pricing")?.id && (
+                            <div className="mt-4">{totals}</div>
+                          )}
                         </QuoteTableOptionsProvider>
                       ) : block.kind === "table" ? (
                         <GeneralTableBlock
@@ -668,18 +676,38 @@ export const QuoteContentStudio = forwardRef<
                         />
                       ) : block.kind === "heading" ? (
                         readOnly ? (
-                          <h3 className="text-xl font-semibold">
-                            {block.text}
-                          </h3>
+                          block.level === 1 ? (
+                            <h1 className="text-3xl font-semibold leading-tight">{block.text}</h1>
+                          ) : block.level === 2 ? (
+                            <h2 className="text-2xl font-semibold leading-tight">{block.text}</h2>
+                          ) : (
+                            <h3 className="text-xl font-semibold leading-tight">{block.text}</h3>
+                          )
                         ) : (
-                          <Input
-                            value={block.text}
-                            placeholder="Section heading"
-                            aria-label="Section heading"
-                            onChange={(event) =>
-                              update(block.id, { text: event.target.value })
-                            }
-                          />
+                          <div className="grid gap-3 sm:grid-cols-[7rem_minmax(0,1fr)]">
+                            <Select
+                              fullWidth
+                              value={String(block.level)}
+                              aria-label="Heading level"
+                              onChange={(event) =>
+                                update(block.id, {
+                                  level: Number(event.target.value) as 1 | 2 | 3,
+                                })
+                              }
+                            >
+                              <option value="1">Heading 1</option>
+                              <option value="2">Heading 2</option>
+                              <option value="3">Heading 3</option>
+                            </Select>
+                            <Input
+                              value={block.text}
+                              placeholder="Section heading"
+                              aria-label="Section heading"
+                              onChange={(event) =>
+                                update(block.id, { text: event.target.value })
+                              }
+                            />
+                          </div>
                         )
                       ) : block.kind === "paragraph" ? (
                         readOnly ? (
@@ -813,23 +841,6 @@ export const QuoteContentStudio = forwardRef<
               ))}
             </div>
           )}
-          <QuoteTableOptionsProvider
-            value={{
-              enabled: true,
-              layout: design.tableLayout,
-              showImages: design.showProductImages,
-              showDescriptions: design.showProductDescriptions,
-              totalsPlacement: design.totalsPlacement,
-              totalsDetail: design.totalsDetail,
-              showCurrencyCode: design.showCurrencyCode,
-              emphasizeTotal: design.emphasizeTotal,
-              showTaxNote: design.showTaxNote,
-              lineContent: design.lineContent,
-              updateLineContent,
-            }}
-          >
-            <div className="mt-6">{totals}</div>
-          </QuoteTableOptionsProvider>
           {!readOnly && design.blocks.length === 0 && (
             <BottomComposer
               index={0}
@@ -1274,6 +1285,7 @@ const RICH_TEXT_TAGS = new Set([
   "B",
   "BR",
   "EM",
+  "H1",
   "H2",
   "H3",
   "I",
@@ -1304,7 +1316,7 @@ function sanitizeRichText(value: string): string {
 function RichTextContent({ value }: { value: string }) {
   return (
     <div
-      className="text-sm leading-relaxed opacity-90 [&_h2]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-semibold [&_ol]:list-decimal [&_ol]:space-y-1 [&_ol]:pl-6 [&_p+p]:mt-3 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-6"
+      className="text-sm leading-relaxed opacity-90 [&_h1]:mb-2 [&_h1]:text-2xl [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-semibold [&_ol]:list-decimal [&_ol]:space-y-1 [&_ol]:pl-6 [&_p+p]:mt-3 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-6"
       dangerouslySetInnerHTML={{ __html: sanitizeRichText(value) }}
     />
   );
@@ -1387,10 +1399,22 @@ function RichTextEditor({
             <Italic className="size-4" />
           </RichTextCommand>
           <RichTextCommand
+            label="Heading 1"
+            onClick={() => command("formatBlock", "h1")}
+          >
+            <Heading1 className="size-4" />
+          </RichTextCommand>
+          <RichTextCommand
             label="Heading 2"
             onClick={() => command("formatBlock", "h2")}
           >
             <Heading2 className="size-4" />
+          </RichTextCommand>
+          <RichTextCommand
+            label="Heading 3"
+            onClick={() => command("formatBlock", "h3")}
+          >
+            <Heading3 className="size-4" />
           </RichTextCommand>
           <RichTextCommand
             label="Paragraph"
@@ -1420,7 +1444,7 @@ function RichTextEditor({
         aria-multiline="true"
         aria-label="Supporting text"
         data-placeholder={placeholder}
-        className="min-h-32 w-full overflow-y-auto rounded-md border border-default bg-surface px-4 py-3 text-sm font-normal leading-relaxed text-primary selection:bg-accent-soft selection:text-primary empty:before:pointer-events-none empty:before:text-tertiary empty:before:content-[attr(data-placeholder)] focus:border-accent focus:outline-none [&_h2]:my-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:my-2 [&_h3]:text-lg [&_h3]:font-semibold [&_ol]:list-decimal [&_ol]:pl-6 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-6"
+        className="min-h-32 w-full overflow-y-auto rounded-md border border-default bg-surface px-4 py-3 text-sm font-normal leading-relaxed text-primary selection:bg-accent-soft selection:text-primary empty:before:pointer-events-none empty:before:text-tertiary empty:before:content-[attr(data-placeholder)] focus:border-accent focus:outline-none [&_h1]:my-2 [&_h1]:text-2xl [&_h1]:font-semibold [&_h2]:my-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:my-2 [&_h3]:text-lg [&_h3]:font-semibold [&_ol]:list-decimal [&_ol]:pl-6 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-6"
         onInput={emit}
         onMouseUp={inspectSelection}
         onKeyUp={inspectSelection}
@@ -1759,16 +1783,22 @@ function GeneralTableBlock({
   readOnly: boolean;
   onChange: (patch: Partial<GeneralTable>) => void;
 }) {
-  const addColumn = () => {
-    const id = crypto.randomUUID();
+  const setColumnCount = (count: number) => {
+    const columns = block.columns.slice(0, count);
+    while (columns.length < count) {
+      const number = columns.length + 1;
+      columns.push({ id: crypto.randomUUID(), label: `Column ${number}` });
+    }
     onChange({
-      columns: [
-        ...block.columns,
-        { id, label: `Column ${block.columns.length + 1}` },
-      ],
+      columns,
       rows: block.rows.map((row) => ({
         ...row,
-        cells: { ...row.cells, [id]: "" },
+        cells: Object.fromEntries(
+          columns.map((column) => [
+            column.id,
+            row.cells[column.id] ?? "",
+          ]),
+        ),
       })),
     });
   };
@@ -1834,13 +1864,21 @@ function GeneralTableBlock({
             Rename columns, then add as many rows or columns as the document needs.
           </p>
         </div>
-        <button
-          type="button"
-          className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-default bg-surface px-3 text-sm font-semibold text-primary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
-          onClick={addColumn}
-        >
-          <Plus className="size-4" aria-hidden="true" /> Add column
-        </button>
+        <label className="grid min-w-40 gap-1 text-xs font-semibold text-secondary">
+          Columns
+          <Select
+            fullWidth
+            value={String(block.columns.length)}
+            aria-label="Number of table columns"
+            onChange={(event) => setColumnCount(Number(event.target.value))}
+          >
+            {[1, 2, 3, 4, 5, 6].map((count) => (
+              <option key={count} value={count}>
+                {count} {count === 1 ? "column" : "columns"}
+              </option>
+            ))}
+          </Select>
+        </label>
       </div>
       <div className="overflow-x-auto rounded-xl border border-default">
         <table className="min-w-full border-collapse text-left text-sm">
@@ -2002,10 +2040,10 @@ function BottomComposer({
   }> = [
     {
       label: "Heading",
-      help: "Title a new section",
+      help: "Choose H1, H2, or H3",
       category: "Text",
       popular: true,
-      Icon: Heading2,
+      Icon: Type,
       action: () => add("heading", "Heading"),
     },
     {
@@ -2127,9 +2165,9 @@ function BottomComposer({
             <Search className="size-4 shrink-0" aria-hidden="true" />
             <input
               autoFocus
-              className="min-w-0 flex-1 bg-transparent text-sm text-primary outline-none placeholder:text-tertiary"
+              className="min-w-0 flex-1 appearance-none border-0 bg-transparent p-0 text-sm text-primary shadow-none outline-none ring-0 placeholder:text-tertiary focus:border-0 focus:outline-none focus:ring-0"
               value={query}
-              placeholder="Search blocksâ€¦"
+              placeholder="Search blocks..."
               aria-label="Search quotation blocks"
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={(event) => {
