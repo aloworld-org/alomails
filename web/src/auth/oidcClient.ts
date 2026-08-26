@@ -93,6 +93,11 @@ export async function login(
     throw new AuthError("bad_credentials");
   }
   if (response.status === 429) throw new AuthError("rate_limited");
+  // A stopped or unhealthy backend is not a credential failure. Vite's dev
+  // proxy historically surfaced a refused upstream as 500, so classify every
+  // server-side failure as availability and give the login page its specific
+  // connection message instead of the generic sign-in error.
+  if (response.status >= 500) throw new AuthError("network");
 
   // Success followed the 302 to our redirect URI; the code (or an error) is in
   // the final URL. The redirect target is served as the SPA shell (200).
