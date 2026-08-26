@@ -47,6 +47,7 @@ interface Props {
   currency: string;
   readOnly: boolean;
   columns?: QuoteColumns | undefined;
+  title?: string | undefined;
   onChange: (rows: LineRow[]) => void;
   /** Called for a fresh row's key, so identity comes from the editor that owns
    *  the document rather than from a counter that resets on every render. */
@@ -61,6 +62,7 @@ export function DocumentLines({
   currency,
   readOnly,
   columns,
+  title,
   onChange,
   nextKey,
 }: Props) {
@@ -89,10 +91,10 @@ export function DocumentLines({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-primary">
-              {strings.billingLines}
+              {title ?? strings.billingLines}
             </h2>
             <p className="mt-1 text-sm text-secondary">
-              Describe what the customer receives, then set quantity and price.
+              Add, edit, or remove the products and services in this table.
             </p>
           </div>
           <ButtonLine

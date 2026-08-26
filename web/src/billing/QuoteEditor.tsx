@@ -241,15 +241,18 @@ export function QuoteEditor() {
       showSummary={!draft.readOnly && !preview}
       lineColumns={quoteColumns}
       documentBody={
-        id === undefined ? null : (
-          <QuoteContentStudio
-            ref={quoteStudio}
-            quoteId={id}
-            readOnly={preview}
-            preview={preview}
-            onColumnsChange={setQuoteColumns}
-          />
-        )
+        id === undefined
+          ? null
+          : (pricingTable) => (
+              <QuoteContentStudio
+                ref={quoteStudio}
+                quoteId={id}
+                readOnly={preview}
+                preview={preview}
+                pricingTable={pricingTable}
+                onColumnsChange={setQuoteColumns}
+              />
+            )
       }
       editorActions={
         quote === null ? null : (

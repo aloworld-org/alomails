@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
 } from "react";
+import type { ReactNode } from "react";
 import {
   AlignLeft,
   ArrowDown,
@@ -13,8 +14,13 @@ import {
   Copy,
   Heading2,
   ImagePlus,
+  List,
+  ListOrdered,
+  Minus,
   Palette,
   Plus,
+  Quote,
+  Table2,
   Trash2,
   Upload,
   X,
@@ -25,7 +31,13 @@ import { Button, Input, Modal, cx } from "../ds";
 type Theme = "modern" | "editorial" | "minimal";
 type Block =
   | { id: string; kind: "text"; heading: string; body: string }
-  | { id: string; kind: "image"; src: string; caption: string };
+  | { id: string; kind: "heading"; level: 1 | 2 | 3; text: string }
+  | { id: string; kind: "paragraph"; text: string }
+  | { id: string; kind: "quote"; text: string; attribution: string }
+  | { id: string; kind: "list"; ordered: boolean; items: string }
+  | { id: string; kind: "divider" }
+  | { id: string; kind: "image"; src: string; caption: string }
+  | { id: string; kind: "pricing" };
 interface Colors {
   accent: string;
   background: string;
@@ -66,7 +78,7 @@ const EMPTY: Design = {
   theme: "modern",
   colors: DEFAULT_COLORS,
   columns: DEFAULT_QUOTE_COLUMNS,
-  blocks: [],
+  blocks: [{ id: "pricing-table", kind: "pricing" }],
 };
 const DESIGN_STORE = "quote-designs";
 const DESIGN_DATABASE = "alo-quote-assets";
@@ -81,14 +93,23 @@ function legacyDesign(key: string): Design | null {
     const raw = localStorage.getItem(key);
     if (raw === null) return null;
     const saved = JSON.parse(raw) as Partial<Design>;
-    return {
+    return normalizeDesign({
       ...EMPTY,
       ...saved,
       colors: { ...DEFAULT_COLORS, ...saved.colors },
-    };
+    });
   } catch {
     return null;
   }
+}
+
+function normalizeDesign(design: Design): Design {
+  return design.blocks.some((block) => block.kind === "pricing")
+    ? design
+    : {
+        ...design,
+        blocks: [...design.blocks, { id: "pricing-table", kind: "pricing" }],
+      };
 }
 
 function designDatabase(): Promise<IDBDatabase> {
@@ -123,11 +144,11 @@ async function loadDesign(key: string): Promise<Design> {
     );
     database.close();
     if (saved !== undefined)
-      return {
+      return normalizeDesign({
         ...EMPTY,
         ...saved,
         colors: { ...DEFAULT_COLORS, ...saved.colors },
-      };
+      });
   } catch {
     /* Fall through to the small legacy record when IndexedDB is unavailable. */
   }
@@ -172,10 +193,11 @@ export const QuoteContentStudio = forwardRef<
     quoteId: string;
     readOnly: boolean;
     preview?: boolean;
+    pricingTable: ReactNode;
     onColumnsChange?: (columns: QuoteColumns) => void;
   }
 >(function QuoteContentStudio(
-  { quoteId, readOnly, preview = false, onColumnsChange },
+  { quoteId, readOnly, preview = false, pricingTable, onColumnsChange },
   ref,
 ) {
   const storageKey = `alo:quote-design:${quoteId}`;
@@ -256,13 +278,24 @@ export const QuoteContentStudio = forwardRef<
         ...current.blocks.slice(index),
       ],
     }));
-  const addText = (index: number, heading = "") => {
-    insertBlock(index, {
-      id: crypto.randomUUID(),
-      kind: "text",
-      heading,
-      body: "",
-    });
+  const addSimpleBlock = (
+    index: number,
+    kind: "heading" | "paragraph" | "quote" | "list" | "divider" | "pricing",
+    ordered = false,
+  ) => {
+    const id = crypto.randomUUID();
+    if (kind === "heading")
+      insertBlock(index, { id, kind, level: 2, text: "" });
+    if (kind === "paragraph") insertBlock(index, { id, kind, text: "" });
+    if (kind === "quote")
+      insertBlock(index, { id, kind, text: "", attribution: "" });
+    if (kind === "list") insertBlock(index, { id, kind, ordered, items: "" });
+    if (kind === "divider") insertBlock(index, { id, kind });
+    if (
+      kind === "pricing" &&
+      !design.blocks.some((block) => block.kind === "pricing")
+    )
+      insertBlock(index, { id, kind });
   };
   const chooseImage = (index: number) => {
     pendingImageIndex.current = index;
@@ -352,7 +385,7 @@ export const QuoteContentStudio = forwardRef<
                     {!readOnly && (
                       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--quote-table-header)] bg-raised/40 px-4 py-2.5">
                         <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
-                          {block.kind === "text" ? "Text block" : "Image block"}
+                          {blockName(block)}
                         </span>
                         <div className="flex flex-wrap items-center gap-1">
                           <BlockCommand
@@ -369,12 +402,14 @@ export const QuoteContentStudio = forwardRef<
                           >
                             <ArrowDown className="size-4" />
                           </BlockCommand>
-                          <BlockCommand
-                            label="Duplicate"
-                            onClick={() => duplicateBlock(index)}
-                          >
-                            <Copy className="size-4" />
-                          </BlockCommand>
+                          {block.kind !== "pricing" && (
+                            <BlockCommand
+                              label="Duplicate"
+                              onClick={() => duplicateBlock(index)}
+                            >
+                              <Copy className="size-4" />
+                            </BlockCommand>
+                          )}
                           <BlockCommand
                             label="Delete"
                             danger
@@ -386,7 +421,109 @@ export const QuoteContentStudio = forwardRef<
                       </div>
                     )}
                     <div className="p-5">
-                      {block.kind === "text" ? (
+                      {block.kind === "pricing" ? (
+                        pricingTable
+                      ) : block.kind === "heading" ? (
+                        readOnly ? (
+                          <h3 className="text-xl font-semibold">
+                            {block.text}
+                          </h3>
+                        ) : (
+                          <Input
+                            value={block.text}
+                            placeholder="Section heading"
+                            aria-label="Section heading"
+                            onChange={(event) =>
+                              update(block.id, { text: event.target.value })
+                            }
+                          />
+                        )
+                      ) : block.kind === "paragraph" ? (
+                        readOnly ? (
+                          <p className="whitespace-pre-wrap leading-relaxed">
+                            {block.text}
+                          </p>
+                        ) : (
+                          <textarea
+                            className="min-h-28 w-full resize-y rounded-md border border-default bg-surface px-3 py-3 text-sm leading-relaxed text-primary placeholder:text-tertiary focus:border-accent focus:outline-none"
+                            value={block.text}
+                            placeholder="Write a paragraph…"
+                            aria-label="Paragraph"
+                            onChange={(event) =>
+                              update(block.id, { text: event.target.value })
+                            }
+                          />
+                        )
+                      ) : block.kind === "quote" ? (
+                        readOnly ? (
+                          <blockquote className="border-l-4 border-[var(--quote-accent)] pl-5 text-lg italic">
+                            <p>{block.text}</p>
+                            {block.attribution && (
+                              <footer className="mt-2 text-sm not-italic opacity-70">
+                                {block.attribution}
+                              </footer>
+                            )}
+                          </blockquote>
+                        ) : (
+                          <div className="grid gap-3">
+                            <textarea
+                              className="min-h-24 w-full resize-y rounded-md border border-default bg-surface px-3 py-3 text-sm text-primary placeholder:text-tertiary focus:border-accent focus:outline-none"
+                              value={block.text}
+                              placeholder="Add a customer quote or important statement…"
+                              aria-label="Quote text"
+                              onChange={(event) =>
+                                update(block.id, { text: event.target.value })
+                              }
+                            />
+                            <Input
+                              value={block.attribution}
+                              placeholder="Attribution (optional)"
+                              aria-label="Quote attribution"
+                              onChange={(event) =>
+                                update(block.id, {
+                                  attribution: event.target.value,
+                                })
+                              }
+                            />
+                          </div>
+                        )
+                      ) : block.kind === "list" ? (
+                        readOnly ? (
+                          block.ordered ? (
+                            <ol className="list-decimal space-y-1 pl-6">
+                              {block.items
+                                .split("\n")
+                                .filter(Boolean)
+                                .map((item, itemIndex) => (
+                                  <li key={itemIndex}>{item}</li>
+                                ))}
+                            </ol>
+                          ) : (
+                            <ul className="list-disc space-y-1 pl-6">
+                              {block.items
+                                .split("\n")
+                                .filter(Boolean)
+                                .map((item, itemIndex) => (
+                                  <li key={itemIndex}>{item}</li>
+                                ))}
+                            </ul>
+                          )
+                        ) : (
+                          <textarea
+                            className="min-h-28 w-full resize-y rounded-md border border-default bg-surface px-3 py-3 text-sm leading-relaxed text-primary placeholder:text-tertiary focus:border-accent focus:outline-none"
+                            value={block.items}
+                            placeholder="One item per line…"
+                            aria-label={
+                              block.ordered ? "Numbered list" : "Bullet list"
+                            }
+                            onChange={(event) =>
+                              update(block.id, { items: event.target.value })
+                            }
+                          />
+                        )
+                      ) : block.kind === "divider" ? (
+                        <hr className="border-0 border-t border-[var(--quote-table-header)]" />
+                      ) : block.kind === "text" ? (
                         readOnly ? (
                           <>
                             <h3 className="text-lg font-semibold">
@@ -454,9 +591,11 @@ export const QuoteContentStudio = forwardRef<
           {!readOnly && (
             <BottomComposer
               index={design.blocks.length}
-              onText={addText}
-              onHeading={(index) => addText(index, "Section heading")}
+              onAdd={addSimpleBlock}
               onImage={chooseImage}
+              hasPricing={design.blocks.some(
+                (block) => block.kind === "pricing",
+              )}
             />
           )}
         </div>
@@ -494,57 +633,168 @@ export const QuoteContentStudio = forwardRef<
   );
 });
 
+function blockName(block: Block): string {
+  switch (block.kind) {
+    case "heading":
+      return "Heading";
+    case "paragraph":
+      return "Paragraph";
+    case "quote":
+      return "Quote";
+    case "list":
+      return block.ordered ? "Numbered list" : "Bullet list";
+    case "divider":
+      return "Divider";
+    case "image":
+      return "Image";
+    case "pricing":
+      return "Pricing table";
+    default:
+      return "Text";
+  }
+}
+
+type InsertKind =
+  "heading" | "paragraph" | "quote" | "list" | "divider" | "pricing";
+
 function BottomComposer({
   index,
-  onText,
-  onHeading,
+  onAdd,
   onImage,
+  hasPricing,
 }: {
   index: number;
-  onText: (index: number) => void;
-  onHeading: (index: number) => void;
+  onAdd: (index: number, kind: InsertKind, ordered?: boolean) => void;
   onImage: (index: number) => void;
+  hasPricing: boolean;
 }) {
+  const [open, setOpen] = useState(false);
+  const add = (kind: InsertKind, ordered = false) => {
+    onAdd(index, kind, ordered);
+    setOpen(false);
+  };
   return (
     <div
-      className="mt-5 flex flex-wrap items-center justify-center gap-2 rounded-xl border border-dashed border-default bg-raised/20 px-4 py-4"
+      className="relative mt-5 flex flex-col items-center"
       aria-label="Add quotation content"
     >
-      <span className="mr-2 inline-flex items-center gap-1.5 text-sm font-semibold text-secondary">
-        <Plus className="size-4 text-accent" aria-hidden="true" /> Add below
-      </span>
-      <AddButton label="Text" Icon={AlignLeft} onClick={() => onText(index)} />
-      <AddButton
-        label="Heading"
-        Icon={Heading2}
-        onClick={() => onHeading(index)}
-      />
-      <AddButton
-        label="Image"
-        Icon={ImagePlus}
-        onClick={() => onImage(index)}
-      />
+      <button
+        type="button"
+        className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-accent px-5 text-sm font-semibold text-on-accent shadow-sm transition-colors hover:bg-accent-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <Plus className="size-4" aria-hidden="true" /> Add block below
+      </button>
+      {open && (
+        <div className="mt-3 w-full max-w-3xl rounded-2xl border border-default bg-surface p-4 shadow-xl">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="font-semibold text-primary">Add to quotation</h3>
+              <p className="mt-0.5 text-sm text-secondary">
+                Choose what should appear next in the document.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="rounded-lg p-2 text-secondary hover:bg-accent-soft hover:text-accent"
+              aria-label="Close block picker"
+              onClick={() => setOpen(false)}
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <AddButton
+              label="Heading"
+              help="Title a new section"
+              Icon={Heading2}
+              onClick={() => add("heading")}
+            />
+            <AddButton
+              label="Paragraph"
+              help="Add explanatory text"
+              Icon={AlignLeft}
+              onClick={() => add("paragraph")}
+            />
+            <AddButton
+              label="Quote"
+              help="Highlight a statement"
+              Icon={Quote}
+              onClick={() => add("quote")}
+            />
+            <AddButton
+              label="Bullet list"
+              help="List key points"
+              Icon={List}
+              onClick={() => add("list")}
+            />
+            <AddButton
+              label="Numbered list"
+              help="Show ordered steps"
+              Icon={ListOrdered}
+              onClick={() => add("list", true)}
+            />
+            <AddButton
+              label="Image"
+              help="Upload a visual"
+              Icon={ImagePlus}
+              onClick={() => {
+                onImage(index);
+                setOpen(false);
+              }}
+            />
+            <AddButton
+              label="Divider"
+              help="Separate sections"
+              Icon={Minus}
+              onClick={() => add("divider")}
+            />
+            <AddButton
+              label="Pricing table"
+              help={
+                hasPricing
+                  ? "Already in this quotation"
+                  : "Add products, prices and totals"
+              }
+              Icon={Table2}
+              disabled={hasPricing}
+              onClick={() => add("pricing")}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function AddButton({
   label,
+  help,
   Icon,
+  disabled = false,
   onClick,
 }: {
   label: string;
+  help: string;
   Icon: typeof AlignLeft;
+  disabled?: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
-      className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-default bg-surface px-3 text-sm font-semibold text-primary shadow-sm transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
+      disabled={disabled}
+      className="flex min-h-20 items-center gap-3 rounded-xl border border-default bg-surface px-4 py-3 text-left text-primary transition-colors hover:border-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 disabled:cursor-not-allowed disabled:opacity-45"
       onClick={onClick}
     >
-      <Icon className="size-4 text-accent" aria-hidden="true" />
-      {label}
+      <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent">
+        <Icon className="size-5" aria-hidden="true" />
+      </span>
+      <span>
+        <span className="block text-sm font-semibold">{label}</span>
+        <span className="mt-0.5 block text-xs text-secondary">{help}</span>
+      </span>
     </button>
   );
 }
@@ -574,7 +824,7 @@ function BlockCommand({
   danger = false,
 }: {
   label: string;
-  children: React.ReactNode;
+  children: ReactNode;
   onClick: () => void;
   disabled?: boolean;
   danger?: boolean;

@@ -84,8 +84,10 @@ interface Props<T extends StoredDocument, A> {
   showSummary?: boolean;
   /** Optional customer-facing pricing columns chosen for a quotation. */
   lineColumns?: QuoteColumns;
-  /** Rich content between the document details and its commercial lines. */
-  documentBody?: ReactNode;
+  /** Rich content between the document details and its commercial lines. A
+   *  quotation canvas receives the pricing table so it can place it like any
+   *  other document block. */
+  documentBody?: ReactNode | ((pricingTable: ReactNode) => ReactNode);
   /** Document-level commands rendered beside save and print. */
   editorActions?: ReactNode;
   /** Temporarily render the editable draft as a customer-facing preview. */
@@ -131,7 +133,6 @@ export function DocumentEditor<T extends StoredDocument, A>({
   const [productSearch, setProductSearch] = useState("");
   const { document, header, rows } = draft;
   const readOnly = draft.readOnly || presentationReadOnly;
-
   // An archived customer is still offered on the document already raised for
   // them — otherwise the picker would silently show no one and the next edit
   // would change who is being billed.
@@ -205,6 +206,30 @@ export function DocumentEditor<T extends StoredDocument, A>({
 
   const currency = document?.currency ?? "";
   const saved = draft.saveState === "saved";
+  const pricingTable =
+    document === null ? null : (
+      <>
+        <DocumentLines
+          rows={rows}
+          products={pickers.products}
+          savedLines={document.lines}
+          saved={saved}
+          currency={currency}
+          readOnly={readOnly}
+          columns={lineColumns}
+          title={
+            typeof documentBody === "function" ? "Pricing table" : undefined
+          }
+          onChange={(next) => draft.edit({ rows: next })}
+          nextKey={draft.nextKey}
+        />
+        <TotalsPanel
+          totals={document.totals}
+          currency={currency}
+          stale={!saved}
+        />
+      </>
+    );
   const error = draft.error ?? pickers.error;
   const selectedProductIds = new Set(
     rows.flatMap((row) => row.productId ?? []),
@@ -583,7 +608,9 @@ export function DocumentEditor<T extends StoredDocument, A>({
             </section>
           )}
 
-          {documentBody}
+          {typeof documentBody === "function"
+            ? documentBody(pricingTable)
+            : documentBody}
 
           {document === null ? (
             <div className={styles.createBar}>
@@ -597,22 +624,7 @@ export function DocumentEditor<T extends StoredDocument, A>({
             </div>
           ) : (
             <>
-              <DocumentLines
-                rows={rows}
-                products={pickers.products}
-                savedLines={document.lines}
-                saved={saved}
-                currency={currency}
-                readOnly={readOnly}
-                columns={lineColumns}
-                onChange={(next) => draft.edit({ rows: next })}
-                nextKey={draft.nextKey}
-              />
-              <TotalsPanel
-                totals={document.totals}
-                currency={currency}
-                stale={!saved}
-              />
+              {typeof documentBody === "function" ? null : pricingTable}
               <DocumentActions
                 actions={actions}
                 unsaved={!saved}
