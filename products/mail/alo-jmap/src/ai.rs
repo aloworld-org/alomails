@@ -187,13 +187,23 @@ pub async fn extract_price_list(
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     if body.len() > MAX_PRICE_IMAGE_BYTES {
-        return Err(Problem::with(StatusCode::PAYLOAD_TOO_LARGE, "image too large"));
+        return Err(Problem::with(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "image too large",
+        ));
     }
     let request: Value = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
     let data_url = request.get("dataUrl").and_then(Value::as_str).unwrap_or("");
-    let supported = ["data:image/jpeg;base64,", "data:image/png;base64,", "data:image/webp;base64,"];
+    let supported = [
+        "data:image/jpeg;base64,",
+        "data:image/png;base64,",
+        "data:image/webp;base64,",
+    ];
     if !supported.iter().any(|prefix| data_url.starts_with(prefix)) {
-        return Err(Problem::with(StatusCode::BAD_REQUEST, "JPEG, PNG or WebP image required"));
+        return Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "JPEG, PNG or WebP image required",
+        ));
     }
     let config = tenant_ai_config(&account).await?;
     let rows = alo_ai::extract_price_list_image(&config, data_url)

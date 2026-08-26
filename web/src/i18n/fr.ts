@@ -668,6 +668,30 @@ export const fr: Partial<Catalog> = {
   sharingAdd: "Partager",
   sharingAddError:
     "Partage impossible — vérifiez que l’adresse correspond à un collègue de votre organisation.",
+  // Mots de passe d’application (réglages)
+  settingsAppPasswords: "Mots de passe d’application",
+  settingsAppPasswordsHint:
+    "Des mots de passe pour les applications de messagerie qui se connectent à l’ancienne (IMAP, POP3, SMTP) — comme Thunderbird ou l’application de votre téléphone. Chaque application a le sien : vous pouvez en révoquer un sans changer le mot de passe de votre compte.",
+  appPasswordNone:
+    "Aucun mot de passe d’application pour l’instant. Créez-en un quand une application de messagerie demande un mot de passe — surtout si votre compte utilise la validation en deux étapes, que ces applications ne savent pas gérer.",
+  appPasswordNamePlaceholder:
+    "Pour quoi ? p. ex. Thunderbird sur le poste de travail",
+  appPasswordCreate: "Créer le mot de passe",
+  appPasswordCreated: (date: string) => `Créé le ${date}`,
+  appPasswordLastUsed: (date: string) => `Dernière utilisation le ${date}`,
+  appPasswordNeverUsed: "Jamais utilisé",
+  appPasswordRevokeFor: (name: string) => `Révoquer ${name}`,
+  appPasswordSecretFor: (name: string) => `Mot de passe pour « ${name} »`,
+  appPasswordSecretHint:
+    "Copiez-le maintenant dans l’application — pour votre sécurité, il ne pourra plus être affiché.",
+  appPasswordCopy: "Copier le mot de passe",
+  appPasswordCopied: "Copié",
+  appPasswordSecretDone: "Terminé",
+  appPasswordListError:
+    "Impossible de charger vos mots de passe d’application — veuillez réessayer.",
+  appPasswordCreateError:
+    "Création impossible — donnez-lui un nom court, et notez qu’un compte en détient au plus 20.",
+  appPasswordRevokeError: "Révocation impossible — veuillez réessayer.",
   userShareAccess: "Accès partagé",
   delegateTitle: (email: string) => `Qui peut accéder à ${email}`,
   delegateIntro:

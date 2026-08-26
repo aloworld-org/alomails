@@ -5,7 +5,14 @@
 // the footer button; Filters persist themselves.
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { Building2, PenLine, SlidersHorizontal, Users, X } from "lucide-react";
+import {
+  Building2,
+  KeyRound,
+  PenLine,
+  SlidersHorizontal,
+  Users,
+  X,
+} from "lucide-react";
 
 import { strings } from "../i18n";
 import {
@@ -19,6 +26,7 @@ import {
 } from "../ds";
 import { useJmapClient } from "../jmap";
 import { RichTextEditor } from "../mail/components/RichTextEditor";
+import { AppPasswordsSection } from "./AppPasswordsSection";
 import { FiltersSection } from "./FiltersSection";
 import { SharingSection } from "./SharingSection";
 import styles from "./SettingsModal.module.css";
@@ -28,7 +36,7 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-type Tab = "general" | "filters" | "sharing" | "org";
+type Tab = "general" | "filters" | "sharing" | "appPasswords" | "org";
 
 export function SettingsModal({ isAdmin, onClose }: SettingsModalProps) {
   const client = useJmapClient();
@@ -119,6 +127,11 @@ export function SettingsModal({ isAdmin, onClose }: SettingsModalProps) {
       key: "sharing",
       label: strings.settingsSharing,
       icon: <Users size={16} />,
+    },
+    {
+      key: "appPasswords",
+      label: strings.settingsAppPasswords,
+      icon: <KeyRound size={16} />,
     },
     ...(isAdmin
       ? [
@@ -307,6 +320,18 @@ export function SettingsModal({ isAdmin, onClose }: SettingsModalProps) {
                   {strings.settingsSharingHint}
                 </p>
                 <SharingSection />
+              </section>
+            )}
+
+            {tab === "appPasswords" && (
+              <section className={styles.section}>
+                <h3 className={styles.sectionTitle}>
+                  {strings.settingsAppPasswords}
+                </h3>
+                <p className={styles.sectionDesc}>
+                  {strings.settingsAppPasswordsHint}
+                </p>
+                <AppPasswordsSection />
               </section>
             )}
 

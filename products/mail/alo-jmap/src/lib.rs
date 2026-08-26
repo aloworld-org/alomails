@@ -40,6 +40,7 @@ pub mod agent_timesheet;
 mod agent_turn;
 pub mod ai;
 pub mod api;
+pub mod app_passwords;
 pub mod audit;
 pub mod audit_action;
 pub mod audit_record;

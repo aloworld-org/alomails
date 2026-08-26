@@ -117,6 +117,16 @@ export interface OutOfOfficeSettings {
   to: string | null;
 }
 
+/** One app-specific password as its owner sees it — the record, never the
+ * secret. `lastUsedAt` is null until the credential first authenticates a
+ * legacy connection (IMAP/POP3/SMTP). */
+export interface AppPassword {
+  id: string;
+  name: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+}
+
 export class JmapClient {
   #fetch: AuthorizedFetch;
   #session: Session | null = null;
@@ -1183,6 +1193,35 @@ export class JmapClient {
   /** Set the tenant's organization footer (admin; HTML; empty clears it). */
   async setOrgFooter(footer: string): Promise<void> {
     await this.#adminPost("/admin/org-footer", { footer });
+  }
+
+  // ---- app-specific passwords (legacy mail clients) -------------------
+
+  /** The caller's app passwords, oldest first — records only, no secrets. */
+  async listAppPasswords(): Promise<AppPassword[]> {
+    const out = (await this.#admin("/settings/app-passwords", {
+      method: "GET",
+    })) as { appPasswords: AppPassword[] };
+    return out.appPasswords;
+  }
+
+  /** Create a named app password. The returned `secret` is shown exactly
+   * once — the server stores only a hash and cannot repeat it. */
+  async createAppPassword(
+    name: string,
+  ): Promise<{ id: string; name: string; secret: string }> {
+    return (await this.#adminPost("/settings/app-passwords", { name })) as {
+      id: string;
+      name: string;
+      secret: string;
+    };
+  }
+
+  /** Revoke an app password immediately — it fails on the next connection. */
+  async revokeAppPassword(id: string): Promise<void> {
+    await this.#admin(`/settings/app-passwords/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
   }
 
   /** This tenant's recent administrative actions, newest first (admin). */

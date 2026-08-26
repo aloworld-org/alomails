@@ -709,6 +709,29 @@ export const en = {
   sharingAdd: "Share",
   sharingAddError:
     "Couldn't share — check the email is a colleague in your organization.",
+  // App-specific passwords (Settings)
+  settingsAppPasswords: "App passwords",
+  settingsAppPasswordsHint:
+    "Passwords for mail apps that sign in the classic way (IMAP, POP3, SMTP) — like Thunderbird or the mail app on your phone. Each app gets its own password, so you can revoke one without changing your account password.",
+  appPasswordNone:
+    "No app passwords yet. Create one when a mail app asks for a password — especially if your account uses two-step sign-in, which classic mail apps can't carry.",
+  appPasswordNamePlaceholder:
+    "What is it for? e.g. Thunderbird on the desk machine",
+  appPasswordCreate: "Create password",
+  appPasswordCreated: (date: string) => `Created ${date}`,
+  appPasswordLastUsed: (date: string) => `Last used ${date}`,
+  appPasswordNeverUsed: "Never used",
+  appPasswordRevokeFor: (name: string) => `Revoke ${name}`,
+  appPasswordSecretFor: (name: string) => `Password for “${name}”`,
+  appPasswordSecretHint:
+    "Copy it into the app now — for your security it can't be shown again.",
+  appPasswordCopy: "Copy password",
+  appPasswordCopied: "Copied",
+  appPasswordSecretDone: "Done",
+  appPasswordListError: "Couldn't load your app passwords — please try again.",
+  appPasswordCreateError:
+    "Couldn't create the app password — give it a short name, and note an account holds at most 20.",
+  appPasswordRevokeError: "Couldn't revoke it — please try again.",
   // Admin — mailbox delegation
   userShareAccess: "Shared access",
   delegateTitle: (email: string) => `Who can access ${email}`,

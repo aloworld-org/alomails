@@ -657,6 +657,30 @@ export const nl: Partial<Catalog> = {
   sharingAdd: "Delen",
   sharingAddError:
     "Kon niet delen — controleer of het adres een collega in uw organisatie is.",
+  // App-wachtwoorden (instellingen)
+  settingsAppPasswords: "App-wachtwoorden",
+  settingsAppPasswordsHint:
+    "Wachtwoorden voor e-mailapps die op de klassieke manier aanmelden (IMAP, POP3, SMTP) — zoals Thunderbird of de mailapp op uw telefoon. Elke app krijgt een eigen wachtwoord, zodat u er één kunt intrekken zonder uw accountwachtwoord te wijzigen.",
+  appPasswordNone:
+    "Nog geen app-wachtwoorden. Maak er een wanneer een e-mailapp om een wachtwoord vraagt — zeker als uw account tweestapsaanmelding gebruikt, wat klassieke mailapps niet aankunnen.",
+  appPasswordNamePlaceholder:
+    "Waarvoor is het? bijv. Thunderbird op de vaste computer",
+  appPasswordCreate: "Wachtwoord aanmaken",
+  appPasswordCreated: (date: string) => `Aangemaakt op ${date}`,
+  appPasswordLastUsed: (date: string) => `Laatst gebruikt op ${date}`,
+  appPasswordNeverUsed: "Nooit gebruikt",
+  appPasswordRevokeFor: (name: string) => `${name} intrekken`,
+  appPasswordSecretFor: (name: string) => `Wachtwoord voor ‘${name}’`,
+  appPasswordSecretHint:
+    "Kopieer het nu naar de app — voor uw veiligheid kan het niet opnieuw worden getoond.",
+  appPasswordCopy: "Wachtwoord kopiëren",
+  appPasswordCopied: "Gekopieerd",
+  appPasswordSecretDone: "Klaar",
+  appPasswordListError:
+    "Kon uw app-wachtwoorden niet laden — probeer het opnieuw.",
+  appPasswordCreateError:
+    "Kon het app-wachtwoord niet aanmaken — geef het een korte naam; een account heeft er hoogstens 20.",
+  appPasswordRevokeError: "Kon het niet intrekken — probeer het opnieuw.",
   userShareAccess: "Gedeelde toegang",
   delegateTitle: (email: string) => `Wie ${email} kan openen`,
   delegateIntro:

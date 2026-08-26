@@ -15,11 +15,11 @@ use crate::error::Problem;
 use crate::push::PushHub;
 use crate::state::{AppState, Limits};
 use crate::{
-    admin, agent, agent_directory, ai, api, audit, audit_record, autoconfig, base, billing_bills,
-    billing_customers, billing_fx, billing_invoices, billing_payments, billing_products,
-    billing_quotes, billing_reminder, billing_reports, billing_schedules, billing_send,
-    billing_sepa, billing_settings, blob, calendar, campaign_audience, campaign_consent,
-    campaign_preview, campaign_record, campaign_segments, campaign_suppression,
+    admin, agent, agent_directory, ai, api, app_passwords, audit, audit_record, autoconfig, base,
+    billing_bills, billing_customers, billing_fx, billing_invoices, billing_payments,
+    billing_products, billing_quotes, billing_reminder, billing_reports, billing_schedules,
+    billing_send, billing_sepa, billing_settings, blob, calendar, campaign_audience,
+    campaign_consent, campaign_preview, campaign_record, campaign_segments, campaign_suppression,
     campaign_unsubscribe, carddav, chat, chat_agent_routes, contacts, crm_activities, crm_deals,
     crm_handoff, crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads,
     delegates, docs, drive, filters, finance_approvals, finance_bank, finance_bank_match,
@@ -2322,6 +2322,17 @@ pub fn app_with_site_boundaries(
         .route("/settings/mail", get(settings::mail_settings))
         .route("/settings/signature", post(settings::set_signature))
         .route("/settings/out-of-office", post(settings::set_out_of_office))
+        // App-specific passwords for legacy mail clients (mail M1.3): the
+        // signed-in user's own credentials, and only theirs — the create
+        // response is the one place the secret ever appears.
+        .route(
+            "/settings/app-passwords",
+            get(app_passwords::list_app_passwords).post(app_passwords::create_app_password),
+        )
+        .route(
+            "/settings/app-passwords/{id}",
+            delete(app_passwords::revoke_app_password),
+        )
         .route("/admin/org-footer", post(settings::set_org_footer))
         .layer(DefaultBodyLimit::max(upload_limit))
         // The business audit trail (B2.13). Applied to the routes rather than

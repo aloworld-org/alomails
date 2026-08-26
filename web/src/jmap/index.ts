@@ -1,5 +1,6 @@
 // Public surface of the shared JMAP area.
 export { JmapClient, JmapError } from "./client";
+export type { AppPassword } from "./client";
 export { useJmapClient } from "./useJmapClient";
 export {
   MAIL_CAPABILITY,
