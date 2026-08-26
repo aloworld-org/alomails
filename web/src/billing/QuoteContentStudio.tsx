@@ -2874,10 +2874,10 @@ function CustomizeQuote({
                   type="button"
                   aria-pressed={design.theme === theme.id}
                   className={cx(
-                    "group relative min-h-36 rounded-2xl border bg-surface p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
+                    "group relative min-h-52 overflow-hidden rounded-2xl border p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
                     design.theme === theme.id
-                      ? "border-accent bg-accent-soft/35"
-                      : "border-default",
+                      ? "border-accent bg-accent-soft/30"
+                      : "border-default bg-surface",
                   )}
                   onClick={() =>
                     onChange((current) => ({ ...current, theme: theme.id }))
@@ -2885,31 +2885,52 @@ function CustomizeQuote({
                 >
                   <span
                     className={cx(
-                      "mb-4 block text-3xl leading-none text-primary",
-                      theme.id === "editorial" && "font-editorial",
-                      theme.id === "minimal" && "font-light tracking-tight",
+                      "block h-28 rounded-xl border border-subtle bg-raised px-4 py-4",
                     )}
                     aria-hidden="true"
                   >
-                    Aa
+                    <span
+                      className={cx(
+                        "block text-xl leading-none text-primary",
+                        theme.id === "modern" && "font-semibold tracking-tight",
+                      theme.id === "editorial" && "font-editorial",
+                        theme.id === "minimal" &&
+                          "font-light uppercase tracking-[0.14em]",
+                      )}
+                    >
+                      Proposal
+                    </span>
+                    <span
+                      className={cx(
+                        "mt-4 block h-1.5 rounded-full bg-primary/20",
+                        theme.id === "modern" && "w-4/5",
+                        theme.id === "editorial" && "w-full",
+                        theme.id === "minimal" && "w-3/5",
+                      )}
+                    />
+                    <span className="mt-2 block h-1.5 w-2/3 rounded-full bg-primary/10" />
                   </span>
-                  <strong className="block text-sm font-semibold text-primary">
-                    {theme.name}
-                  </strong>
-                  <small className="mt-1 block text-xs leading-relaxed text-secondary">
-                    {theme.help}
-                  </small>
-                  <span
-                    className={cx(
-                      "absolute right-3 top-3 grid size-5 place-items-center rounded-full border",
-                      design.theme === theme.id
-                        ? "border-accent bg-accent text-on-accent"
-                        : "border-default bg-surface group-hover:border-accent",
-                    )}
-                  >
-                    {design.theme === theme.id && (
-                      <Check className="size-3.5" aria-hidden="true" />
-                    )}
+                  <span className="flex items-start justify-between gap-3 px-1 pb-1 pt-4">
+                    <span>
+                      <strong className="block text-sm font-semibold text-primary">
+                        {theme.name}
+                      </strong>
+                      <small className="mt-1 block text-xs leading-relaxed text-secondary">
+                        {theme.help}
+                      </small>
+                    </span>
+                    <span
+                      className={cx(
+                        "grid size-6 shrink-0 place-items-center rounded-full border transition-colors",
+                        design.theme === theme.id
+                          ? "border-accent bg-accent text-on-accent"
+                          : "border-default bg-surface group-hover:border-accent",
+                      )}
+                    >
+                      {design.theme === theme.id && (
+                        <Check className="size-3.5" aria-hidden="true" />
+                      )}
+                    </span>
                   </span>
                 </button>
               ))}
