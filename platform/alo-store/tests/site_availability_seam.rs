@@ -76,6 +76,8 @@ fn event(calendar: &CalendarId, summary: &str, starts_at: OffsetDateTime) -> Cal
         recurrence: None,
         attendees: Vec::new(),
         exdates: Vec::new(),
+        timezone: None,
+        rdates: Vec::new(),
         recurrence_id: None,
         reminder_minutes: None,
         attendee_status: Vec::new(),

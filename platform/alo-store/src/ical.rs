@@ -79,6 +79,23 @@ fn vevent_lines(
     organizer: Option<&str>,
     dtstamp: OffsetDateTime,
 ) -> Vec<String> {
+    // A series that follows a zone's wall-clock serializes its date-times as
+    // `;TZID=<zone>:<local>` so clients expand the recurrence in that zone
+    // (no `VTIMEZONE` block — the IANA name is the definition; documented in
+    // docs/interop.md). Everything else stays UTC (`…Z`). `DTSTAMP` is always
+    // UTC (RFC 5545 §3.8.7.2).
+    let zone = event
+        .timezone
+        .as_deref()
+        .filter(|_| !event.all_day)
+        .and_then(|name| crate::tz::zone(name).map(|z| (name, z)));
+    let dt_prop = |name: &str, t: OffsetDateTime| match &zone {
+        Some((tzid, z)) => format!(
+            "{name};TZID={tzid}:{}",
+            fmt_wall(crate::tz::utc_to_wall(t, z))
+        ),
+        None => format!("{name}:{}", fmt_utc(t)),
+    };
     let mut lines = vec![
         "BEGIN:VEVENT".to_owned(),
         format!("UID:{}", event.id.as_str()),
@@ -91,26 +108,34 @@ fn vevent_lines(
         lines.push(format!("DTSTART;VALUE=DATE:{}", fmt_date(event.starts_at)));
         lines.push(format!("DTEND;VALUE=DATE:{}", fmt_date(event.ends_at)));
     } else {
-        lines.push(format!("DTSTART:{}", fmt_utc(event.starts_at)));
-        lines.push(format!("DTEND:{}", fmt_utc(event.ends_at)));
+        lines.push(dt_prop("DTSTART", event.starts_at));
+        lines.push(dt_prop("DTEND", event.ends_at));
     }
     // For an overridden/one-off instance of a series, the slot it replaces.
     if let Some(rid) = event.recurrence_id {
         if event.all_day {
             lines.push(format!("RECURRENCE-ID;VALUE=DATE:{}", fmt_date(rid)));
         } else {
-            lines.push(format!("RECURRENCE-ID:{}", fmt_utc(rid)));
+            lines.push(dt_prop("RECURRENCE-ID", rid));
         }
     }
     if let Some(rrule) = &event.recurrence {
         lines.push(format!("RRULE:{rrule}"));
+    }
+    // Extra occurrences beyond the rule.
+    for rd in &event.rdates {
+        if event.all_day {
+            lines.push(format!("RDATE;VALUE=DATE:{}", fmt_date(*rd)));
+        } else {
+            lines.push(dt_prop("RDATE", *rd));
+        }
     }
     // Individually cancelled occurrences of the series.
     for ex in &event.exdates {
         if event.all_day {
             lines.push(format!("EXDATE;VALUE=DATE:{}", fmt_date(*ex)));
         } else {
-            lines.push(format!("EXDATE:{}", fmt_utc(*ex)));
+            lines.push(dt_prop("EXDATE", *ex));
         }
     }
     lines.push(format!("SUMMARY:{}", escape(&event.summary)));
@@ -161,6 +186,8 @@ pub fn from_ics(text: &str, fallback_id: &str) -> Option<CalendarEvent> {
     let mut recurrence: Option<String> = None;
     let mut attendees: Vec<String> = Vec::new();
     let mut exdates: Vec<OffsetDateTime> = Vec::new();
+    let mut timezone: Option<String> = None;
+    let mut rdates: Vec<OffsetDateTime> = Vec::new();
     let mut reminder_minutes: Option<i32> = None;
     // A VALARM is a nested block: read only its TRIGGER, and never let its
     // properties (e.g. DESCRIPTION) bleed into the event's.
@@ -211,7 +238,19 @@ pub fn from_ics(text: &str, fallback_id: &str) -> Option<CalendarEvent> {
             "SUMMARY" => summary = unescape(value),
             "DESCRIPTION" => description = Some(unescape(value)),
             "LOCATION" => location = Some(unescape(value)),
-            "DTSTART" => start = parse_dt(value.trim(), is_date, tzid),
+            "DTSTART" => {
+                start = parse_dt(value.trim(), is_date, tzid);
+                // The series' wall-clock zone, for DST-correct recurrence
+                // expansion — kept only when it resolved (an unknown zone fell
+                // back to UTC above and must keep expanding as UTC).
+                if !is_date
+                    && !value.trim().ends_with('Z')
+                    && let Some(z) = tzid
+                    && crate::tz::known(z)
+                {
+                    timezone = Some(z.to_owned());
+                }
+            }
             "DTEND" => end = parse_dt(value.trim(), is_date, tzid),
             "RRULE" => recurrence = Some(value.trim().to_owned()),
             "EXDATE" => {
@@ -220,6 +259,22 @@ pub fn from_ics(text: &str, fallback_id: &str) -> Option<CalendarEvent> {
                 for token in value.split(',') {
                     if let Some((dt, _)) = parse_dt(token.trim(), is_date, tzid) {
                         exdates.push(dt);
+                    }
+                }
+            }
+            "RDATE" => {
+                // Extra occurrence instants, same forms as EXDATE.
+                // `VALUE=PERIOD` (start/duration pairs) is not modelled; such
+                // values are skipped (docs/interop.md).
+                if params
+                    .iter()
+                    .any(|p| p.eq_ignore_ascii_case("VALUE=PERIOD"))
+                {
+                    continue;
+                }
+                for token in value.split(',') {
+                    if let Some((dt, _)) = parse_dt(token.trim(), is_date, tzid) {
+                        rdates.push(dt);
                     }
                 }
             }
@@ -256,6 +311,8 @@ pub fn from_ics(text: &str, fallback_id: &str) -> Option<CalendarEvent> {
         recurrence,
         attendees,
         exdates,
+        timezone,
+        rdates,
         // A parsed VEVENT is a master/one-off; RECURRENCE-ID overrides are not
         // read here (see docs/interop.md — CalDAV override sync is a later slice).
         recurrence_id: None,
@@ -482,6 +539,20 @@ fn fmt_utc(t: OffsetDateTime) -> String {
     )
 }
 
+/// A wall-clock (already zone-local) date-time — the digits without a `Z`,
+/// for `;TZID=`-qualified properties.
+fn fmt_wall(t: OffsetDateTime) -> String {
+    format!(
+        "{:04}{:02}{:02}T{:02}{:02}{:02}",
+        t.year(),
+        t.month() as u8,
+        t.day(),
+        t.hour(),
+        t.minute(),
+        t.second()
+    )
+}
+
 fn fmt_date(t: OffsetDateTime) -> String {
     let t = t.to_offset(UtcOffset::UTC);
     format!("{:04}{:02}{:02}", t.year(), t.month() as u8, t.day())
@@ -526,18 +597,10 @@ fn local_to_utc(
     second: u8,
     tzid: &str,
 ) -> Option<OffsetDateTime> {
-    let zone = jiff::tz::TimeZone::get(tzid).ok()?;
-    let civil = jiff::civil::datetime(
-        year as i16,
-        month as i8,
-        day as i8,
-        hour as i8,
-        minute as i8,
-        second as i8,
-        0,
-    );
-    let zoned = civil.to_zoned(zone).ok()?;
-    OffsetDateTime::from_unix_timestamp(zoned.timestamp().as_second()).ok()
+    let zone = crate::tz::zone(tzid)?;
+    let date = Date::from_calendar_date(year, Month::try_from(month).ok()?, day).ok()?;
+    let wall = OffsetDateTime::new_utc(date, Time::from_hms(hour, minute, second).ok()?);
+    crate::tz::wall_to_utc(wall, &zone)
 }
 
 fn escape(s: &str) -> String {
@@ -634,6 +697,8 @@ mod tests {
             recurrence: Some("FREQ=WEEKLY".to_owned()),
             attendees: vec!["guest@example.com".to_owned()],
             exdates: vec![],
+            timezone: None,
+            rdates: vec![],
             recurrence_id: None,
             reminder_minutes: None,
             attendee_status: vec![],
@@ -677,6 +742,8 @@ mod tests {
             recurrence: None,
             attendees: vec!["guest@example.com".to_owned()],
             exdates: vec![],
+            timezone: None,
+            rdates: vec![],
             recurrence_id: None,
             reminder_minutes: None,
             attendee_status: vec![],
@@ -728,6 +795,8 @@ mod tests {
             recurrence: None,
             attendees: vec![],
             exdates: vec![],
+            timezone: None,
+            rdates: vec![],
             recurrence_id: None,
             reminder_minutes: None,
             attendee_status: vec![],
@@ -769,6 +838,8 @@ mod tests {
             recurrence: Some("FREQ=WEEKLY".to_owned()),
             attendees: vec![],
             exdates: vec![ex],
+            timezone: None,
+            rdates: vec![],
             recurrence_id: None,
             reminder_minutes: None,
             attendee_status: vec![],
@@ -797,6 +868,8 @@ mod tests {
             recurrence: None,
             attendees: vec![],
             exdates: vec![],
+            timezone: None,
+            rdates: vec![],
             recurrence_id: None,
             reminder_minutes: Some(10),
             attendee_status: vec![],
@@ -827,6 +900,8 @@ mod tests {
             recurrence: Some("FREQ=WEEKLY".to_owned()),
             attendees: vec![],
             exdates: vec![],
+            timezone: None,
+            rdates: vec![],
             recurrence_id: None,
             reminder_minutes: None,
             attendee_status: vec![],
@@ -861,6 +936,8 @@ mod tests {
         let e = from_ics(ics, "fb").unwrap();
         assert_eq!(fmt_utc(e.starts_at), "20260901T130000Z");
         assert_eq!(fmt_utc(e.ends_at), "20260901T133000Z");
+        // The wall-clock's zone is kept for DST-correct recurrence expansion.
+        assert_eq!(e.timezone.as_deref(), Some("America/New_York"));
     }
 
     #[test]
@@ -871,6 +948,69 @@ mod tests {
                    SUMMARY:Winzone\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
         let e = from_ics(ics, "fb").unwrap();
         assert_eq!(fmt_utc(e.starts_at), "20260901T090000Z");
+        // The unresolvable name is not kept: expansion must stay UTC too.
+        assert_eq!(e.timezone, None);
+    }
+
+    #[test]
+    fn zoned_series_serializes_tzid_wall_clock_and_round_trips() {
+        // A Brussels weekly with an EXDATE and an RDATE: every date-time
+        // property serializes as the zone's wall-clock (no Z), and the form
+        // is a fixed point through parse → serialize.
+        let start = OffsetDateTime::new_utc(
+            Date::from_calendar_date(2026, time::Month::October, 19).unwrap(),
+            Time::from_hms(7, 0, 0).unwrap(), // 09:00 Brussels (CEST)
+        );
+        let e = CalendarEvent {
+            id: EventId::new("tz-series".to_owned()),
+            calendar_id: CalendarId::new("cal".to_owned()),
+            summary: "Weekly".into(),
+            description: None,
+            location: None,
+            starts_at: start,
+            ends_at: start + time::Duration::minutes(30),
+            all_day: false,
+            recurrence: Some("FREQ=WEEKLY".to_owned()),
+            attendees: vec![],
+            // Skip Nov 2 (post-DST: 09:00 local = 08:00Z), add Thu Oct 22.
+            exdates: vec![OffsetDateTime::new_utc(
+                Date::from_calendar_date(2026, time::Month::November, 2).unwrap(),
+                Time::from_hms(8, 0, 0).unwrap(),
+            )],
+            timezone: Some("Europe/Brussels".to_owned()),
+            rdates: vec![OffsetDateTime::new_utc(
+                Date::from_calendar_date(2026, time::Month::October, 22).unwrap(),
+                Time::from_hms(7, 0, 0).unwrap(),
+            )],
+            recurrence_id: None,
+            reminder_minutes: None,
+            attendee_status: vec![],
+        };
+        let ics = to_ics(&e);
+        assert!(ics.contains("DTSTART;TZID=Europe/Brussels:20261019T090000"));
+        assert!(ics.contains("DTEND;TZID=Europe/Brussels:20261019T093000"));
+        assert!(ics.contains("RDATE;TZID=Europe/Brussels:20261022T090000"));
+        // The excluded instant is after the DST switch: 09:00 local again.
+        assert!(ics.contains("EXDATE;TZID=Europe/Brussels:20261102T090000"));
+        let back = from_ics(&ics, "fb").unwrap();
+        assert_eq!(back.starts_at, e.starts_at);
+        assert_eq!(back.ends_at, e.ends_at);
+        assert_eq!(back.timezone, e.timezone);
+        assert_eq!(back.rdates, e.rdates);
+        assert_eq!(back.exdates, e.exdates);
+    }
+
+    #[test]
+    fn rdate_round_trips_and_period_values_are_skipped() {
+        let ics = "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:rd1\r\n\
+                   DTSTART:20260803T090000Z\r\nDTEND:20260803T093000Z\r\n\
+                   RRULE:FREQ=WEEKLY\r\nRDATE:20260806T090000Z\r\n\
+                   RDATE;VALUE=PERIOD:20260807T090000Z/PT1H\r\n\
+                   SUMMARY:Standup\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+        let e = from_ics(ics, "fb").unwrap();
+        assert_eq!(e.rdates.len(), 1, "the PERIOD value is skipped");
+        assert_eq!(fmt_utc(e.rdates[0]), "20260806T090000Z");
+        assert!(to_ics(&e).contains("RDATE:20260806T090000Z"));
     }
 
     #[test]
@@ -913,6 +1053,8 @@ mod tests {
             recurrence: None,
             attendees: vec![],
             exdates: vec![],
+            timezone: None,
+            rdates: vec![],
             recurrence_id: None,
             reminder_minutes: None,
             attendee_status: vec![],

@@ -28,19 +28,21 @@ impl AccountStore {
         to: OffsetDateTime,
     ) -> Result<Vec<CalendarEvent>> {
         // Non-recurring events that overlap the window, plus every recurring
-        // master that starts before the window ends (its occurrences may land
-        // inside — expanded below). The master's own `starts_at`/`ends_at` are
-        // the first occurrence.
+        // master (an RRULE and/or RDATEs) that starts before the window ends
+        // (its occurrences may land inside — expanded below). The master's own
+        // `starts_at`/`ends_at` are the first occurrence.
         let visible = visible_pred();
         let sql = format!(
             "SELECT e.id, e.calendar_id, e.summary, e.description, e.location, e.starts_at, \
-                    e.ends_at, e.all_day, e.rrule, e.attendees, e.exdates, e.reminder_minutes, \
-                    e.attendee_status \
+                    e.ends_at, e.all_day, e.rrule, e.attendees, e.exdates, e.tzid, e.rdates, \
+                    e.reminder_minutes, e.attendee_status \
              FROM calendar_events e \
              WHERE e.tenant_id = $1 AND e.calendar_id IN ( \
                  SELECT c.id FROM calendars c WHERE c.tenant_id = $1 AND {visible}) AND ( \
-                 (e.rrule IS NULL AND e.starts_at < $3 AND e.ends_at > $4) OR \
-                 (e.rrule IS NOT NULL AND e.starts_at < $3)) \
+                 (e.rrule IS NULL AND jsonb_array_length(e.rdates) = 0 \
+                  AND e.starts_at < $3 AND e.ends_at > $4) OR \
+                 ((e.rrule IS NOT NULL OR jsonb_array_length(e.rdates) > 0) \
+                  AND e.starts_at < $3)) \
              ORDER BY e.starts_at, e.id",
         );
         let rows = sqlx::query_as::<_, EventRow>(&sql)
@@ -56,14 +58,14 @@ impl AccountStore {
         // are too); each replaces one occurrence in place.
         let series_ids: Vec<String> = masters
             .iter()
-            .filter(|e| e.recurrence.is_some())
+            .filter(|e| e.recurrence.is_some() || !e.rdates.is_empty())
             .map(|e| e.id.as_str().to_owned())
             .collect();
         let overrides = self.overrides_for(&series_ids).await?;
 
         let mut out = Vec::new();
         for event in masters {
-            if event.recurrence.is_none() {
+            if event.recurrence.is_none() && event.rdates.is_empty() {
                 out.push(event);
                 continue;
             }
@@ -89,6 +91,8 @@ impl AccountStore {
                             recurrence: event.recurrence.clone(),
                             attendees: event.attendees.clone(),
                             exdates: Vec::new(),
+                            timezone: event.timezone.clone(),
+                            rdates: Vec::new(),
                             recurrence_id: Some(*slot),
                             reminder_minutes: event.reminder_minutes,
                             attendee_status: event.attendee_status.clone(),
@@ -143,7 +147,7 @@ impl AccountStore {
     /// [`StoreError::Db`] on failure.
     pub async fn all_events(&self) -> Result<Vec<CalendarEvent>> {
         let rows = sqlx::query_as::<_, EventRow>(
-            "SELECT id, calendar_id, summary, description, location, starts_at, ends_at, all_day, rrule, attendees, exdates, reminder_minutes, attendee_status \
+            "SELECT id, calendar_id, summary, description, location, starts_at, ends_at, all_day, rrule, attendees, exdates, tzid, rdates, reminder_minutes, attendee_status \
              FROM calendar_events WHERE tenant_id = $1 AND user_id = $2 \
              ORDER BY starts_at, id",
         )
@@ -164,8 +168,8 @@ impl AccountStore {
         let visible = visible_pred();
         let sql = format!(
             "SELECT e.id, e.calendar_id, e.summary, e.description, e.location, e.starts_at, \
-                    e.ends_at, e.all_day, e.rrule, e.attendees, e.exdates, e.reminder_minutes, \
-                    e.attendee_status \
+                    e.ends_at, e.all_day, e.rrule, e.attendees, e.exdates, e.tzid, e.rdates, \
+                    e.reminder_minutes, e.attendee_status \
              FROM calendar_events e \
              WHERE e.tenant_id = $1 AND e.calendar_id = $3 AND e.calendar_id IN ( \
                  SELECT c.id FROM calendars c WHERE c.tenant_id = $1 AND {visible}) \
@@ -188,8 +192,8 @@ impl AccountStore {
         let visible = visible_pred();
         let sql = format!(
             "SELECT e.id, e.calendar_id, e.summary, e.description, e.location, e.starts_at, \
-                    e.ends_at, e.all_day, e.rrule, e.attendees, e.exdates, e.reminder_minutes, \
-                    e.attendee_status \
+                    e.ends_at, e.all_day, e.rrule, e.attendees, e.exdates, e.tzid, e.rdates, \
+                    e.reminder_minutes, e.attendee_status \
              FROM calendar_events e \
              WHERE e.tenant_id = $1 AND e.id = $3 AND e.calendar_id IN ( \
                  SELECT c.id FROM calendars c WHERE c.tenant_id = $1 AND {visible})",
@@ -219,8 +223,9 @@ impl AccountStore {
         sqlx::query(
             "INSERT INTO calendar_events \
              (tenant_id, user_id, id, calendar_id, summary, description, location, \
-              starts_at, ends_at, all_day, rrule, attendees, exdates, reminder_minutes) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)",
+              starts_at, ends_at, all_day, rrule, attendees, exdates, tzid, rdates, \
+              reminder_minutes) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)",
         )
         .bind(self.tenant.as_str())
         .bind(self.user.as_str())
@@ -235,6 +240,8 @@ impl AccountStore {
         .bind(&event.recurrence)
         .bind(sqlx::types::Json(&event.attendees))
         .bind(exdates_to_json(&event.exdates))
+        .bind(&event.timezone)
+        .bind(exdates_to_json(&event.rdates))
         .bind(event.reminder_minutes)
         .execute(&mut *tx)
         .await
@@ -278,8 +285,8 @@ impl AccountStore {
             sqlx::query(
                 "UPDATE calendar_events SET summary = $4, description = $5, location = $6, \
                         starts_at = $7, ends_at = $8, all_day = $9, rrule = $10, \
-                        attendees = $11, exdates = $12, reminder_minutes = $13, \
-                        updated_at = now() \
+                        attendees = $11, exdates = $12, tzid = $13, rdates = $14, \
+                        reminder_minutes = $15, updated_at = now() \
                  WHERE tenant_id = $1 AND user_id = $2 AND id = $3",
             )
             .bind(self.tenant.as_str())
@@ -294,6 +301,8 @@ impl AccountStore {
             .bind(&event.recurrence)
             .bind(sqlx::types::Json(&event.attendees))
             .bind(exdates_to_json(&event.exdates))
+            .bind(&event.timezone)
+            .bind(exdates_to_json(&event.rdates))
             .bind(event.reminder_minutes)
             .execute(&mut *tx)
             .await
@@ -321,15 +330,17 @@ impl AccountStore {
         sqlx::query(
             "INSERT INTO calendar_events \
              (tenant_id, user_id, id, calendar_id, summary, description, location, \
-              starts_at, ends_at, all_day, rrule, attendees, exdates, reminder_minutes) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) \
+              starts_at, ends_at, all_day, rrule, attendees, exdates, tzid, rdates, \
+              reminder_minutes) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) \
              ON CONFLICT (tenant_id, user_id, id) DO UPDATE SET \
                calendar_id = EXCLUDED.calendar_id, \
                summary = EXCLUDED.summary, description = EXCLUDED.description, \
                location = EXCLUDED.location, starts_at = EXCLUDED.starts_at, \
                ends_at = EXCLUDED.ends_at, all_day = EXCLUDED.all_day, \
                rrule = EXCLUDED.rrule, attendees = EXCLUDED.attendees, \
-               exdates = EXCLUDED.exdates, reminder_minutes = EXCLUDED.reminder_minutes, \
+               exdates = EXCLUDED.exdates, tzid = EXCLUDED.tzid, \
+               rdates = EXCLUDED.rdates, reminder_minutes = EXCLUDED.reminder_minutes, \
                updated_at = now()",
         )
         .bind(self.tenant.as_str())
@@ -345,6 +356,8 @@ impl AccountStore {
         .bind(&event.recurrence)
         .bind(sqlx::types::Json(&event.attendees))
         .bind(exdates_to_json(&event.exdates))
+        .bind(&event.timezone)
+        .bind(exdates_to_json(&event.rdates))
         .bind(event.reminder_minutes)
         .execute(&mut *tx)
         .await
@@ -371,7 +384,8 @@ impl AccountStore {
         let sql = format!(
             "UPDATE calendar_events AS e SET summary = $4, description = $5, location = $6, \
                     starts_at = $7, ends_at = $8, all_day = $9, rrule = $10, attendees = $11, \
-                    exdates = $12, calendar_id = $13, reminder_minutes = $14, updated_at = now() \
+                    exdates = $12, calendar_id = $13, tzid = $14, rdates = $15, \
+                    reminder_minutes = $16, updated_at = now() \
              WHERE e.tenant_id = $1 AND e.id = $3 AND e.calendar_id IN ( \
                  SELECT c.id FROM calendars c WHERE c.tenant_id = $1 AND {editable})",
         );
@@ -389,6 +403,8 @@ impl AccountStore {
             .bind(sqlx::types::Json(&event.attendees))
             .bind(exdates_to_json(&event.exdates))
             .bind(event.calendar_id.as_str())
+            .bind(&event.timezone)
+            .bind(exdates_to_json(&event.rdates))
             .bind(event.reminder_minutes)
             .execute(&mut *tx)
             .await
@@ -610,6 +626,8 @@ impl AccountStore {
                 recurrence: None,
                 attendees: master.attendees.clone(),
                 exdates: Vec::new(),
+                timezone: master.timezone.clone(),
+                rdates: Vec::new(),
                 recurrence_id: Some(*slot),
                 reminder_minutes: master.reminder_minutes,
                 attendee_status: master.attendee_status.clone(),
@@ -988,56 +1006,112 @@ const MAX_OCCURRENCES: usize = 3660;
 /// rule whose periods yield few or no in-range occurrences.
 const MAX_PERIODS: i64 = 4000;
 
+/// Whether a recurring master (an `RRULE` and/or `RDATE`s) yields any occurrence
+/// overlapping `[from, to)` — the same expansion the Agenda range listing uses,
+/// so CalDAV `time-range` narrowing never grows a second implementation.
+/// Per-occurrence overrides are ignored: an overridden slot still counts at its
+/// original position (callers that must catch a moved-into-range instance check
+/// the overrides table separately).
+pub fn series_occurs_in_range(
+    master: &CalendarEvent,
+    from: OffsetDateTime,
+    to: OffsetDateTime,
+) -> bool {
+    !expand_occurrences(master, from, to, &[]).is_empty()
+}
+
 /// Expand a recurring master into the occurrences overlapping `[from, to)`. Each
 /// occurrence is the master with `starts_at`/`ends_at` shifted — the series
 /// shares one id and duration; a per-occurrence override/exclusion is applied by
 /// the caller/expander. An unparseable rule degrades to the single master.
+///
+/// With a [`CalendarEvent::timezone`], the rule repeats the master's
+/// **wall-clock** in that zone: the period math runs on the local date-time and
+/// each occurrence converts back to the UTC instant it lands on, so a 09:00
+/// Brussels weekly stays 09:00 local across a DST switch. Without one (or for
+/// all-day events, whose dates never shift), the math is plain UTC as before.
+/// `RDATE` instants are appended after the rule (deduplicated against it).
 fn expand_occurrences(
     master: &CalendarEvent,
     from: OffsetDateTime,
     to: OffsetDateTime,
     overridden: &[OffsetDateTime],
 ) -> Vec<CalendarEvent> {
-    let Some(rule) = master.recurrence.as_deref().and_then(parse_rrule) else {
-        return vec![master.clone()];
-    };
-    let anchor = master.starts_at;
     let duration = master.ends_at - master.starts_at;
+    let zone = if master.all_day {
+        None
+    } else {
+        master.timezone.as_deref().and_then(crate::tz::zone)
+    };
     let mut out = Vec::new();
-    let mut total = 0usize; // occurrences counted from the series start (for COUNT)
-    let mut period = 0i64;
-    'outer: while total < MAX_OCCURRENCES && period < MAX_PERIODS {
-        for occ in period_occurrences(&rule, anchor, period) {
-            if occ < anchor {
-                continue; // BYDAY days before DTSTART in the first period
-            }
-            if occ >= to {
-                break 'outer; // periods only move forward — nothing later is in range
-            }
-            if rule.until.is_some_and(|u| occ > u) {
-                break 'outer;
-            }
-            total += 1;
-            let Some(occ_end) = occ.checked_add(duration) else {
-                break 'outer;
+    // The occurrence at `occ` (already a real UTC instant), if it overlaps the
+    // window and was not cancelled or overridden away.
+    let emit = |occ: OffsetDateTime, out: &mut Vec<CalendarEvent>| {
+        let Some(occ_end) = occ.checked_add(duration) else {
+            return;
+        };
+        let excluded = master.exdates.contains(&occ) || overridden.contains(&occ);
+        if occ < to && occ_end > from && !excluded {
+            out.push(CalendarEvent {
+                starts_at: occ,
+                ends_at: occ_end,
+                recurrence_id: Some(occ),
+                ..master.clone()
+            });
+        }
+    };
+    match master.recurrence.as_deref().and_then(parse_rrule) {
+        Some(rule) => {
+            // Anchor in wall-clock space; the periods repeat this local time.
+            let anchor = match &zone {
+                Some(z) => crate::tz::utc_to_wall(master.starts_at, z),
+                None => master.starts_at,
             };
-            // Skip occurrences the owner cancelled (EXDATE) or moved/edited via a
-            // per-occurrence override (emitted separately from the overrides table).
-            let excluded = master.exdates.contains(&occ) || overridden.contains(&occ);
-            if occ_end > from && !excluded {
-                out.push(CalendarEvent {
-                    starts_at: occ,
-                    ends_at: occ_end,
-                    recurrence_id: Some(occ),
-                    ..master.clone()
-                });
-            }
-            if rule.count.is_some_and(|c| total >= c) {
-                break 'outer;
+            let mut total = 0usize; // occurrences counted from the series start (for COUNT)
+            let mut period = 0i64;
+            'outer: while total < MAX_OCCURRENCES && period < MAX_PERIODS {
+                for wall in period_occurrences(&rule, anchor, period) {
+                    if wall < anchor {
+                        continue; // BYDAY days before DTSTART in the first period
+                    }
+                    // The UTC instant this wall-clock lands on (DST decides).
+                    let occ = match &zone {
+                        Some(z) => match crate::tz::wall_to_utc(wall, z) {
+                            Some(t) => t,
+                            None => continue,
+                        },
+                        None => wall,
+                    };
+                    // Wall order is ascending and the zone conversion is
+                    // monotonic, so nothing later can re-enter the window.
+                    if occ >= to {
+                        break 'outer;
+                    }
+                    if rule.until.is_some_and(|u| occ > u) {
+                        break 'outer;
+                    }
+                    total += 1;
+                    emit(occ, &mut out);
+                    if rule.count.is_some_and(|c| total >= c) {
+                        break 'outer;
+                    }
+                }
+                period += 1;
             }
         }
-        period += 1;
+        None if master.rdates.is_empty() => return vec![master.clone()],
+        // An RDATE-only series (or an unparseable rule beside RDATEs): the
+        // master's own start is the first occurrence, the RDATEs the rest.
+        None => emit(master.starts_at, &mut out),
     }
+    // RDATEs: extra instants beyond the rule, sharing the master's duration.
+    for &rd in &master.rdates {
+        if out.iter().any(|o| o.recurrence_id == Some(rd)) {
+            continue; // the rule already yields this instant
+        }
+        emit(rd, &mut out);
+    }
+    out.sort_by_key(|e| e.starts_at);
     out
 }
 
@@ -1273,6 +1347,8 @@ struct EventRow {
     // Stored as RFC 3339 strings: `time::OffsetDateTime` isn't serde-encodable
     // (the crate's serde feature is off), and strings keep the column readable.
     exdates: sqlx::types::Json<Vec<String>>,
+    tzid: Option<String>,
+    rdates: sqlx::types::Json<Vec<String>>,
     reminder_minutes: Option<i32>,
     attendee_status: sqlx::types::Json<HashMap<String, String>>,
 }
@@ -1304,6 +1380,8 @@ impl EventRow {
             recurrence: self.rrule,
             attendees: self.attendees.0,
             exdates: exdates_from_json(self.exdates.0),
+            timezone: self.tzid,
+            rdates: exdates_from_json(self.rdates.0),
             // A stored row is always a master or one-off (overrides live in
             // their own table); expansion stamps the slot on each occurrence.
             recurrence_id: None,
@@ -1357,6 +1435,8 @@ mod tests {
             recurrence: rrule.map(str::to_owned),
             attendees: vec![],
             exdates: vec![],
+            timezone: None,
+            rdates: vec![],
             recurrence_id: None,
             reminder_minutes: None,
             attendee_status: vec![],
@@ -1486,6 +1566,107 @@ mod tests {
         let e = ev(Some("FREQ=DAILY;UNTIL=20260805"), 2026, 8, 3, 9);
         let occ = expand_occurrences(&e, at(2026, 8, 1), at(2026, 9, 1), &[]);
         assert_eq!(occ.len(), 3, "Aug 3/4/5, inclusive of the UNTIL day");
+    }
+
+    #[test]
+    fn zoned_weekly_keeps_wall_clock_across_dst() {
+        // 09:00 Europe/Brussels weekly from Mon 2026-10-19 (CEST, UTC+2 →
+        // 07:00Z), crossing the 2026-10-25 end of DST: the local time holds,
+        // so the UTC instant shifts to 08:00Z once CET (UTC+1) returns.
+        let mut e = ev(Some("FREQ=WEEKLY;COUNT=3"), 2026, 10, 19, 7);
+        e.timezone = Some("Europe/Brussels".to_owned());
+        let occ = expand_occurrences(&e, at(2026, 10, 1), at(2026, 12, 1), &[]);
+        let starts: Vec<(u8, u8, u8)> = occ
+            .iter()
+            .map(|o| {
+                (
+                    o.starts_at.month() as u8,
+                    o.starts_at.day(),
+                    o.starts_at.hour(),
+                )
+            })
+            .collect();
+        assert_eq!(starts, vec![(10, 19, 7), (10, 26, 8), (11, 2, 8)]);
+        // Duration is absolute: every occurrence keeps the master's length.
+        assert!(
+            occ.iter()
+                .all(|o| o.ends_at - o.starts_at == e.ends_at - e.starts_at)
+        );
+        // The slot (recurrence id) is the real instant, so EXDATEs written in
+        // UTC keep matching: cancelling the post-switch instant works.
+        e.exdates.push(occ[1].starts_at);
+        let after = expand_occurrences(&e, at(2026, 10, 1), at(2026, 12, 1), &[]);
+        assert_eq!(after.len(), 2);
+        assert!(after.iter().all(|o| o.starts_at.day() != 26));
+    }
+
+    #[test]
+    fn zoned_monthly_by_day_crosses_dst() {
+        // 2nd Tuesday monthly, 09:00 Brussels, anchored Tue 2026-09-08
+        // (07:00Z): Oct 13 is still CEST (07:00Z), Nov 10 is CET (08:00Z).
+        let mut e = ev(Some("FREQ=MONTHLY;BYDAY=2TU"), 2026, 9, 8, 7);
+        e.timezone = Some("Europe/Brussels".to_owned());
+        let occ = expand_occurrences(&e, at(2026, 9, 1), at(2026, 12, 1), &[]);
+        let starts: Vec<(u8, u8, u8)> = occ
+            .iter()
+            .map(|o| {
+                (
+                    o.starts_at.month() as u8,
+                    o.starts_at.day(),
+                    o.starts_at.hour(),
+                )
+            })
+            .collect();
+        assert_eq!(starts, vec![(9, 8, 7), (10, 13, 7), (11, 10, 8)]);
+    }
+
+    #[test]
+    fn unknown_zone_expands_as_utc() {
+        // A zone the IANA database can't resolve degrades to fixed-UTC math
+        // rather than dropping the series.
+        let mut e = ev(Some("FREQ=WEEKLY;COUNT=2"), 2026, 10, 19, 7);
+        e.timezone = Some("Not/A_Zone".to_owned());
+        let occ = expand_occurrences(&e, at(2026, 10, 1), at(2026, 12, 1), &[]);
+        assert_eq!(occ.len(), 2);
+        assert!(occ.iter().all(|o| o.starts_at.hour() == 7));
+    }
+
+    #[test]
+    fn rdates_add_occurrences_and_dedupe() {
+        let mut e = ev(Some("FREQ=WEEKLY;COUNT=2"), 2026, 8, 3, 9);
+        // One off-pattern extra (a Thursday), one duplicating a rule slot.
+        e.rdates.push(at(2026, 8, 6) + Duration::hours(9));
+        e.rdates.push(e.starts_at + Duration::weeks(1));
+        let occ = expand_occurrences(&e, at(2026, 8, 1), at(2026, 9, 1), &[]);
+        let days: Vec<u8> = occ.iter().map(|o| o.starts_at.day()).collect();
+        assert_eq!(days, vec![3, 6, 10], "rule Mon 3/10 + extra Thu 6, no dup");
+        // An EXDATE cancels an RDATE instant like any other occurrence.
+        e.exdates.push(at(2026, 8, 6) + Duration::hours(9));
+        let after = expand_occurrences(&e, at(2026, 8, 1), at(2026, 9, 1), &[]);
+        assert_eq!(after.len(), 2);
+    }
+
+    #[test]
+    fn rdate_only_series_expands_master_plus_extras() {
+        let mut e = ev(None, 2026, 8, 3, 9);
+        e.rdates.push(at(2026, 8, 20) + Duration::hours(9));
+        let occ = expand_occurrences(&e, at(2026, 8, 1), at(2026, 9, 1), &[]);
+        let days: Vec<u8> = occ.iter().map(|o| o.starts_at.day()).collect();
+        assert_eq!(days, vec![3, 20]);
+        assert!(occ.iter().all(|o| o.recurrence_id == Some(o.starts_at)));
+    }
+
+    #[test]
+    fn series_range_test_uses_the_same_expansion() {
+        // A bounded series entirely before the window is not "in range" even
+        // though the master starts before the window end.
+        let e = ev(Some("FREQ=DAILY;COUNT=3"), 2026, 8, 3, 9);
+        assert!(series_occurs_in_range(&e, at(2026, 8, 1), at(2026, 8, 10)));
+        assert!(!series_occurs_in_range(&e, at(2026, 9, 1), at(2026, 9, 10)));
+        // An RDATE alone can put a series in range.
+        let mut r = ev(None, 2026, 8, 3, 9);
+        r.rdates.push(at(2026, 9, 5) + Duration::hours(9));
+        assert!(series_occurs_in_range(&r, at(2026, 9, 1), at(2026, 9, 10)));
     }
 
     #[test]

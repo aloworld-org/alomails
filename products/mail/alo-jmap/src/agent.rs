@@ -1143,6 +1143,8 @@ async fn execute_create_event(account: &Account, args: &Value) -> Result<Json<Va
         recurrence: None,
         attendees: Vec::new(),
         exdates: Vec::new(),
+        timezone: None,
+        rdates: Vec::new(),
         recurrence_id: None,
         reminder_minutes: None,
         attendee_status: Vec::new(),

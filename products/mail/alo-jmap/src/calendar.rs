@@ -55,6 +55,12 @@ struct EventBody {
     /// An iCalendar RRULE (e.g. `FREQ=WEEKLY`) or empty/absent for a one-off.
     #[serde(default)]
     recurrence: Option<String>,
+    /// The IANA zone whose wall-clock a recurring event follows across DST
+    /// (e.g. `Europe/Brussels`); empty/absent → occurrences repeat at fixed
+    /// UTC instants. On a whole-series update, an *absent* field keeps the
+    /// stored zone; an empty string clears it. An unknown name is refused.
+    #[serde(default)]
+    timezone: Option<String>,
     /// Guest email addresses to invite (iMIP invitations are mailed on save).
     #[serde(default)]
     attendees: Vec<String>,
@@ -186,7 +192,20 @@ pub async fn update(
         return Ok(Json(json!({ "status": "ok", "scope": "occurrence" })));
     }
     let calendar_id = resolve_calendar(&account, &req).await?;
-    let event = build_event(eid.clone(), calendar_id, req)?;
+    let timezone_given = req.timezone.is_some();
+    let mut event = build_event(eid.clone(), calendar_id, req)?;
+    // The JSON body cannot express a series' exceptions (EXDATEs/RDATEs, which
+    // arrive via DELETE?occurrence= and CalDAV) and usually omits the zone —
+    // a whole-series edit carries them forward rather than resurrecting
+    // cancelled instances or unpinning the wall-clock. An explicit `timezone`
+    // (including `""` to clear) still wins.
+    if let Ok(Some(prev)) = account.acc.event(&eid).await {
+        event.exdates = prev.exdates;
+        event.rdates = prev.rdates;
+        if !timezone_given && !event.all_day {
+            event.timezone = prev.timezone;
+        }
+    }
     account
         .acc
         .update_event(&eid, &event)
@@ -512,6 +531,23 @@ fn build_event(
             "the event ends before it starts",
         ));
     }
+    // A zone must resolve in the IANA database, or expansion would silently
+    // fall back to UTC — refuse it verbatim so the client can correct it
+    // (Windows display names are the usual culprit).
+    let timezone = match req
+        .timezone
+        .as_deref()
+        .map(str::trim)
+        .filter(|z| !z.is_empty())
+    {
+        Some(z) if !alo_store::tz::known(z) => {
+            return Err(Problem::with(
+                StatusCode::BAD_REQUEST,
+                format!("unknown time zone: {z} (use an IANA name like Europe/Brussels)"),
+            ));
+        }
+        other => other.map(str::to_owned).filter(|_| !req.all_day),
+    };
     let clean = |s: Option<String>| s.map(|v| v.trim().to_owned()).filter(|v| !v.is_empty());
     Ok(CalendarEvent {
         id,
@@ -523,6 +559,7 @@ fn build_event(
         ends_at,
         all_day: req.all_day,
         recurrence: clean(req.recurrence),
+        timezone,
         attendees: req
             .attendees
             .into_iter()
@@ -536,9 +573,12 @@ fn build_event(
             })
             .collect(),
         // A new event carries no exceptions; excluding an occurrence is a
-        // separate action (DELETE with an `occurrence`). CalDAV PUTs preserve
-        // any EXDATE via put_event/from_ics, not this create path.
+        // separate action (DELETE with an `occurrence`), and RDATEs arrive
+        // only over CalDAV. CalDAV PUTs preserve EXDATE/RDATE via
+        // put_event/from_ics, not this create path; a whole-series update
+        // carries the stored ones forward (see `update`).
         exdates: Vec::new(),
+        rdates: Vec::new(),
         // Masters/one-offs have no recurrence-id; only expanded occurrences do.
         recurrence_id: None,
         // Clamp to a sane, non-negative lead time (0 = at start time).
@@ -975,6 +1015,9 @@ fn event_json(e: &CalendarEvent) -> Value {
         "endsAt": e.ends_at.format(&Rfc3339).unwrap_or_default(),
         "allDay": e.all_day,
         "recurrence": e.recurrence,
+        // The zone whose wall-clock a recurring event follows across DST
+        // (IANA name), or null for fixed-UTC repetition.
+        "timezone": e.timezone,
         "attendees": e.attendees,
         // The occurrence's original slot (its stable edit/skip handle); null on
         // a stored master or one-off. For a moved occurrence it differs from

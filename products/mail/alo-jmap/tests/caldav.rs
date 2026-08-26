@@ -560,3 +560,78 @@ async fn read_only_shared_calendar_refuses_writes_with_403() {
     let (_s, _h, body) = dav(&a, "GET", &team_obj, None, "").await;
     assert!(body.contains("Moved offsite"), "{body}");
 }
+
+#[tokio::test]
+async fn recurring_series_syncs_zoned_and_time_range_expands() {
+    let h = harness("caldav-dst").await;
+    let uid = &h.account_id;
+    let cal = format!("/dav/calendars/{uid}/default/");
+
+    // A Brussels weekly (09:00 local from Mon 2026-10-19, six instances)
+    // crossing the 2026-10-25 end of DST, with the Nov 2 instance cancelled
+    // and an extra Thursday added — as a zone-aware client PUTs it.
+    let series = format!("dst-{uid}");
+    let series_path = format!("{cal}{series}.ics");
+    let body = format!(
+        "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//caldav//EN\r\n\
+         BEGIN:VEVENT\r\nUID:{series}\r\nDTSTAMP:20260101T000000Z\r\n\
+         DTSTART;TZID=Europe/Brussels:20261019T090000\r\n\
+         DTEND;TZID=Europe/Brussels:20261019T093000\r\n\
+         RRULE:FREQ=WEEKLY;COUNT=6\r\n\
+         EXDATE;TZID=Europe/Brussels:20261102T090000\r\n\
+         RDATE;TZID=Europe/Brussels:20261022T090000\r\n\
+         SUMMARY:Monday review\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+    );
+    let (status, ..) = dav(&h, "PUT", &series_path, None, &body).await;
+    assert_eq!(status, StatusCode::CREATED);
+
+    // GET serves the wall-clock (`;TZID=`) form back — the client's own
+    // expansion stays DST-correct — with the RDATE and EXDATE intact.
+    let (status, _h2, ics_body) = dav(&h, "GET", &series_path, None, "").await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(
+        ics_body.contains("DTSTART;TZID=Europe/Brussels:20261019T090000"),
+        "{ics_body}"
+    );
+    assert!(ics_body.contains("RRULE:FREQ=WEEKLY;COUNT=6"), "{ics_body}");
+    assert!(
+        ics_body.contains("RDATE;TZID=Europe/Brussels:20261022T090000"),
+        "{ics_body}"
+    );
+    assert!(
+        ics_body.contains("EXDATE;TZID=Europe/Brussels:20261102T090000"),
+        "{ics_body}"
+    );
+
+    // A bounded series entirely before November: the old "master starts
+    // before the window end" shortcut would have kept it; real expansion
+    // (the same function the Agenda uses) excludes it.
+    let spent = format!("spent-{uid}");
+    let spent_path = format!("{cal}{spent}.ics");
+    let body = format!(
+        "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//caldav//EN\r\n\
+         BEGIN:VEVENT\r\nUID:{spent}\r\nDTSTAMP:20260101T000000Z\r\n\
+         DTSTART:20260601T080000Z\r\nDTEND:20260601T083000Z\r\n\
+         RRULE:FREQ=DAILY;COUNT=3\r\n\
+         SUMMARY:June only\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+    );
+    let (status, ..) = dav(&h, "PUT", &spent_path, None, &body).await;
+    assert_eq!(status, StatusCode::CREATED);
+
+    // November window: the Brussels series still has instances (Nov 9/16/23,
+    // 09:00 CET) so it is reported; the June-only series is not.
+    let query = "<c:calendar-query xmlns:d=\"DAV:\" xmlns:c=\"urn:ietf:params:xml:ns:caldav\">\
+         <c:filter><c:comp-filter name=\"VCALENDAR\"><c:comp-filter name=\"VEVENT\">\
+         <c:time-range start=\"20261101T000000Z\" end=\"20261201T000000Z\"/>\
+         </c:comp-filter></c:comp-filter></c:filter></c:calendar-query>";
+    let (status, _h3, xml) = dav(&h, "REPORT", &cal, Some("1"), query).await;
+    assert_eq!(status, StatusCode::MULTI_STATUS);
+    assert!(
+        xml.contains(&format!("{series}.ics")),
+        "the DST-crossing series has November instances: {xml}"
+    );
+    assert!(
+        !xml.contains(&format!("{spent}.ics")),
+        "a series spent before the window is narrowed out: {xml}"
+    );
+}

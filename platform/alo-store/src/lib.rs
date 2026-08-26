@@ -276,6 +276,7 @@ pub mod time_invoice;
 pub mod time_report;
 pub mod time_timer;
 pub mod time_weeks;
+pub mod tz;
 pub mod user_invites;
 pub mod user_modules;
 pub mod vat_id;

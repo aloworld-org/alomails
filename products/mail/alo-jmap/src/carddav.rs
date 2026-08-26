@@ -391,7 +391,7 @@ fn event_propstat(
 /// The overrides to include alongside a recurring event's `calendar-data` (empty
 /// for a one-off or an un-edited series).
 async fn overrides_for_ics(acc: &AccountStore, e: &CalendarEvent) -> Vec<CalendarEvent> {
-    if e.recurrence.is_none() {
+    if e.recurrence.is_none() && e.rdates.is_empty() {
         return Vec::new();
     }
     acc.override_occurrences(&e.id).await.unwrap_or_default()
@@ -454,12 +454,25 @@ async fn report_events(acc: &AccountStore, uid: &str, coll: &str, text: &str) ->
         };
         let range = extract_time_range(text);
         for e in &events {
+            let mut ovs: Option<Vec<CalendarEvent>> = None;
             if let Some((start, end)) = range
                 && !event_overlaps(e, start, end)
             {
-                continue;
+                // A per-occurrence override can still have moved an
+                // instance INTO the window; check before dropping.
+                let loaded = overrides_for_ics(acc, e).await;
+                if !loaded
+                    .iter()
+                    .any(|o| o.starts_at < end && o.ends_at > start)
+                {
+                    continue;
+                }
+                ovs = Some(loaded);
             }
-            let ovs = overrides_for_ics(acc, e).await;
+            let ovs = match ovs {
+                Some(v) => v,
+                None => overrides_for_ics(acc, e).await,
+            };
             responses.push_str(&event_propstat(uid, e, true, &ovs));
         }
     } else {
@@ -928,12 +941,15 @@ fn parse_ical_utc(v: &str) -> Option<OffsetDateTime> {
     ))
 }
 
-/// Whether an event could have an instance in `[start, end)`. A recurring master
-/// is kept if it starts before `end` (its occurrences may fall inside — the
-/// client expands and narrows); a one-off must actually overlap.
+/// Whether an event has an instance in `[start, end)`. A recurring master (an
+/// `RRULE` and/or `RDATE`s) is answered by the store's one expansion function —
+/// the same one the Agenda range listing uses, so CalDAV never grows a second
+/// recurrence implementation; a one-off must overlap directly. The caller
+/// still checks per-occurrence overrides, which can move an instance into the
+/// window that the unoverridden series would miss.
 fn event_overlaps(e: &CalendarEvent, start: OffsetDateTime, end: OffsetDateTime) -> bool {
-    if e.recurrence.is_some() {
-        e.starts_at < end
+    if e.recurrence.is_some() || !e.rdates.is_empty() {
+        alo_store::calendar::series_occurs_in_range(e, start, end)
     } else {
         e.starts_at < end && e.ends_at > start
     }

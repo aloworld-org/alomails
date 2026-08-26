@@ -238,6 +238,8 @@ async fn an_event(
         recurrence: rrule.map(str::to_owned),
         attendees: vec!["paula@delaunay.example".to_owned()],
         exdates: Vec::new(),
+        timezone: None,
+        rdates: Vec::new(),
         recurrence_id: None,
         reminder_minutes: Some(10),
         attendee_status: Vec::new(),

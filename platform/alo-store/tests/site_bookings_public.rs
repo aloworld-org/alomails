@@ -262,6 +262,8 @@ async fn the_owners_calendar_takes_slots_away_and_a_booking_takes_the_next_one()
             recurrence: None,
             attendees: Vec::new(),
             exdates: Vec::new(),
+            timezone: None,
+            rdates: Vec::new(),
             recurrence_id: None,
             reminder_minutes: None,
             attendee_status: Vec::new(),

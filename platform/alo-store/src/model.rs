@@ -308,6 +308,16 @@ pub struct CalendarEvent {
     /// a one-off. It is the stable handle for editing/skipping that instance,
     /// since an override's `starts_at` may differ from its slot.
     pub recurrence_id: Option<OffsetDateTime>,
+    /// The IANA zone whose **wall-clock** a recurring series follows (from an
+    /// iCalendar `DTSTART;TZID=…` or the API's `timezone`): expansion repeats
+    /// the local time in this zone, so the UTC instant shifts across its DST
+    /// changes. `None` → occurrences are fixed UTC instants (one-offs, and
+    /// UTC/floating series). Ignored for all-day events (dates don't shift).
+    pub timezone: Option<String>,
+    /// Extra occurrence start-instants (iCalendar `RDATE`) beyond what the
+    /// `RRULE` yields; each occurrence gets the master's duration. May recur
+    /// without any `RRULE` (an RDATE-only series). Empty for most events.
+    pub rdates: Vec<OffsetDateTime>,
     /// Reminder lead-time in minutes before the start (iCalendar `VALARM` with a
     /// negative `TRIGGER`), or `None` for no reminder. A recurring series shares
     /// one reminder across its occurrences.
