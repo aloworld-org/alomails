@@ -2636,9 +2636,9 @@ function CustomizeQuote({
         </>
       }
     >
-      <div className="grid gap-8 lg:grid-cols-[17rem_minmax(0,1fr)]">
-        <section className="rounded-2xl bg-raised/45 p-5">
-          <div>
+      <div className="space-y-7">
+        <section className="flex flex-wrap items-center gap-5 rounded-2xl border border-default bg-raised/35 p-4">
+          <div className="min-w-52 flex-1">
             <h3 className="text-base font-semibold text-primary">Brand mark</h3>
             <p className="mt-1 text-sm leading-relaxed text-secondary">
               Shown at the top of the customer quotation.
@@ -2646,32 +2646,27 @@ function CustomizeQuote({
           </div>
           <button
             type="button"
-            className="mt-5 flex min-h-44 w-full items-center justify-center overflow-hidden rounded-xl border border-dashed border-default bg-surface p-5 text-sm font-semibold text-secondary shadow-sm transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
+            className="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-default bg-surface p-3 text-sm font-semibold text-secondary shadow-sm transition-all hover:border-accent hover:bg-accent-soft hover:text-accent hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
             onClick={() => logoInput.current?.click()}
           >
             {design.logo ? (
               <img
                 src={design.logo}
                 alt="Quote logo"
-                className="max-h-28 max-w-full object-contain"
+                className="max-h-20 max-w-full object-contain"
               />
             ) : (
               <span className="flex flex-col items-center gap-3 text-center">
-                <span className="grid size-11 place-items-center rounded-xl bg-accent-soft text-accent">
+                <span className="grid size-10 place-items-center rounded-xl bg-accent-soft text-accent">
                   <Upload className="size-5" />
                 </span>
                 <span>
-                  <strong className="block text-sm text-primary">
-                    Upload your logo
-                  </strong>
-                  <small className="mt-1 block font-normal text-tertiary">
-                    PNG, JPG, WebP, or SVG
-                  </small>
+                  <strong className="sr-only">Upload your logo</strong>
                 </span>
               </span>
             )}
           </button>
-          <div className="mt-3 flex items-center justify-between gap-3">
+          <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
               className="inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-accent transition-colors hover:bg-accent-soft hover:text-accent-hover disabled:cursor-not-allowed disabled:text-tertiary disabled:opacity-50"
@@ -2703,7 +2698,7 @@ function CustomizeQuote({
             }}
           />
         </section>
-        <div className="min-w-0 space-y-8">
+        <div className="min-w-0 space-y-7">
           <section>
             <div>
               <h3 className="text-base font-semibold text-primary">
@@ -2713,14 +2708,14 @@ function CustomizeQuote({
                 Choose which side carries your company identity.
               </p>
             </div>
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
               {(["left", "right"] as const).map((alignment) => (
                 <button
                   key={alignment}
                   type="button"
                   aria-pressed={design.headerAlignment === alignment}
                   className={cx(
-                    "group relative min-h-48 overflow-hidden rounded-2xl border p-3 text-left transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
+                    "group relative min-h-40 overflow-hidden rounded-2xl border p-3 text-left transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
                     design.headerAlignment === alignment
                       ? "border-accent bg-accent-soft/30 shadow-sm"
                       : "border-default bg-surface shadow-sm",
@@ -2734,7 +2729,7 @@ function CustomizeQuote({
                 >
                   <span
                     className={cx(
-                      "flex h-24 items-center justify-between gap-5 rounded-xl border border-subtle bg-raised px-5",
+                      "flex h-20 items-center justify-between gap-5 rounded-xl bg-raised px-5",
                       alignment === "right" && "flex-row-reverse",
                     )}
                     aria-hidden="true"
@@ -2751,7 +2746,7 @@ function CustomizeQuote({
                       <span className="block h-1.5 w-14 rounded-full bg-accent/70" />
                     </span>
                   </span>
-                  <span className="flex items-start justify-between gap-4 px-1 pb-1 pt-4">
+                  <span className="flex items-start justify-between gap-4 px-1 pb-1 pt-3">
                     <span>
                       <strong className="block text-sm font-semibold text-primary">
                         Logo {alignment}
@@ -2777,7 +2772,7 @@ function CustomizeQuote({
               ))}
             </div>
           </section>
-          <section className="border-t border-subtle pt-7">
+          <section className="border-t border-subtle pt-6">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h3 className="text-base font-semibold text-primary">
@@ -2801,8 +2796,8 @@ function CustomizeQuote({
                 Reset
               </button>
             </div>
-            <div className="mt-5 grid gap-4 xl:grid-cols-2">
-              <div className="rounded-2xl border border-default bg-raised/35 p-4">
+            <div className="mt-5 grid gap-6 xl:grid-cols-2">
+              <div>
                 <div className="mb-4">
                   <h4 className="text-sm font-semibold text-primary">
                     Document
@@ -2834,7 +2829,7 @@ function CustomizeQuote({
                   />
                 </div>
               </div>
-              <div className="rounded-2xl border border-default bg-raised/35 p-4">
+              <div className="xl:border-l xl:border-subtle xl:pl-6">
                 <div className="mb-4">
                   <h4 className="text-sm font-semibold text-primary">
                     Pricing tables
