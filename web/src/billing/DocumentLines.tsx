@@ -19,6 +19,7 @@ import { blankRow, isBlankRow, rowFromProduct, rowProblem } from "./lineRows";
 import type { LineRow, RowProblem } from "./lineRows";
 import type { BillingProduct, DocumentLine } from "./types";
 import type { QuoteColumns } from "./QuoteContentStudio";
+import { useQuoteTableOptions } from "./quoteTableOptions";
 import styles from "./billingStyles";
 
 /** What to say about the row's first problem. A blank description is the
@@ -68,6 +69,7 @@ export function DocumentLines({
   nextKey,
 }: Props) {
   const locale = useLocale();
+  const tableOptions = useQuoteTableOptions();
   const [draggedKey, setDraggedKey] = useState<string | null>(null);
   const [dropTargetKey, setDropTargetKey] = useState<string | null>(null);
 
@@ -104,6 +106,21 @@ export function DocumentLines({
     onChange(next);
   }
 
+  function contentKey(row: LineRow) {
+    if (row.productId) return `product:${row.productId}`;
+    const description = row.description.trim().toLocaleLowerCase();
+    return description ? `description:${description}` : row.key;
+  }
+
+  function uploadImage(file: File, key: string) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string")
+        tableOptions.updateLineContent(key, { image: reader.result });
+    };
+    reader.readAsDataURL(file);
+  }
+
   if (!readOnly) {
     return (
       <section className="flex flex-col gap-4">
@@ -131,6 +148,11 @@ export function DocumentLines({
             {rows.map((row, index) => {
               const problem = isBlankRow(row) ? null : rowProblem(row);
               const line = stored.get(row.key);
+              const detailKey = contentKey(row);
+              const content = tableOptions.lineContent[detailKey] ?? {
+                description: "",
+                image: "",
+              };
               return (
                 <article
                   key={row.key}
@@ -206,6 +228,67 @@ export function DocumentLines({
                   >
                     <GripVertical className="size-5" aria-hidden="true" />
                   </button>
+                  {tableOptions.enabled && tableOptions.showImages && (
+                    <div className="mb-4 flex items-center gap-3 rounded-xl bg-raised/35 p-3">
+                      <div
+                        className={cx(
+                          "grid shrink-0 place-items-center overflow-hidden rounded-lg border border-default bg-surface",
+                          tableOptions.layout === "catalogue"
+                            ? "size-28"
+                            : "size-20",
+                        )}
+                      >
+                        {content.image ? (
+                          <img
+                            src={content.image}
+                            alt="Product"
+                            className="size-full object-cover"
+                          />
+                        ) : (
+                          <PackageOpen
+                            className="size-5 text-tertiary"
+                            aria-hidden="true"
+                          />
+                        )}
+                      </div>
+                      <div>
+                        <strong className="block text-sm font-semibold text-primary">
+                          Product image
+                        </strong>
+                        <p className="mt-1 text-xs text-secondary">
+                          Shown beside this item in the customer quotation.
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <label className="inline-flex min-h-9 cursor-pointer items-center rounded-lg border border-default bg-surface px-3 text-xs font-semibold text-primary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent">
+                            {content.image ? "Replace image" : "Upload image"}
+                            <input
+                              type="file"
+                              accept="image/png,image/jpeg,image/webp"
+                              className="sr-only"
+                              onChange={(event) => {
+                                const file = event.target.files?.[0];
+                                if (file) uploadImage(file, detailKey);
+                                event.currentTarget.value = "";
+                              }}
+                            />
+                          </label>
+                          {content.image && (
+                            <button
+                              type="button"
+                              className="min-h-9 rounded-lg px-3 text-xs font-semibold text-secondary hover:bg-danger-tint hover:text-danger"
+                              onClick={() =>
+                                tableOptions.updateLineContent(detailKey, {
+                                  image: "",
+                                })
+                              }
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <div className="grid gap-4 xl:grid-cols-[minmax(280px,2fr)_minmax(120px,.6fr)_minmax(110px,.5fr)_minmax(130px,.65fr)_minmax(110px,.5fr)_minmax(130px,.7fr)_40px] xl:items-end">
                     <div className="flex min-w-0 flex-col gap-2 xl:row-span-2">
                       <label className="text-xs font-semibold uppercase tracking-wide text-tertiary">
@@ -318,6 +401,23 @@ export function DocumentLines({
                       }
                     />
                   </div>
+                  {tableOptions.enabled && tableOptions.showDescriptions && (
+                    <label className="mt-4 block">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-tertiary">
+                        Product description
+                      </span>
+                      <textarea
+                        className="mt-2 min-h-20 w-full resize-y rounded-md border border-default bg-surface px-3 py-3 text-sm leading-relaxed text-primary placeholder:text-tertiary focus:border-accent focus:outline-none"
+                        value={content.description}
+                        placeholder="Add specifications, materials, scope, or other useful details…"
+                        onChange={(event) =>
+                          tableOptions.updateLineContent(detailKey, {
+                            description: event.target.value,
+                          })
+                        }
+                      />
+                    </label>
+                  )}
                 </article>
               );
             })}
@@ -356,6 +456,9 @@ export function DocumentLines({
         >
           <thead>
             <tr>
+              {tableOptions.enabled && tableOptions.showImages && (
+                <Th>Image</Th>
+              )}
               <Th>{strings.billingColDescription}</Th>
               {(columns?.unit ?? true) && (
                 <Th className={styles.narrowCol}>{strings.billingColUnit}</Th>
@@ -385,11 +488,46 @@ export function DocumentLines({
             {rows.map((row, index) => {
               const problem = isBlankRow(row) ? null : rowProblem(row);
               const line = stored.get(row.key);
+              const content = tableOptions.lineContent[contentKey(row)] ?? {
+                description: "",
+                image: "",
+              };
               return (
                 <tr key={row.key}>
+                  {tableOptions.enabled && tableOptions.showImages && (
+                    <td className="w-28">
+                      {content.image ? (
+                        <img
+                          src={content.image}
+                          alt=""
+                          className={cx(
+                            "rounded-lg object-cover",
+                            tableOptions.layout === "catalogue"
+                              ? "size-24"
+                              : "size-16",
+                          )}
+                        />
+                      ) : (
+                        <span className="grid size-16 place-items-center rounded-lg bg-raised/40">
+                          <PackageOpen className="size-5 text-tertiary" />
+                        </span>
+                      )}
+                    </td>
+                  )}
                   <td className={styles.lineDescription}>
                     {readOnly ? (
-                      row.description
+                      <div>
+                        <strong className="font-medium text-primary">
+                          {row.description}
+                        </strong>
+                        {tableOptions.enabled &&
+                          tableOptions.showDescriptions &&
+                          content.description && (
+                            <p className="mt-1 max-w-2xl whitespace-pre-wrap text-sm leading-relaxed text-secondary">
+                              {content.description}
+                            </p>
+                          )}
+                      </div>
                     ) : (
                       <>
                         <Input

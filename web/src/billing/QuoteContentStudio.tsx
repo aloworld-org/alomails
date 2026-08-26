@@ -27,6 +27,11 @@ import {
 } from "lucide-react";
 
 import { Button, Input, Modal, cx } from "../ds";
+import {
+  QuoteTableOptionsProvider,
+  type QuoteLineContent,
+  type QuoteTableLayout,
+} from "./quoteTableOptions";
 
 type Theme = "modern" | "editorial" | "minimal";
 type Block =
@@ -64,6 +69,10 @@ interface Design {
   theme: Theme;
   colors: Colors;
   columns: QuoteColumns;
+  tableLayout: QuoteTableLayout;
+  showProductImages: boolean;
+  showProductDescriptions: boolean;
+  lineContent: Record<string, QuoteLineContent>;
   blocks: Block[];
 }
 const DEFAULT_COLORS: Colors = {
@@ -78,6 +87,10 @@ const EMPTY: Design = {
   theme: "modern",
   colors: DEFAULT_COLORS,
   columns: DEFAULT_QUOTE_COLUMNS,
+  tableLayout: "compact",
+  showProductImages: false,
+  showProductDescriptions: false,
+  lineContent: {},
   blocks: [{ id: "pricing-table", kind: "pricing" }],
 };
 const DESIGN_STORE = "quote-designs";
@@ -308,6 +321,18 @@ export const QuoteContentStudio = forwardRef<
         block.id === id ? ({ ...block, ...patch } as Block) : block,
       ),
     }));
+  const updateLineContent = (key: string, patch: Partial<QuoteLineContent>) =>
+    setDesign((current) => ({
+      ...current,
+      lineContent: {
+        ...current.lineContent,
+        [key]: {
+          description: current.lineContent[key]?.description ?? "",
+          image: current.lineContent[key]?.image ?? "",
+          ...patch,
+        },
+      },
+    }));
   const removeBlock = (id: string) =>
     setDesign((current) => ({
       ...current,
@@ -388,6 +413,14 @@ export const QuoteContentStudio = forwardRef<
                           {blockName(block)}
                         </span>
                         <div className="flex flex-wrap items-center gap-1">
+                          {block.kind === "pricing" && (
+                            <BlockCommand
+                              label="Table settings"
+                              onClick={() => setCustomize(true)}
+                            >
+                              <Palette className="size-4" />
+                            </BlockCommand>
+                          )}
                           <BlockCommand
                             label="Move up"
                             disabled={index === 0}
@@ -422,7 +455,18 @@ export const QuoteContentStudio = forwardRef<
                     )}
                     <div className="p-5">
                       {block.kind === "pricing" ? (
-                        pricingTable
+                        <QuoteTableOptionsProvider
+                          value={{
+                            enabled: true,
+                            layout: design.tableLayout,
+                            showImages: design.showProductImages,
+                            showDescriptions: design.showProductDescriptions,
+                            lineContent: design.lineContent,
+                            updateLineContent,
+                          }}
+                        >
+                          {pricingTable}
+                        </QuoteTableOptionsProvider>
                       ) : block.kind === "heading" ? (
                         readOnly ? (
                           <h3 className="text-xl font-semibold">
@@ -1014,6 +1058,83 @@ function CustomizeQuote({
                 {design.theme === theme.id && (
                   <Check className="size-4 shrink-0 text-accent" />
                 )}
+              </button>
+            ))}
+          </div>
+          <h3 className="mt-6 text-sm font-semibold text-primary">
+            Pricing table layout
+          </h3>
+          <p className="mt-1 text-xs text-secondary">
+            Start simple, then reveal richer product information only when it
+            helps the customer.
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            {(
+              [
+                ["compact", "Compact", "Names and prices only"],
+                ["detailed", "Detailed", "Descriptions with optional images"],
+                ["catalogue", "Catalogue", "Larger product images and details"],
+              ] as const
+            ).map(([layout, label, help]) => (
+              <button
+                key={layout}
+                type="button"
+                className={cx(
+                  "rounded-xl border px-3 py-3 text-left transition-colors hover:border-accent hover:bg-accent-soft",
+                  design.tableLayout === layout
+                    ? "border-accent bg-accent-soft"
+                    : "border-default bg-surface",
+                )}
+                onClick={() =>
+                  onChange((current) => ({
+                    ...current,
+                    tableLayout: layout,
+                    showProductDescriptions: layout !== "compact",
+                    showProductImages: layout === "catalogue",
+                  }))
+                }
+              >
+                <strong className="block text-sm font-semibold text-primary">
+                  {label}
+                </strong>
+                <span className="mt-1 block text-xs text-secondary">
+                  {help}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {(
+              [
+                ["showProductImages", "Product images"],
+                ["showProductDescriptions", "Product descriptions"],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={design[key]}
+                className={cx(
+                  "inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 text-sm font-semibold transition-colors hover:border-accent hover:bg-accent-soft",
+                  design[key]
+                    ? "border-accent bg-accent-soft text-accent"
+                    : "border-default bg-surface text-secondary",
+                )}
+                onClick={() =>
+                  onChange((current) => ({ ...current, [key]: !current[key] }))
+                }
+              >
+                <span
+                  className={cx(
+                    "flex size-4 items-center justify-center rounded border",
+                    design[key]
+                      ? "border-accent bg-accent text-on-accent"
+                      : "border-default bg-surface",
+                  )}
+                >
+                  {design[key] && <Check className="size-3" />}
+                </span>
+                {label}
               </button>
             ))}
           </div>
