@@ -1874,7 +1874,7 @@ export const fr: Partial<Catalog> = {
   billingDeleteQuoteDraftConfirm:
     "Supprimer ce brouillon ? Il ne porte aucun numéro et n’a jamais été proposé à personne — et rien ne pourra être récupéré.",
   billingQuoteSentNotice:
-    "Ce devis est finalisé et ne peut plus être modifié. Il n’a pas été envoyé par e-mail par alo. Si le prix change, créez un nouveau devis.",
+    "Finalisé dans alo. Aucun e-mail n’a été envoyé.",
   billingQuoteClosedNotice:
     "Cette offre est close et ne peut plus être modifiée.",
   billingSendQuote: "Finaliser le devis",

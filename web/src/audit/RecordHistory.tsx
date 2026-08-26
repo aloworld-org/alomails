@@ -19,9 +19,11 @@ interface Props {
   /** `billing.invoice`, `crm.deal`, … — the server's own record kind. */
   entityType: string;
   entityId: string;
+  /** Optional internal context that belongs with the audit trail, not the document. */
+  note?: string | undefined;
 }
 
-export function RecordHistory({ entityType, entityId }: Props) {
+export function RecordHistory({ entityType, entityId, note }: Props) {
   const api = useAuditApi();
   const locale = useLocale();
   const [entries, setEntries] = useState<AuditEntry[] | null>(null);
@@ -51,8 +53,9 @@ export function RecordHistory({ entityType, entityId }: Props) {
       <h2 className="m-0 flex items-center gap-1 text-sm font-semibold uppercase tracking-[0.04em] text-tertiary">
         <History size={13} /> {strings.auditHistoryTitle}
       </h2>
+      {note !== undefined && <p className="m-0 text-sm text-secondary">{note}</p>}
       {error !== null && <p className="m-0 text-sm text-danger">{error}</p>}
-      {error === null && entries !== null && entries.length === 0 && (
+      {note === undefined && error === null && entries !== null && entries.length === 0 && (
         <p className="m-0 text-sm text-tertiary">{strings.auditHistoryEmpty}</p>
       )}
       {entries !== null && entries.length > 0 && (

@@ -1834,7 +1834,7 @@ export const nl: Partial<Catalog> = {
   billingDeleteQuoteDraftConfirm:
     "Dit concept verwijderen? Het draagt geen nummer en is nooit aan iemand aangeboden — en er kan niets worden teruggehaald.",
   billingQuoteSentNotice:
-    "Deze offerte is definitief en kan niet meer worden gewijzigd. alo heeft geen e-mail verstuurd. Verandert de prijs, maak dan een nieuwe offerte.",
+    "Definitief gemaakt in alo. Er is geen e-mail verstuurd.",
   billingQuoteClosedNotice:
     "Deze offerte is gesloten en kan niet meer worden gewijzigd.",
   billingSendQuote: "Offerte definitief maken",

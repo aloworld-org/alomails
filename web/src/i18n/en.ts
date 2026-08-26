@@ -2825,7 +2825,7 @@ export const en = {
   billingDeleteQuoteDraftConfirm:
     "Delete this draft? It carries no number and was never made to anybody — and nothing can be recovered.",
   billingQuoteSentNotice:
-    "This quote is finalized and can no longer be changed. It has not been emailed by alo. If the price changes, create a new quote.",
+    "Finalized in alo. No email was sent.",
   billingQuoteClosedNotice:
     "This offer is closed and can no longer be changed.",
   billingSendQuote: "Finalize quote",

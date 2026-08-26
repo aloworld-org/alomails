@@ -196,7 +196,7 @@ export function QuoteEditor() {
         discardMessage: strings.billingDeleteQuoteDraftConfirm,
         frozenNotice:
           quote?.status === "sent"
-            ? strings.billingQuoteSentNotice
+            ? null
             : strings.billingQuoteClosedNotice,
       }}
       chips={quote === null ? null : <QuoteChips quote={quote} />}
@@ -286,7 +286,13 @@ export function QuoteEditor() {
             )}
             {/* Who did what to this quote, and when (B2.13). A quote that was
                 never saved has no id and therefore no history. */}
-            {id !== undefined && <RecordHistory entityType="billing.quote" entityId={id} />}
+            {id !== undefined && (
+              <RecordHistory
+                entityType="billing.quote"
+                entityId={id}
+                note={quote?.status === "sent" ? strings.billingQuoteSentNotice : undefined}
+              />
+            )}
           </>
         )
       }

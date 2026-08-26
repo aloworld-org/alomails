@@ -393,7 +393,10 @@ describe("the offer's transitions", () => {
 
     reply("/billing/quotes/quo-2", "GET", { quote: SENT, invoiceId: null });
     ui("/billing/quotes/quo-2");
-    await screen.findByText(strings.billingQuoteSentNotice);
+    const finalizedNote = await screen.findByText(strings.billingQuoteSentNotice);
+    const history = finalizedNote.closest("section");
+    expect(history).not.toBeNull();
+    expect(within(history as HTMLElement).getByText(strings.auditHistoryTitle)).toBeTruthy();
     for (const label of [
       strings.billingAcceptQuote,
       strings.billingDeclineQuote,

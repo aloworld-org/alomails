@@ -48,8 +48,8 @@ export interface DocumentEditorLabels {
   /** Discarding a draft — the label, and what the dialog says first. */
   discardLabel: string;
   discardMessage: string;
-  /** Why a numbered document offers no edits. */
-  frozenNotice: string;
+  /** Why a numbered document offers no edits, when that needs a page notice. */
+  frozenNotice: string | null;
 }
 
 export interface CreationTemplate {
@@ -458,7 +458,9 @@ export function DocumentEditor<T extends StoredDocument, A>({
         </div>
 
         {error !== null && <ErrorBanner message={error} />}
-        {draft.readOnly && <p className={styles.notice}>{labels.frozenNotice}</p>}
+        {draft.readOnly && labels.frozenNotice !== null && (
+          <p className={styles.notice}>{labels.frozenNotice}</p>
+        )}
 
         <div className={styles.editorBody}>
         {lead}
