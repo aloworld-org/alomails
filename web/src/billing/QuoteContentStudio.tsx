@@ -1142,8 +1142,9 @@ function ImageBlockEditor({
         <p className="mt-1 text-xs text-secondary">
           Choose how this content block will appear in the quotation.
         </p>
-        <div className="mt-5 grid items-start gap-x-6 gap-y-5 md:grid-cols-12">
-          <div className="md:col-span-4">
+        <div className="mt-5 flex flex-col gap-5">
+          <div className="grid items-start gap-6 md:grid-cols-[minmax(0,3fr)_minmax(0,5fr)]">
+            <div>
             <ImageOptionGroup
               label="Composition"
               visual="composition"
@@ -1155,15 +1156,17 @@ function ImageBlockEditor({
               ]}
               onChange={(placement) => onChange({ placement })}
             />
-          </div>
-          <div className="md:col-span-8">
+            </div>
+            <div>
             <ImageColumnRatioPicker
               value={block.columnRatio ?? "50-50"}
               placement={block.placement ?? "full"}
               onChange={(columnRatio) => onChange({ columnRatio })}
             />
+            </div>
           </div>
-          <div className="md:col-span-4">
+          <div className="grid items-start gap-6 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)_minmax(0,3fr)]">
+            <div>
             <ImageOptionGroup
               label="Image frame"
               visual="frame"
@@ -1175,8 +1178,8 @@ function ImageBlockEditor({
               ]}
               onChange={(aspect) => onChange({ aspect })}
             />
-          </div>
-          <div className="md:col-span-4">
+            </div>
+            <div>
             <ImageOptionGroup
               label="Fit"
               visual="fit"
@@ -1195,8 +1198,8 @@ function ImageBlockEditor({
                 })
               }
             />
-          </div>
-          <div className="md:col-span-4">
+            </div>
+            <div>
             <ImageZoomControl
               value={
                 block.fit === "cover"
@@ -1209,6 +1212,7 @@ function ImageBlockEditor({
               minimum={block.fit === "cover" ? 100 : 50}
               onChange={(zoom) => onChange({ zoom })}
             />
+            </div>
           </div>
         </div>
       </section>
@@ -1501,14 +1505,14 @@ function ImageColumnRatioPicker({
               aria-label={`Image ${image}%, text ${text}%`}
               aria-pressed={selected}
               className={cx(
-                "group rounded-lg border bg-surface p-1.5 transition-colors hover:border-accent hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40",
+                "group h-20 rounded-xl border bg-surface p-2 transition-colors hover:border-accent hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40",
                 selected
                   ? "border-accent ring-1 ring-inset ring-accent/15"
                   : "border-default",
               )}
               onClick={() => onChange(id)}
             >
-              <span className="flex h-7 gap-1 overflow-hidden rounded bg-raised p-1">
+              <span className="mx-auto flex h-10 max-w-24 gap-1 overflow-hidden rounded-md bg-raised p-1.5">
                 <span
                   className={cx(
                     "rounded-sm bg-accent/25",
@@ -1579,7 +1583,7 @@ function ImageOptionGroup<T extends string | number>({
             className={cx(
               "group relative whitespace-nowrap border text-center text-sm font-medium transition-all hover:border-accent hover:bg-accent-soft hover:text-accent",
               visual
-                ? "min-h-[4.25rem] rounded-xl bg-surface p-2 shadow-sm hover:-translate-y-px hover:shadow-md"
+                ? "h-20 rounded-xl bg-surface p-2 shadow-sm hover:-translate-y-px hover:shadow-md"
                 : "min-h-11 rounded-lg px-3",
               value === id
                 ? "border-accent/30 bg-accent-soft font-semibold text-accent shadow-sm ring-1 ring-inset ring-accent/15"
