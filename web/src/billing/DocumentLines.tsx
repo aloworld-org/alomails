@@ -9,7 +9,8 @@
 // saved**. A net next to a quantity the server has not seen yet would be a
 // figure the browser had made up, which is the one thing the billing surface
 // never does.
-import { PackageOpen, Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { GripVertical, PackageOpen, Plus, Trash2 } from "lucide-react";
 
 import { ChoicePicker, IconButton, Input, Table, Td, Th, cx } from "../ds";
 import { strings, useLocale } from "../i18n";
@@ -67,6 +68,7 @@ export function DocumentLines({
   nextKey,
 }: Props) {
   const locale = useLocale();
+  const [draggedKey, setDraggedKey] = useState<string | null>(null);
 
   // The server replaces the whole set in the order sent, so the n-th line it
   // stored is the n-th row that was worth sending. That pairing is what lets a
@@ -85,21 +87,33 @@ export function DocumentLines({
     onChange(rows.map((r, i) => (i === index ? row : r)));
   }
 
+  function move(from: number, to: number) {
+    if (
+      from === to ||
+      from < 0 ||
+      to < 0 ||
+      from >= rows.length ||
+      to >= rows.length
+    )
+      return;
+    const next = [...rows];
+    const [row] = next.splice(from, 1);
+    if (row === undefined) return;
+    next.splice(to, 0, row);
+    onChange(next);
+  }
+
   if (!readOnly) {
     return (
       <section className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-base font-semibold text-primary">
-              {title ?? strings.billingLines}
-            </h2>
-            <p className="mt-1 text-sm text-secondary">
-              Add, edit, or remove the products and services in this table.
-            </p>
-          </div>
-          <ButtonLine
-            onClick={() => onChange([...rows, blankRow(nextKey())])}
-          />
+        <div>
+          <h2 className="text-base font-semibold text-primary">
+            {title ?? strings.billingLines}
+          </h2>
+          <p className="mt-1 text-sm text-secondary">
+            Add, edit, remove, or drag products and services into the right
+            order.
+          </p>
         </div>
         {rows.length === 0 ? (
           <div className="flex min-h-40 flex-col items-center justify-center rounded-xl border border-dashed border-default bg-surface px-6 text-center">
@@ -119,8 +133,46 @@ export function DocumentLines({
               return (
                 <article
                   key={row.key}
-                  className="rounded-xl border border-default bg-surface p-4 shadow-sm"
+                  className={cx(
+                    "relative rounded-xl border border-default bg-surface p-4 pl-14 shadow-sm transition-colors",
+                    draggedKey === row.key && "border-accent bg-accent-soft/30",
+                  )}
+                  onDragOver={(event) => {
+                    if (draggedKey !== null) event.preventDefault();
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    const from = rows.findIndex(
+                      (item) => item.key === draggedKey,
+                    );
+                    move(from, index);
+                    setDraggedKey(null);
+                  }}
                 >
+                  <button
+                    type="button"
+                    draggable
+                    className="absolute left-3 top-1/2 grid size-9 -translate-y-1/2 cursor-grab place-items-center rounded-lg text-tertiary transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 active:cursor-grabbing"
+                    aria-label={`Reorder ${row.description || `line ${index + 1}`}. Use arrow keys to move it.`}
+                    onDragStart={(event) => {
+                      setDraggedKey(row.key);
+                      event.dataTransfer.effectAllowed = "move";
+                      event.dataTransfer.setData("text/plain", row.key);
+                    }}
+                    onDragEnd={() => setDraggedKey(null)}
+                    onKeyDown={(event) => {
+                      if (event.key === "ArrowUp") {
+                        event.preventDefault();
+                        move(index, index - 1);
+                      }
+                      if (event.key === "ArrowDown") {
+                        event.preventDefault();
+                        move(index, index + 1);
+                      }
+                    }}
+                  >
+                    <GripVertical className="size-5" aria-hidden="true" />
+                  </button>
                   <div className="grid gap-4 xl:grid-cols-[minmax(280px,2fr)_minmax(120px,.6fr)_minmax(110px,.5fr)_minmax(130px,.65fr)_minmax(110px,.5fr)_minmax(130px,.7fr)_40px] xl:items-end">
                     <div className="flex min-w-0 flex-col gap-2 xl:row-span-2">
                       <label className="text-xs font-semibold uppercase tracking-wide text-tertiary">
@@ -238,6 +290,11 @@ export function DocumentLines({
             })}
           </div>
         )}
+        <div className="flex justify-end pt-1">
+          <ButtonLine
+            onClick={() => onChange([...rows, blankRow(nextKey())])}
+          />
+        </div>
       </section>
     );
   }
