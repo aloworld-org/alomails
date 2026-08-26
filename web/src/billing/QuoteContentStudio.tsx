@@ -10,14 +10,17 @@ import {
   AlignLeft,
   ArrowDown,
   ArrowUp,
+  Bold,
   Check,
   Copy,
   Heading2,
   ImagePlus,
+  Italic,
   List,
   ListOrdered,
   Minus,
   Palette,
+  Pilcrow,
   Pencil,
   Plus,
   Quote,
@@ -1020,9 +1023,7 @@ function ImageContentBlock({
   const copy = (block.body || block.caption) && (
     <div className="flex flex-col justify-center px-1 py-2">
       {block.body && (
-        <p className="whitespace-pre-wrap text-sm leading-relaxed opacity-90">
-          {block.body}
-        </p>
+        <RichTextContent value={block.body} />
       )}
       {block.caption && (
         <p className={cx("text-xs opacity-65", block.body && "mt-3")}>
@@ -1140,15 +1141,14 @@ function ImageBlockEditor({
         </div>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
-        <label className="text-sm font-semibold text-primary">
-          Supporting text
-          <textarea
-            className="mt-2 min-h-28 w-full resize-y rounded-md border border-default bg-surface px-3 py-3 text-sm font-normal leading-relaxed text-primary placeholder:text-tertiary focus:border-accent focus:outline-none"
+        <div>
+          <p className="text-sm font-semibold text-primary">Supporting text</p>
+          <RichTextEditor
             value={block.body ?? ""}
             placeholder="Explain the product, project, or result shown in the image."
-            onChange={(event) => onChange({ body: event.target.value })}
+            onChange={(body) => onChange({ body })}
           />
-        </label>
+        </div>
         <label className="text-sm font-semibold text-primary">
           Caption
           <textarea
@@ -1160,6 +1160,187 @@ function ImageBlockEditor({
         </label>
       </div>
     </Modal>
+  );
+}
+
+const RICH_TEXT_TAGS = new Set([
+  "B",
+  "BR",
+  "EM",
+  "H2",
+  "H3",
+  "I",
+  "LI",
+  "OL",
+  "P",
+  "STRONG",
+  "UL",
+]);
+
+function escapeRichText(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;")
+    .replaceAll("\n", "<br>");
+}
+
+function sanitizeRichText(value: string): string {
+  if (!value.includes("<")) return escapeRichText(value);
+  const template = document.createElement("template");
+  template.innerHTML = value;
+  const elements = [...template.content.querySelectorAll("*")];
+  for (const element of elements) {
+    if (!RICH_TEXT_TAGS.has(element.tagName)) {
+      element.replaceWith(...element.childNodes);
+      continue;
+    }
+    for (const attribute of [...element.attributes])
+      element.removeAttribute(attribute.name);
+  }
+  return template.innerHTML;
+}
+
+function RichTextContent({ value }: { value: string }) {
+  return (
+    <div
+      className="text-sm leading-relaxed opacity-90 [&_h2]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-semibold [&_ol]:list-decimal [&_ol]:space-y-1 [&_ol]:pl-6 [&_p+p]:mt-3 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-6"
+      dangerouslySetInnerHTML={{ __html: sanitizeRichText(value) }}
+    />
+  );
+}
+
+function RichTextEditor({
+  value,
+  placeholder,
+  onChange,
+}: {
+  value: string;
+  placeholder: string;
+  onChange: (value: string) => void;
+}) {
+  const editor = useRef<HTMLDivElement>(null);
+  const lastEmitted = useRef("");
+  const [showTools, setShowTools] = useState(false);
+
+  useEffect(() => {
+    if (editor.current !== null && value !== lastEmitted.current) {
+      editor.current.innerHTML = sanitizeRichText(value);
+      lastEmitted.current = value;
+    }
+  }, [value]);
+
+  const emit = () => {
+    if (editor.current === null) return;
+    const next = editor.current.innerHTML;
+    lastEmitted.current = next;
+    onChange(next);
+  };
+  const inspectSelection = () => {
+    const selection = window.getSelection();
+    const node = selection?.anchorNode;
+    setShowTools(
+      selection !== null &&
+        !selection.isCollapsed &&
+        node != null &&
+        editor.current?.contains(node) === true,
+    );
+  };
+  const command = (name: string, argument?: string) => {
+    editor.current?.focus();
+    document.execCommand(name, false, argument);
+    emit();
+    inspectSelection();
+  };
+
+  return (
+    <div className="relative mt-2">
+      {showTools && (
+        <div
+          className="absolute -top-12 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-default bg-surface p-1.5 shadow-lg"
+          role="toolbar"
+          aria-label="Text formatting"
+          onMouseDown={(event) => event.preventDefault()}
+        >
+          <RichTextCommand label="Bold" onClick={() => command("bold")}>
+            <Bold className="size-4" />
+          </RichTextCommand>
+          <RichTextCommand label="Italic" onClick={() => command("italic")}>
+            <Italic className="size-4" />
+          </RichTextCommand>
+          <RichTextCommand
+            label="Heading 2"
+            onClick={() => command("formatBlock", "h2")}
+          >
+            <Heading2 className="size-4" />
+          </RichTextCommand>
+          <RichTextCommand
+            label="Paragraph"
+            onClick={() => command("formatBlock", "p")}
+          >
+            <Pilcrow className="size-4" />
+          </RichTextCommand>
+          <RichTextCommand
+            label="Bullet list"
+            onClick={() => command("insertUnorderedList")}
+          >
+            <List className="size-4" />
+          </RichTextCommand>
+          <RichTextCommand
+            label="Numbered list"
+            onClick={() => command("insertOrderedList")}
+          >
+            <ListOrdered className="size-4" />
+          </RichTextCommand>
+        </div>
+      )}
+      <div
+        ref={editor}
+        contentEditable
+        suppressContentEditableWarning
+        role="textbox"
+        aria-multiline="true"
+        aria-label="Supporting text"
+        data-placeholder={placeholder}
+        className="min-h-32 w-full overflow-y-auto rounded-md border border-default bg-surface px-4 py-3 text-sm font-normal leading-relaxed text-primary selection:bg-accent-soft selection:text-primary empty:before:pointer-events-none empty:before:text-tertiary empty:before:content-[attr(data-placeholder)] focus:border-accent focus:outline-none [&_h2]:my-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:my-2 [&_h3]:text-lg [&_h3]:font-semibold [&_ol]:list-decimal [&_ol]:pl-6 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-6"
+        onInput={emit}
+        onMouseUp={inspectSelection}
+        onKeyUp={inspectSelection}
+        onBlur={() => {
+          if (editor.current !== null) {
+            const clean = sanitizeRichText(editor.current.innerHTML);
+            editor.current.innerHTML = clean;
+            lastEmitted.current = clean;
+            onChange(clean);
+          }
+          setShowTools(false);
+        }}
+      />
+    </div>
+  );
+}
+
+function RichTextCommand({
+  label,
+  onClick,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      className="grid size-9 place-items-center rounded-lg text-secondary transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+    >
+      {children}
+    </button>
   );
 }
 
