@@ -2799,7 +2799,7 @@ export const en = {
   billingNoQuotesTitle: "No quotes yet",
   billingNoQuotesBody:
     "Offer a customer a price. When they accept, the quote becomes a draft invoice with the same lines.",
-  billingQuoteStatusSent: "Sent",
+  billingQuoteStatusSent: "Finalized",
   billingQuoteStatusAccepted: "Accepted",
   billingQuoteStatusDeclined: "Declined",
   billingQuoteStatusExpired: "Expired",
@@ -2809,7 +2809,7 @@ export const en = {
   // "Sent on", not "Sent", for the same reason the invoice list says "Issue
   // date": a column header that reads the same as the status chip under it
   // makes a list of documents ambiguous at a glance.
-  billingColSentDate: "Sent on",
+  billingColSentDate: "Finalized on",
   billingColValidUntil: "Valid until",
   billingDraftQuote: "Draft quote",
   billingBackToQuotes: "All quotes",
@@ -2817,21 +2817,21 @@ export const en = {
   billingQuoteCustomerHint: "Their currency is copied onto the offer.",
   billingCreateQuoteHint:
     "The draft is raised first; then you add what you are offering.",
-  billingFieldSentDate: "Sent on",
+  billingFieldSentDate: "Finalized on",
   billingFieldValidUntil: "Valid until",
   billingValidForDays: (days: number) =>
-    `Stands for ${days} days from the day it is sent.`,
+    `Valid for ${days} days from finalization.`,
   billingDeleteQuoteDraft: "Delete draft",
   billingDeleteQuoteDraftConfirm:
     "Delete this draft? It carries no number and was never made to anybody — and nothing can be recovered.",
   billingQuoteSentNotice:
-    "This offer has been sent and can no longer be changed. If the price moves, make a new quote.",
+    "This quote is finalized and can no longer be changed. It has not been emailed by alo. If the price changes, create a new quote.",
   billingQuoteClosedNotice:
     "This offer is closed and can no longer be changed.",
-  billingSendQuote: "Mark as sent",
-  billingSendQuoteTitle: "Send this quote?",
+  billingSendQuote: "Finalize quote",
+  billingSendQuoteTitle: "Finalize this quote?",
   billingSendQuoteConfirm:
-    "This takes the next quote number, dates the offer and freezes its prices, so what the customer holds cannot change under them. Nothing is emailed — send it yourself and record it here.",
+    "This assigns the next quote number, records the finalization date and locks the prices. Nothing will be emailed to the customer.",
   billingAcceptQuote: "Accept quote",
   billingAcceptQuoteTitle: "The customer accepted?",
   billingAcceptQuoteConfirm:

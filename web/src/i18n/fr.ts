@@ -1851,12 +1851,12 @@ export const fr: Partial<Catalog> = {
   billingNoQuotesTitle: "Aucun devis pour l’instant",
   billingNoQuotesBody:
     "Proposez un prix à un client. S’il accepte, le devis devient une facture en brouillon avec les mêmes lignes.",
-  billingQuoteStatusSent: "Envoyé",
+  billingQuoteStatusSent: "Finalisé",
   billingQuoteStatusAccepted: "Accepté",
   billingQuoteStatusDeclined: "Refusé",
   billingQuoteStatusExpired: "Expiré",
   billingQuoteLapsed: "Date dépassée",
-  billingColSentDate: "Envoyé le",
+  billingColSentDate: "Finalisé le",
   billingColValidUntil: "Valable jusqu’au",
   billingDraftQuote: "Devis en brouillon",
   billingBackToQuotes: "Tous les devis",
@@ -1864,23 +1864,23 @@ export const fr: Partial<Catalog> = {
   billingQuoteCustomerHint: "Sa devise est recopiée sur l’offre.",
   billingCreateQuoteHint:
     "Le brouillon est établi d’abord ; vous ajoutez ensuite ce que vous proposez.",
-  billingFieldSentDate: "Envoyé le",
+  billingFieldSentDate: "Finalisé le",
   billingFieldValidUntil: "Valable jusqu’au",
   billingValidForDays: (days: number) =>
     days === 1
-      ? "Valable 1 jour à compter de son envoi."
-      : `Valable ${days} jours à compter de son envoi.`,
+      ? "Valable 1 jour à compter de sa finalisation."
+      : `Valable ${days} jours à compter de sa finalisation.`,
   billingDeleteQuoteDraft: "Supprimer le brouillon",
   billingDeleteQuoteDraftConfirm:
     "Supprimer ce brouillon ? Il ne porte aucun numéro et n’a jamais été proposé à personne — et rien ne pourra être récupéré.",
   billingQuoteSentNotice:
-    "Cette offre a été envoyée et ne peut plus être modifiée. Si le prix change, faites un nouveau devis.",
+    "Ce devis est finalisé et ne peut plus être modifié. Il n’a pas été envoyé par e-mail par alo. Si le prix change, créez un nouveau devis.",
   billingQuoteClosedNotice:
     "Cette offre est close et ne peut plus être modifiée.",
-  billingSendQuote: "Marquer comme envoyé",
-  billingSendQuoteTitle: "Envoyer ce devis ?",
+  billingSendQuote: "Finaliser le devis",
+  billingSendQuoteTitle: "Finaliser ce devis ?",
   billingSendQuoteConfirm:
-    "Ceci consomme le numéro de devis suivant, date l’offre et fige ses prix, pour que ce que détient le client ne puisse pas changer sous ses yeux. Rien n’est envoyé par courriel — envoyez-le vous-même et notez-le ici.",
+    "Ceci attribue le prochain numéro de devis, enregistre la date de finalisation et verrouille les prix. Aucun e-mail ne sera envoyé au client.",
   billingAcceptQuote: "Accepter le devis",
   billingAcceptQuoteTitle: "Le client a accepté ?",
   billingAcceptQuoteConfirm:

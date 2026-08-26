@@ -1811,12 +1811,12 @@ export const nl: Partial<Catalog> = {
   billingNoQuotesTitle: "Nog geen offertes",
   billingNoQuotesBody:
     "Bied een klant een prijs. Accepteert hij, dan wordt de offerte een conceptfactuur met dezelfde regels.",
-  billingQuoteStatusSent: "Verstuurd",
+  billingQuoteStatusSent: "Definitief",
   billingQuoteStatusAccepted: "Geaccepteerd",
   billingQuoteStatusDeclined: "Afgewezen",
   billingQuoteStatusExpired: "Verlopen",
   billingQuoteLapsed: "Datum verstreken",
-  billingColSentDate: "Verstuurd op",
+  billingColSentDate: "Definitief op",
   billingColValidUntil: "Geldig tot",
   billingDraftQuote: "Conceptofferte",
   billingBackToQuotes: "Alle offertes",
@@ -1824,23 +1824,23 @@ export const nl: Partial<Catalog> = {
   billingQuoteCustomerHint: "Hun valuta wordt op de offerte overgenomen.",
   billingCreateQuoteHint:
     "Eerst wordt het concept opgemaakt; daarna zet u erbij wat u aanbiedt.",
-  billingFieldSentDate: "Verstuurd op",
+  billingFieldSentDate: "Definitief op",
   billingFieldValidUntil: "Geldig tot",
   billingValidForDays: (days: number) =>
     days === 1
-      ? "Staat 1 dag vanaf de dag dat hij wordt verstuurd."
-      : `Staat ${days} dagen vanaf de dag dat hij wordt verstuurd.`,
+      ? "Geldig tot 1 dag na de definitieve datum."
+      : `Geldig tot ${days} dagen na de definitieve datum.`,
   billingDeleteQuoteDraft: "Concept verwijderen",
   billingDeleteQuoteDraftConfirm:
     "Dit concept verwijderen? Het draagt geen nummer en is nooit aan iemand aangeboden — en er kan niets worden teruggehaald.",
   billingQuoteSentNotice:
-    "Deze offerte is verstuurd en kan niet meer worden gewijzigd. Verandert de prijs, maak dan een nieuwe offerte.",
+    "Deze offerte is definitief en kan niet meer worden gewijzigd. alo heeft geen e-mail verstuurd. Verandert de prijs, maak dan een nieuwe offerte.",
   billingQuoteClosedNotice:
     "Deze offerte is gesloten en kan niet meer worden gewijzigd.",
-  billingSendQuote: "Als verstuurd markeren",
-  billingSendQuoteTitle: "Deze offerte versturen?",
+  billingSendQuote: "Offerte definitief maken",
+  billingSendQuoteTitle: "Deze offerte definitief maken?",
   billingSendQuoteConfirm:
-    "Dit neemt het volgende offertenummer, dateert de offerte en zet de prijzen vast, zodat wat de klant in handen heeft niet onder hem kan veranderen. Er wordt niets gemaild — verstuur hem zelf en leg het hier vast.",
+    "Dit kent het volgende offertenummer toe, registreert de definitieve datum en vergrendelt de prijzen. Er wordt geen e-mail naar de klant verstuurd.",
   billingAcceptQuote: "Offerte accepteren",
   billingAcceptQuoteTitle: "Heeft de klant geaccepteerd?",
   billingAcceptQuoteConfirm:
