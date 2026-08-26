@@ -245,7 +245,7 @@ export function DocumentLines({
   return (
     <section className={styles.lines}>
       <div className={styles.linesHead}>
-        <h2 className={styles.sectionTitle}>{strings.billingLines}</h2>
+        <h2 className={styles.sectionTitle}>{title ?? strings.billingLines}</h2>
         {!readOnly && (
           <button
             type="button"
@@ -261,7 +261,7 @@ export function DocumentLines({
         <p className={styles.noMatches}>{strings.billingNoLines}</p>
       ) : (
         <Table
-          label={strings.billingLines}
+          label={title ?? strings.billingLines}
           className="bg-[var(--quote-table-row,var(--bg-surface))] [&_thead_th]:!bg-[var(--quote-table-header,var(--bg-surface))] [&_td]:!text-[var(--quote-text,var(--text-primary))]"
         >
           <thead>
