@@ -287,6 +287,24 @@ describe("the quote list", () => {
       ).toBe(true),
     );
   });
+
+  test("a draft quote can be opened from its whole row", async () => {
+    reply("/billing/quotes", "GET", { quotes: [DRAFT] });
+    reply(`/billing/quotes/${DRAFT.id}`, "GET", { quote: DRAFT });
+    ui("/billing/quotes");
+
+    const row = await screen.findByRole("link", {
+      name: new RegExp(strings.billingDraftQuote),
+    });
+    expect(within(row).getByText(strings.billingDraftQuote)).toBeTruthy();
+
+    fireEvent.click(row);
+
+    expect(await screen.findByText(strings.billingDraftQuote)).toBeTruthy();
+    expect(
+      calls.some((call) => call.url.includes(`/billing/quotes/${DRAFT.id}`)),
+    ).toBe(true);
+  });
 });
 
 describe("the quote draft editor", () => {

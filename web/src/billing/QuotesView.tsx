@@ -179,18 +179,27 @@ export function QuotesView() {
             {shown.map((quote) => (
               <tr
                 key={quote.id}
+                role="link"
+                tabIndex={0}
+                aria-label={`${quote.number ?? strings.billingDraftQuote}: ${
+                  names.get(quote.customerId) ?? strings.billingUnknownCustomer
+                }`}
                 className={cx(
+                  "cursor-pointer focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[-2px]",
                   quote.status === "sent" && quote.expired && styles.overdueRow,
                 )}
+                onClick={() => void navigate(quote.id)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    void navigate(quote.id);
+                  }
+                }}
               >
                 <td>
-                  <button
-                    type="button"
-                    className={cx(styles.rowName, styles.mono)}
-                    onClick={() => void navigate(quote.id)}
-                  >
-                    {quote.number ?? strings.billingNotNumbered}
-                  </button>
+                  <span className={cx(styles.rowName, styles.mono)}>
+                    {quote.number ?? strings.billingDraftQuote}
+                  </span>
                 </td>
                 <td>
                   {names.get(quote.customerId) ??
