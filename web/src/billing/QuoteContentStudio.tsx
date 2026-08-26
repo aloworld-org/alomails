@@ -18,6 +18,7 @@ import {
   ListOrdered,
   Minus,
   Palette,
+  Pencil,
   Plus,
   Quote,
   Rows3,
@@ -44,7 +45,17 @@ type Block =
   | { id: string; kind: "quote"; text: string; attribution: string }
   | { id: string; kind: "list"; ordered: boolean; items: string }
   | { id: string; kind: "divider" }
-  | { id: string; kind: "image"; src: string; caption: string }
+  | {
+      id: string;
+      kind: "image";
+      src: string;
+      caption: string;
+      body?: string;
+      placement?: "full" | "left" | "right";
+      aspect?: "natural" | "landscape" | "square";
+      fit?: "cover" | "contain";
+      zoom?: 50 | 75 | 100 | 125 | 150 | 175 | 200;
+    }
   | {
       id: string;
       kind: "pricing";
@@ -260,8 +271,10 @@ export const QuoteContentStudio = forwardRef<
   const [saveError, setSaveError] = useState("");
   const [customize, setCustomize] = useState(false);
   const [tableSettings, setTableSettings] = useState(false);
+  const [editingImageId, setEditingImageId] = useState<string | null>(null);
   const root = useRef<HTMLElement>(null);
   const imageInput = useRef<HTMLInputElement>(null);
+  const replaceImageInput = useRef<HTMLInputElement>(null);
   const pendingImageIndex = useRef<number | null>(null);
   useImperativeHandle(
     ref,
@@ -725,16 +738,10 @@ export const QuoteContentStudio = forwardRef<
                             </ul>
                           )
                         ) : (
-                          <textarea
-                            className="min-h-28 w-full resize-y rounded-md border border-default bg-surface px-3 py-3 text-sm leading-relaxed text-primary placeholder:text-tertiary focus:border-accent focus:outline-none"
-                            value={block.items}
-                            placeholder="One item per line…"
-                            aria-label={
-                              block.ordered ? "Numbered list" : "Bullet list"
-                            }
-                            onChange={(event) =>
-                              update(block.id, { items: event.target.value })
-                            }
+                          <ListBlockEditor
+                            ordered={block.ordered}
+                            items={block.items}
+                            onChange={(items) => update(block.id, { items })}
                           />
                         )
                       ) : block.kind === "divider" ? (
@@ -773,30 +780,11 @@ export const QuoteContentStudio = forwardRef<
                           </div>
                         )
                       ) : (
-                        <>
-                          <img
-                            src={block.src}
-                            alt={block.caption || "Quote image"}
-                            className="max-h-[420px] w-full rounded-lg object-cover"
-                          />
-                          {readOnly ? (
-                            <p className="mt-3 text-sm opacity-80">
-                              {block.caption}
-                            </p>
-                          ) : (
-                            <Input
-                              className="mt-3"
-                              value={block.caption}
-                              placeholder="Describe this image"
-                              aria-label="Image caption"
-                              onChange={(event) =>
-                                update(block.id, {
-                                  caption: event.target.value,
-                                })
-                              }
-                            />
-                          )}
-                        </>
+                        <ImageContentBlock
+                          block={block}
+                          readOnly={readOnly}
+                          onEdit={() => setEditingImageId(block.id)}
+                        />
                       )}
                     </div>
                   </article>
@@ -844,9 +832,26 @@ export const QuoteContentStudio = forwardRef<
                   kind: "image",
                   src,
                   caption: "",
+                  body: "",
+                  placement: "full",
+                  aspect: "landscape",
+                  fit: "cover",
+                  zoom: 100,
                 }),
               );
             pendingImageIndex.current = null;
+            event.currentTarget.value = "";
+          }}
+        />
+        <input
+          ref={replaceImageInput}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          className="sr-only"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file && editingImageId !== null)
+              imageData(file, (src) => update(editingImageId, { src }));
             event.currentTarget.value = "";
           }}
         />
@@ -867,9 +872,333 @@ export const QuoteContentStudio = forwardRef<
           onClose={() => setTableSettings(false)}
         />
       )}
+      {editingImageId !== null && (() => {
+        const imageBlock = design.blocks.find(
+          (block) => block.id === editingImageId && block.kind === "image",
+        );
+        return imageBlock?.kind === "image" ? (
+          <ImageBlockEditor
+            block={imageBlock}
+            onChange={(patch) => update(imageBlock.id, patch)}
+            onReplace={() => replaceImageInput.current?.click()}
+            onClose={() => setEditingImageId(null)}
+          />
+        ) : null;
+      })()}
     </>
   );
 });
+
+function ListBlockEditor({
+  ordered,
+  items,
+  onChange,
+}: {
+  ordered: boolean;
+  items: string;
+  onChange: (items: string) => void;
+}) {
+  const rows = items === "" ? [""] : items.split("\n");
+  const replace = (index: number, value: string) =>
+    onChange(rows.map((item, itemIndex) => (itemIndex === index ? value : item)).join("\n"));
+  const remove = (index: number) => {
+    const next = rows.filter((_, itemIndex) => itemIndex !== index);
+    onChange(next.length === 0 ? "" : next.join("\n"));
+  };
+  const move = (index: number, direction: -1 | 1) => {
+    const destination = index + direction;
+    if (destination < 0 || destination >= rows.length) return;
+    const next = [...rows];
+    const [item] = next.splice(index, 1);
+    if (item === undefined) return;
+    next.splice(destination, 0, item);
+    onChange(next.join("\n"));
+  };
+
+  return (
+    <div>
+      <div className="flex flex-col gap-2">
+        {rows.map((item, index) => (
+          <div
+            key={index}
+            className="grid grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-default bg-surface p-3 shadow-sm"
+          >
+            <span className="grid size-9 place-items-center rounded-lg bg-raised text-sm font-semibold text-secondary">
+              {ordered ? index + 1 : "•"}
+            </span>
+            <Input
+              value={item}
+              aria-label={`${ordered ? "Numbered" : "Bullet"} item ${index + 1}`}
+              placeholder="Write an item"
+              onChange={(event) => replace(index, event.target.value)}
+            />
+            <div className="flex items-center gap-1">
+              <BlockCommand
+                label="Move item up"
+                disabled={index === 0}
+                onClick={() => move(index, -1)}
+              >
+                <ArrowUp className="size-4" />
+              </BlockCommand>
+              <BlockCommand
+                label="Move item down"
+                disabled={index === rows.length - 1}
+                onClick={() => move(index, 1)}
+              >
+                <ArrowDown className="size-4" />
+              </BlockCommand>
+              <BlockCommand label="Remove item" danger onClick={() => remove(index)}>
+                <Trash2 className="size-4" />
+              </BlockCommand>
+            </div>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-default bg-surface px-4 text-sm font-semibold text-primary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
+        onClick={() => onChange(items === "" ? "\n" : `${items}\n`)}
+      >
+        <Plus className="size-4" aria-hidden="true" /> Add item below
+      </button>
+    </div>
+  );
+}
+
+type ImageBlock = Extract<Block, { kind: "image" }>;
+
+const IMAGE_ASPECT = {
+  natural: "max-h-[520px]",
+  landscape: "aspect-[16/7]",
+  square: "aspect-square",
+} as const;
+
+const IMAGE_BLOCK_ZOOM = {
+  50: "scale-50",
+  75: "scale-75",
+  100: "scale-100",
+  125: "scale-125",
+  150: "scale-150",
+  175: "scale-[1.75]",
+  200: "scale-200",
+} as const;
+
+function ImageContentBlock({
+  block,
+  readOnly,
+  onEdit,
+}: {
+  block: ImageBlock;
+  readOnly: boolean;
+  onEdit: () => void;
+}) {
+  const placement = block.placement ?? "full";
+  const image = (
+    <div className="group/image relative overflow-hidden rounded-xl bg-raised">
+      <img
+        src={block.src}
+        alt={block.caption || "Quotation image"}
+        className={cx(
+          "w-full transition-transform duration-200",
+          IMAGE_ASPECT[block.aspect ?? "landscape"],
+          block.fit === "contain" ? "object-contain" : "object-cover",
+          IMAGE_BLOCK_ZOOM[block.zoom ?? 100],
+        )}
+        onDoubleClick={readOnly ? undefined : onEdit}
+      />
+      {!readOnly && (
+        <button
+          type="button"
+          className="absolute right-3 top-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-default bg-surface/95 px-3 text-sm font-semibold text-primary shadow-md transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
+          onClick={onEdit}
+        >
+          <Pencil className="size-4" aria-hidden="true" /> Edit image
+        </button>
+      )}
+    </div>
+  );
+  const copy = (block.body || block.caption) && (
+    <div className="flex flex-col justify-center px-1 py-2">
+      {block.body && (
+        <p className="whitespace-pre-wrap text-sm leading-relaxed opacity-90">
+          {block.body}
+        </p>
+      )}
+      {block.caption && (
+        <p className={cx("text-xs opacity-65", block.body && "mt-3")}>
+          {block.caption}
+        </p>
+      )}
+    </div>
+  );
+
+  if (placement === "full")
+    return (
+      <figure>
+        {image}
+        {copy && <figcaption className="mt-3">{copy}</figcaption>}
+      </figure>
+    );
+  return (
+    <figure className="grid items-center gap-6 md:grid-cols-2">
+      {placement === "left" ? image : copy}
+      {placement === "left" ? copy : image}
+    </figure>
+  );
+}
+
+function ImageBlockEditor({
+  block,
+  onChange,
+  onReplace,
+  onClose,
+}: {
+  block: ImageBlock;
+  onChange: (patch: Partial<ImageBlock>) => void;
+  onReplace: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal
+      title="Edit image block"
+      icon={<ImagePlus className="size-5" />}
+      onClose={onClose}
+      wide
+      footer={
+        <>
+          <p className="mr-auto text-xs text-secondary">
+            Changes are shown immediately in the quotation.
+          </p>
+          <Button onClick={onClose}>Done</Button>
+        </>
+      }
+    >
+      <div className="grid gap-6 md:grid-cols-[minmax(0,1.15fr)_minmax(18rem,.85fr)]">
+        <div className="overflow-hidden rounded-2xl border border-default bg-raised p-4">
+          <img
+            src={block.src}
+            alt={block.caption || "Quotation image preview"}
+            className={cx(
+              "w-full rounded-xl bg-surface transition-transform duration-200",
+              IMAGE_ASPECT[block.aspect ?? "landscape"],
+              block.fit === "contain" ? "object-contain" : "object-cover",
+              IMAGE_BLOCK_ZOOM[block.zoom ?? 100],
+            )}
+          />
+          <button
+            type="button"
+            className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-default bg-surface px-4 text-sm font-semibold text-primary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
+            onClick={onReplace}
+          >
+            <Upload className="size-4" aria-hidden="true" /> Replace image
+          </button>
+        </div>
+        <div className="flex flex-col gap-6">
+          <ImageOptionGroup
+            label="Place text"
+            value={block.placement ?? "full"}
+            options={[
+              ["full", "Below image"],
+              ["left", "Image left"],
+              ["right", "Image right"],
+            ]}
+            onChange={(placement) => onChange({ placement })}
+          />
+          <ImageOptionGroup
+            label="Image frame"
+            value={block.aspect ?? "landscape"}
+            options={[
+              ["natural", "Natural"],
+              ["landscape", "Wide"],
+              ["square", "Square"],
+            ]}
+            onChange={(aspect) => onChange({ aspect })}
+          />
+          <ImageOptionGroup
+            label="Fit"
+            value={block.fit ?? "cover"}
+            options={[
+              ["cover", "Fill frame"],
+              ["contain", "Show whole image"],
+            ]}
+            onChange={(fit) => onChange({ fit })}
+          />
+          <ImageOptionGroup
+            label="Zoom"
+            value={block.zoom ?? 100}
+            options={[
+              [50, "50%"],
+              [75, "75%"],
+              [100, "100%"],
+              [125, "125%"],
+              [150, "150%"],
+              [175, "175%"],
+              [200, "200%"],
+            ]}
+            onChange={(zoom) => onChange({ zoom })}
+          />
+        </div>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="text-sm font-semibold text-primary">
+          Supporting text
+          <textarea
+            className="mt-2 min-h-28 w-full resize-y rounded-md border border-default bg-surface px-3 py-3 text-sm font-normal leading-relaxed text-primary placeholder:text-tertiary focus:border-accent focus:outline-none"
+            value={block.body ?? ""}
+            placeholder="Explain the product, project, or result shown in the image."
+            onChange={(event) => onChange({ body: event.target.value })}
+          />
+        </label>
+        <label className="text-sm font-semibold text-primary">
+          Caption
+          <textarea
+            className="mt-2 min-h-28 w-full resize-y rounded-md border border-default bg-surface px-3 py-3 text-sm font-normal leading-relaxed text-primary placeholder:text-tertiary focus:border-accent focus:outline-none"
+            value={block.caption}
+            placeholder="Optional short caption"
+            onChange={(event) => onChange({ caption: event.target.value })}
+          />
+        </label>
+      </div>
+    </Modal>
+  );
+}
+
+function ImageOptionGroup<T extends string | number>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: Array<readonly [T, string]>;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <fieldset>
+      <legend className="text-xs font-semibold uppercase tracking-wide text-tertiary">
+        {label}
+      </legend>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {options.map(([id, name]) => (
+          <button
+            key={id}
+            type="button"
+            className={cx(
+              "min-h-11 rounded-xl border px-3 text-left text-sm font-semibold transition-colors",
+              value === id
+                ? "border-accent bg-accent-soft text-accent"
+                : "border-default bg-surface text-primary hover:border-accent hover:bg-accent-soft",
+            )}
+            onClick={() => onChange(id)}
+          >
+            {name}
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
 
 type GeneralTable = Extract<Block, { kind: "table" }>;
 
@@ -1684,10 +2013,10 @@ function CustomizeTable({
           ))}
         </div>
 
-        <h4 className="mt-7 text-xs font-semibold uppercase tracking-wide text-tertiary">
+        <h4 className="mt-10 border-t border-subtle pt-7 text-xs font-semibold uppercase tracking-wide text-tertiary">
           Amount details
         </h4>
-        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+        <div className="mt-5 grid gap-4 sm:grid-cols-3">
           {(
             [
               ["total", "Total only", "The shortest summary"],
