@@ -811,7 +811,9 @@ export const QuoteContentStudio = forwardRef<
                                 .split("\n")
                                 .filter(Boolean)
                                 .map((item, itemIndex) => (
-                                  <li key={itemIndex}>{item}</li>
+                                  <li key={itemIndex}>
+                                    <InlineRichTextContent value={item} />
+                                  </li>
                                 ))}
                             </ol>
                           ) : (
@@ -826,7 +828,9 @@ export const QuoteContentStudio = forwardRef<
                                 .split("\n")
                                 .filter(Boolean)
                                 .map((item, itemIndex) => (
-                                  <li key={itemIndex}>{item}</li>
+                                  <li key={itemIndex}>
+                                    <InlineRichTextContent value={item} />
+                                  </li>
                                 ))}
                             </ul>
                           )
@@ -1048,11 +1052,11 @@ function ListBlockEditor({
             <span className="grid size-9 place-items-center rounded-lg bg-raised text-sm font-semibold text-secondary">
               {ordered ? index + 1 : "•"}
             </span>
-            <Input
+            <InlineListTextEditor
               value={item}
               aria-label={`${ordered ? "Numbered" : "Bullet"} item ${index + 1}`}
               placeholder="Write an item"
-              onChange={(event) => replace(index, event.target.value)}
+              onChange={(value) => replace(index, value)}
             />
             <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover/list-item:opacity-100 group-focus-within/list-item:opacity-100 max-md:col-span-2 max-md:justify-self-end max-md:opacity-100">
               <BlockCommand
@@ -1085,6 +1089,120 @@ function ListBlockEditor({
       >
         <Plus className="size-4" aria-hidden="true" /> Add item below
       </button>
+    </div>
+  );
+}
+
+function sanitizeInlineRichText(value: string): string {
+  const template = document.createElement("template");
+  template.innerHTML = value;
+  const inlineTags = new Set(["B", "EM", "I", "STRONG"]);
+  for (const element of [...template.content.querySelectorAll("*")]) {
+    if (!inlineTags.has(element.tagName)) {
+      element.replaceWith(...element.childNodes);
+      continue;
+    }
+    for (const attribute of [...element.attributes])
+      element.removeAttribute(attribute.name);
+  }
+  return template.innerHTML;
+}
+
+function InlineRichTextContent({ value }: { value: string }) {
+  return (
+    <span
+      className="[&_strong]:font-semibold"
+      dangerouslySetInnerHTML={{ __html: sanitizeInlineRichText(value) }}
+    />
+  );
+}
+
+function InlineListTextEditor({
+  value,
+  placeholder,
+  onChange,
+  ...rest
+}: {
+  value: string;
+  placeholder: string;
+  onChange: (value: string) => void;
+  "aria-label": string;
+}) {
+  const editor = useRef<HTMLDivElement>(null);
+  const lastEmitted = useRef("");
+  const [showTools, setShowTools] = useState(false);
+
+  useEffect(() => {
+    if (editor.current !== null && value !== lastEmitted.current) {
+      editor.current.innerHTML = sanitizeInlineRichText(value);
+      lastEmitted.current = value;
+    }
+  }, [value]);
+
+  const emit = () => {
+    if (editor.current === null) return;
+    const next = sanitizeInlineRichText(editor.current.innerHTML);
+    lastEmitted.current = next;
+    onChange(next);
+  };
+  const inspectSelection = () => {
+    const selection = window.getSelection();
+    const node = selection?.anchorNode;
+    setShowTools(
+      selection !== null &&
+        !selection.isCollapsed &&
+        node != null &&
+        editor.current?.contains(node) === true,
+    );
+  };
+  const command = (name: "bold" | "italic") => {
+    editor.current?.focus();
+    document.execCommand(name);
+    emit();
+    inspectSelection();
+  };
+
+  return (
+    <div className="relative min-w-0">
+      {showTools && (
+        <div
+          className="absolute bottom-[calc(100%+0.5rem)] left-3 z-20 flex items-center gap-1 rounded-xl border border-default bg-surface p-1.5 shadow-lg"
+          role="toolbar"
+          aria-label="List item formatting"
+          onMouseDown={(event) => event.preventDefault()}
+        >
+          <RichTextCommand label="Bold" onClick={() => command("bold")}>
+            <Bold className="size-4" />
+          </RichTextCommand>
+          <RichTextCommand label="Italic" onClick={() => command("italic")}>
+            <Italic className="size-4" />
+          </RichTextCommand>
+        </div>
+      )}
+      <div
+        ref={editor}
+        contentEditable
+        suppressContentEditableWarning
+        role="textbox"
+        data-placeholder={placeholder}
+        className="min-h-11 w-full rounded-md border border-default bg-surface px-4 py-2.5 text-sm leading-6 text-primary selection:bg-accent-soft selection:text-primary empty:before:pointer-events-none empty:before:text-tertiary empty:before:content-[attr(data-placeholder)] focus:border-accent focus:outline-none [&_strong]:font-semibold"
+        onInput={emit}
+        onMouseUp={inspectSelection}
+        onKeyUp={inspectSelection}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") event.preventDefault();
+        }}
+        onBlur={() => {
+          if (editor.current !== null) {
+            const clean = sanitizeInlineRichText(editor.current.innerHTML);
+            editor.current.innerHTML = clean;
+            lastEmitted.current = clean;
+            onChange(clean);
+          }
+          setShowTools(false);
+        }}
+        {...rest}
+      />
     </div>
   );
 }
