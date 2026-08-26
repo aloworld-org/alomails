@@ -1083,31 +1083,12 @@ function ImageBlockEditor({
           quotation.
         </p>
       </div>
-      <div className="grid items-start gap-5 md:grid-cols-[minmax(0,1.1fr)_minmax(18rem,.9fr)]">
-        <section className="min-w-0">
-          <div className="rounded-2xl border border-default bg-surface p-5 shadow-sm">
-            <div className="mx-auto overflow-hidden rounded-xl bg-raised">
-              <img
-                src={block.src}
-                alt={block.caption || "Quotation image"}
-                className={cx(
-                  "mx-auto w-full transition-transform duration-200",
-                  IMAGE_ASPECT[block.aspect ?? "landscape"],
-                  block.fit === "contain" ? "object-contain" : "object-cover",
-                  IMAGE_BLOCK_ZOOM[block.zoom ?? 100],
-                )}
-              />
-            </div>
-          </div>
-          <button
-            type="button"
-            className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-default bg-surface px-4 text-sm font-semibold text-primary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
-            onClick={onReplace}
-          >
-            <Upload className="size-4" aria-hidden="true" /> Replace image
-          </button>
-        </section>
-        <div className="flex flex-col gap-3">
+      <section className="rounded-2xl border border-default bg-raised/35 p-4">
+        <h4 className="text-sm font-semibold text-primary">Layout tools</h4>
+        <p className="mt-1 text-xs text-secondary">
+          Choose how this content block will appear in the quotation.
+        </p>
+        <div className="mt-4 grid items-start gap-3 md:grid-cols-2 xl:grid-cols-4">
           <ImageOptionGroup
             label="Place text"
             value={block.placement ?? "full"}
@@ -1142,32 +1123,49 @@ function ImageBlockEditor({
             onChange={(zoom) => onChange({ zoom })}
           />
         </div>
-      </div>
-      <section className="rounded-2xl border border-default bg-raised/35 p-4">
-        <div className="mb-4">
-          <h4 className="text-sm font-semibold text-primary">Block content</h4>
-          <p className="mt-1 text-xs text-secondary">
-            Supporting text follows the selected layout; the caption remains
-            visually secondary.
-          </p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-[minmax(0,1.35fr)_minmax(14rem,.65fr)]">
+      </section>
+      <div className="grid items-start gap-5 md:grid-cols-2">
+        <section className="min-w-0">
+          <h4 className="mb-2 text-sm font-semibold text-primary">Image</h4>
+          <div className="rounded-2xl border border-default bg-surface p-5 shadow-sm">
+            <div className="mx-auto overflow-hidden rounded-xl bg-surface">
+              <img
+                src={block.src}
+                alt={block.caption || "Quotation image"}
+                className={cx(
+                  "mx-auto w-full transition-transform duration-200",
+                  IMAGE_ASPECT[block.aspect ?? "landscape"],
+                  block.fit === "contain" ? "object-contain" : "object-cover",
+                  IMAGE_BLOCK_ZOOM[block.zoom ?? 100],
+                )}
+              />
+            </div>
+          </div>
+          <button
+            type="button"
+            className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-default bg-surface px-4 text-sm font-semibold text-primary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
+            onClick={onReplace}
+          >
+            <Upload className="size-4" aria-hidden="true" /> Replace image
+          </button>
+        </section>
+        <section className="min-w-0">
           <RichTextEditor
             value={block.body ?? ""}
             placeholder="Explain the product, project, or result shown in the image."
             onChange={(body) => onChange({ body })}
           />
-          <label className="text-sm font-semibold text-primary">
+          <label className="mt-4 block text-sm font-semibold text-primary">
             Caption
             <textarea
-              className="mt-2 min-h-32 w-full resize-y rounded-md border border-default bg-surface px-4 py-3 text-sm font-normal leading-relaxed text-primary placeholder:text-tertiary focus:border-accent focus:outline-none"
+              className="mt-2 min-h-24 w-full resize-y rounded-md border border-default bg-surface px-4 py-3 text-sm font-normal leading-relaxed text-primary placeholder:text-tertiary focus:border-accent focus:outline-none"
               value={block.caption}
               placeholder="Optional short caption"
               onChange={(event) => onChange({ caption: event.target.value })}
             />
           </label>
-        </div>
-      </section>
+        </section>
+      </div>
     </Modal>
   );
 }
