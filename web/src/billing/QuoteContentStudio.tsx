@@ -1086,7 +1086,18 @@ function ImageBlockEditor({
       <div className="grid items-start gap-5 md:grid-cols-[minmax(0,1.1fr)_minmax(18rem,.9fr)]">
         <section className="min-w-0">
           <div className="rounded-2xl border border-default bg-surface p-5 shadow-sm">
-            <ImageContentBlock block={block} readOnly onEdit={() => undefined} />
+            <div className="mx-auto overflow-hidden rounded-xl bg-raised">
+              <img
+                src={block.src}
+                alt={block.caption || "Quotation image"}
+                className={cx(
+                  "mx-auto w-full transition-transform duration-200",
+                  IMAGE_ASPECT[block.aspect ?? "landscape"],
+                  block.fit === "contain" ? "object-contain" : "object-cover",
+                  IMAGE_BLOCK_ZOOM[block.zoom ?? 100],
+                )}
+              />
+            </div>
           </div>
           <button
             type="button"
