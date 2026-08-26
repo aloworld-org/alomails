@@ -15,12 +15,21 @@ const PRODID: &str = "-//alo//calendar//EN";
 
 /// Serialize an event as a complete single-`VEVENT` `VCALENDAR` document.
 pub fn to_ics(event: &CalendarEvent) -> String {
+    to_ics_at(event, OffsetDateTime::now_utc())
+}
+
+/// [`to_ics`] with a caller-supplied `DTSTAMP` instant. `DTSTAMP` is the one
+/// property not derived from the event (RFC 5545 §3.8.7.2 — the moment of
+/// serialization), so pinning it is what makes the output a pure function of
+/// the event: the round-trip corpus proves parse → store → serialize is
+/// byte-stable through this seam.
+pub fn to_ics_at(event: &CalendarEvent, dtstamp: OffsetDateTime) -> String {
     let mut lines = vec![
         "BEGIN:VCALENDAR".to_owned(),
         "VERSION:2.0".to_owned(),
         format!("PRODID:{PRODID}"),
     ];
-    lines.extend(vevent_lines(event, None));
+    lines.extend(vevent_lines(event, None, dtstamp));
     lines.push("END:VCALENDAR".to_owned());
     fold_join(&lines)
 }
@@ -35,9 +44,10 @@ pub fn to_ics_series(master: &CalendarEvent, overrides: &[CalendarEvent]) -> Str
         "VERSION:2.0".to_owned(),
         format!("PRODID:{PRODID}"),
     ];
-    lines.extend(vevent_lines(master, None));
+    let dtstamp = OffsetDateTime::now_utc();
+    lines.extend(vevent_lines(master, None, dtstamp));
     for ov in overrides {
-        lines.extend(vevent_lines(ov, None));
+        lines.extend(vevent_lines(ov, None, dtstamp));
     }
     lines.push("END:VCALENDAR".to_owned());
     fold_join(&lines)
@@ -53,18 +63,26 @@ pub fn to_imip(event: &CalendarEvent, organizer: &str, method: &str) -> String {
         format!("PRODID:{PRODID}"),
         format!("METHOD:{method}"),
     ];
-    lines.extend(vevent_lines(event, Some(organizer)));
+    lines.extend(vevent_lines(
+        event,
+        Some(organizer),
+        OffsetDateTime::now_utc(),
+    ));
     lines.push("END:VCALENDAR".to_owned());
     fold_join(&lines)
 }
 
 /// The `VEVENT` body shared by [`to_ics`] and [`to_imip`]; an `organizer`, when
 /// given, adds the `ORGANIZER` property (present only in scheduling messages).
-fn vevent_lines(event: &CalendarEvent, organizer: Option<&str>) -> Vec<String> {
+fn vevent_lines(
+    event: &CalendarEvent,
+    organizer: Option<&str>,
+    dtstamp: OffsetDateTime,
+) -> Vec<String> {
     let mut lines = vec![
         "BEGIN:VEVENT".to_owned(),
         format!("UID:{}", event.id.as_str()),
-        format!("DTSTAMP:{}", fmt_utc(OffsetDateTime::now_utc())),
+        format!("DTSTAMP:{}", fmt_utc(dtstamp)),
     ];
     if let Some(org) = organizer {
         lines.push(format!("ORGANIZER:mailto:{org}"));

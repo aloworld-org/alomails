@@ -159,17 +159,17 @@ impl Store {
     pub async fn claim_due_sends(&self, limit: i64) -> Result<Vec<DueSend>> {
         type DueRow = (String, String, String, String, Vec<String>, Option<String>);
         let rows: Vec<DueRow> = sqlx::query_as(
-                "DELETE FROM scheduled_sends \
+            "DELETE FROM scheduled_sends \
                  WHERE (tenant_id, user_id, message_id) IN ( \
                      SELECT tenant_id, user_id, message_id FROM scheduled_sends \
                      WHERE send_at <= now() ORDER BY send_at LIMIT $1 \
                      FOR UPDATE SKIP LOCKED \
                  ) \
                  RETURNING tenant_id, user_id, message_id, mail_from, rcpts, on_behalf_sender",
-            )
-            .bind(limit)
-            .fetch_all(self.pool())
-            .await?;
+        )
+        .bind(limit)
+        .fetch_all(self.pool())
+        .await?;
         Ok(rows
             .into_iter()
             .map(

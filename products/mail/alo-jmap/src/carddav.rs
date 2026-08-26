@@ -677,7 +677,30 @@ async fn put_event_object(
     };
     match acc.put_event(&EventId::new(id.to_owned()), &event).await {
         Ok(created) => created_or_updated(created, &event_etag(&event)),
+        // The store refuses a calendar the caller can't edit as NotFound. On
+        // the wire that is 403 when the collection is visible (a read-only
+        // grant — the denial is a permission, not existence) and 404 when it
+        // isn't, so an unshared calendar id stays unprobeable.
+        Err(alo_store::StoreError::NotFound) => {
+            cal_write_denial(acc, event.calendar_id.as_str()).await
+        }
         Err(_) => status(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+/// The wire status for a refused calendar write: `403` when the caller can
+/// see the calendar (a read-only grant), else `404`.
+async fn cal_write_denial(acc: &AccountStore, cal_id: &str) -> Response {
+    let visible = acc
+        .calendars()
+        .await
+        .unwrap_or_default()
+        .iter()
+        .any(|c| c.id.as_str() == cal_id);
+    if visible {
+        status(StatusCode::FORBIDDEN)
+    } else {
+        status(StatusCode::NOT_FOUND)
     }
 }
 
@@ -716,7 +739,15 @@ async fn delete_object(acc: &AccountStore, resource: &Resource, headers: &Header
                     None => return status(StatusCode::NOT_FOUND),
                 }
             }
-            store_delete(acc.delete_event(&EventId::new(id.to_owned())).await)
+            match acc.delete_event(&EventId::new(id.to_owned())).await {
+                // delete_event removes only from an editable calendar; an
+                // event the caller can *see* but not edit is a permission
+                // denial, not a missing resource.
+                Err(alo_store::StoreError::NotFound) if fetch_event(acc, id).await.is_some() => {
+                    status(StatusCode::FORBIDDEN)
+                }
+                other => store_delete(other),
+            }
         }
         _ => status(StatusCode::NOT_FOUND),
     }

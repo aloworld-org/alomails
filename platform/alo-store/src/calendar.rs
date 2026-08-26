@@ -261,6 +261,53 @@ impl AccountStore {
             return Err(StoreError::NotFound);
         }
         let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
+        // On a shared calendar the existing row may belong to another user
+        // (rows are keyed by (tenant, user, id)): replace it in place, keeping
+        // its owner, rather than forking a per-user duplicate of the same href.
+        let owner: Option<String> = sqlx::query_scalar(
+            "SELECT user_id FROM calendar_events \
+             WHERE tenant_id = $1 AND id = $2 AND calendar_id = $3",
+        )
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .bind(event.calendar_id.as_str())
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(StoreError::Db)?;
+        if let Some(owner_uid) = owner {
+            sqlx::query(
+                "UPDATE calendar_events SET summary = $4, description = $5, location = $6, \
+                        starts_at = $7, ends_at = $8, all_day = $9, rrule = $10, \
+                        attendees = $11, exdates = $12, reminder_minutes = $13, \
+                        updated_at = now() \
+                 WHERE tenant_id = $1 AND user_id = $2 AND id = $3",
+            )
+            .bind(self.tenant.as_str())
+            .bind(&owner_uid)
+            .bind(id.as_str())
+            .bind(&event.summary)
+            .bind(&event.description)
+            .bind(&event.location)
+            .bind(event.starts_at)
+            .bind(event.ends_at)
+            .bind(event.all_day)
+            .bind(&event.recurrence)
+            .bind(sqlx::types::Json(&event.attendees))
+            .bind(exdates_to_json(&event.exdates))
+            .bind(event.reminder_minutes)
+            .execute(&mut *tx)
+            .await
+            .map_err(StoreError::Db)?;
+            changes::bump_and_record(
+                &mut tx,
+                self.tenant.as_str(),
+                self.user.as_str(),
+                &[Change::updated(TYPE_EVENT, id.as_str())],
+            )
+            .await?;
+            tx.commit().await.map_err(StoreError::Db)?;
+            return Ok(false);
+        }
         let existed: bool = sqlx::query_scalar(
             "SELECT EXISTS(SELECT 1 FROM calendar_events \
              WHERE tenant_id = $1 AND user_id = $2 AND id = $3)",
