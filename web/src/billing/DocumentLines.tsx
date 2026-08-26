@@ -69,6 +69,7 @@ export function DocumentLines({
 }: Props) {
   const locale = useLocale();
   const [draggedKey, setDraggedKey] = useState<string | null>(null);
+  const [dropTargetKey, setDropTargetKey] = useState<string | null>(null);
 
   // The server replaces the whole set in the order sent, so the n-th line it
   // stored is the n-th row that was worth sending. That pairing is what lets a
@@ -134,11 +135,30 @@ export function DocumentLines({
                 <article
                   key={row.key}
                   className={cx(
-                    "relative rounded-xl border border-default bg-surface p-4 pl-14 shadow-sm transition-colors",
-                    draggedKey === row.key && "border-accent bg-accent-soft/30",
+                    "relative rounded-xl border border-default bg-surface p-4 pl-14 shadow-sm transition-all",
+                    draggedKey === row.key &&
+                      "scale-[0.995] border-accent bg-accent-soft/30 opacity-45 shadow-lg",
+                    dropTargetKey === row.key &&
+                      draggedKey !== row.key &&
+                      "border-accent bg-accent-soft/40 ring-2 ring-accent/20",
                   )}
+                  onDragEnter={() => {
+                    if (draggedKey !== null && draggedKey !== row.key)
+                      setDropTargetKey(row.key);
+                  }}
                   onDragOver={(event) => {
-                    if (draggedKey !== null) event.preventDefault();
+                    if (draggedKey !== null) {
+                      event.preventDefault();
+                      event.dataTransfer.dropEffect = "move";
+                    }
+                  }}
+                  onDragLeave={(event) => {
+                    if (
+                      !event.currentTarget.contains(event.relatedTarget as Node)
+                    )
+                      setDropTargetKey((current) =>
+                        current === row.key ? null : current,
+                      );
                   }}
                   onDrop={(event) => {
                     event.preventDefault();
@@ -147,6 +167,7 @@ export function DocumentLines({
                     );
                     move(from, index);
                     setDraggedKey(null);
+                    setDropTargetKey(null);
                   }}
                 >
                   <button
@@ -158,8 +179,20 @@ export function DocumentLines({
                       setDraggedKey(row.key);
                       event.dataTransfer.effectAllowed = "move";
                       event.dataTransfer.setData("text/plain", row.key);
+                      const card = event.currentTarget.closest("article");
+                      if (card instanceof HTMLElement) {
+                        const bounds = card.getBoundingClientRect();
+                        event.dataTransfer.setDragImage(
+                          card,
+                          event.clientX - bounds.left,
+                          event.clientY - bounds.top,
+                        );
+                      }
                     }}
-                    onDragEnd={() => setDraggedKey(null)}
+                    onDragEnd={() => {
+                      setDraggedKey(null);
+                      setDropTargetKey(null);
+                    }}
                     onKeyDown={(event) => {
                       if (event.key === "ArrowUp") {
                         event.preventDefault();
