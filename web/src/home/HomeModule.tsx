@@ -674,7 +674,7 @@ function StatCard({
     <Card
       as="button"
       interactive
-      className="group flex min-h-[112px] items-center gap-4 text-left hover:-translate-y-px max-sm:min-h-[96px]"
+      className="group flex min-h-[112px] items-center gap-4 text-left max-sm:min-h-[96px]"
       onClick={onClick}
     >
       <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">

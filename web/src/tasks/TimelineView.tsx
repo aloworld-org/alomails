@@ -196,7 +196,7 @@ export function TimelineView({ tasks, edges = [], onOpen }: Props) {
               <div className="relative h-full overflow-hidden" style={{ width: total }}>
                 <button
                   type="button"
-                  className="absolute top-4 z-0 h-5 overflow-hidden rounded-full border shadow-sm transition-[filter,box-shadow,transform] hover:-translate-y-px hover:brightness-95 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                  className="absolute top-4 z-0 h-5 overflow-hidden rounded-full border shadow-sm transition-[filter,box-shadow] hover:brightness-95 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                   style={{
                     left,
                     width,

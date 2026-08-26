@@ -395,7 +395,7 @@ function ProjectRow({
             {project.projectName}
             <ArrowUpRight
               size={15}
-              className="opacity-60 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100"
+              className="opacity-60 transition-opacity group-hover:opacity-100"
               aria-hidden="true"
             />
           </button>

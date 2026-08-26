@@ -2715,7 +2715,7 @@ function CustomizeQuote({
                   type="button"
                   aria-pressed={design.headerAlignment === alignment}
                   className={cx(
-                    "group relative min-h-40 overflow-hidden rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
+                    "group relative min-h-40 overflow-hidden rounded-2xl border p-4 text-left transition-colors hover:border-accent hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
                     design.headerAlignment === alignment
                       ? "border-accent bg-accent-soft/30 shadow-sm"
                       : "border-default bg-surface shadow-sm",
@@ -2869,7 +2869,7 @@ function CustomizeQuote({
                   type="button"
                   aria-pressed={design.theme === theme.id}
                   className={cx(
-                    "group relative min-h-52 overflow-hidden rounded-2xl border p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
+                    "group relative min-h-52 overflow-hidden rounded-2xl border p-3 text-left shadow-sm transition-colors hover:border-accent hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
                     design.theme === theme.id
                       ? "border-accent bg-accent-soft/30"
                       : "border-default bg-surface",
@@ -2996,7 +2996,7 @@ function CustomizeTable({
               key={layout}
               type="button"
               className={cx(
-                "group relative min-h-64 overflow-hidden rounded-2xl border bg-surface !p-5 text-left shadow-sm ring-1 transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-md",
+                "group relative min-h-64 overflow-hidden rounded-2xl border bg-surface !p-5 text-left shadow-sm ring-1 transition-colors hover:border-accent hover:shadow-md",
                 design.tableLayout === layout
                   ? "border-accent bg-accent-soft ring-accent/25"
                   : "border-default ring-default hover:bg-accent-soft/30",
@@ -3123,7 +3123,7 @@ function CustomizeTable({
               key={placement}
               type="button"
               className={cx(
-                "group min-h-40 rounded-2xl border !p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-md",
+                "group min-h-40 rounded-2xl border !p-5 text-left shadow-sm transition-colors hover:border-accent hover:shadow-md",
                 design.totalsPlacement === placement
                   ? "border-accent bg-accent-soft ring-1 ring-accent/20"
                   : "border-default bg-surface",
