@@ -1074,21 +1074,21 @@ function ImageBlockEditor({
         </>
       }
     >
-      <div>
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <h3 className="text-base font-semibold text-primary">
           Compose image and text
         </h3>
-        <p className="mt-1 text-sm text-secondary">
+        <p className="w-full text-sm text-secondary">
           Arrange the block once and see exactly how it will appear in the
           quotation.
         </p>
       </div>
-      <section className="rounded-2xl border border-default bg-raised/35 p-4">
+      <section className="rounded-2xl border border-default bg-surface p-5 shadow-sm">
         <h4 className="text-sm font-semibold text-primary">Layout tools</h4>
         <p className="mt-1 text-xs text-secondary">
           Choose how this content block will appear in the quotation.
         </p>
-        <div className="mt-4 grid items-start gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-5 grid items-start gap-x-5 gap-y-4 md:grid-cols-2 xl:grid-cols-[1.15fr_1.15fr_1fr_1.1fr]">
           <ImageOptionGroup
             label="Place text"
             value={block.placement ?? "full"}
@@ -1124,11 +1124,20 @@ function ImageBlockEditor({
           />
         </div>
       </section>
-      <div className="grid items-start gap-5 md:grid-cols-2">
+      <div className="grid items-start gap-6 md:grid-cols-2">
         <section className="min-w-0">
-          <h4 className="mb-2 text-sm font-semibold text-primary">Image</h4>
-          <div className="rounded-2xl border border-default bg-surface p-5 shadow-sm">
-            <div className="mx-auto overflow-hidden rounded-xl bg-surface">
+          <div className="mb-2 flex min-h-10 items-center justify-between gap-3">
+            <h4 className="text-sm font-semibold text-primary">Image</h4>
+            <button
+              type="button"
+              className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-default bg-surface px-3 text-xs font-semibold text-secondary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
+              onClick={onReplace}
+            >
+              <Upload className="size-4" aria-hidden="true" /> Replace
+            </button>
+          </div>
+          <div className="rounded-2xl border border-default bg-surface p-4 shadow-sm">
+            <div className="mx-auto flex min-h-[26rem] items-center justify-center overflow-hidden rounded-xl bg-surface">
               <img
                 src={block.src}
                 alt={block.caption || "Quotation image"}
@@ -1141,13 +1150,6 @@ function ImageBlockEditor({
               />
             </div>
           </div>
-          <button
-            type="button"
-            className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-default bg-surface px-4 text-sm font-semibold text-primary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
-            onClick={onReplace}
-          >
-            <Upload className="size-4" aria-hidden="true" /> Replace image
-          </button>
         </section>
         <section className="min-w-0">
           <RichTextEditor
@@ -1378,13 +1380,13 @@ function ImageOptionGroup<T extends string | number>({
   onChange: (value: T) => void;
 }) {
   return (
-    <fieldset className="rounded-2xl border border-default bg-raised/40 p-4">
-      <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-tertiary">
+    <fieldset className="min-w-0">
+      <legend className="text-xs font-semibold uppercase tracking-wide text-tertiary">
         {label}
       </legend>
       <div
         className={cx(
-          "mt-2 grid gap-2",
+          "mt-2 grid gap-1 rounded-xl bg-raised p-1",
           options.length === 3 ? "grid-cols-3" : "grid-cols-2",
         )}
       >
@@ -1394,19 +1396,14 @@ function ImageOptionGroup<T extends string | number>({
             type="button"
             aria-pressed={value === id}
             className={cx(
-              "relative min-h-12 rounded-xl border px-3 text-center text-xs font-semibold shadow-sm ring-1 ring-inset transition-all hover:-translate-y-px hover:border-accent hover:bg-accent-soft hover:text-accent hover:shadow-md",
+              "relative min-h-11 rounded-lg border px-2 text-center text-xs font-semibold transition-colors hover:bg-accent-soft hover:text-accent",
               value === id
-                ? "border-accent bg-accent-soft text-accent ring-accent/25"
-                : "border-default bg-surface text-primary ring-default",
+                ? "border-accent bg-accent-soft text-accent shadow-sm"
+                : "border-transparent bg-transparent text-primary hover:border-accent/30",
             )}
             onClick={() => onChange(id)}
           >
             {name}
-            {value === id && (
-              <span className="absolute right-1.5 top-1.5 grid size-4 place-items-center rounded-full bg-accent text-on-accent">
-                <Check className="size-3" aria-hidden="true" />
-              </span>
-            )}
           </button>
         ))}
       </div>
@@ -1428,7 +1425,7 @@ function ImageZoomControl({
   const next =
     IMAGE_ZOOM_STEPS[Math.min(IMAGE_ZOOM_STEPS.length - 1, index + 1)] ?? 200;
   return (
-    <section className="rounded-2xl border border-default bg-raised/40 p-4">
+    <section className="min-w-0">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h4 className="text-xs font-semibold uppercase tracking-wide text-tertiary">
@@ -1445,7 +1442,7 @@ function ImageZoomControl({
           Reset
         </button>
       </div>
-      <div className="mt-3 grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-2 rounded-xl border border-default bg-surface p-2 shadow-sm">
+      <div className="mt-2 grid grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-1 rounded-xl bg-raised p-1">
         <button
           type="button"
           className="grid size-10 place-items-center rounded-lg text-primary transition-colors hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-35"
