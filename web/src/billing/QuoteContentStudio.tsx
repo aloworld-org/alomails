@@ -1135,10 +1135,10 @@ function CustomizeTable({
               key={layout}
               type="button"
               className={cx(
-                "relative min-h-24 rounded-xl border px-4 py-4 text-left transition-colors hover:border-accent hover:bg-accent-soft",
+                "group relative overflow-hidden rounded-2xl border bg-surface p-3 text-left shadow-sm ring-1 transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-md",
                 design.tableLayout === layout
-                  ? "border-accent bg-accent-soft"
-                  : "border-default bg-surface",
+                  ? "border-accent bg-accent-soft ring-accent/25"
+                  : "border-default ring-default hover:bg-accent-soft/30",
               )}
               onClick={() =>
                 onChange((current) => ({
@@ -1149,15 +1149,32 @@ function CustomizeTable({
                 }))
               }
             >
-              <strong className="block text-sm font-semibold text-primary">
-                {label}
-              </strong>
-              <span className="mt-1 block text-xs leading-relaxed text-secondary">
-                {help}
+              <LayoutPreview
+                layout={layout}
+                selected={design.tableLayout === layout}
+              />
+              <span className="mt-3 flex items-start justify-between gap-3 px-1 pb-1">
+                <span>
+                  <strong className="block text-sm font-semibold text-primary">
+                    {label}
+                  </strong>
+                  <span className="mt-1 block text-xs leading-relaxed text-secondary">
+                    {help}
+                  </span>
+                </span>
+                <span
+                  className={cx(
+                    "mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border",
+                    design.tableLayout === layout
+                      ? "border-accent bg-accent text-on-accent"
+                      : "border-default bg-surface group-hover:border-accent",
+                  )}
+                >
+                  {design.tableLayout === layout && (
+                    <Check className="size-3.5" />
+                  )}
+                </span>
               </span>
-              {design.tableLayout === layout && (
-                <Check className="absolute right-3 top-3 size-4 text-accent" />
-              )}
             </button>
           ))}
         </div>
@@ -1225,6 +1242,46 @@ function CustomizeTable({
         </div>
       </section>
     </Modal>
+  );
+}
+
+function LayoutPreview({
+  layout,
+  selected,
+}: {
+  layout: QuoteTableLayout;
+  selected: boolean;
+}) {
+  return (
+    <span
+      className={cx(
+        "block rounded-xl border p-3",
+        selected ? "border-accent/25 bg-surface" : "border-subtle bg-raised/45",
+      )}
+      aria-hidden="true"
+    >
+      <span className="mb-2 flex items-center gap-2 border-b border-subtle pb-2">
+        {layout === "catalogue" && (
+          <span className="size-6 rounded-md bg-accent-soft" />
+        )}
+        <span className="h-1.5 w-16 rounded-full bg-secondary/25" />
+        <span className="ml-auto h-1.5 w-8 rounded-full bg-accent/55" />
+      </span>
+      {[0, 1].map((row) => (
+        <span key={row} className="flex items-center gap-2 py-1.5">
+          {layout === "catalogue" && (
+            <span className="size-8 shrink-0 rounded-md bg-accent-soft" />
+          )}
+          <span className="min-w-0 flex-1">
+            <span className="block h-1.5 rounded-full bg-primary/20" />
+            {layout !== "compact" && (
+              <span className="mt-1.5 block h-1 w-3/4 rounded-full bg-secondary/15" />
+            )}
+          </span>
+          <span className="h-1.5 w-8 rounded-full bg-secondary/20" />
+        </span>
+      ))}
+    </span>
   );
 }
 
