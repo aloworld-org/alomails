@@ -939,34 +939,36 @@ export const QuoteContentStudio = forwardRef<
                         Prepared for
                       </p>
                       {customerDetails.companyName && (
-                        <p className="mt-1 text-sm font-semibold">{customerDetails.companyName}</p>
+                        <p className="mt-1 text-xl font-semibold leading-tight tracking-tight">
+                          {customerDetails.companyName}
+                        </p>
                       )}
                       {customerDetails.contactName && (
-                        <p className="mt-1 text-xs opacity-75">{customerDetails.contactName}</p>
+                        <p className="mt-1 text-sm opacity-75">{customerDetails.contactName}</p>
                       )}
-                      <div className="mt-4 grid gap-x-8 gap-y-4 text-xs leading-relaxed sm:grid-cols-2">
+                      <div className="mt-4 grid gap-x-12 gap-y-5 text-sm leading-6 sm:grid-cols-2">
                         {customerDetails.address && (
                           <div>
-                            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] opacity-55">
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] opacity-55">
                               Address
                             </p>
-                            <p className="whitespace-pre-line opacity-75">{customerDetails.address}</p>
+                            <p className="whitespace-pre-line opacity-80">{customerDetails.address}</p>
                           </div>
                         )}
                         {(customerDetails.email || customerDetails.phone) && (
                           <div>
-                            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] opacity-55">
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] opacity-55">
                               Contact
                             </p>
-                            <div className="flex flex-col gap-1.5 opacity-75">
+                            <div className="flex flex-col gap-1.5 opacity-80">
                               {customerDetails.email && (
-                                <span className="flex items-center gap-2">
+                                <span className="flex items-center gap-2.5">
                                   <Mail className="size-4 shrink-0 text-[var(--quote-contact-icons)]" aria-hidden="true" />
                                   {customerDetails.email}
                                 </span>
                               )}
                               {customerDetails.phone && (
-                                <span className="flex items-center gap-2">
+                                <span className="flex items-center gap-2.5">
                                   <Phone className="size-4 shrink-0 text-[var(--quote-contact-icons)]" aria-hidden="true" />
                                   {customerDetails.phone}
                                 </span>
