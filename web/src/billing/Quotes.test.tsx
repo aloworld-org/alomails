@@ -856,8 +856,10 @@ describe("the quotation document preview", () => {
     await screen.findByText("alo Studio GmbH");
     expect(screen.getByText(/Friedrichstrasse 88/)).toBeTruthy();
     expect(screen.getByText("billing@alo.example")).toBeTruthy();
-    expect(screen.getByText("VAT BE0123456789")).toBeTruthy();
-    expect(screen.getByText("Company no. HRB 248610 B")).toBeTruthy();
+    expect(screen.getByText("VAT ID")).toBeTruthy();
+    expect(screen.getByText("BE0123456789")).toBeTruthy();
+    expect(screen.getByText("Company number")).toBeTruthy();
+    expect(screen.getByText("HRB 248610 B")).toBeTruthy();
     expect(screen.getByText("Thank you for your business.")).toBeTruthy();
   });
 

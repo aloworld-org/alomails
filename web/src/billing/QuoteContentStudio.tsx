@@ -888,16 +888,24 @@ export const QuoteContentStudio = forwardRef<
                     )}
                   </div>
                   {(headerDetails.vatId || headerDetails.registrationNo) && (
-                    <p className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-[var(--quote-table-header)] pt-4 text-xs opacity-70">
+                    <dl className="mt-6 grid grid-cols-2 gap-x-10 gap-y-3 border-t border-[var(--quote-table-header)] pt-4 text-xs text-[var(--quote-text)]">
                       {headerDetails.vatId && (
-                        <span>{`VAT ${headerDetails.vatId}`}</span>
+                        <div>
+                          <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-55">
+                            VAT ID
+                          </dt>
+                          <dd className="mt-1.5 font-semibold">{headerDetails.vatId}</dd>
+                        </div>
                       )}
                       {headerDetails.registrationNo && (
-                        <span className="border-[var(--quote-table-header)] sm:border-l sm:pl-5">
-                          {`Company no. ${headerDetails.registrationNo}`}
-                        </span>
+                        <div>
+                          <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-55">
+                            Company number
+                          </dt>
+                          <dd className="mt-1.5 font-semibold">{headerDetails.registrationNo}</dd>
+                        </div>
                       )}
-                    </p>
+                    </dl>
                   )}
                 </div>
               </div>
