@@ -697,58 +697,71 @@ export const QuoteContentStudio = forwardRef<
             >
               <div
                 className={cx(
-                  "flex min-w-0 items-start gap-6 px-8 py-8 max-sm:flex-col max-sm:px-5 max-sm:py-6",
-                  design.headerAlignment === "right" &&
-                    "md:order-2 md:flex-row-reverse md:text-right",
+                  "flex min-w-0 flex-col px-8 py-8 max-sm:px-5 max-sm:py-6",
+                  design.headerAlignment === "right" && "md:order-2",
                 )}
               >
-                {design.logo && (
-                  <img
-                    src={design.logo}
-                    alt="Company logo"
-                    className="h-20 w-24 shrink-0 object-contain"
-                  />
-                )}
-                <div className="min-w-0 flex-1 text-[var(--quote-text)]">
+                <div className="flex min-w-0 items-center gap-5">
+                  {design.logo && (
+                    <img
+                      src={design.logo}
+                      alt="Company logo"
+                      className="h-16 w-20 shrink-0 object-contain"
+                    />
+                  )}
                   {headerDetails.companyName && (
-                    <p className="text-lg font-semibold leading-tight tracking-tight">
+                    <p className="text-xl font-semibold leading-tight tracking-tight text-[var(--quote-text)]">
                       {headerDetails.companyName}
                     </p>
                   )}
-                  <div className="mt-4 grid gap-x-10 gap-y-3 text-xs leading-5 opacity-70 sm:grid-cols-2">
+                </div>
+                <div className="mt-7 min-w-0 flex-1 text-[var(--quote-text)]">
+                  <div className="grid gap-x-12 gap-y-5 text-sm leading-6 sm:grid-cols-2">
                     {headerDetails.address && (
                       <div>
-                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide opacity-70">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] opacity-55">
                           Address
                         </p>
-                        <p className="whitespace-pre-line">{headerDetails.address}</p>
+                        <p className="whitespace-pre-line opacity-80">{headerDetails.address}</p>
                       </div>
                     )}
                     {(headerDetails.email || headerDetails.phone || headerDetails.website) && (
                       <div>
-                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide opacity-70">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] opacity-55">
                           Contact
                         </p>
-                        <div
-                          className={cx(
-                            "flex flex-col",
-                            design.headerAlignment === "right"
-                              ? "items-end"
-                              : "items-start",
+                        <div className="flex flex-col gap-1.5 opacity-80">
+                          {headerDetails.email && (
+                            <span className="flex items-center gap-2.5">
+                              <Mail className="size-4 shrink-0 text-[var(--quote-accent)]" aria-hidden="true" />
+                              {headerDetails.email}
+                            </span>
                           )}
-                        >
-                          {headerDetails.email && <span>{headerDetails.email}</span>}
-                          {headerDetails.phone && <span>{headerDetails.phone}</span>}
-                          {headerDetails.website && <span className="break-all">{headerDetails.website}</span>}
+                          {headerDetails.phone && (
+                            <span className="flex items-center gap-2.5">
+                              <Phone className="size-4 shrink-0 text-[var(--quote-accent)]" aria-hidden="true" />
+                              {headerDetails.phone}
+                            </span>
+                          )}
+                          {headerDetails.website && (
+                            <span className="flex items-center gap-2.5 break-all">
+                              <Globe2 className="size-4 shrink-0 text-[var(--quote-accent)]" aria-hidden="true" />
+                              {headerDetails.website.replace(/^https?:\/\//, "")}
+                            </span>
+                          )}
                         </div>
                       </div>
                     )}
                   </div>
                   {(headerDetails.vatId || headerDetails.registrationNo) && (
-                    <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-[var(--quote-table-header)] pt-2.5 text-[11px] opacity-60">
-                      {headerDetails.vatId && <span>VAT {headerDetails.vatId}</span>}
+                    <p className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-[var(--quote-table-header)] pt-4 text-xs opacity-70">
+                      {headerDetails.vatId && (
+                        <span>{`VAT ${headerDetails.vatId}`}</span>
+                      )}
                       {headerDetails.registrationNo && (
-                        <span>Company no. {headerDetails.registrationNo}</span>
+                        <span className="border-[var(--quote-table-header)] sm:border-l sm:pl-5">
+                          {`Company no. ${headerDetails.registrationNo}`}
+                        </span>
                       )}
                     </p>
                   )}
