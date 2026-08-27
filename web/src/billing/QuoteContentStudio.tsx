@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import {
   AlignLeft,
   ArrowDown,
@@ -32,6 +33,7 @@ import {
   Phone,
   Plus,
   Quote,
+  QrCode,
   RotateCcw,
   Rows3,
   Search,
@@ -56,6 +58,7 @@ import type { BillingCustomer, BillingQuote, BillingSettings } from "./types";
 type Theme = "modern" | "editorial" | "minimal";
 type HeaderAlignment = "left" | "right";
 type HeaderStyle = "signature" | "editorial" | "band" | "minimal" | "stacked";
+type ContactQrSize = "small" | "medium" | "large";
 type Block =
   | { id: string; kind: "text"; heading: string; body: string }
   | { id: string; kind: "heading"; level: 1 | 2 | 3; text: string }
@@ -144,6 +147,10 @@ interface Design {
   headerDetailsCustomized: boolean;
   customerDetails: CustomerHeaderDetails;
   customerDetailsCustomized: boolean;
+  showContactQr: boolean;
+  contactQrAlignment: HeaderAlignment;
+  contactQrSize: ContactQrSize;
+  contactQrColor: string;
   theme: Theme;
   colors: Colors;
   columns: QuoteColumns;
@@ -194,6 +201,10 @@ const EMPTY: Design = {
   headerDetailsCustomized: false,
   customerDetails: DEFAULT_CUSTOMER_DETAILS,
   customerDetailsCustomized: false,
+  showContactQr: false,
+  contactQrAlignment: "right",
+  contactQrSize: "medium",
+  contactQrColor: "#102a43",
   theme: "modern",
   colors: DEFAULT_COLORS,
   columns: DEFAULT_QUOTE_COLUMNS,
@@ -300,6 +311,24 @@ function formatDocumentDate(value: string | null | undefined) {
     month: "short",
     year: "numeric",
   }).format(new Date(Date.UTC(year, month - 1, day)));
+}
+
+function vCardValue(value: string) {
+  return value.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/;/g, "\\;").replace(/,/g, "\\,");
+}
+
+function contactVCard(details: HeaderDetails) {
+  return [
+    "BEGIN:VCARD",
+    "VERSION:3.0",
+    `FN:${vCardValue(details.companyName)}`,
+    `ORG:${vCardValue(details.companyName)}`,
+    details.phone && `TEL;TYPE=WORK,VOICE:${vCardValue(details.phone)}`,
+    details.email && `EMAIL;TYPE=WORK:${vCardValue(details.email)}`,
+    details.website && `URL:${vCardValue(details.website)}`,
+    details.address && `ADR;TYPE=WORK:;;${vCardValue(details.address).replace(/\\n/g, ";")};;;`,
+    "END:VCARD",
+  ].filter(Boolean).join("\n");
 }
 
 function legacyDesign(key: string): Design | null {
@@ -909,6 +938,29 @@ export const QuoteContentStudio = forwardRef<
                         </div>
                       )}
                     </dl>
+                  )}
+                  {design.showContactQr && headerDetails.companyName && (
+                    <div
+                      className={cx(
+                        "mt-6 flex items-end gap-3",
+                        design.contactQrAlignment === "right" ? "justify-end text-right" : "justify-start",
+                      )}
+                    >
+                      <div className="rounded-xl bg-white p-2 ring-1 ring-[var(--quote-table-header)]">
+                        <QRCodeSVG
+                          value={contactVCard(headerDetails)}
+                          size={design.contactQrSize === "small" ? 64 : design.contactQrSize === "large" ? 104 : 84}
+                          fgColor={design.contactQrColor}
+                          bgColor="#ffffff"
+                          level="M"
+                          marginSize={0}
+                          title={`Save ${headerDetails.companyName} contact details`}
+                        />
+                      </div>
+                      <p className="max-w-28 pb-1 text-[10px] font-medium leading-relaxed opacity-65">
+                        Scan to save our contact details
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
@@ -3166,6 +3218,62 @@ function CustomizeQuote({
                 );
             }}
           />
+        </section>
+        <section className="rounded-2xl border border-subtle bg-surface p-6 shadow-sm sm:p-8">
+          <div className="flex flex-wrap items-center justify-between gap-5">
+            <div className="flex items-start gap-4">
+              <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+                <QrCode className="size-5" aria-hidden="true" />
+              </span>
+              <div>
+                <h3 className="text-xl font-semibold tracking-tight text-primary">Contact QR code</h3>
+                <p className="mt-2 text-sm leading-relaxed text-secondary">
+                  Let customers scan and save your company contact details.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={design.showContactQr}
+              className={cx(
+                "relative h-7 w-12 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
+                design.showContactQr ? "bg-accent" : "bg-muted",
+              )}
+              onClick={() => onChange((current) => ({ ...current, showContactQr: !current.showContactQr }))}
+            >
+              <span className={cx("absolute top-1 size-5 rounded-full bg-white shadow-sm transition-[left]", design.showContactQr ? "left-6" : "left-1")} />
+              <span className="sr-only">Show contact QR code</span>
+            </button>
+          </div>
+          <div className={cx("mt-7 grid gap-6 lg:grid-cols-[1fr_1fr_1.2fr]", !design.showContactQr && "pointer-events-none opacity-45")}>
+            <div>
+              <p className="text-sm font-semibold text-primary">Placement</p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {(["left", "right"] as const).map((alignment) => (
+                  <button key={alignment} type="button" className={cx("min-h-10 rounded-xl border px-4 text-sm font-medium capitalize transition-colors", design.contactQrAlignment === alignment ? "border-accent bg-accent-soft text-accent" : "border-default bg-surface text-primary hover:border-accent hover:text-accent")} onClick={() => onChange((current) => ({ ...current, contactQrAlignment: alignment }))}>
+                    {alignment}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-primary">Size</p>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                {(["small", "medium", "large"] as const).map((size) => (
+                  <button key={size} type="button" className={cx("min-h-10 rounded-xl border px-3 text-sm font-medium capitalize transition-colors", design.contactQrSize === size ? "border-accent bg-accent-soft text-accent" : "border-default bg-surface text-primary hover:border-accent hover:text-accent")} onClick={() => onChange((current) => ({ ...current, contactQrSize: size }))}>
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <ColorField
+              label="QR code colour"
+              help="Choose a dark colour for reliable scanning"
+              value={design.contactQrColor}
+              onChange={(contactQrColor) => onChange((current) => ({ ...current, contactQrColor }))}
+            />
+          </div>
         </section>
         <section className="rounded-2xl border border-subtle bg-surface p-6 shadow-sm sm:p-8">
           <div>
