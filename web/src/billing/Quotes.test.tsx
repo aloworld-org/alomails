@@ -500,7 +500,7 @@ describe("the offer's transitions", () => {
     });
     const actions = within(title.parentElement as HTMLElement);
     const edit = actions.getByRole("button", { name: "Edit quote" });
-    expect((edit as HTMLButtonElement).disabled).toBe(true);
+    expect((edit as HTMLButtonElement).disabled).toBe(false);
     expect(actions.getByRole("button", { name: "Customize" })).toBeTruthy();
     expect(actions.getByRole("button", { name: "Preview" })).toBeTruthy();
     expect(
@@ -525,6 +525,7 @@ describe("the offer's transitions", () => {
       (actions.getByRole("button", { name: "Customize" }) as HTMLButtonElement)
         .disabled,
     ).toBe(false);
+    expect((edit as HTMLButtonElement).disabled).toBe(false);
   });
 
   test("editing a finalized quote creates an editable revision with the same lines", async () => {

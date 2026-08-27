@@ -95,6 +95,10 @@ export function QuoteEditor() {
 
   const editAsDraft = useCallback(async () => {
     if (quote === null) return;
+    if (quote.status === "draft") {
+      quoteStudio.current?.edit();
+      return;
+    }
     const revised = await api.createQuote({
       customerId: quote.customerId,
       currency: quote.currency,
@@ -263,12 +267,12 @@ export function QuoteEditor() {
               type="button"
               className={styles.linkAction}
               onClick={() => void editAsDraft()}
-              disabled={quote.status === "draft" || preview}
+              disabled={preview}
               title={
                 preview
                   ? "Exit preview before editing this quote"
                   : quote.status === "draft"
-                  ? "This quote is already editable"
+                  ? "Edit quotation content"
                   : "Create an editable revision"
               }
             >

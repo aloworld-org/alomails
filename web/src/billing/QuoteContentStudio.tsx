@@ -284,6 +284,7 @@ function imageData(file: File, done: (value: string) => void) {
 
 export interface QuoteContentStudioHandle {
   customize: () => void;
+  edit: () => void;
   copyTo: (quoteId: string) => Promise<void>;
 }
 
@@ -338,6 +339,13 @@ export const QuoteContentStudio = forwardRef<
     ref,
     () => ({
       customize: () => setCustomize(true),
+      edit: () => {
+        const target = root.current?.querySelector<HTMLElement>(
+          'input:not([disabled]), textarea:not([disabled]), [contenteditable="true"], button[aria-label="Edit quotation header"]',
+        );
+        target?.scrollIntoView({ behavior: "smooth", block: "center" });
+        target?.focus({ preventScroll: true });
+      },
       copyTo: (nextQuoteId) =>
         saveDesign(`alo:quote-design:${nextQuoteId}`, design),
     }),
