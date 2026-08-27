@@ -779,6 +779,7 @@ export const QuoteContentStudio = forwardRef<
   >(null);
   const [tableSettings, setTableSettings] = useState(false);
   const [editingImageId, setEditingImageId] = useState<string | null>(null);
+  const [editingDividerId, setEditingDividerId] = useState<string | null>(null);
   const root = useRef<HTMLElement>(null);
   const imageInput = useRef<HTMLInputElement>(null);
   const replaceImageInput = useRef<HTMLInputElement>(null);
@@ -1410,7 +1411,8 @@ export const QuoteContentStudio = forwardRef<
                           )}
                           <div className="flex flex-wrap items-center gap-3 opacity-0 transition-opacity group-hover/quote-block:opacity-100 group-focus-within/quote-block:opacity-100 max-md:opacity-100">
                             {(block.kind === "pricing" ||
-                              block.kind === "image") && (
+                              block.kind === "image" ||
+                              block.kind === "divider") && (
                               <div className="flex flex-wrap items-center gap-2 border-r border-default pr-3">
                                 {block.kind === "pricing" && (
                                   <>
@@ -1450,6 +1452,15 @@ export const QuoteContentStudio = forwardRef<
                                     onClick={() => setEditingImageId(block.id)}
                                   >
                                     <Pencil className="size-4" />
+                                  </BlockCommand>
+                                )}
+                                {block.kind === "divider" && (
+                                  <BlockCommand
+                                    accent
+                                    label={strings.quoteStudioDividerSettings}
+                                    onClick={() => setEditingDividerId(block.id)}
+                                  >
+                                    <Settings2 className="size-4" />
                                   </BlockCommand>
                                 )}
                               </div>
@@ -1701,6 +1712,10 @@ export const QuoteContentStudio = forwardRef<
                               block={block}
                               fallbackColor={design.colors.accent}
                               onChange={(patch) => update(block.id, patch)}
+                              open={editingDividerId === block.id}
+                              onOpenChange={(open) =>
+                                setEditingDividerId(open ? block.id : null)
+                              }
                             />
                           )
                         ) : block.kind === "text" ? (
@@ -1886,12 +1901,15 @@ function DividerBlockEditor({
   block,
   fallbackColor,
   onChange,
+  open,
+  onOpenChange,
 }: {
   block: Extract<Block, { kind: "divider" }>;
   fallbackColor: string;
   onChange: (patch: Partial<Extract<Block, { kind: "divider" }>>) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
   const thickness = block.thickness ?? "fine";
   const style = block.style ?? "solid";
   const width = block.width ?? 100;
@@ -1910,27 +1928,21 @@ function DividerBlockEditor({
 
   return (
     <>
-      <div className="relative flex min-h-16 items-center px-4 py-6">
+      <div className="flex min-h-16 items-center px-4 py-6">
         <DividerLine block={{ ...block, thickness, style, width, color }} />
-        <IconButton
-          className="absolute right-4 top-1/2 -translate-y-1/2 bg-surface shadow-sm"
-          label={strings.quoteStudioDividerSettings}
-          icon={<Settings2 className="size-4" />}
-          onClick={() => setOpen(true)}
-        />
       </div>
       {open && (
         <Modal
           title={strings.quoteStudioDividerSettings}
           icon={<Minus className="size-5" />}
-          onClose={() => setOpen(false)}
+          onClose={() => onOpenChange(false)}
           wide
           footer={
             <>
               <p className="mr-auto text-xs text-secondary">
                 {strings.quoteStudioChangesImmediate}
               </p>
-              <Button onClick={() => setOpen(false)}>
+              <Button onClick={() => onOpenChange(false)}>
                 {strings.quoteStudioDone}
               </Button>
             </>
