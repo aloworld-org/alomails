@@ -1,10 +1,10 @@
-// The keys that exist in English and not yet in Dutch or French.
+// The keys that exist in English and not yet in Dutch, French or German.
 //
 // **The list is empty, and the intent is that it stays that way.** It began at
 // 588 — the drift of every module that shipped without a parity test — and was
 // worked down to nothing. `locale.test.ts` fails when a key outside this list
 // is missing a translation, so with nothing on it the rule is now simply:
-// every string exists in all three languages.
+// every string exists in all four languages.
 //
 // Adding a line here is a deliberate exemption, not a convenience. It is the
 // right move when a stream needs to land English strings today and cannot
@@ -21,13 +21,13 @@
 // an agent if that helps, and have somebody who speaks the language approve.
 //
 // Two conventions the existing catalogs follow, worth knowing before adding to
-// them. Both languages address people formally — "u", "vous" — throughout.
-// And the product's own type names are not translated: Space, Base, Sheet and
-// Doc are called that in every language, while the words around them move.
+// them. All three languages address people formally — "u", "vous", "Sie" —
+// throughout. And the product's own type names are not translated: Space,
+// Base, Sheet and Doc are called that in every language, while the words
+// around them move.
 //
-// German (`de.ts`) is newer and deliberately partial: it ships complete
-// modules per iteration (M4.1) and is ratcheted per shipped module in
-// `locale.test.ts`, not through this list. Same conventions: "Sie"
-// throughout, type names untranslated.
+// German (`de.ts`) shipped complete modules per iteration (M4.1) and has
+// been complete since 2026-08-27; it is held to parity through this list
+// like Dutch and French.
 export const UNTRANSLATED: readonly string[] = [
 ] as const;

@@ -47,14 +47,14 @@ describe("catalog fallback", () => {
     for (const key of Object.keys(de)) {
       expect(en).toHaveProperty(key);
     }
-    // German is deliberately partial while M4.1 ships it module by module:
-    // an untranslated surface (here: the Sites commerce half, the last one)
-    // must read as English, not blank.
-    expect(catalog.sitesNewCatalog).toBe(en.sitesNewCatalog);
+    // German shipped module by module (M4.1) and is complete since
+    // tranche 9; the drift ratchet at the bottom of this file now holds
+    // it to parity alongside Dutch and French.
+    expect(Object.keys(de).length).toBe(Object.keys(en).length);
   });
 });
 
-describe("German ships complete modules (M4.1, tranches 1–8: mail + Docs/Drive + Chat/Meet + admin/control + Billing/CRM/Insights + Projects/Finance + Inventory/HR/Campaigns/Base + the agent tail + the Sites builder half)", () => {
+describe("German ships complete modules (M4.1, tranches 1–9: the whole catalog, Sites commerce half last)", () => {
   /** The sections `de.ts` claims to cover, by key prefix. The catalog is
    *  allowed to be partial across *modules* — the fallback shows English —
    *  but never inside one: a reading pane that mixes German buttons with
@@ -78,19 +78,20 @@ describe("German ships complete modules (M4.1, tranches 1–8: mail + Docs/Drive
    *  `agent` family — the assistant's mail/calendar/chat/Drive cards were
    *  the last agent keys out, so the anchored agentApprove/agentDiscard
    *  singletons widened to the plain prefix. Tranche 8 adds the Sites
-   *  builder half — everything under `sites` except the commerce families
-   *  (catalog, shop, booking, tickets, collections, custom code, orders,
-   *  domains and their palette/new/empty strays), which the negative
-   *  lookahead holds back for the final tranche. */
+   *  builder half; tranche 9 finishes the Sites commerce half (catalog,
+   *  shop, booking, tickets, collections, custom code, orders, domains),
+   *  so `sites` is claimed whole and the catalog is complete — the drift
+   *  ratchet at the bottom of this file now holds German to full parity,
+   *  and this list remains as the per-module map of how it got there. */
   const SHIPPED_PREFIXES =
-    /^(agenda|task|mail|compose|flag|folder|filter|spam|snooze|unsubscribe|appPassword|delegate|sharing|shared|categor|transfer|contact|import|signup|reset|settings|brand|home|module|rsvp|error|twoFactor|recovery|doc|drive|sheet|office|picker|search|ai|eq|spec|tb|ref|block|heading|para|table|chart|code|insert|font|size|align|text|style|highlight|strikethrough|bullet|numbered|horizontal|clear|close|cancel|chat|meet|admin|audit|control|domain|group|invite|overview|provider|security|tenant|user|dkim|kind|access|billing|crm|insights|projects|finance|inventory|hr|campaign|base|agent|sites(?!Booking|Catalog|Collection|Commerce|Connect|Custom|Domain|Order|Shop|Ticket|AssistantSuggestedShop|AssistantSuggestedTickets|NewBooking|NewCatalog|NewTicketEvent|NoOrders|NoTicketEvents|SectionBooking|SectionCatalog|SectionCollection|SectionCustomCode|SectionShop|SectionTickets)|add$|save$|deleteLabel$|aloDesc$|anthropicDesc$|openaiDesc$|mistralDesc$|ollamaDesc$|customDesc$|builtInTag$|connectTitle$|configureTitle$|removeRecipient$|recipientCount$|archiveUnavailable$)/;
+    /^(agenda|task|mail|compose|flag|folder|filter|spam|snooze|unsubscribe|appPassword|delegate|sharing|shared|categor|transfer|contact|import|signup|reset|settings|brand|home|module|rsvp|error|twoFactor|recovery|doc|drive|sheet|office|picker|search|ai|eq|spec|tb|ref|block|heading|para|table|chart|code|insert|font|size|align|text|style|highlight|strikethrough|bullet|numbered|horizontal|clear|close|cancel|chat|meet|admin|audit|control|domain|group|invite|overview|provider|security|tenant|user|dkim|kind|access|billing|crm|insights|projects|finance|inventory|hr|campaign|base|agent|sites|add$|save$|deleteLabel$|aloDesc$|anthropicDesc$|openaiDesc$|mistralDesc$|ollamaDesc$|customDesc$|builtInTag$|connectTitle$|configureTitle$|removeRecipient$|recipientCount$|archiveUnavailable$)/;
   const shippedKeys = Object.keys(en).filter((key) =>
     SHIPPED_PREFIXES.test(key),
   );
 
   test("the key list is the real shipped surface, not an empty filter", () => {
-    expect(shippedKeys.length).toBeGreaterThan(4400);
-    expect(Object.keys(de).length).toBeGreaterThan(4500);
+    expect(shippedKeys.length).toBeGreaterThan(5000);
+    expect(Object.keys(de).length).toBeGreaterThan(5100);
   });
 
   test("every shipped-module string exists in German", () => {
@@ -317,6 +318,44 @@ describe("German ships complete modules (M4.1, tranches 1–8: mail + Docs/Drive
     expect(catalog.sitesTranslationPublishHint(1)).toContain("1 Übersetzung zeigt");
     expect(catalog.sitesTranslationPublishHint(2)).toContain(
       "2 Übersetzungen zeigen",
+    );
+    // Tranche 9: the Sites commerce half. A website visitor places a
+    // Bestellung — the everyday B2C word; the formal Auftrag stays the
+    // order book's (inventoryNewSalesOrder above). A ticketed event is a
+    // Veranstaltung, never a Termin — the calendar keeps that word.
+    expect(catalog.sitesOrders).toBe("Bestellungen");
+    expect(catalog.sitesOrders).not.toBe(catalog.inventoryNewSalesOrder);
+    expect(catalog.sitesNewTicketEvent).toBe("Neue Veranstaltung");
+    expect(catalog.sitesCatalogNoPrice).toBe("Preis auf Anfrage");
+    expect(catalog.sitesCatalogSoldOut).toBe("Ausverkauft");
+    // The shop-setup proposal is approved with the agent cards' own word,
+    // while a domain price — a sum of money — is freigegeben.
+    expect(catalog.sitesShopSetupApprove(1)).toContain(catalog.agentApprove);
+    expect(catalog.sitesDomainApproveAction("12,00 €")).toBe(
+      "12,00 € freigeben",
+    );
+    // The proposal quotes the item's name in German quotes.
+    expect(catalog.sitesShopSetupInclude("Brot")).toBe("„Brot“ anlegen");
+    // Plural branches across the commerce surface.
+    expect(catalog.sitesTicketSectionOnSale(1)).toBe(
+      "1 Veranstaltung ist im Verkauf.",
+    );
+    expect(catalog.sitesTicketSectionOnSale(3)).toBe(
+      "3 Veranstaltungen sind im Verkauf.",
+    );
+    expect(catalog.sitesShopUnits(1)).toBe("1 Stück");
+    expect(catalog.sitesShopUnits(5)).toBe("5 Stück");
+    expect(catalog.sitesTicketSeatsCell(2, 3, 5)).toBe(
+      "2 verkauft · 3 von 5 frei",
+    );
+    expect(catalog.sitesDomainYearsOption(1)).toBe("1 Jahr");
+    expect(catalog.sitesDomainYearsOption(2)).toBe("2 Jahre");
+    // The renewal price is said beside the first-year price, both branches.
+    expect(catalog.sitesDomainTermPrice("12,00 €", 1)).toBe(
+      "12,00 € für das erste Jahr",
+    );
+    expect(catalog.sitesDomainTermPrice("24,00 €", 2)).toBe(
+      "24,00 € für die ersten 2 Jahre",
     );
   });
 
@@ -1379,25 +1418,29 @@ describe("runtime switching", () => {
   });
 });
 
-describe("the ratchet: no new key drifts out of Dutch or French", () => {
+describe("the ratchet: no new key drifts out of Dutch, French or German", () => {
   // The catalog falls back to English for a missing key, which is right at
   // runtime — a blank screen would be worse — and is exactly why 588 keys
   // drifted without anyone noticing. Nothing surfaces an untranslated string
   // except a Dutch user reading English.
   //
   // So the check is here instead. `UNTRANSLATED` is the debt as it stood when
-  // this was written; anything outside it must exist in all three languages.
+  // this was written; anything outside it must exist in all four languages.
+  // German joined when M4.1 completed its catalog (tranche 9).
   const nlKeys = new Set(Object.keys(nl));
   const frKeys = new Set(Object.keys(fr));
+  const deKeys = new Set(Object.keys(de));
   const allowed = new Set(UNTRANSLATED);
 
   test("a new English key is translated, or the build says which is not", () => {
     const drifted = Object.keys(en).filter(
-      (key) => !allowed.has(key) && (!nlKeys.has(key) || !frKeys.has(key)),
+      (key) =>
+        !allowed.has(key) &&
+        (!nlKeys.has(key) || !frKeys.has(key) || !deKeys.has(key)),
     );
     expect(
       drifted,
-      `These keys need Dutch and French, or an explicit line in untranslated.ts:\n  ${drifted.join("\n  ")}`,
+      `These keys need Dutch, French and German, or an explicit line in untranslated.ts:\n  ${drifted.join("\n  ")}`,
     ).toEqual([]);
   });
 
@@ -1405,7 +1448,7 @@ describe("the ratchet: no new key drifts out of Dutch or French", () => {
     // Otherwise the debt list quietly becomes a permanent exemption, and the
     // number stops meaning anything.
     const stale = UNTRANSLATED.filter(
-      (key) => nlKeys.has(key) && frKeys.has(key),
+      (key) => nlKeys.has(key) && frKeys.has(key) && deKeys.has(key),
     );
     expect(
       stale,

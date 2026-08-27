@@ -33,8 +33,12 @@
 // entire (catalog, stock, movements, purchase + sales orders, the
 // order book, scanning), HR entire (recruiting, letter templates, the
 // directory and org chart, leave, the absence month, approvals) and
-// Campaigns entire (audience, letters, the unsubscribe page). Only
-// Sites remains. Vocabulary held from tranche 4: a document is "ausgestellt"
+// Campaigns entire (audience, letters, the unsubscribe page) — and
+// (tranches 8 and 9) Sites entire: the builder half, then the commerce
+// half (catalog, bookings, tickets, shop, orders, collections, custom
+// code, domains). The catalog has been complete since 2026-08-27 and is
+// held to parity with en/fr/nl by the drift ratchet in `locale.test.ts`.
+// Vocabulary held from tranche 4: a document is "ausgestellt"
 // (matching auditActionIssue), a declined quote is "abgelehnt"
 // (matching auditActionDecline), a sent-back timesheet is
 // "zurückgewiesen" (matching auditActionReject), and the module names
@@ -6079,4 +6083,778 @@ export const de: Partial<Catalog> = {
   sitesPagePasswordPreviewNote:
     "Besucher werden zuerst nach dem Passwort gefragt. Diese Vorschau zeigt die Seite, wie jemand mit Passwort sie sieht.",
   sitesPagePasswordBadge: "Passwort",
+
+  // ---- Tranche 9: die Commerce-Hälfte von Sites — Katalog, Buchungen,
+  // Tickets, Shop, Bestellungen, Sammlungen, eigener Code und Domains.
+  // Damit ist der Katalog vollständig. Wortwahl: Besucher geben eine
+  // „Bestellung“ auf — das alltägliche B2C-Wort; der förmliche „Auftrag“
+  // bleibt dem Auftragsbuch in Lager. Eine Ticket-Veranstaltung ist die
+  // „Veranstaltung“ (der Kalender-Termin bleibt der „Termin“), verkauft
+  // werden „Plätze“, Ware liegt wie im Lager-Modul „auf Lager“, und der
+  // KI-Vorschlag der Shop-Einrichtung wird wie jede Agent-Karte
+  // „genehmigt“, während ein Domainpreis — ein Geldbetrag — „freigegeben“
+  // wird.
+
+  // Der Katalog: was die Website anbietet, mit Preisen.
+  sitesCatalogs: "Katalog",
+  sitesCatalogsHint:
+    "Was diese Website anbietet — Gerichte, Zimmer, Leistungen, Kurse. Die Preise werden in dem Moment eingefroren, in dem Sie veröffentlichen.",
+  sitesCatalogsLoading: "Der Katalog wird geladen…",
+  sitesCatalogsLoadFailed:
+    "Die Kataloge konnten nicht geladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+  sitesCatalogLoadFailed:
+    "Dieser Katalog ließ sich nicht öffnen. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+  sitesNewCatalog: "Neuer Katalog",
+  sitesCatalogNoneTitle: "Noch nichts im Angebot",
+  sitesCatalogNoneBody:
+    "Ein Katalog ist die Liste, die Ihre Website zeigt — und aus der sie, wenn Sie wollen, Bestellungen entgegennimmt. Beginnen Sie mit einem Namen und einer Währung; die Artikel kommen danach.",
+  sitesCatalogOrdersOn: "Nimmt Bestellungen an",
+  sitesCatalogOrdersOff: "Kein Bestellformular",
+  sitesCatalogSettings: "Dieser Katalog",
+  sitesCatalogSettingsHint:
+    "Der Name ist nur für Sie; Besucher sehen die Artikel. Änderungen erreichen die veröffentlichte Website beim nächsten Veröffentlichen.",
+  sitesCatalogName: "Name des Katalogs",
+  sitesCatalogCurrency: "Währung",
+  sitesCatalogCurrencyHint:
+    "Drei Buchstaben, zum Beispiel EUR. Eine Änderung liest die schon geschriebenen Preise in der neuen Währung — umgerechnet wird nichts.",
+  sitesCatalogOrders: "Bestellungen aus diesem Katalog annehmen",
+  sitesCatalogOrdersHint:
+    "Besucher bekommen unter der Liste ein Bestellformular. Auf der Website wird nichts bezahlt — die Bestellung landet in Ihrem Posteingang, und Sie bestätigen sie selbst. Sichtbar wird es beim nächsten Veröffentlichen.",
+  sitesCatalogCreate: "Katalog anlegen",
+  sitesCatalogSave: "Katalog speichern",
+  sitesCatalogSaveFailed: "Der Katalog konnte nicht gespeichert werden.",
+  sitesCatalogDelete: "Katalog löschen",
+  sitesCatalogDeleteConfirm: "Löschen, mit allem darin",
+  sitesCatalogDeleteHint:
+    "Die Artikel und Gruppen gehen mit. Bereits veröffentlichte Seiten zeigen weiter, was sie zeigten, bis Sie erneut veröffentlichen.",
+  sitesCatalogDeleteFailed: "Der Katalog konnte nicht gelöscht werden.",
+  sitesCatalogGroups: "Gruppen",
+  sitesCatalogGroupsHint:
+    "Optional. Eine Gruppe ist eine Überschrift auf der Seite — Brote, Zimmer, Halbtagskurse.",
+  sitesCatalogGroupName: "Name der Gruppe",
+  sitesCatalogNewGroup: "Neue Gruppe",
+  sitesCatalogNewGroupPlaceholder: "Brote",
+  sitesCatalogAddGroup: "Gruppe hinzufügen",
+  sitesCatalogGroupRemove: (name: string) => `Die Gruppe ${name} entfernen`,
+  sitesCatalogGroupRemoveShort: "Entfernen",
+  sitesCatalogGroupSaveFailed: "Die Gruppe konnte nicht gespeichert werden.",
+  sitesCatalogGroupDeleteFailed: "Die Gruppe konnte nicht entfernt werden.",
+  sitesCatalogItems: "Artikel",
+  sitesCatalogItemsHint:
+    "Alles, was dieser Katalog anbietet, in der Reihenfolge, in der die Seite es zeigt.",
+  sitesCatalogAddItem: "Artikel hinzufügen",
+  sitesCatalogNoItemsTitle: "Dieser Katalog ist leer",
+  sitesCatalogNoItemsBody:
+    "Fügen Sie hinzu, was Sie anbieten. Ein Name genügt für den Anfang — Preis, Foto und Beschreibung können folgen.",
+  sitesCatalogNoPrice: "Preis auf Anfrage",
+  sitesCatalogEdit: "Bearbeiten",
+  sitesCatalogEditItem: (name: string) => `${name} bearbeiten`,
+  sitesCatalogNewItem: "Neuer Artikel",
+  sitesCatalogSaveItem: "Artikel speichern",
+  sitesCatalogItemSubtitle:
+    "Er erscheint auf der Website beim nächsten Veröffentlichen.",
+  sitesCatalogItemName: "Name",
+  sitesCatalogItemHandle: "Kurzname",
+  sitesCatalogItemHandlePlaceholder: "Aus dem Namen",
+  sitesCatalogItemHandleHint:
+    "Der kurze Name für Links und auf Bestellungen. Lassen Sie ihn leer, und wir bilden einen aus dem Namen.",
+  sitesCatalogItemPrice: (currency: string) => `Preis (${currency})`,
+  sitesCatalogItemPriceHint:
+    "Schreiben Sie ihn wie auf eine Karte — 4,50 oder 4.50. Leer lassen für Preis auf Anfrage.",
+  sitesCatalogItemPriceNote: "Neben dem Preis",
+  sitesCatalogItemPriceNoteHint:
+    "Ein kurzer Zusatz — pro Nacht, ab, pro Person.",
+  sitesCatalogItemGroup: "Gruppe",
+  sitesCatalogItemNoGroup: "Keine Gruppe",
+  sitesCatalogItemDescription: "Beschreibung",
+  sitesCatalogItemPhoto: "Foto",
+  sitesCatalogItemPhotoNone: "Noch kein Foto",
+  sitesCatalogItemPhotoNoneHint:
+    "Ein Artikel ohne Foto erscheint trotzdem — mit Name, Preis und Beschreibung.",
+  sitesCatalogItemPhotoAdd: "Foto hinzufügen",
+  sitesCatalogItemPhotoReplace: "Ersetzen",
+  sitesCatalogItemPhotoRemove: "Das Foto entfernen",
+  sitesCatalogItemPhotoPreview: "Das Foto dieses Artikels",
+  sitesCatalogItemPhotoAlt: "Was das Foto zeigt",
+  sitesCatalogItemPhotoAltHint:
+    "Wird von Screenreadern vorgelesen. Beschreiben Sie das Bild — nicht den Namen, der darunter steht.",
+  sitesCatalogItemPhotoAltMissing:
+    "Noch hat niemand dieses Foto beschrieben; bis dahin greift die Karte auf den Artikelnamen zurück.",
+  sitesCatalogItemAvailability: "Verfügbarkeit",
+  sitesCatalogAvailabilityHint:
+    "Ausverkauft erscheint weiterhin — markiert und nicht bestellbar. Ausgeblendet wird gar nicht veröffentlicht.",
+  sitesCatalogAvailable: "Verfügbar",
+  sitesCatalogSoldOut: "Ausverkauft",
+  sitesCatalogHidden: "Ausgeblendet",
+  sitesCatalogItemSaveFailed: "Der Artikel konnte nicht gespeichert werden.",
+  sitesCatalogItemDelete: "Löschen",
+  sitesCatalogItemDeleteConfirm: "Ja, löschen",
+  sitesCatalogItemDeleteLabel: (name: string) => `${name} löschen`,
+  sitesCatalogItemDeleteConfirmLabel: (name: string) =>
+    `Ja, löschen: ${name}`,
+  sitesCatalogItemDeleteFailed: "Der Artikel konnte nicht gelöscht werden.",
+  sitesSectionCatalog: "Katalog",
+  sitesSectionCatalogDesc:
+    "Was Sie anbieten, mit Preisen, aus Ihrem Katalog.",
+  sitesCatalogSectionHeading: "Überschrift darüber",
+  sitesCatalogSectionChoose: "Welcher Katalog",
+  sitesCatalogSectionGroup: "Welche Gruppe",
+  sitesCatalogSectionAllGroups: "Alles im Katalog",
+  sitesCatalogSectionGroupHint:
+    "Zeigen Sie eine Gruppe auf dieser Seite — die Mittagskarte, die Doppelzimmer — oder alles.",
+  sitesCatalogSectionGoneGroup: (handle: string) =>
+    `${handle} (keine Gruppe mehr)`,
+  sitesCatalogSectionOneGroup: (handle: string) => `Eine Gruppe: ${handle}`,
+  sitesCatalogSectionNoCatalogs: "Diese Website hat noch keinen Katalog",
+  sitesCatalogSectionNoCatalogsHint:
+    "Ein Katalog enthält, was Sie anbieten, mit den Preisen. Legen Sie einen an, und dieser Abschnitt kann ihn zeigen.",
+  sitesCatalogSectionOrdersOn:
+    "Dieser Katalog nimmt Bestellungen an, deshalb trägt die veröffentlichte Seite unter der Liste ein Bestellformular. Bestellungen landen im Bestelleingang dieser Website.",
+  sitesCatalogSectionOrdersOff:
+    "Dieser Katalog nimmt keine Bestellungen an, deshalb zeigt die Seite nur die Liste. Das Bestellen ist ein Schalter am Katalog, nicht an diesem Abschnitt.",
+
+  // Buchungen: was Besucher buchen können, und der Kalender dahinter.
+  sitesBookings: "Buchungen",
+  sitesBookingsHint:
+    "Was Besucher auf dieser Website buchen können — eine Beratung, eine Besichtigung, einen Tisch. Jede Buchung landet direkt in einem Ihrer Kalender.",
+  sitesBookingsLoading: "Die buchbaren Leistungen werden geladen…",
+  sitesBookingsLoadFailed:
+    "Die buchbaren Leistungen konnten nicht geladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+  sitesNewBooking: "Neue buchbare Leistung",
+  sitesBookingNoneTitle: "Noch kann nichts gebucht werden",
+  sitesBookingNoneBody:
+    "Eine buchbare Leistung ist eine Sache, für die ein Besucher sich eine Zeit nehmen kann. Sagen Sie, wie lange sie dauert und wann Sie dafür geöffnet haben; die freien Zeiten werden aus Ihrem Kalender errechnet.",
+  sitesBookingNoCalendarTitle: "Kein Kalender, in den gebucht werden kann",
+  sitesBookingNoCalendarBody:
+    "Eine Buchung ist ein Termin in einem Ihrer Kalender, also muss es einen Kalender geben, dem Sie Termine hinzufügen dürfen. Legen Sie im Kalender einen an, und er erscheint hier.",
+  sitesBookingSettings: "Diese Leistung",
+  sitesBookingSettingsHint:
+    "Alles, was einem Besucher angeboten wird. Änderungen erreichen die veröffentlichte Website beim nächsten Veröffentlichen.",
+  sitesBookingName: "Was gebucht wird",
+  sitesBookingDescription: "Beschreibung",
+  sitesBookingWhere: "Wo es stattfindet",
+  sitesBookingWherePlaceholder: "Zweiter Stock, bitte klingeln",
+  sitesBookingWhereLine: (place: string) => `Wo: ${place}`,
+  sitesBookingCalendar: "Gebucht in",
+  sitesBookingCalendarHint:
+    "Termine werden in diesen Kalender geschrieben, und Zeiten, in denen Sie dort schon belegt sind, werden nie angeboten.",
+  sitesBookingCalendarReadOnly: (name: string) =>
+    `${name} — nur zum Lesen mit Ihnen geteilt`,
+  sitesBookingCalendarGone: "Kalender nicht mehr verfügbar",
+  sitesBookingCalendarGoneHint:
+    "Der Kalender, in den diese Leistung gebucht wurde, ist nicht mehr erreichbar — er wurde gelöscht, oder die Freigabe wurde zurückgezogen. Bis Sie einen anderen wählen, bietet die veröffentlichte Seite gar keine Zeiten an.",
+  sitesBookingOpenAgenda: "Den Kalender öffnen und die Termine verwalten",
+  sitesBookingLength: "Dauer (Minuten)",
+  sitesBookingBuffer: "Pause danach (Minuten)",
+  sitesBookingNotice: "Kürzeste Vorlaufzeit (Minuten)",
+  sitesBookingHorizon: "Buchbar im Voraus (Tage)",
+  sitesBookingTimeZone: "Zeitzone",
+  sitesBookingTimeZoneHint:
+    "Die Uhr, nach der Ihre Öffnungszeiten geschrieben sind, als IANA-Name wie Europe/Brussels. Termine wandern mit der Uhr, wenn die Sommerzeit wechselt.",
+  sitesBookingHours: "Wann Sie dafür geöffnet haben",
+  sitesBookingHoursHint:
+    "Ein leerer Kalender ist kein geöffneter Tag. Diese Fenster sind das Angebot; was schon im Kalender steht, wird davon abgezogen.",
+  sitesBookingDay: "Tag",
+  sitesBookingFrom: "Von",
+  sitesBookingUntil: "Bis",
+  sitesBookingAddWindow: "Fenster hinzufügen",
+  sitesBookingRemoveWindow: (window: string) => `${window} entfernen`,
+  sitesBookingNoHours:
+    "Noch keine Öffnungszeiten — nichts kann gebucht werden.",
+  sitesBookingQuestions: "Was Sie bei der Buchung fragen",
+  sitesBookingQuestionsHint:
+    "Name und E-Mail-Adresse werden immer erfragt und stehen nicht in dieser Liste. Ergänzen Sie nur, was genau diese Buchung braucht.",
+  sitesBookingQuestionLabel: "Frage",
+  sitesBookingQuestionLabelPlaceholder: "Telefonnummer",
+  sitesBookingQuestionKey: "Gespeichert als",
+  sitesBookingQuestionKind: "Art der Antwort",
+  sitesBookingQuestionText: "Eine Zeile",
+  sitesBookingQuestionLongText: "Mehrere Zeilen",
+  sitesBookingQuestionPhone: "Telefonnummer",
+  sitesBookingQuestionChoice: "Eine aus einer Liste",
+  sitesBookingQuestionOptions: "Die angebotenen Antworten",
+  sitesBookingQuestionOptionsPlaceholder: "Schnitt, Farbe, beides",
+  sitesBookingQuestionRequired: "Muss beantwortet werden",
+  sitesBookingAddQuestion: "Frage hinzufügen",
+  sitesBookingRemoveQuestion: (question: string) =>
+    `Die Frage ${question} entfernen`,
+  sitesBookingActive: "Buchungen dafür annehmen",
+  sitesBookingActiveHint:
+    "Ausgeschaltet bleibt die Leistung genau, wie sie ist, und die veröffentlichte Seite sagt, dass sie vorerst keine Buchungen annimmt.",
+  sitesBookingCreate: "Leistung anlegen",
+  sitesBookingSave: "Leistung speichern",
+  sitesBookingSaveFailed:
+    "Die buchbare Leistung konnte nicht gespeichert werden.",
+  sitesBookingDelete: "Leistung löschen",
+  sitesBookingDeleteConfirm: "Ja, löschen",
+  sitesBookingDeleteHint:
+    "Termine, die schon in Ihrem Kalender stehen, bleiben genau, wie sie sind — nichts hier sagt einen ab. Bereits veröffentlichte Seiten bieten die Leistung weiter an, bis Sie erneut veröffentlichen.",
+  sitesBookingDeleteFailed:
+    "Die buchbare Leistung konnte nicht gelöscht werden.",
+  sitesBookingMinutes: (minutes: number) => `${minutes} Minuten`,
+  sitesBookingOff: "Nimmt keine Buchungen an",
+  sitesBookingPreview: "Was ein Besucher sieht",
+  sitesBookingPreviewHint:
+    "Das Angebot, wie die veröffentlichte Seite es nennt. Die freien Zeiten selbst werden gegen Ihren Kalender errechnet, sobald jemand fragt.",
+  sitesBookingUnnamed: "Leistung ohne Titel",
+  sitesBookingAsksNothingExtra:
+    "Besucher werden nach Name und E-Mail-Adresse gefragt.",
+  sitesBookingAsksAlso: (questions: string) =>
+    `Besucher werden nach Name und E-Mail-Adresse gefragt, und außerdem: ${questions}.`,
+  sitesBookingPublishHint:
+    "Auf der Website erscheint es, sobald eine Seite einen Buchungsabschnitt dafür trägt und Sie veröffentlichen.",
+  sitesBookingOffPreview:
+    "Diese Leistung ist ausgeschaltet, deshalb wird die Seite sagen, dass sie vorerst keine Buchungen annimmt.",
+  sitesSectionBooking: "Buchung",
+  sitesSectionBookingDesc:
+    "Lassen Sie Besucher eine Zeit bei Ihnen buchen, direkt in Ihren Kalender.",
+  sitesBookingSectionHeading: "Überschrift darüber",
+  sitesBookingSectionChoose: "Was hier gebucht werden kann",
+  sitesBookingSectionNoServices: "Diese Website hat noch nichts zu buchen",
+  sitesBookingSectionNoServicesHint:
+    "Eine buchbare Leistung sagt, wie lange sie dauert, wann Sie dafür geöffnet haben und in welchen Kalender sie geht. Legen Sie eine an, und dieser Abschnitt kann sie anbieten.",
+  sitesBookingSectionOffOption: (name: string) =>
+    `${name} (nimmt keine Buchungen an)`,
+  sitesBookingSectionLength: (minutes: number) =>
+    `Besucher wählen eine freie Zeit von ${minutes} Minuten. Die Zeiten kommen aus Ihrem Kalender, sobald jemand fragt — nicht aus dieser Seite.`,
+  sitesBookingSectionOff:
+    "Diese Leistung ist ausgeschaltet, deshalb wird die veröffentlichte Seite sagen, dass sie vorerst keine Buchungen annimmt.",
+  sitesBookingSectionGone:
+    "Die Leistung, die dieser Abschnitt anbot, ist weg. Wählen Sie eine andere, sonst wird das nächste Veröffentlichen abgelehnt.",
+
+  // Der Ticketshop: Veranstaltungen mit Datum, Plätzen und einem Artikel
+  // von der Preisliste.
+  sitesSectionTickets: "Tickets",
+  sitesSectionTicketsDesc:
+    "Die Tür zu Ihrem Ticketshop. Was im Verkauf ist, Preise und Plätze bleiben aktuell.",
+  sitesTicketSectionHeading: "Überschrift darüber",
+  sitesTicketSectionBody: "Ihre eigenen Worte über dem Link",
+  sitesTicketSectionNoEvents: "Noch ist nichts im Verkauf",
+  sitesTicketSectionNoEventsHint:
+    "Der veröffentlichte Abschnitt verweist auf Ihren Ticketshop. Legen Sie eine Veranstaltung an, damit es etwas zu kaufen gibt.",
+  sitesTicketSectionHint:
+    "Der veröffentlichte Abschnitt verweist auf Ihren Ticketshop; Veranstaltungen, Preise und Plätze werden live gelesen, wenn ein Besucher kommt.",
+  sitesTicketSectionOnSale: (count: number) =>
+    count === 1
+      ? "1 Veranstaltung ist im Verkauf."
+      : `${count} Veranstaltungen sind im Verkauf.`,
+  sitesTickets: "Tickets",
+  sitesTicketsLoadFailed:
+    "Die Veranstaltungen konnten nicht geladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+  sitesNoTicketEventsTitle: "Noch keine Veranstaltungen",
+  sitesNoTicketEventsBody:
+    "Eine Ticket-Veranstaltung verkauft Plätze für einen Artikel Ihrer Preisliste, an einem Datum. Shop, Kasse und das Zählen der Plätze sind schon gebaut — legen Sie die erste Veranstaltung an, und Ihre Website kann sie verkaufen.",
+  sitesTicketNoProducts: "Noch steht nichts auf Ihrer Preisliste",
+  sitesTicketNoProductsHint:
+    "Eine Veranstaltung verkauft Plätze für einen Artikel Ihrer Preisliste, zu dessen eigenem Preis. Legen Sie den Artikel zuerst in Rechnungen an; Name und Preis bleiben dort und werden hier nie kopiert.",
+  sitesNewTicketEvent: "Neue Veranstaltung",
+  sitesNewTicketEventSubtitle:
+    "Ein Datum, als was ein Platz verkauft wird, und wie viele Plätze es gibt.",
+  sitesTicketCreateSubmit: "Veranstaltung anlegen",
+  sitesTicketCreateFailed: "Die Veranstaltung konnte nicht angelegt werden.",
+  sitesTicketEventProduct: "Als was ein Platz verkauft wird",
+  sitesTicketEventProductHint:
+    "Ein Artikel Ihrer Preisliste. Name und Preis werden live gelesen, nie kopiert.",
+  sitesTicketProductOption: (name: string, price: string) =>
+    `${name} — ${price}`,
+  sitesTicketEventStartsAt: "Wann sie beginnt",
+  sitesTicketEventCapacity: "Plätze",
+  sitesTicketEventCapacityHint:
+    "Mehr geht immer. Weniger endet bei den Plätzen, die schon verkauft oder vergeben sind.",
+  sitesTicketCapacityTitle: "Die Plätze ändern",
+  sitesTicketCapacitySubtitle: (taken: number) =>
+    taken === 1
+      ? "1 Platz ist schon verkauft oder vergeben."
+      : `${taken} Plätze sind schon verkauft oder vergeben.`,
+  sitesTicketCapacitySubmit: "Plätze speichern",
+  sitesTicketCapacityFailed: "Die Platzzahl konnte nicht geändert werden.",
+  sitesTicketChangeCapacity: "Plätze…",
+  sitesTicketDelete: "Löschen",
+  sitesTicketChangeCapacityFor: (event: string) =>
+    `Plätze für ${event} ändern`,
+  sitesTicketDeleteFor: (event: string) => `${event} löschen`,
+  sitesTicketDeleteConfirm: "Wirklich löschen?",
+  sitesTicketDeleteHint:
+    "Eine Veranstaltung, für die niemand gekauft hat, verschwindet. Sobald ein Platz verkauft ist, ist die Veranstaltung der Nachweis des Verkaufs und bleibt.",
+  sitesTicketDeleteFailed: "Die Veranstaltung konnte nicht gelöscht werden.",
+  sitesTicketWhen: "Wann",
+  sitesTicketWhat: "Was",
+  sitesTicketPrice: "Preis",
+  sitesTicketSeats: "Plätze",
+  sitesTicketSeatsCell: (sold: number, remaining: number, capacity: number) =>
+    `${sold} verkauft · ${remaining} von ${capacity} frei`,
+  sitesTicketHeld: (held: number) =>
+    held === 1 ? "(1 gerade an der Kasse)" : `(${held} gerade an der Kasse)`,
+  sitesTicketGoneProduct: "Steht nicht mehr auf der Preisliste",
+  sitesAssistantSuggestedTickets: "Kann ich online Tickets kaufen?",
+
+  // Das Schaufenster des Shops: Lagerware von der Preisliste, live gelesen.
+  sitesSectionShop: "Shop",
+  sitesSectionShopDesc:
+    "Die Tür zu Ihrem Shop. Was im Verkauf ist, Preise und Bestand bleiben aktuell.",
+  sitesShopSectionHeading: "Überschrift darüber",
+  sitesShopSectionBody: "Ihre eigenen Worte über dem Link",
+  sitesShopSectionNoItems: "Noch ist nichts im Shop",
+  sitesShopSectionNoItemsHint:
+    "Der Block verweist auf Ihre Shop-Seite. Führen Sie auf dem Shop-Bildschirm ein Produkt mit Bestand auf, und es erscheint dort.",
+  sitesShopSectionHint:
+    "Der Block verweist auf Ihre Shop-Seite. Was im Verkauf ist, Preise und Bestand werden live gelesen — in der Seite selbst ist nichts gespeichert.",
+  sitesShopSectionListed: (count: number) =>
+    count === 1
+      ? "1 Produkt ist im Shop."
+      : `${count} Produkte sind im Shop.`,
+  sitesAssistantSuggestedShop: "Was verkaufen Sie?",
+  sitesShop: "Shop",
+  sitesShopLoadFailed:
+    "Der Shop konnte nicht geladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+  sitesShopAddProduct: "Produkt hinzufügen",
+  sitesShopAddSubtitle:
+    "Wählen Sie ein Produkt mit Bestand aus Ihrer Preisliste. Name, Preis und Bestand gehören weiter Rechnungen und Lager — der Shop führt es nur auf.",
+  sitesShopAddSubmit: "In den Shop aufnehmen",
+  sitesShopAddFailed: "Das Produkt konnte nicht hinzugefügt werden.",
+  sitesShopProduct: "Was verkauft wird",
+  sitesShopProductHint:
+    "Nur Lagerware von Ihrer Preisliste kann hier verkauft werden.",
+  sitesShopProductOption: (name: string, price: string, units: number) =>
+    units === 1
+      ? `${name} — ${price} (1 auf Lager)`
+      : `${name} — ${price} (${units} auf Lager)`,
+  sitesShopColWhat: "Was",
+  sitesShopColPrice: "Preis",
+  sitesShopColShelf: "Auf Lager",
+  sitesShopGoneProduct: "Steht nicht mehr auf der Preisliste",
+  sitesShopNotStocked: "Keine Lagerware mehr",
+  sitesShopUnits: (units: number) =>
+    units === 1 ? "1 Stück" : `${units} Stück`,
+  sitesShopRemove: "Entfernen",
+  sitesShopRemoveFor: (product: string) =>
+    `${product} aus dem Shop entfernen`,
+  sitesShopRemoveConfirm: "Wirklich entfernen?",
+  sitesShopRemoveHint:
+    "Entfernen nimmt das Produkt nur aus dem Schaufenster. Bereits aufgegebene Bestellungen behalten es.",
+  sitesShopRemoveFailed: "Das Produkt konnte nicht entfernt werden.",
+  sitesShopNoProducts: "Noch liegt nichts zum Verkaufen auf Lager",
+  sitesShopNoProductsHint:
+    "Der Shop verkauft Lagerware von Ihrer Preisliste. Legen Sie in Rechnungen einen Artikel an (oder lassen Sie sich von der Shop-Einrichtung eine Liste vorschlagen), buchen Sie Bestand ein, und er erscheint hier.",
+  sitesShopEmptyTitle: "Ihr Schaufenster ist leer",
+  sitesShopEmptyBody:
+    "Führen Sie ein Produkt mit Bestand auf, und Besucher können es auf Ihrer Website kaufen — bezahlt auf der Seite des Zahlungsanbieters.",
+  sitesShopAllListed: "Jedes Produkt mit Bestand ist schon im Shop.",
+  sitesShopDeliveryRate: (price: string) =>
+    `Die Lieferung kostet ${price} pro Bestellung.`,
+  sitesShopDeliveryFree: "Die Lieferung ist kostenlos.",
+  sitesCommerceReadOnly:
+    "Nur wer diese Website besitzt, kann ändern, was sie verkauft und berechnet — Sie können schauen, nicht ändern.",
+  sitesShopDeliveryChange: "Lieferung ändern…",
+  sitesShopDeliveryTitle: "Lieferung pro Bestellung",
+  sitesShopDeliverySubtitle:
+    "Ein Pauschalpreis pro Bestellung, neben der Ware berechnet. Die MwSt. folgt der Ware.",
+  sitesShopDeliveryLabel: (currency: string) => `Lieferpreis (${currency})`,
+  sitesShopDeliveryHint: "0 heißt: Die Lieferung ist kostenlos.",
+  sitesShopDeliverySave: "Lieferung speichern",
+  sitesShopDeliveryFailed: "Der Lieferpreis konnte nicht gespeichert werden.",
+
+  // Die Shop-Einrichtung: ein Vorschlag zum Genehmigen, wie jede
+  // Agent-Karte — nichts existiert, bevor Sie es genehmigen.
+  sitesShopSetup: "Shop-Einrichtung",
+  sitesShopSetupSubtitle:
+    "Beschreiben Sie Ihr Geschäft, und Sie bekommen eine vorgeschlagene Preisliste, MwSt.-Behandlung und einen Lieferpreis zum Prüfen. Nichts wird angelegt, bevor Sie es genehmigen.",
+  sitesShopSetupLoadFailed:
+    "Die Shop-Einrichtung konnte nicht geladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+  sitesShopSetupDescribeLabel: "Was verkaufen Sie?",
+  sitesShopSetupDescribeHint:
+    "Nennen Sie, was Sie verkaufen, und die Preise, die Sie verlangen. Genannte Preise werden übernommen, wie sie dastehen — alles andere bleibt leer oder eine markierte Vermutung, die Sie bestätigen.",
+  sitesShopSetupPropose: "Einrichtung vorschlagen",
+  sitesShopSetupProposeFailed:
+    "Es ließ sich keine Einrichtung vorschlagen. Versuchen Sie es erneut.",
+  sitesShopSetupUnconfigured:
+    "Dieser Arbeitsbereich hat keinen KI-Anbieter eingerichtet, deshalb kann hier nichts vorgeschlagen werden — legen Sie Ihre Preisliste stattdessen von Hand an.",
+  sitesShopSetupManualPath: "Lieber von Hand?",
+  sitesShopSetupManualTickets: "Ticket-Veranstaltungen verwalten",
+  sitesShopSetupManualCatalogs: "Kataloge verwalten",
+  sitesShopSetupExisting: (count: number) =>
+    count === 1
+      ? "Ihre Preisliste hat schon 1 Artikel. Genehmigen fügt hinzu — ersetzt wird nie etwas."
+      : `Ihre Preisliste hat schon ${count} Artikel. Genehmigen fügt hinzu — ersetzt wird nie etwas.`,
+  sitesShopSetupProposalTitle: "Der Vorschlag",
+  sitesShopSetupProposalIntro:
+    "Prüfen Sie jede Zeile, bevor Sie genehmigen. Angezeigte Preise standen in Ihrer Beschreibung; Leerstellen füllen Sie selbst, und jeder MwSt.-Satz ist eine Vermutung zum Bestätigen.",
+  sitesShopSetupInclude: (name: string) => `„${name}“ anlegen`,
+  sitesShopSetupItemName: "Name",
+  sitesShopSetupItemUnit: "Einheit",
+  sitesShopSetupItemPrice: (currency: string) => `Preis (${currency})`,
+  sitesShopSetupVatLabel: "MwSt. %",
+  sitesShopSetupVatGuessBadge: "MwSt. ist eine Vermutung",
+  sitesShopSetupNameMissing:
+    "Jeder angehakte Artikel braucht einen Namen, bevor Sie genehmigen.",
+  sitesShopSetupPriceMissing:
+    "Ihre Beschreibung nannte keinen Preis — tragen Sie einen ein, bevor Sie genehmigen.",
+  sitesShopSetupVatMissing:
+    "Tragen Sie für jeden angehakten Artikel einen MwSt.-Prozentsatz ein, bevor Sie genehmigen.",
+  sitesShopSetupKindStock: "Ware",
+  sitesShopSetupKindDated: "Tickets",
+  sitesShopSetupKindService: "Dienstleistung",
+  sitesShopSetupShippingTitle: "Lieferung",
+  sitesShopSetupShippingNotNeeded:
+    "Nichts in diesem Vorschlag wird verschickt, also gibt es keinen Lieferpreis zu setzen.",
+  sitesShopSetupShippingLabel: (currency: string) =>
+    `Pauschaler Lieferpreis pro Bestellung (${currency})`,
+  sitesShopSetupShippingMissing:
+    "Ware wird verschickt, aber Ihre Beschreibung nannte keinen Lieferpreis — tragen Sie einen ein, bevor Sie genehmigen.",
+  sitesShopSetupShippingCurrent: (price: string) => `Derzeit ${price}.`,
+  sitesShopSetupShippingSaved: "Lieferpreis gespeichert.",
+  sitesShopSetupShippingFailed:
+    "Der Lieferpreis konnte nicht gespeichert werden.",
+  sitesShopSetupNothingIncluded:
+    "Nichts ist angehakt — haken Sie mindestens einen Artikel an, um ihn anzulegen.",
+  sitesShopSetupApprove: (count: number) =>
+    count === 1
+      ? "Genehmigen — 1 Artikel anlegen"
+      : `Genehmigen — ${count} Artikel anlegen`,
+  sitesShopSetupRetry: "Erneut versuchen",
+  sitesShopSetupDiscard: "Vorschlag verwerfen",
+  sitesShopSetupCreated: "Angelegt",
+  sitesShopSetupCreateFailed: "Dieser Artikel konnte nicht angelegt werden.",
+  sitesShopSetupDone: (count: number) =>
+    count === 1
+      ? "1 Artikel steht jetzt auf Ihrer Preisliste."
+      : `${count} Artikel stehen jetzt auf Ihrer Preisliste.`,
+  sitesShopSetupNextTickets:
+    "Die Veranstaltungen planen, für die Tickets verkauft werden",
+
+  // Der Bestelleingang: worum Besucher gebeten haben, und was als
+  // Nächstes damit geschieht.
+  sitesOrders: "Bestellungen",
+  sitesOrdersLoadFailed:
+    "Die Bestellungen konnten nicht geladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+  sitesOrdersExport: "Als CSV exportieren",
+  sitesOrdersExporting: "Wird exportiert…",
+  sitesOrdersExportFailed: "Die Bestellungen konnten nicht exportiert werden.",
+  sitesNoOrdersTitle: "Noch keine Bestellungen",
+  sitesNoOrdersBody:
+    "Zeigt eine veröffentlichte Seite einen Katalog, der Bestellungen annimmt, landet hier, worum Besucher bitten — mit dem, was sie wollen, ihren Angaben und der Summe.",
+  sitesOrderList: "Bestellungen",
+  sitesOrderDetail: "Diese Bestellung",
+  sitesOrderFilter: "Zeigen",
+  sitesOrderFilterAll: "Alle",
+  sitesOrderFilterOption: (label: string, count: number) =>
+    `${label} (${count})`,
+  sitesOrderFilterEmpty: "Keine Bestellungen in diesem Stand.",
+  sitesOrderStatus: "Wo diese Bestellung steht",
+  sitesOrderStatusNew: "Neu",
+  sitesOrderStatusConfirmed: "Bestätigt",
+  sitesOrderStatusFulfilled: "Erledigt",
+  sitesOrderStatusCancelled: "Storniert",
+  sitesOrderStatusFailed: "Die Bestellung konnte nicht umgestellt werden.",
+  sitesOrderCatalog: "Aus",
+  sitesOrderPhone: "Telefon",
+  sitesOrderItem: "Artikel",
+  sitesOrderQuantity: "Wie viele",
+  sitesOrderUnitPrice: "Einzeln",
+  sitesOrderLineTotal: "Zeile",
+  sitesOrderTotal: "Summe",
+  sitesOrderLinesCaption: "Was bestellt wurde",
+  sitesOrderLineNoPrice: "Auf Anfrage",
+  sitesOrderQuotedHint:
+    "Ein Artikel ohne Preis zählt nicht zur Summe — nennen Sie den Preis selbst, wenn Sie antworten.",
+  sitesOrderLineCount: (count: number) =>
+    count === 1 ? "1 Artikel" : `${count} Artikel`,
+  sitesOrderDelete: "Bestellung löschen",
+  sitesOrderDeleteConfirm: "Endgültig löschen",
+  sitesOrderDeleteHint:
+    "Diese Bestellung enthält den Namen, die Telefonnummer und die Wünsche einer Person. Löschen entfernt alles davon — es gibt kein Zurück.",
+  sitesOrderDeleteFailed: "Die Bestellung konnte nicht gelöscht werden.",
+
+  // Sammlungen: Zeilen aus alo Base als wiederverwendbare Karten.
+  sitesCollections: "Sammlungen",
+  sitesCollectionsHint:
+    "Machen Sie aus einer Tabelle in alo Base wiederverwendbare Karten für Ihre Website.",
+  sitesConnectTable: "Tabelle verbinden",
+  sitesCollectionsLoading: "Sammlungen werden geladen…",
+  sitesCollectionsLoadFailed:
+    "Die Sammlungen konnten nicht geladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+  sitesCollectionEmptyTitle: "Verbinden Sie Ihre erste Tabelle",
+  sitesCollectionEmptyBody:
+    "Wählen Sie eine alo Base, ordnen Sie ihre Spalten einmal zu, und verwenden Sie diese Zeilen auf jeder Seite wieder.",
+  sitesCollectionNoBasesTitle: "Legen Sie zuerst eine alo Base an",
+  sitesCollectionNoBasesBody:
+    "Sammlungen lesen Zeilen aus alo Base. Legen Sie in Drive eine Base an und kommen Sie dann hierher zurück, um sie zu verbinden.",
+  sitesCollectionOpenDrive: "Drive öffnen",
+  sitesCollectionName: "Name der Sammlung",
+  sitesCollectionBase: "alo Base",
+  sitesCollectionTable: "Tabelle",
+  sitesCollectionChooseBase: "Base wählen",
+  sitesCollectionChooseTable: "Tabelle wählen",
+  sitesCollectionRows: (count: number) =>
+    count === 1 ? "1 Zeile" : `${count} Zeilen`,
+  sitesCollectionConnectedTo: (base: string, table: string) =>
+    `${base} / ${table}`,
+  sitesCollectionSourceUnavailable:
+    "Wählen Sie die Base und die Tabelle, deren Zeilen auf der Website erscheinen sollen.",
+  sitesCollectionEdit: (name: string) => `${name} bearbeiten`,
+  sitesCollectionMapping: "Spalten dem Website-Inhalt zuordnen",
+  sitesCollectionMappingHint:
+    "Der Titel ist Pflicht. Alles andere ist optional und kann später dazukommen.",
+  sitesCollectionOptional: "Optional",
+  sitesCollectionNotMapped: "Nicht zeigen",
+  sitesCollectionNoCompatibleField: "Diese Tabelle braucht eine Textspalte",
+  sitesCollectionTitleField: "Titel",
+  sitesCollectionSlugField: "Seitenpfad",
+  sitesCollectionSummaryField: "Zusammenfassung",
+  sitesCollectionBodyField: "Text",
+  sitesCollectionImageField: "Bild",
+  sitesCollectionLinkField: "Link",
+  sitesCollectionDateField: "Veröffentlichungsdatum",
+  sitesCollectionSave: "Sammlung speichern",
+  sitesCollectionSaving: "Wird gespeichert…",
+  sitesCollectionSaveFailed:
+    "Die Sammlung wurde nicht gespeichert. Nichts hat sich geändert; prüfen Sie die markierte Zuordnung und versuchen Sie es erneut.",
+  sitesCollectionDisconnect: "Trennen",
+  sitesCollectionDisconnectConfirm: "Jetzt trennen",
+  sitesCollectionDisconnectHint:
+    "Die Base und alle ihre Zeilen bleiben in Drive.",
+  sitesCollectionDisconnectFailed:
+    "Die Sammlung ist noch verbunden. Entfernen Sie sie von allen Seiten, die sie verwenden, und versuchen Sie es dann erneut.",
+  sitesCollectionPreview: "Aktuelle Zeilen",
+  sitesCollectionPreviewHint:
+    "Genau das wird die nächste Veröffentlichung aus Base lesen.",
+  sitesCollectionPreviewLoading: "Die aktuellen Base-Zeilen werden geladen",
+  sitesCollectionPreviewFailed:
+    "Diese Zeilen ließen sich nicht anzeigen. Korrigieren Sie den Base-Wert, den der Server nennt, und versuchen Sie es erneut.",
+  sitesCollectionPreviewSaveTitle:
+    "Speichern Sie, um diese Zeilen zu sehen",
+  sitesCollectionPreviewSaveBody:
+    "Einmal verbunden, prüfen dieselben Veröffentlichungsregeln wie auf der Live-Website jede Zeile hier.",
+  sitesCollectionPreviewEmptyTitle:
+    "Diese Tabelle hat noch keine vollständigen Zeilen",
+  sitesCollectionPreviewEmptyBody:
+    "Geben Sie einer Zeile in Base einen Titel, und sie erscheint hier von selbst.",
+  sitesCollectionPreviewLinked: "Öffnet einen Link",
+  sitesSectionCollection: "Sammlung",
+  sitesSectionCollectionDesc:
+    "Ein wiederverwendbares Raster aus Zeilen von alo Base.",
+  sitesCollectionSectionHeading: "Überschrift des Abschnitts",
+  sitesCollectionSectionChoose: "Welche Sammlung gezeigt wird",
+  sitesCollectionSectionNoConnections:
+    "Verbinden Sie eine Tabelle, bevor Sie diesen Abschnitt hinzufügen",
+  sitesCollectionSectionNoConnectionsHint:
+    "Die Sammlung bleibt wiederverwendbar — dieselbe Base kann mehr als eine Seite versorgen.",
+
+  // Der versiegelte Eigener-Code-Block: die Worte leisten, was die CSP
+  // erzwingt.
+  sitesSectionCustomCode: "Eigener Code",
+  sitesSectionCustomCodeDesc:
+    "Ihr eigenes HTML, CSS und JavaScript, versiegelt in einem Rahmen ohne Ausweg.",
+  sitesCustomCodeBoundaryTitle: "Was dieser Block kann und was nicht",
+  sitesCustomCodeBoundarySealed:
+    "Er läuft abgeschottet von Ihrer Website: Er kann weder die Seite um sich herum lesen noch Ihre Besucher, noch irgendetwas, das sie anderswo eingetippt haben.",
+  sitesCustomCodeBoundaryNoNetwork:
+    "Er hat kein Netz. Nichts lädt von einer anderen Adresse — kein Embed, keine Schrift, kein Statistik-Skript — und genau das hält diese Website frei von einem Cookie-Banner.",
+  sitesCustomCodeBoundaryYours:
+    "Es ist Ihr Code, veröffentlicht genau, wie Sie ihn geschrieben haben. Wir prüfen nicht, was er tut, und der Assistent schreibt und ändert ihn nicht.",
+  sitesCustomCodeHeadingHint:
+    "Wird von der Seite über dem Block gezeigt, in der Schrift Ihrer Website. Leer lassen für einen Block, der für sich steht.",
+  sitesCustomCodeFrameTitle: "Was dieser Block ist",
+  sitesCustomCodeFrameTitleHint:
+    "Wird Besuchern mit Screenreader vorgelesen — „Ein Countdown zur laufenden Röstung“, nicht „Rahmen“.",
+  sitesCustomCodeHtml: "Markup",
+  sitesCustomCodeHtmlHint:
+    "Der Rumpf des Blocks. Das Dokument darum herum — seine Policy, seine Style- und Script-Blöcke — wird für Sie geschrieben.",
+  sitesCustomCodeCss: "Stil",
+  sitesCustomCodeCssHint: "Gilt nur in diesem Block. Optional.",
+  sitesCustomCodeJs: "Skript",
+  sitesCustomCodeJsHint:
+    "Läuft nur in diesem Block, auf dem Gerät des Besuchers.",
+  sitesCustomCodeCapabilities: "Was der Block darf",
+  sitesCustomCodeCapabilitiesHint:
+    "Alles ist aus, bis Sie es einschalten, und nur diese zwei lassen sich einschalten.",
+  sitesCustomCodeScripts: "Ein Skript ausführen",
+  sitesCustomCodeScriptsHint:
+    "Ohne dies ist der Block Markup und Stil: Nichts darin wird ausgeführt, was auch immer er sagt.",
+  sitesCustomCodeScriptMissing:
+    "Es gibt noch kein Skript zum Ausführen. Schreiben Sie eins, oder schalten Sie dies aus — eine Erlaubnis, hinter der nichts steht, wird abgelehnt.",
+  sitesCustomCodeScriptDropped:
+    "Ausgeschaltet — das Skript unten wird deshalb nicht mit dem Block gespeichert. Schalten Sie es wieder ein, um es zu behalten.",
+  sitesCustomCodeImages: "Bilder zeigen, die im Markup mitgeschrieben sind",
+  sitesCustomCodeImagesHint:
+    "Für ein Bild, das ins Markup selbst geschrieben ist. Ein Bild von einer Adresse kann weiterhin nicht laden — nehmen Sie dafür einen Bild-Abschnitt.",
+  sitesCustomCodeHeight: "Höhe auf der Seite (Pixel)",
+  sitesCustomCodeHeightHint:
+    "Ein versiegelter Block lässt sich von außen nicht messen, also sagen Sie, wie hoch er ist. Zwischen 40 und 2000.",
+  sitesCustomCodeBytes: (used: number, max: number) =>
+    `${used} von ${max} Bytes`,
+  sitesCustomCodeBytesOver: (used: number, max: number) =>
+    `${used} von ${max} Bytes — zu lang zum Speichern`,
+  sitesCustomCodeTotalBytes: (used: number, max: number) =>
+    `${used} von ${max} Bytes in diesem Block insgesamt`,
+
+  // Domains: die Adressen, unter denen eine Website antwortet. Jeder Preis
+  // wird zweimal gesagt — heute und jedes Jahr danach — und nichts heißt
+  // fertig, bevor es fertig ist.
+  sitesDomains: "Domains",
+  sitesDomainsLoading: "Die Domains werden geladen…",
+  sitesDomainsLoadFailed:
+    "Die Domains dieser Website konnten nicht geladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+  sitesDomainAloAddress: "Diese Website ist immer erreichbar unter",
+  sitesDomainOwned: "Eine Domain, die Sie schon besitzen",
+  sitesDomainOwnedHint:
+    "Fügen Sie die Domain hinzu, veröffentlichen Sie den gezeigten Eintrag bei Ihrem DNS-Anbieter und drücken Sie dann auf Prüfen. Für Ihre Besucher ändert sich nichts, bis sie verifiziert ist.",
+  sitesDomainAddress: "Domain",
+  sitesDomainPlaceholder: "beispiel.de",
+  sitesDomainAdd: "Domain hinzufügen",
+  sitesDomainAddFailed: "Diese Domain konnte nicht hinzugefügt werden.",
+  sitesDomainNoneBody:
+    "Noch ist keine eigene Domain verbunden. Fügen Sie eine hinzu, die Sie schon besitzen, oder kaufen Sie unten eine — und diese Website antwortet auch dort.",
+  sitesDomainStatusPending: "Wartet auf den Eintrag",
+  sitesDomainStatusVerified: "Verifiziert",
+  sitesDomainStatusLive: "Liefert aus",
+  sitesDomainCheck: "Prüfen",
+  sitesDomainVerifyFailed: "Die Domain konnte nicht geprüft werden.",
+  sitesDomainNotYet:
+    "Der Eintrag ist noch nicht sichtbar. DNS-Änderungen brauchen ein paar Minuten, um sich zu verbreiten — lassen Sie den Eintrag stehen und prüfen Sie gleich noch einmal.",
+  sitesDomainVerifiedNow: (domain: string) =>
+    `${domain} ist verifiziert. Diese Website antwortet jetzt auch dort.`,
+  sitesDomainRecordTitle:
+    "Veröffentlichen Sie diesen Eintrag bei Ihrem DNS-Anbieter",
+  sitesDomainRecordName: "Name",
+  sitesDomainRecordType: "Typ",
+  sitesDomainRecordValue: "Wert",
+  sitesDomainRecordHint:
+    "Lassen Sie den Eintrag stehen, bis die Prüfung gelingt. Manche DNS-Anbieter hängen die Domain selbst an den Namen an — tut Ihrer das, lassen Sie sie weg.",
+  sitesDomainPointHint: (host: string) =>
+    `Der letzte Schritt bei Ihrem DNS-Anbieter: Richten Sie die Domain mit einem CNAME auf ${host}. Eine Apex-Domain braucht stattdessen den ALIAS- oder ANAME-Eintrag Ihres Anbieters.`,
+  sitesDomainCopy: "Kopieren",
+  sitesDomainCopied: "Kopiert",
+  sitesDomainRemove: "Entfernen",
+  sitesDomainRemoveConfirm: "Ja, entfernen",
+  sitesDomainRemoveHint:
+    "alo antwortet unter dieser Domain nicht mehr. Die Domain selbst bleibt Ihre — bei der Registry wird nichts aufgegeben.",
+  sitesDomainRemoveFailed: "Diese Domain konnte nicht entfernt werden.",
+
+  sitesDomainBuy: "Eine Domain kaufen",
+  sitesDomainBuyHint:
+    "Suchen Sie einen Namen. Sie sehen, was er dieses Jahr kostet und was jedes Jahr danach, bevor irgendetwas gekauft wird.",
+  sitesDomainSearchLabel: "Der Name, den Sie möchten",
+  sitesDomainSearchPlaceholder: "acme",
+  sitesDomainSearching: "Wird gesucht…",
+  sitesDomainSearchInvite:
+    "Tippen Sie einen Namen, um zu sehen, welche Endungen frei sind.",
+  sitesDomainSearchFailed: "Dieser Name konnte nicht geprüft werden.",
+  sitesDomainCatalogFailed: "Die Domainpreise konnten nicht geladen werden.",
+  sitesDomainUnconfiguredTitle: "Domains kaufen ist hier nicht eingeschaltet",
+  sitesDomainUnconfiguredBody:
+    "Dieser Arbeitsbereich kann keine Domainnamen registrieren. Eine Domain, die Sie schon besitzen, können Sie trotzdem verbinden.",
+  sitesDomainNotBuyable:
+    "Dieser Arbeitsbereich kann Preise zeigen, aber noch keine Domain registrieren, weil keine Nameserver eingerichtet sind.",
+  sitesDomainTestRegistrar: (name: string) =>
+    `${name} ist ein Test-Registrar: Nichts wird berechnet, und kein echter Name wird registriert.`,
+  sitesDomainRegistrarLine: (name: string, country: string) =>
+    `Domains werden über ${name} (${country}) registriert. Preise ohne MwSt.`,
+  sitesDomainAvailable: "Frei",
+  sitesDomainTaken: "Schon registriert",
+  sitesDomainBlocked: "Nicht zu verkaufen",
+  sitesDomainUnsupportedEnding: "alo verkauft diese Endung nicht",
+  sitesDomainPremium: "Premium-Name",
+  sitesDomainPremiumHint:
+    "Die Registry bepreist diesen Namen über dem üblichen Preis seiner Endung. Sein Verlängerungspreis ist der gezeigte, nicht der gewöhnliche.",
+  sitesDomainPriceLine: (today: string, renewal: string) =>
+    `${today} heute, dann ${renewal} pro Jahr`,
+  sitesDomainChoose: "Diese Domain kaufen",
+
+  sitesDomainPurchaseTitle: (domain: string) => `${domain} kaufen`,
+  sitesDomainPurchaseSubtitle:
+    "Auf wen die Domain registriert wird, und für wie lange. Den Preis geben Sie im nächsten Schritt frei; vorher wird nichts berechnet.",
+  sitesDomainYears: "Bezahlt für",
+  sitesDomainYearsHint:
+    "Wie viele Jahre die erste Zahlung deckt. Danach geht es jahrweise weiter.",
+  sitesDomainYearsOption: (years: number) =>
+    years === 1 ? "1 Jahr" : `${years} Jahre`,
+  sitesDomainAutoRenew: "Diese Domain automatisch verlängern",
+  sitesDomainAutoRenewHint:
+    "Eine Domain, die nicht verlängert wird, ist verloren, und jeder darf sie dann nehmen. Schalten Sie dies nur aus, wenn Sie selbst verlängern wollen.",
+  sitesDomainAutoRenewOn: "Sie verlängert sich jedes Jahr automatisch.",
+  sitesDomainAutoRenewOff:
+    "Sie verlängert sich nicht automatisch: Sie müssen sie selbst verlängern, bevor sie abläuft, sonst verlieren Sie sie.",
+  sitesDomainRegistrant: "Registriert auf",
+  sitesDomainRegistrantHint:
+    "Die Registry verlangt eine echte Person oder Firma, die erreichbar ist. Das geht an die Registry — auf Ihrer Website erscheint es nie.",
+  sitesDomainRegistrantName: "Vollständiger Name",
+  sitesDomainRegistrantOrganisation:
+    "Firma (leer lassen, wenn es keine gibt)",
+  sitesDomainRegistrantEmail: "E-Mail",
+  sitesDomainRegistrantEmailHint:
+    "Hierhin schreibt die Registry zu Ablauf und Verifizierung. Eine Adresse, die niemand liest, kostet die Domain.",
+  sitesDomainRegistrantStreet: "Straße und Hausnummer",
+  sitesDomainRegistrantPostalCode: "Postleitzahl",
+  sitesDomainRegistrantCity: "Ort",
+  sitesDomainRegistrantCountry: "Land",
+  sitesDomainRegistrantCountryHint:
+    "Der Zwei-Buchstaben-Ländercode, etwa de oder be.",
+  sitesDomainRegistrantPhone: "Telefon",
+  sitesDomainRegistrantPhoneHint:
+    "In internationaler Form, etwa +49301234567.",
+  sitesDomainRequirementEea:
+    "Diese Endung wird nur an Inhaber im Europäischen Wirtschaftsraum verkauft.",
+  sitesDomainRequirementCountry: (country: string) =>
+    `Diese Endung wird nur an Inhaber in ${country} verkauft.`,
+  sitesDomainSeePrice: "Den Preis sehen",
+  sitesDomainQuoteFailed: "Diese Domain konnte nicht bepreist werden.",
+  sitesDomainApproveTitle: "Diesen Preis freigeben",
+  sitesDomainApproveSubtitle: (domain: string) =>
+    `Was ${domain} kostet, vollständig, bevor irgendetwas berechnet wird.`,
+  sitesDomainQuoteName: "Domain",
+  sitesDomainQuoteTerm: "Bezahlt für",
+  sitesDomainQuoteToday: "Heute",
+  sitesDomainQuoteRenewal: "Jedes Jahr danach",
+  sitesDomainApproveAction: (price: string) => `${price} freigeben`,
+  sitesDomainApproveHint:
+    "Mit der Freigabe ist festgehalten, dass Sie genau diesen Beträgen zugestimmt haben. Ändert sich der Preis, bevor er bezahlt ist, fragt alo erneut, statt einen anderen zu berechnen.",
+  sitesDomainApproveFailed: "Dieser Preis konnte nicht freigegeben werden.",
+
+  sitesDomainPurchases: "Hier gekaufte Domains",
+  sitesDomainPurchasesHint:
+    "Jede Domain, die diese Website zu kaufen begonnen hat, und wie weit sie gekommen ist.",
+  sitesDomainPurchasesNone:
+    "Für diese Website wurde noch keine Domain gekauft.",
+  sitesDomainPurchasesLoadFailed:
+    "Die Domainkäufe konnten nicht geladen werden.",
+  sitesDomainRefresh: "Aktualisieren",
+  sitesDomainTermPrice: (price: string, years: number) =>
+    years === 1
+      ? `${price} für das erste Jahr`
+      : `${price} für die ersten ${years} Jahre`,
+  sitesDomainRenewalLine: (price: string) => `danach ${price} pro Jahr`,
+  sitesDomainApprovedOn: (when: string) => `Preis freigegeben am ${when}.`,
+  sitesDomainAttempts: (attempts: number) =>
+    `Registrierungsversuch ${attempts}; alo versucht es weiter.`,
+  sitesDomainCancel: "Abbrechen",
+  sitesDomainCancelConfirm: "Ja, abbrechen",
+  sitesDomainCancelFailed: "Dieser Kauf konnte nicht abgebrochen werden.",
+  sitesDomainStateQuoted: "Wartet auf Ihre Freigabe",
+  sitesDomainStateApproved: "Freigegeben",
+  sitesDomainStateAwaitingPayment: "Wartet auf die Zahlung",
+  sitesDomainStatePaid: "Bezahlt",
+  sitesDomainStateRegistering: "Wird registriert",
+  sitesDomainStateRegistered: "Registriert",
+  sitesDomainStateConfigured: "Online",
+  sitesDomainStateFailed: "Nicht abgeschlossen",
+  sitesDomainStateCancelled: "Abgebrochen",
+  sitesDomainStepQuoted:
+    "Berechnet wurde nichts. Geben Sie den Preis frei, und der Kauf geht weiter zur Zahlung.",
+  sitesDomainStepApproved:
+    "Sie haben diesen Preis freigegeben. Als Nächstes kommt die Zahlung: Sobald sie eingegangen ist, registriert alo die Domain und verbindet sie von selbst mit dieser Website.",
+  sitesDomainStepAwaitingPayment:
+    "Wartet darauf, dass die Zahlung eingeht. Die Registrierung startet von selbst, sobald das geschieht.",
+  sitesDomainStepPaid: "Bezahlt. Die Registrierung startet innerhalb einer Minute.",
+  sitesDomainStepRegistering:
+    "Der Registrar registriert den Namen gerade jetzt.",
+  sitesDomainStepRegistered: (domain: string) =>
+    `${domain} ist auf Sie registriert. Sie wird mit dieser Website verbunden.`,
+  sitesDomainStepConfigured: (domain: string) =>
+    `${domain} ist registriert und liefert diese Website aus.`,
+  sitesDomainStepFailed:
+    "Dieser Kauf konnte nicht abgeschlossen werden. Dafür wird nichts weiter berechnet.",
+  sitesDomainStepCancelled: "Abgebrochen. Berechnet wurde nichts.",
+  sitesDomainOwnerOnly:
+    "Nur wer diese Website besitzt, kann ihre Domainnamen kaufen und verwalten. Die Website selbst können Sie weiter bearbeiten und veröffentlichen.",
 };
