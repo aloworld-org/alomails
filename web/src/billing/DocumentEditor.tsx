@@ -345,7 +345,11 @@ export function DocumentEditor<T extends StoredDocument, A>({
     }
   }
 
-  const currency = document?.currency ?? "";
+  const currency =
+    document?.currency ??
+    pickers.customers.find((customer) => customer.id === header.customerId)
+      ?.currency ??
+    "";
   const saved = draft.saveState === "saved";
   const renderPricingTable = ({
     rowKeys,
@@ -661,13 +665,13 @@ export function DocumentEditor<T extends StoredDocument, A>({
                           {row.description}
                         </span>
                         <span className={styles.templateItemMeta}>
-                          {row.unit || strings.billingQuotePerItem}
-                          <span aria-hidden="true">·</span>
                           {formatAmount(
                             parseHundredths(row.price) ?? 0,
                             locale,
                             currency,
                           )}
+                          <span aria-hidden="true">/</span>
+                          {row.unit || strings.billingQuotePerItem}
                         </span>
                       </span>
                       <button
@@ -730,15 +734,15 @@ export function DocumentEditor<T extends StoredDocument, A>({
                             {product.name}
                           </span>
                           <span className="shrink-0 text-xs text-tertiary">
-                            {product.unit || strings.billingQuotePerItem}
-                            <span className="mx-1" aria-hidden="true">
-                              ·
-                            </span>
                             {formatAmount(
                               product.unitPriceCents,
                               locale,
                               currency,
                             )}
+                            <span className="mx-1" aria-hidden="true">
+                              /
+                            </span>
+                            {product.unit || strings.billingQuotePerItem}
                           </span>
                           <Plus
                             className="size-4 shrink-0 text-accent"
