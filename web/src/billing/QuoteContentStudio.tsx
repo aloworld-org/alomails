@@ -3676,7 +3676,7 @@ function CustomizeQuote({
                 Choose how much space the company and customer sides receive.
               </p>
             </div>
-            <div className="mt-4 grid max-w-2xl grid-cols-3 gap-3" role="radiogroup" aria-label="Quotation header column balance">
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3" role="radiogroup" aria-label="Quotation header column balance">
               {headerRatioChoices.map((choice) => {
                 const selected = design.headerRatio === choice.id;
                 const [company, customer] = choice.id.split("-");
@@ -3688,20 +3688,20 @@ function CustomizeQuote({
                     aria-checked={selected}
                     aria-label={`Company ${company} percent, customer ${customer} percent`}
                     className={cx(
-                      "group relative rounded-xl p-2 transition-colors hover:bg-accent-soft/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
+                      "group relative rounded-2xl p-3 transition-colors hover:bg-accent-soft/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
                       selected && "bg-accent-soft/40",
                     )}
                     onClick={() => onChange((current) => ({ ...current, headerRatio: choice.id }))}
                   >
-                    <span className={cx("grid h-16 gap-1.5 rounded-lg bg-raised p-2", design.headerAlignment === "left" ? choice.columns : choice.reverseColumns)} aria-hidden="true">
-                      <span className={cx("flex items-center justify-center rounded-md bg-surface text-primary", design.headerAlignment === "right" && "order-2", selected && "ring-1 ring-accent/30")}>
-                        <Building2 className="size-5" strokeWidth={1.7} />
+                    <span className={cx("grid h-24 gap-2 rounded-xl bg-raised p-3", design.headerAlignment === "left" ? choice.columns : choice.reverseColumns)} aria-hidden="true">
+                      <span className={cx("flex items-center justify-center rounded-lg bg-surface text-primary", design.headerAlignment === "right" && "order-2", selected && "ring-1 ring-accent/30")}>
+                        <Building2 className="size-6" strokeWidth={1.7} />
                       </span>
-                      <span className={cx("flex items-center justify-center rounded-md bg-surface text-accent", design.headerAlignment === "right" && "order-1", selected && "ring-1 ring-accent/30")}>
-                        <ContactRound className="size-5" strokeWidth={1.7} />
+                      <span className={cx("flex items-center justify-center rounded-lg bg-surface text-accent", design.headerAlignment === "right" && "order-1", selected && "ring-1 ring-accent/30")}>
+                        <ContactRound className="size-6" strokeWidth={1.7} />
                       </span>
                     </span>
-                    <span className={cx("absolute right-1 top-1 grid size-5 place-items-center rounded-full border", selected ? "border-accent bg-accent text-white" : "border-default bg-surface group-hover:border-accent")} aria-hidden="true">
+                    <span className={cx("absolute right-2 top-2 grid size-6 place-items-center rounded-full border", selected ? "border-accent bg-accent text-white" : "border-default bg-surface group-hover:border-accent")} aria-hidden="true">
                       {selected && <Check className="size-3" />}
                     </span>
                   </button>
