@@ -13,7 +13,11 @@
 // Drive + Spaces, Sheets, the Office embed, the search overlay and the
 // Drive file picker — and (tranche 3) Chat and Meet, incl. the small
 // shared words those two surfaces are first to use (add/save/delete,
-// approve/discard on agent cards).
+// approve/discard on agent cards) — and (tranche 4) the admin console
+// (overview, domains + DKIM, audit log, security checks, groups & lists,
+// users & invitations, app switches, AI providers), the control plane,
+// the invitation page, the record-history panel, and the compose
+// recipient strays tranche 1's prefix list missed.
 import type { Catalog } from "./en";
 
 export const de: Partial<Catalog> = {
@@ -2001,4 +2005,357 @@ export const de: Partial<Catalog> = {
   deleteLabel: "Löschen",
   agentApprove: "Genehmigen",
   agentDiscard: "Verwerfen",
+
+  // admin console
+  adminTitle: "Admin",
+  adminBackToalo: "Zurück zu alo",
+  adminOpen: "Admin-Konsole",
+
+  // admin — overview dashboard
+  adminOverview: "Übersicht",
+  adminOverviewIntro: "Ihre Organisation auf einen Blick.",
+  overviewUsers: "Benutzer",
+  overviewStorage: "Belegter Speicher",
+  overviewDeliverability: "Zustellbarkeit",
+  overviewDeliverOk: "Alle Prüfungen bestanden",
+  overviewDeliverAttention: "Braucht Aufmerksamkeit",
+  overviewAi: "KI",
+  overviewOn: "Ein",
+  overviewOff: "Aus",
+  overviewManage: "Verwalten",
+
+  // admin — domains (tenant's own; ADR 0012)
+  adminDomains: "Domains",
+  adminDomainsIntro:
+    "Die Domains, über die diese Organisation E-Mails sendet und empfängt, und deren Verifizierung.",
+  adminDomainsError: "Domains konnten nicht geladen werden.",
+  adminDomainsEmpty:
+    "Noch keine Domains. Fügen Sie eine hinzu, um sie zu verifizieren.",
+  adminAddDomain: "Domain hinzufügen",
+  dkimPublish:
+    "Veröffentlichen Sie diesen DKIM-Eintrag, damit Ihre E-Mails signiert werden",
+  dkimRotate: "DKIM-Schlüssel wechseln",
+  dkimRotateConfirm: (domain: string) =>
+    `DKIM-Schlüssel für ${domain} wechseln? Veröffentlichen Sie den neuen Eintrag; behalten Sie den alten, bis keine E-Mail ihn mehr verwendet.`,
+  dkimRotated: (domain: string) =>
+    `Neuer DKIM-Schlüssel für ${domain} — veröffentlichen Sie den aktualisierten Eintrag.`,
+
+  // admin — audit log
+  adminAudit: "Audit-Protokoll",
+  adminAuditIntro: "Wer wann was geändert hat. Neueste zuerst.",
+  adminAuditError: "Das Audit-Protokoll konnte nicht geladen werden.",
+  adminAuditEmpty: "Noch keine administrativen Aktionen verzeichnet.",
+  auditBy: (actor: string) => `von ${actor}`,
+  auditUnknownActor: "System",
+  auditUserCreate: "Benutzer angelegt",
+  auditUserDelete: "Benutzer gelöscht",
+  auditUserAdmin: "Admin-Rechte geändert",
+  auditAliasAdd: "Alias hinzugefügt",
+  auditAliasRemove: "Alias entfernt",
+  auditGroupCreate: "Gruppe erstellt",
+  auditGroupDelete: "Gruppe gelöscht",
+  auditGroupAddress: "Verteileradresse geändert",
+  auditDomainRegister: "Domain registriert",
+  auditDomainVerify: "Domain verifiziert",
+  auditDomainDelete: "Domain entfernt",
+  auditTenantCreate: "Organisation angelegt",
+  auditTenantStatus: "Status der Organisation geändert",
+  auditTenantQuota: "Speicherkontingent geändert",
+
+  // control plane (platform operator; ADR 0012). fr says "plan de
+  // contrôle", nl "beheerplatform" — German follows the Dutch instinct
+  // and names the thing by what it does.
+  controlOpen: "Plattformverwaltung",
+  controlTitle: "Plattformverwaltung",
+  controlDeniedTitle: "Betreiberzugriff erforderlich",
+  controlDeniedBody:
+    "Die Plattformverwaltung ist den Betreibern der Plattform vorbehalten. Ihr Konto gehört nicht dazu — bitten Sie einen Betreiber, falls Sie Zugriff benötigen.",
+  controlTenants: "Organisationen",
+  controlTenantsIntro: "Jede Organisation auf dieser Installation.",
+  controlTenantsError: "Organisationen konnten nicht geladen werden.",
+  controlTenantsEmpty:
+    "Noch keine Organisationen. Legen Sie die erste an.",
+  controlDomains: "Domains",
+  controlDomainsIntro:
+    "Die Domains, über die jede Organisation E-Mails senden und empfangen darf, und deren Verifizierung.",
+  controlDomainsError: "Domains konnten nicht geladen werden.",
+  controlDomainsEmpty: "Noch keine Domains registriert.",
+  tenantAdd: "Neue Organisation",
+  tenantName: "Name der Organisation",
+  tenantNameHint: "Acme GmbH",
+  tenantAdminEmail: "E-Mail des ersten Admins",
+  tenantAdminPassword: "Passwort des ersten Admins",
+  tenantAdminPasswordHint: "mindestens 12 Zeichen",
+  tenantCreate: "Organisation anlegen",
+  tenantInvalid:
+    "Erforderlich sind ein Name, eine gültige Admin-E-Mail-Adresse und ein Passwort mit mindestens 12 Zeichen.",
+  tenantCreateError: "Die Organisation konnte nicht angelegt werden.",
+  tenantActive: "Aktiv",
+  tenantSuspended: "Gesperrt",
+  tenantSuspend: "Sperren",
+  tenantResume: "Entsperren",
+  tenantDelete: "Organisation löschen",
+  tenantDeleteConfirm: (name: string) =>
+    `„${name}“ mit allen Daten endgültig löschen? Das lässt sich nicht rückgängig machen.`,
+  tenantUsage: (n: number, size: string) => `${n} Benutzer · ${size}`,
+  tenantQuota: "Kontingent",
+  tenantQuotaPrompt: "Speicherkontingent in GB (leer lassen für unbegrenzt):",
+  tenantQuotaUnlimited: "unbegrenzt",
+  tenantQuotaOf: (size: string) => `von ${size}`,
+  domainAdd: "Domain hinzufügen",
+  domainTenant: "Zugehörige Organisation",
+  domainName: "Domain",
+  domainRegister: "Registrieren",
+  domainInvalid:
+    "Wählen Sie eine Organisation und geben Sie eine gültige Domain ein.",
+  domainCreateError: "Die Domain konnte nicht registriert werden.",
+  domainActionError: "Das hat nicht geklappt. Versuchen Sie es erneut.",
+  domainVerified: "Verifiziert",
+  domainUnverified: "Nicht verifiziert",
+  domainVerify: "Verifizieren",
+  domainDelete: "Domain entfernen",
+  domainOwnedBy: (tenant: string) => `Gehört zu ${tenant}`,
+  domainDeleteConfirm: (domain: string) =>
+    `${domain} aus dieser Installation entfernen?`,
+  domainVerifiedOk: (domain: string) => `${domain} ist verifiziert.`,
+  domainVerifyPending: (domain: string) =>
+    `Für ${domain} wurde noch kein passender DNS-TXT-Eintrag gefunden — veröffentlichen Sie ihn und versuchen Sie es erneut.`,
+  domainPublishTitle: "Veröffentlichen Sie diesen DNS-Eintrag",
+  domainPublishIntro: (domain: string) =>
+    `Um zu belegen, dass ${domain} Ihnen gehört, veröffentlichen Sie diesen TXT-Eintrag und klicken Sie dann bei der Domain auf „Verifizieren“.`,
+  domainRecordName: "Eintragsname",
+  domainRecordType: "Typ",
+  domainRecordValue: "Wert",
+  domainPublishDone: "Fertig",
+
+  adminDeniedTitle: "Admin-Zugriff erforderlich",
+  adminDeniedBody:
+    "Sie haben keinen Administratorzugriff auf diesen Arbeitsbereich. Bitten Sie einen Admin darum, falls Sie ihn benötigen.",
+  adminSecurity: "Sicherheit & Vertrauen",
+  adminSecurityIntro:
+    "Wie Ihre Mail-Domain von außen aussieht. Diese Prüfungen fragen bei jedem Lauf live das DNS und die MTA-STS-Richtlinie ab.",
+  securityFor: (domain: string) => `Prüfungen für ${domain}`,
+  securityRecheck: "Prüfungen erneut ausführen",
+  securityChecking: "Live-Prüfungen laufen…",
+  securityError:
+    "Die Prüfungen konnten nicht ausgeführt werden — bitte versuchen Sie es erneut.",
+  securityPass: "Bestanden",
+  securityWarn: "Achtung",
+  securityFail: "Handlungsbedarf",
+  adminGroups: "Gruppen & Verteiler",
+  adminGroupsIntro:
+    "Gruppen für gemeinsamen Zugriff und Verteilerlisten, die eingehende E-Mails an ihre Mitglieder verteilen.",
+  adminNewGroup: "Neue Gruppe",
+  adminGroupsError: "Gruppen konnten nicht geladen werden.",
+  groupName: "Gruppenname",
+  groupRename: "Umbenennen",
+  groupCreate: "Gruppe erstellen",
+  groupListBadge: "Verteiler",
+  groupMembers: "Mitglieder",
+  groupMemberCount: (n: number) =>
+    n === 1 ? "1 Mitglied" : `${n} Mitglieder`,
+  groupNoMembers: "Noch keine Mitglieder.",
+  groupListAddress: "Verteileradresse",
+  groupListAddressHint:
+    "E-Mails an diese Adresse werden jedem Mitglied zugestellt. Leer lassen für eine reine Zugriffsgruppe.",
+  groupAddressSave: "Adresse speichern",
+  groupAddressClear: "Verteiler abschalten",
+  groupAddMember: "Mitglied hinzufügen",
+  groupDelete: "Gruppe löschen",
+  groupDeleteConfirm: (name: string) =>
+    `Die Gruppe „${name}“ löschen? Die Mitglieder behalten ihre Postfächer.`,
+  groupCreateError:
+    "Die Gruppe konnte nicht erstellt werden — der Name ist womöglich schon vergeben.",
+  groupAddressError:
+    "Die Adresse konnte nicht gesetzt werden — sie wird womöglich schon verwendet.",
+  groupActionError:
+    "Das hat nicht geklappt — bitte versuchen Sie es erneut.",
+  groupClose: "Schließen",
+  adminUsers: "Benutzer & Postfächer",
+  adminUsersIntro: "Die Personen in Ihrer Organisation und ihre Postfächer.",
+  adminAddUser: "Benutzer hinzufügen",
+  adminUsersError: "Benutzer konnten nicht geladen werden.",
+  userAdminBadge: "Admin",
+  userManage: "Verwalten",
+  userUsage: (n: number, size: string) =>
+    `${n === 1 ? "1 Nachricht" : `${n} Nachrichten`} · ${size}`,
+  userEmail: "E-Mail-Adresse",
+  userPassword: "Passwort",
+  userNewPassword: "Neues Passwort",
+  userPasswordHint: "Mindestens 8 Zeichen.",
+  userCreate: "Benutzer anlegen",
+  userInvalid:
+    "Geben Sie eine gültige E-Mail-Adresse und ein Passwort mit mindestens 8 Zeichen ein.",
+  userCreateError:
+    "Der Benutzer konnte nicht angelegt werden — die E-Mail-Adresse wird womöglich schon verwendet.",
+  userReset: "Passwort zurücksetzen",
+  userResetDone: "Passwort zurückgesetzt.",
+  userAdminRole: "Admin der Organisation",
+  userAdminRoleFor: (email: string) => `Admin-Zugriff für ${email}`,
+  userAdminHint: "Admins können Benutzer, Aliasse und Einstellungen verwalten.",
+  userRoles: "Rollen",
+  userInvite: "Einladung erstellen",
+  userInviteReady: "Einrichtungslink",
+  userInviteCopy: "Kopieren",
+  userInviteCopied: "Kopiert",
+  userInviteHint:
+    "Senden Sie diesen Link an Ihre Kollegin oder Ihren Kollegen. Er funktioniert genau einmal, läuft nach sieben Tagen ab, und die Person wählt Passwort und Wiederherstellungsadresse selbst — Sie erfahren beides nie. Dieser Link wird nur einmal angezeigt.",
+  inviteTitle: "Richten Sie Ihr Konto ein",
+  inviteUnavailable: "Diese Einladung funktioniert nicht mehr",
+  inviteAskAdmin:
+    "Bitten Sie den Administrator Ihres Arbeitsbereichs um eine neue.",
+  inviteLoadFailed:
+    "Diese Einladung ist abgelaufen oder wurde bereits verwendet.",
+  inviteFailed: "Das konnte nicht gespeichert werden. Versuchen Sie es erneut.",
+  invitePassword: "Wählen Sie ein Passwort",
+  invitePasswordHint: "Mindestens 8 Zeichen. Nur Sie werden es kennen.",
+  inviteRecovery: "Wiederherstellungsadresse",
+  inviteRecoveryPlaceholder: "sie@woanders.de",
+  inviteRecoveryHint:
+    "Eine Adresse, die Sie woanders abrufen können — nicht diese neue. Falls Sie Ihr Passwort einmal vergessen, ist sie der einzige Weg zurück, ohne einen Administrator zu fragen.",
+  inviteSubmit: "Konto einrichten",
+  inviteWorking: "Wird eingerichtet…",
+  inviteDoneTitle: "Alles bereit",
+  inviteGoToSignIn: "Zur Anmeldung",
+  inviteFor: (email: string): string => `Für ${email}`,
+  inviteDoneBody: (email: string): string =>
+    `Sie können sich jetzt als ${email} anmelden, mit dem Passwort, das Sie gerade gewählt haben.`,
+  userApps: "Apps",
+  userAppsHint:
+    "Nur die angehakten Apps erscheinen in der Navigation dieser Person, und der Server verweigert alle übrigen — das versteckt nicht nur, es schließt ab. E-Mail und Start lassen sich nicht abschalten. Ein Häkchen gewährt nicht alles darin: Finanzen verlangt weiterhin die Buchhaltungsrolle, und ein Space weiterhin die Mitgliedschaft.",
+  userAppsSelfHint:
+    "Dies ist Ihr eigenes Konto. Ein Admin wird nie ausgesperrt, daher ändern diese Schalter nichts daran, was Sie öffnen können — sie bleiben erhalten für den Fall, dass dieses Konto einmal kein Admin mehr ist.",
+  accessModuleOff: "Diese App ist für Ihr Konto abgeschaltet.",
+  accessModuleOffHint:
+    "Ein Administrator des Arbeitsbereichs kann sie wieder einschalten.",
+  accessBackHome: "Zurück zum Start",
+  userAccountantRole: "Buchhaltung",
+  userAccountantHint:
+    "Liest die Bücher — Berichte, Spesenfreigaben und den Periodenabschluss — und kann Rechnungen und Deals öffnen, ohne sie zu ändern. Keine Admin-Konsole und kein Zugriff auf fremde E-Mails oder Dateien.",
+  userAccountantBadge: "Buchhaltung",
+  userAliases: "Aliasse",
+  userAliasesHint: "Zusätzliche Adressen, die in dieses Postfach zustellen.",
+  userAliasPlaceholder: "alias@namel3ss.com",
+  userAliasAdd: "Alias hinzufügen",
+  userDelete: "Benutzer löschen",
+  userDeleteConfirm: (email: string) =>
+    `${email} mit sämtlichen E-Mails löschen? Das lässt sich nicht rückgängig machen.`,
+  userActionError: "Das hat nicht geklappt — bitte versuchen Sie es erneut.",
+  userClose: "Schließen",
+
+  // admin — AI providers. Provider and model names stay as they are;
+  // "alo AI" is a product name like Space or Base.
+  adminAiProviders: "KI-Anbieter",
+  adminProviderEnabledFor: (name: string) => `${name} aktiviert`,
+  adminAiIntro:
+    "Wählen Sie, welche Modelle alo antreiben — selbst gehostet oder mit Ihren eigenen API-Schlüsseln.",
+  adminAddProvider: "Anbieter hinzufügen",
+  adminManage: "Verwalten",
+  adminDefaultBadge: "Standard",
+  adminMakeDefault: "Als Standard festlegen",
+  adminProvidersError: "Anbieter konnten nicht geladen werden.",
+  adminAiSelfHosted: "Selbst gehostet (empfohlen)",
+  adminAiSelfHostedHint:
+    "Läuft auf Ihrer eigenen Infrastruktur — keine Daten verlassen Ihre Server.",
+  adminAiOwnKeys: "Ihre eigenen API-Schlüssel",
+  adminAiOwnKeysHint:
+    "Verbinden Sie einen externen Anbieter mit Ihrem Schlüssel. Anfragen verlassen Ihren Server zu diesem Anbieter.",
+  adminAiFootnote:
+    "Selbst gehostete Anbieter behalten alle Daten auf Ihrer Infrastruktur. Externe API-Schlüssel senden Anfragen und Inhalte an den jeweiligen Anbieter — entscheiden Sie nach Ihrer Datenrichtlinie.",
+  providerConnected: "Verbunden",
+  providerKeyAdded: "Schlüssel hinterlegt",
+  providerReady: "Bereit",
+  providerNotConfigured: "Nicht konfiguriert",
+  kindOllama: "Ollama",
+  kindalo: "alo AI",
+  kindMistral: "Mistral (EU)",
+  kindOpenai: "OpenAI",
+  kindAnthropic: "Anthropic",
+  kindCustom: "Eigener Endpunkt",
+  builtInTag: "Integriert",
+  ollamaDesc:
+    "Lokale Modelle auf Ihrem Server — Llama 3, Mistral und mehr. Vollständig privat.",
+  aloDesc:
+    "Integriertes, in der EU gehostetes Modell, auf alo abgestimmt — richten Sie es auf Ihren alo-AI-Endpunkt.",
+  mistralDesc:
+    "Europäische Modelle, gehostet in der EU. Hinterlegen Sie Ihren Mistral-Schlüssel, um sie zu aktivieren. Empfohlen für Datensouveränität.",
+  openaiDesc:
+    "GPT-4o, GPT-4o mini. Hinterlegen Sie Ihren OpenAI-Schlüssel, um sie zu aktivieren.",
+  anthropicDesc:
+    "Claude-Modelle. Hinterlegen Sie Ihren Anthropic-API-Schlüssel, um sie zu aktivieren.",
+  customDesc:
+    "Jede OpenAI-kompatible API — selbst gehostetes vLLM, Together, Groq, OpenRouter …",
+  connectTitle: (name: string) => `${name} verbinden`,
+  configureTitle: (name: string) => `${name} konfigurieren`,
+  providerBaseUrl: "API-Endpunkt",
+  providerModel: "Modell",
+  providerModels: "Aktivierte Modelle",
+  providerAddModel: "Hinzufügen",
+  providerModelPlaceholder: "Modellname",
+  providerRemoveModel: (name: string) => `${name} entfernen`,
+  providerApiKey: "API-Schlüssel",
+  providerShowKey: "Schlüssel anzeigen",
+  providerHideKey: "Schlüssel verbergen",
+  providerApiKeyKept:
+    "Gespeichert — leer lassen, um den aktuellen Schlüssel zu behalten",
+  providerApiKeyOptional: "Für ein lokales Ollama nicht nötig",
+  providerTest: "Verbindung testen",
+  providerTestAgain: "Erneut testen",
+  providerTesting: "Wird getestet…",
+  providerTestOk: (n: number) =>
+    n === 1
+      ? "Verbindung geprüft — 1 Modell erreichbar"
+      : `Verbindung geprüft — ${n} Modelle erreichbar`,
+  providerTestFail: "Der Endpunkt ist nicht erreichbar.",
+  providerCancel: "Abbrechen",
+  providerSave: "Speichern & aktivieren",
+  providerSaveError: "Der Anbieter konnte nicht gespeichert werden.",
+  providerRequired: "Ein Endpunkt und ein Modell sind erforderlich.",
+
+  // compose recipients + archive (mail strays tranche 1's prefixes missed)
+  removeRecipient: (name: string) => `${name} entfernen`,
+  recipientCount: (n: number) => `${n} Empfänger`,
+  archiveUnavailable:
+    "Es gibt keinen Archivordner, in den sich dies verschieben ließe.",
+
+  // Audit trail — a record's own history (B2.13). Verbs, not sentences,
+  // and past tense, as in every language. Zurückgewiesen (a timesheet
+  // sent back) and Abgelehnt (a quote the customer declined) stay two
+  // words because they are two different acts.
+  auditHistoryTitle: "Verlauf",
+  auditHistoryEmpty: "Mit diesem Eintrag ist noch nichts passiert.",
+  auditLoadFailed: "Der Verlauf konnte nicht geladen werden.",
+  auditActionCreate: "Angelegt",
+  auditActionUpdate: "Bearbeitet",
+  auditActionDelete: "Gelöscht",
+  auditActionArchive: "Archiviert",
+  auditActionIssue: "Ausgestellt",
+  auditActionVoid: "Storniert",
+  auditActionCreditNote: "Gutschrift erstellt",
+  auditActionSend: "E-Mail entworfen",
+  auditActionReminder: "Zahlungserinnerung entworfen",
+  auditActionPaymentCreate: "Zahlung erfasst",
+  auditActionPaymentDelete: "Zahlung entfernt",
+  auditActionImport: "Importiert",
+  auditActionSepaXml: "In eine Zahlungsdatei aufgenommen",
+  auditActionApprove: "Genehmigt",
+  auditActionReject: "Zurückgewiesen",
+  auditActionAccept: "Angenommen",
+  auditActionDecline: "Abgelehnt",
+  auditActionExpire: "Als abgelaufen markiert",
+  auditActionRun: "Ausgeführt",
+  auditActionPause: "Pausiert",
+  auditActionResume: "Fortgesetzt",
+  auditActionRatesUpdate: "Wechselkurs festgelegt",
+  auditActionRatesImport: "Wechselkurse importiert",
+  auditActionStageMove: "In eine andere Spalte verschoben",
+  auditActionStageCreate: "Spalte hinzugefügt",
+  auditActionMove: "Verschoben",
+  auditActionQuoteRaised: "Angebot erstellt",
+  auditActionInvoiceRaised: "Rechnung erstellt",
+  auditActionActivityCreate: "Notiz hinzugefügt",
+  auditActionNextStepCreate: "Nächster Schritt hinzugefügt",
+  auditActionThreadCreate: "Unterhaltung verknüpft",
+  auditActionThreadDelete: "Unterhaltung getrennt",
+  auditActionLeadCreate: "Leads importiert",
 };

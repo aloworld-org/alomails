@@ -53,7 +53,7 @@ describe("catalog fallback", () => {
   });
 });
 
-describe("German ships complete modules (M4.1, tranches 1–3: mail + Docs/Drive + Chat/Meet)", () => {
+describe("German ships complete modules (M4.1, tranches 1–4: mail + Docs/Drive + Chat/Meet + admin/control)", () => {
   /** The sections `de.ts` claims to cover, by key prefix. The catalog is
    *  allowed to be partial across *modules* — the fallback shows English —
    *  but never inside one: a reading pane that mixes German buttons with
@@ -64,16 +64,19 @@ describe("German ships complete modules (M4.1, tranches 1–3: mail + Docs/Drive
    *  Sheets, the Office embed, the search overlay and the Drive picker;
    *  tranche 3 adds Chat and Meet plus the exact-match generics those two
    *  surfaces are first to use (anchored with `$` so they claim one key,
-   *  not a family). */
+   *  not a family); tranche 4 adds the admin console, the control plane,
+   *  the invitation page, AI providers (whose kind/desc singletons are
+   *  anchored), the record-history panel, and the compose recipient
+   *  strays. */
   const SHIPPED_PREFIXES =
-    /^(agenda|task|mail|compose|flag|folder|filter|spam|snooze|unsubscribe|appPassword|delegate|sharing|shared|categor|transfer|contact|import|signup|reset|settings|brand|home|module|rsvp|error|twoFactor|recovery|doc|drive|sheet|office|picker|search|ai|eq|spec|tb|ref|block|heading|para|table|chart|code|insert|font|size|align|text|style|highlight|strikethrough|bullet|numbered|horizontal|clear|close|cancel|chat|meet|add$|save$|deleteLabel$|agentApprove$|agentDiscard$)/;
+    /^(agenda|task|mail|compose|flag|folder|filter|spam|snooze|unsubscribe|appPassword|delegate|sharing|shared|categor|transfer|contact|import|signup|reset|settings|brand|home|module|rsvp|error|twoFactor|recovery|doc|drive|sheet|office|picker|search|ai|eq|spec|tb|ref|block|heading|para|table|chart|code|insert|font|size|align|text|style|highlight|strikethrough|bullet|numbered|horizontal|clear|close|cancel|chat|meet|admin|audit|control|domain|group|invite|overview|provider|security|tenant|user|dkim|kind|access|add$|save$|deleteLabel$|agentApprove$|agentDiscard$|aloDesc$|anthropicDesc$|openaiDesc$|mistralDesc$|ollamaDesc$|customDesc$|builtInTag$|connectTitle$|configureTitle$|removeRecipient$|recipientCount$|archiveUnavailable$)/;
   const shippedKeys = Object.keys(en).filter((key) =>
     SHIPPED_PREFIXES.test(key),
   );
 
   test("the key list is the real shipped surface, not an empty filter", () => {
-    expect(shippedKeys.length).toBeGreaterThan(1400);
-    expect(Object.keys(de).length).toBeGreaterThan(1600);
+    expect(shippedKeys.length).toBeGreaterThan(1750);
+    expect(Object.keys(de).length).toBeGreaterThan(1900);
   });
 
   test("every shipped-module string exists in German", () => {
@@ -144,6 +147,29 @@ describe("German ships complete modules (M4.1, tranches 1–3: mail + Docs/Drive
     // The button that opens the calendar module says what the module is
     // called in German — Kalender, matching moduleAgenda — not "Agenda".
     expect(catalog.meetOpenAgenda).toBe("Kalender öffnen");
+    // Tranche 4: admin console + control plane, in both plural branches,
+    // incl. the two-argument usage lines.
+    expect(catalog.adminOverview).toBe("Übersicht");
+    expect(catalog.controlTitle).toBe("Plattformverwaltung");
+    expect(catalog.tenantSuspend).toBe("Sperren");
+    expect(catalog.groupMemberCount(1)).toBe("1 Mitglied");
+    expect(catalog.groupMemberCount(5)).toBe("5 Mitglieder");
+    expect(catalog.userUsage(1, "2 GB")).toBe("1 Nachricht · 2 GB");
+    expect(catalog.userUsage(3, "2 GB")).toBe("3 Nachrichten · 2 GB");
+    expect(catalog.providerTestOk(1)).toBe(
+      "Verbindung geprüft — 1 Modell erreichbar",
+    );
+    expect(catalog.providerTestOk(4)).toBe(
+      "Verbindung geprüft — 4 Modelle erreichbar",
+    );
+    expect(catalog.auditHistoryTitle).toBe("Verlauf");
+    // Reject (a timesheet sent back) and Decline (a quote the customer
+    // said no to) are two different acts and must stay two words.
+    expect(catalog.auditActionReject).not.toBe(catalog.auditActionDecline);
+    // The confirm that deletes an organization must really warn in German.
+    expect(catalog.tenantDeleteConfirm("Acme")).toContain(
+      "lässt sich nicht rückgängig machen",
+    );
   });
 
   test("the spam-banner fallback declines correctly in both sentences", () => {
