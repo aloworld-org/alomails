@@ -1,24 +1,6 @@
-// The VAT summary of a period: what was billed at each rate between two days,
-// which is what a VAT return is copied from.
-//
-// Three things it deliberately does not do. It does not compute money — every
-// figure shown is the server's, in integer cents, and there is no column here
-// that the browser adds up. It does not decide what a period contains: which
-// documents count (issued and paid, judged on the issue date frozen on them,
-// credit notes subtracting) is the server's rule, stated once in
-// `docs/design/billing.md`. And it does not add currencies together: the API
-// answers one group per currency, and this page renders one table each.
-//
-// What it does render once, at the end, is the period **in the currency the
-// tenant keeps books in** (B1.21) — the figure a return is actually filed from,
-// with every document converted server-side at the rate frozen on it when it was
-// issued. Where any document could not be converted, the count of those is said
-// out loud above the table: a tax total that is quietly missing a document is
-// worse than no total at all.
-//
-// The period is applied on submit rather than on every keystroke, so a
-// half-typed date never becomes a request — and so the figures on screen always
-// belong to the days written above them.
+// The server owns VAT inclusion and money calculations. This view renders its
+// per-currency groups and books-currency filing summary. Period changes apply on
+// submit so the visible dates always match the visible report.
 import { useCallback, useEffect, useState } from "react";
 import { CalendarRange, Download, FileSpreadsheet } from "lucide-react";
 
@@ -31,6 +13,10 @@ import { formatAmount, formatRate } from "./money";
 import { ErrorBanner } from "./parts";
 import { previousQuarterOf, quarterOf, type Period } from "./period";
 import type { VatReport } from "./types";
+import {
+  vatReportFileName,
+  vatReportRestatesAnything,
+} from "./vatReportPresentation";
 
 const dateInput =
   "h-11 min-w-0 rounded-lg border border-default bg-surface px-3 text-sm text-primary outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/15";
@@ -48,10 +34,6 @@ const numberCell = "text-right tabular-nums";
  *  its own `Content-Disposition`, and this is the same name for the copy the
  *  browser writes from memory (the route is authenticated, so the file is
  *  fetched rather than linked). */
-function fileName(period: Period): string {
-  return `vat-${period.from}-to-${period.to}.csv`;
-}
-
 export function VatReportView() {
   const api = useBillingApi();
   const locale = useLocale();
@@ -94,7 +76,7 @@ export function VatReportView() {
     setDownloading(true);
     try {
       const csv = await api.vatReportCsv(period.from, period.to);
-      saveTextFile(csv, fileName(period), "text/csv;charset=utf-8");
+      saveTextFile(csv, vatReportFileName(period), "text/csv;charset=utf-8");
       setError(null);
     } catch (err) {
       setError(billingMessage(err, strings.billingReportDownloadFailed));
@@ -305,7 +287,7 @@ export function VatReportView() {
           same figures twice. */}
       {report !== null &&
         report.currencies.length > 0 &&
-        restatesAnything(report) && (
+        vatReportRestatesAnything(report) && (
           <section className={tableShell}>
             <p className="m-0 border-b border-subtle px-4 py-3 text-sm text-secondary">
               {strings.billingReportBaseIntro(report.base.currency)}
@@ -407,16 +389,5 @@ export function VatReportView() {
           </section>
         )}
     </div>
-  );
-}
-
-/** Whether the accounting-currency table would say anything the per-currency
- *  tables above do not: a second currency was billed, or something in the period
- *  could not be converted at all. A single-currency tenant sees one table, not
- *  the same figures twice. */
-function restatesAnything(report: VatReport): boolean {
-  return (
-    report.base.unconvertedCount > 0 ||
-    report.currencies.some((group) => group.currency !== report.base.currency)
   );
 }

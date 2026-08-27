@@ -26,6 +26,12 @@ import { Button, Input, Spinner } from "../ds";
 import { strings } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
 import {
+  billingSettingsDraftFrom,
+  billingSettingsFormOf,
+  BLANK_BILLING_SETTINGS_FORM,
+  type BillingSettingsForm,
+} from "./billingSettingsForm";
+import {
   BILLING_BASE_CURRENCY,
   BILLING_BIC_EXAMPLE,
   BILLING_HOME_COUNTRY,
@@ -34,70 +40,12 @@ import {
 } from "./conventions";
 import { FxRatesPanel } from "./FxRatesPanel";
 import { ErrorBanner, Field } from "./parts";
-import type { BillingSettings, SettingsDraft } from "./types";
+import type { BillingSettings } from "./types";
 import styles from "./billingStyles";
 
 /** The form's own state — every field a string, as typed. */
-type FormState = Record<TextKey | NullableKey, string>;
-
-/** The fields the server stores as plain text: blank means blank. */
-type TextKey =
-  | "legalName"
-  | "addressLine1"
-  | "addressLine2"
-  | "postalCode"
-  | "city"
-  | "country"
-  | "registrationNo"
-  | "email"
-  | "phone"
-  | "website"
-  | "bankName"
-  | "accountHolder"
-  | "footerNote"
-  | "baseCurrency";
-
-/** The fields the server stores as nullable: blank means `null`. */
-type NullableKey = "vatId" | "iban" | "bic";
-
-const TEXT_KEYS: TextKey[] = [
-  "legalName",
-  "addressLine1",
-  "addressLine2",
-  "postalCode",
-  "city",
-  "country",
-  "registrationNo",
-  "email",
-  "phone",
-  "website",
-  "bankName",
-  "accountHolder",
-  "footerNote",
-  "baseCurrency",
-];
-
-const NULLABLE_KEYS: NullableKey[] = ["vatId", "iban", "bic"];
-
-const BLANK: FormState = {
-  legalName: "",
-  addressLine1: "",
-  addressLine2: "",
-  postalCode: "",
-  city: "",
-  country: "",
-  registrationNo: "",
-  email: "",
-  phone: "",
-  website: "",
-  bankName: "",
-  accountHolder: "",
-  footerNote: "",
-  baseCurrency: "",
-  vatId: "",
-  iban: "",
-  bic: "",
-};
+type FormState = BillingSettingsForm;
+const BLANK: FormState = BLANK_BILLING_SETTINGS_FORM;
 
 const settingsCard =
   "flex min-w-0 flex-col gap-4 rounded-xl border border-subtle bg-surface p-6 shadow-sm max-sm:p-4";
@@ -107,28 +55,11 @@ const settingsIcon = "size-5 shrink-0 text-accent";
 
 /** The stored record as the form shows it. A `null` is an empty box — the two
  *  are the same thing to a person, and `draftFrom` turns it back. */
-function formOf(settings: BillingSettings): FormState {
-  const form = { ...BLANK };
-  for (const key of TEXT_KEYS) form[key] = settings[key];
-  for (const key of NULLABLE_KEYS) form[key] = settings[key] ?? "";
-  return form;
-}
+const formOf = billingSettingsFormOf;
 
 /** What to send: only the fields that actually differ from the stored record.
  *  A cleared nullable box becomes `null`, which clears it on the server. */
-function draftFrom(form: FormState, stored: BillingSettings): SettingsDraft {
-  const draft: SettingsDraft = {};
-  for (const key of TEXT_KEYS) {
-    const value = form[key].trim();
-    if (value !== stored[key]) draft[key] = value;
-  }
-  for (const key of NULLABLE_KEYS) {
-    const typed = form[key].trim();
-    const value = typed === "" ? null : typed;
-    if (value !== stored[key]) draft[key] = value;
-  }
-  return draft;
-}
+const draftFrom = billingSettingsDraftFrom;
 
 export function SettingsView() {
   const api = useBillingApi();
@@ -201,7 +132,7 @@ export function SettingsView() {
 
   // The wiring every text box on this page shares. The styling is `ds/Input`'s
   // now, so what is left here is the binding (D2.06b).
-  const text = (key: TextKey | NullableKey) => ({
+  const text = (key: keyof BillingSettingsForm) => ({
     value: form[key],
     onChange: (e: { target: { value: string } }) => set(key)(e.target.value),
   });
