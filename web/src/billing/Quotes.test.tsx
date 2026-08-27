@@ -21,6 +21,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { DialogProvider } from "../ds";
 import { strings } from "../i18n";
 import { BillingModule } from "./BillingModule";
+import { QuoteContentStudio } from "./QuoteContentStudio";
 import type {
   BillingCustomer,
   BillingInvoice,
@@ -790,5 +791,65 @@ describe("the offer's transitions", () => {
     expect(
       screen.getByRole("button", { name: strings.billingAddLine }),
     ).toBeTruthy();
+  });
+});
+
+describe("the quotation document preview", () => {
+  test("keeps visible markers on bullet and numbered lists", async () => {
+    const quoteId = "list-marker-preview";
+    const records = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => records.get(key) ?? null,
+      setItem: (key: string, value: string) => records.set(key, value),
+      removeItem: (key: string) => records.delete(key),
+      clear: () => records.clear(),
+      key: (index: number) => [...records.keys()][index] ?? null,
+      get length() {
+        return records.size;
+      },
+    };
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: storage,
+    });
+    storage.setItem(
+      `alo:quote-design:${quoteId}`,
+      JSON.stringify({
+        blocks: [
+          {
+            id: "bullet-list",
+            kind: "list",
+            ordered: false,
+            items: "First benefit\nSecond benefit",
+            columns: 1,
+          },
+          {
+            id: "numbered-list",
+            kind: "list",
+            ordered: true,
+            items: "First step\nSecond step",
+            columns: 1,
+          },
+        ],
+      }),
+    );
+
+    const view = render(
+      <QuoteContentStudio
+        quoteId={quoteId}
+        readOnly
+        preview
+        pricingTable={() => null}
+        tableSubtotal={() => null}
+        lineKeys={[]}
+      />,
+    );
+
+    await screen.findByText("First benefit");
+    expect(
+      view.container.querySelector('ul li > span[aria-hidden="true"]'),
+    ).toBeTruthy();
+    expect(screen.getByText("1", { selector: "ol li > span" })).toBeTruthy();
+    storage.removeItem(`alo:quote-design:${quoteId}`);
   });
 });
