@@ -1948,7 +1948,7 @@ function DividerBlockEditor({
             </>
           }
         >
-          <div>
+          <div className="border-b border-subtle pb-5">
             <h3 className="text-base font-semibold text-primary">
               {strings.quoteStudioDividerAppearance}
             </h3>
@@ -1957,7 +1957,7 @@ function DividerBlockEditor({
             </p>
           </div>
 
-          <fieldset className="mt-6">
+          <fieldset className="mt-1">
             <legend className="text-sm font-semibold text-primary">
               {strings.quoteStudioDividerStyle}
             </legend>
@@ -1977,7 +1977,7 @@ function DividerBlockEditor({
             </div>
           </fieldset>
 
-          <div className="mt-6 grid gap-6 md:grid-cols-2">
+          <div className="mt-2 grid gap-8 border-b border-subtle pb-7 md:grid-cols-2">
             <fieldset>
               <legend className="text-sm font-semibold text-primary">
                 {strings.quoteStudioDividerThickness}
@@ -2024,16 +2024,15 @@ function DividerBlockEditor({
             </fieldset>
           </div>
 
-          <div className="mt-6 border-t border-subtle pt-6">
+          <div className="mt-1">
             <p className="text-sm font-semibold text-primary">
               {strings.quoteStudioDividerColour}
             </p>
-            <div className="mt-3 flex w-full items-center gap-4 rounded-xl border border-default bg-surface px-4 py-3">
-              <ColorPicker
-                label={strings.quoteStudioChooseDividerColour}
-                value={color}
-                onChange={(next) => onChange({ color: next })}
-                triggerClassName="!size-12 !rounded-xl"
+            <div className="mt-3 flex w-full items-center gap-4 rounded-xl border border-default bg-surface px-4 py-3.5">
+              <span
+                className="size-12 shrink-0 rounded-xl border border-black/10"
+                style={{ backgroundColor: color }}
+                aria-hidden="true"
               />
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium text-primary">
@@ -2043,11 +2042,14 @@ function DividerBlockEditor({
                   {color}
                 </span>
               </span>
+              <ColorPicker
+                label={strings.quoteStudioChooseDividerColour}
+                value={color}
+                onChange={(next) => onChange({ color: next })}
+                triggerIcon={<Pencil className="size-4" />}
+                triggerClassName="!size-10 !rounded-xl"
+              />
             </div>
-          </div>
-
-          <div className="mt-6 rounded-xl bg-raised px-5 py-7">
-            <DividerLine block={{ ...block, thickness, style, width, color }} />
           </div>
         </Modal>
       )}
@@ -2073,18 +2075,25 @@ function DividerVisualChoice({
       type="button"
       aria-pressed={selected}
       className={cx(
-        "flex flex-col rounded-xl border px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
-        compact ? "min-h-20" : "min-h-24",
+        "relative flex flex-col rounded-xl border px-3 py-3 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
+        compact ? "min-h-20" : "min-h-28",
         selected
-          ? "border-accent bg-accent-soft text-accent"
+          ? "border-accent bg-surface text-primary"
           : "border-default bg-surface text-primary hover:border-accent hover:bg-accent-soft/30",
       )}
       onClick={onClick}
     >
-      <span className="flex min-h-8 w-full items-center" aria-hidden="true">
+      {selected && (
+        <span className="absolute right-2.5 top-2.5 inline-flex size-5 items-center justify-center rounded-full bg-accent text-white">
+          <Check className="size-3.5" aria-hidden="true" />
+        </span>
+      )}
+      <span className="flex min-h-9 w-full items-center pr-6" aria-hidden="true">
         {children}
       </span>
-      <span className="mt-auto text-sm font-medium">{label}</span>
+      <span className="mt-auto pt-3 text-center text-xs font-medium text-primary">
+        {label}
+      </span>
     </button>
   );
 }
