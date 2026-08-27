@@ -2685,10 +2685,10 @@ export const en = {
   billingChooseCustomer: "Choose a customer…",
   billingCustomerFixedHint:
     "Their currency and payment terms are copied onto the document.",
-  billingFieldReference: "Their reference",
-  billingReferencePlaceholder: "PO-1234",
+  billingFieldReference: "Customer reference (optional)",
+  billingReferencePlaceholder: "For example, PO-1234",
   billingReferenceHint:
-    "The customer's own order number, printed on the document.",
+    "Enter a PO or RFQ supplied by the customer. Alo assigns this document its own unique number automatically when you finalize it.",
   billingFieldNote: "Note",
   billingNotePlaceholder: "Anything the customer should read on the document.",
   billingNoteHint: "Printed under the lines.",

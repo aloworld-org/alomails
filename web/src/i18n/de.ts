@@ -2570,10 +2570,10 @@ export const de: Partial<Catalog> = {
   billingChooseCustomer: "Kunde wählen…",
   billingCustomerFixedHint:
     "Währung und Zahlungsziel des Kunden werden auf das Dokument übernommen.",
-  billingFieldReference: "Referenz des Kunden",
-  billingReferencePlaceholder: "PO-1234",
+  billingFieldReference: "Kundenreferenz (optional)",
+  billingReferencePlaceholder: "Zum Beispiel PO-1234",
   billingReferenceHint:
-    "Die Bestellnummer des Kunden, auf das Dokument gedruckt.",
+    "Geben Sie eine Bestell- oder Angebotsanfragenummer des Kunden ein. Alo vergibt beim Finalisieren automatisch eine eigene eindeutige Nummer für dieses Dokument.",
   billingFieldNote: "Anmerkung",
   billingNotePlaceholder:
     "Alles, was der Kunde auf dem Dokument lesen soll.",

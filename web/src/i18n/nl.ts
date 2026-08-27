@@ -1697,10 +1697,10 @@ export const nl: Partial<Catalog> = {
   billingChooseCustomer: "Kies een klant…",
   billingCustomerFixedHint:
     "Hun valuta en betaaltermijn worden op het document overgenomen.",
-  billingFieldReference: "Hun referentie",
-  billingReferencePlaceholder: "PO-1234",
+  billingFieldReference: "Klantreferentie (optioneel)",
+  billingReferencePlaceholder: "Bijvoorbeeld PO-1234",
   billingReferenceHint:
-    "Het ordernummer van de klant zelf, gedrukt op het document.",
+    "Vul een bestelnummer of offerteaanvraag van de klant in. Alo kent dit document bij het definitief maken automatisch een uniek nummer toe.",
   billingFieldNote: "Notitie",
   billingNotePlaceholder: "Wat de klant op het document moet lezen.",
   billingNoteHint: "Gedrukt onder de regels.",

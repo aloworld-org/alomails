@@ -1739,10 +1739,10 @@ export const fr: Partial<Catalog> = {
   billingChooseCustomer: "Choisissez un client…",
   billingCustomerFixedHint:
     "Sa devise et son délai de paiement sont recopiés sur le document.",
-  billingFieldReference: "Sa référence",
-  billingReferencePlaceholder: "BC-1234",
+  billingFieldReference: "Référence client (facultatif)",
+  billingReferencePlaceholder: "Par exemple, BC-1234",
   billingReferenceHint:
-    "Le numéro de commande du client, imprimé sur le document.",
+    "Saisissez un bon de commande ou une demande de devis fourni par le client. Alo attribue automatiquement un numéro unique à ce document lors de sa finalisation.",
   billingFieldNote: "Note",
   billingNotePlaceholder: "Ce que le client doit lire sur le document.",
   billingNoteHint: "Imprimée sous les lignes.",
