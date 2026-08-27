@@ -7217,6 +7217,9 @@ export const fr: Partial<Catalog> = {
   quoteStudioDividerWidthHelp: "Définissez la largeur du trait de séparation.",
   quoteStudioDividerColour: "Couleur du trait",
   quoteStudioChooseDividerColour: "Choisir la couleur du séparateur",
+  quoteStudioChooseColour: "Choisir une couleur",
+  quoteStudioHexColour: "Couleur hexadécimale",
+  quoteStudioCopyColour: "Copier la couleur",
   quoteStudioCategoryText: "Texte",
   quoteStudioEditQuotationHeader: "Modifier l’en-tête du devis",
   quoteStudioCustomizeQuotation: "Personnaliser le devis",
@@ -7357,6 +7360,8 @@ export const fr: Partial<Catalog> = {
   quoteStudioWholeImage: "Image entière",
   quoteStudioColumnNumber: (number: number) => `Colonne ${number}`,
   quoteStudioColumnNameA11y: (number: number) => `Nom de la colonne ${number}`,
+  quoteStudioRemoveColumnA11y: (label: string) => `Supprimer ${label}`,
+  quoteStudioRemoveRowA11y: (row: number) => `Supprimer la ligne ${row}`,
   quoteStudioTableCellA11y: (column: string, row: number) =>
     `${column}, ligne ${row}`,
   quoteStudioCategoryMedia: "Médias",

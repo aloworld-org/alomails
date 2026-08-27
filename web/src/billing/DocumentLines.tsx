@@ -10,17 +10,20 @@
 // figure the browser had made up, which is the one thing the billing surface
 // never does.
 import { useState } from "react";
-import { Crop, GripVertical, PackageOpen, Pencil, Plus, Trash2, X } from "lucide-react";
+import { GripVertical, PackageOpen, Pencil, Plus, Trash2 } from "lucide-react";
 
-import { Button, ChoicePicker, IconButton, Input, Modal, Table, Td, Th, cx } from "../ds";
+import { ChoicePicker, IconButton, Input, Table, Td, Th, cx } from "../ds";
 import { strings, useLocale } from "../i18n";
 import { formatAmount, formatQty, formatRate } from "./money";
 import { blankRow, isBlankRow, rowFromProduct, rowProblem } from "./lineRows";
 import type { LineRow, RowProblem } from "./lineRows";
 import type { BillingProduct, DocumentLine } from "./types";
 import type { QuoteColumns } from "./QuoteContentStudio";
-import type { QuoteLineContent } from "./quoteTableOptions";
 import { useQuoteTableOptions } from "./quoteTableOptions";
+import { ButtonLine } from "./ButtonLine";
+import { LineField } from "./LineField";
+import { ProductImageEditor } from "./ProductImageEditor";
+import { IMAGE_SIZE, imageClasses, imageDraft, type ImageDraft } from "./productImage";
 import styles from "./billingStyles";
 
 /** What to say about the row's first problem. A blank description is the
@@ -55,236 +58,6 @@ interface Props {
   /** Called for a fresh row's key, so identity comes from the editor that owns
    *  the document rather than from a counter that resets on every render. */
   nextKey: () => string;
-}
-
-type ImageDraft = Required<Pick<
-  QuoteLineContent,
-  "image" | "imageFit" | "imagePosition" | "imageZoom"
->> & { key: string };
-
-const IMAGE_SIZE = {
-  small: "size-16",
-  medium: "size-24",
-  large: "size-32",
-} as const;
-const IMAGE_POSITION = {
-  center: "object-center",
-  top: "object-top",
-  bottom: "object-bottom",
-  left: "object-left",
-  right: "object-right",
-} as const;
-const IMAGE_ZOOM = {
-  50: "scale-50",
-  60: "scale-[.6]",
-  70: "scale-[.7]",
-  75: "scale-75",
-  80: "scale-[.8]",
-  90: "scale-90",
-  100: "scale-100",
-  110: "scale-110",
-  120: "scale-[1.2]",
-  125: "scale-125",
-  130: "scale-[1.3]",
-  140: "scale-[1.4]",
-  150: "scale-150",
-  160: "scale-[1.6]",
-  170: "scale-[1.7]",
-  175: "scale-[1.75]",
-  180: "scale-[1.8]",
-  190: "scale-[1.9]",
-  200: "scale-200",
-} as const;
-
-function normalizeZoom(value: number): keyof typeof IMAGE_ZOOM {
-  if (!Number.isFinite(value)) return 100;
-  const supported = Object.keys(IMAGE_ZOOM).map(Number);
-  return supported.reduce((closest, candidate) =>
-    Math.abs(candidate - value) < Math.abs(closest - value)
-      ? candidate
-      : closest,
-  ) as keyof typeof IMAGE_ZOOM;
-}
-
-function imageDraft(key: string, content: QuoteLineContent): ImageDraft {
-  return {
-    key,
-    image: content.image,
-    imageFit: content.imageFit ?? "cover",
-    imagePosition: content.imagePosition ?? "center",
-    imageZoom: content.imageZoom ?? 100,
-  };
-}
-
-function imageClasses(
-  content: Pick<
-    QuoteLineContent,
-    "imageFit" | "imagePosition" | "imageZoom"
-  >,
-): string {
-  return cx(
-    "size-full transition-transform",
-    content.imageFit === "contain" ? "object-contain" : "object-cover",
-    IMAGE_POSITION[content.imagePosition ?? "center"],
-    IMAGE_ZOOM[normalizeZoom(content.imageZoom ?? 100)],
-  );
-}
-
-function ProductImageEditor({
-  draft,
-  onChange,
-  onApply,
-  onClose,
-}: {
-  draft: ImageDraft;
-  onChange: (draft: ImageDraft) => void;
-  onApply: () => void;
-  onClose: () => void;
-}) {
-  return (
-    <Modal
-      title={strings.billingEditProductImage}
-      icon={<Crop className="size-5" />}
-      onClose={onClose}
-      wide
-      actions={<IconButton label={strings.billingCloseImageEditor} icon={<X />} onClick={onClose} />}
-      footer={
-        <div className="ml-auto flex items-center gap-3">
-          <Button variant="ghost" onClick={onClose}>{strings.cancel}</Button>
-          <Button onClick={onApply}>{strings.billingApplyImage}</Button>
-        </div>
-      }
-    >
-      <div className="grid min-h-0 gap-5 lg:grid-cols-[minmax(0,1fr)_15rem]">
-        <section className="rounded-xl border border-default bg-app p-5" aria-label={strings.billingPdfPreview}>
-          <div className="mx-auto max-w-xl rounded-lg border border-default bg-surface p-8 shadow-sm">
-            <div className="mb-5 flex items-center justify-between border-b border-subtle pb-4">
-              <div>
-                <span className="text-xs font-semibold uppercase tracking-wide text-accent">{strings.billingQuotationPreview}</span>
-                <p className="mt-1 text-sm text-secondary">{strings.billingImagePdfHelp}</p>
-              </div>
-              <span className="text-xs font-medium text-tertiary">{strings.billingPdfPaperSizeA4}</span>
-            </div>
-            <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 rounded-lg border border-subtle p-4">
-              <div className="size-24 overflow-hidden rounded-lg border border-default bg-raised/30">
-                <img src={draft.image} alt={strings.billingProductPdfPreview} className={imageClasses(draft)} />
-              </div>
-              <div className="min-w-0">
-                <div className="h-3 w-3/4 rounded-full bg-default" />
-                <div className="mt-3 h-2 w-full rounded-full bg-raised" />
-                <div className="mt-2 h-2 w-2/3 rounded-full bg-raised" />
-              </div>
-              <div className="h-3 w-20 rounded-full bg-accent-soft" />
-            </div>
-          </div>
-        </section>
-
-        <aside className="flex flex-col gap-5">
-          <EditorChoice
-            label={strings.billingCropStyle}
-            value={draft.imageFit}
-            choices={[["cover", strings.billingFillFrame], ["contain", strings.billingShowFullImage]]}
-            onChange={(imageFit) => onChange({ ...draft, imageFit })}
-          />
-          <fieldset>
-            <legend className="mb-2 text-xs font-semibold uppercase tracking-wide text-tertiary">
-              {strings.billingZoom}
-            </legend>
-            <div className="grid grid-cols-3 gap-2">
-              {[75, 100, 125, 150, 200].map((zoom) => (
-                <button
-                  key={zoom}
-                  type="button"
-                  className={cx(
-                    "min-h-10 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-                    draft.imageZoom === zoom
-                      ? "border-accent bg-accent-soft text-accent"
-                      : "border-default bg-surface text-primary hover:border-accent/50 hover:bg-raised",
-                  )}
-                  aria-pressed={draft.imageZoom === zoom}
-                  onClick={() => onChange({ ...draft, imageZoom: zoom })}
-                >
-                  {zoom}%
-                </button>
-              ))}
-              <label className="relative">
-                <span className="sr-only">{strings.billingCustomZoom}</span>
-                <input
-                  aria-label={strings.billingCustomZoom}
-                  type="number"
-                  min="50"
-                  max="200"
-                  step="10"
-                  value={draft.imageZoom}
-                  className="min-h-10 w-full rounded-lg border border-default bg-surface px-3 pr-7 text-sm font-medium text-primary focus:border-accent focus:outline-none"
-                  onChange={(event) =>
-                    onChange({
-                      ...draft,
-                      imageZoom: event.currentTarget.valueAsNumber,
-                    })
-                  }
-                  onBlur={(event) =>
-                    onChange({
-                      ...draft,
-                      imageZoom: normalizeZoom(event.currentTarget.valueAsNumber),
-                    })
-                  }
-                />
-                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-tertiary">
-                  %
-                </span>
-              </label>
-            </div>
-            <p className="mt-2 text-xs leading-relaxed text-secondary">
-              {strings.billingZoomHelp}
-            </p>
-          </fieldset>
-          <EditorChoice
-            label={strings.billingFocusArea}
-            value={draft.imagePosition}
-            choices={[["center", strings.billingCentre], ["top", strings.billingTop], ["bottom", strings.billingBottom], ["left", strings.billingLeft], ["right", strings.billingRight]]}
-            onChange={(imagePosition) => onChange({ ...draft, imagePosition })}
-          />
-        </aside>
-      </div>
-    </Modal>
-  );
-}
-
-function EditorChoice<T extends string>({
-  label,
-  value,
-  choices,
-  onChange,
-}: {
-  label: string;
-  value: T;
-  choices: ReadonlyArray<readonly [T, string]>;
-  onChange: (value: T) => void;
-}) {
-  return (
-    <fieldset>
-      <legend className="mb-2 text-xs font-semibold uppercase tracking-wide text-tertiary">{label}</legend>
-      <div className="grid grid-cols-2 gap-2">
-        {choices.map(([id, name]) => (
-          <button
-            key={id}
-            type="button"
-            className={cx(
-              "min-h-10 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-              value === id
-                ? "border-accent bg-accent-soft text-accent"
-                : "border-default bg-surface text-primary hover:border-accent/50 hover:bg-raised",
-            )}
-            aria-pressed={value === id}
-            onClick={() => onChange(id)}
-          >
-            {name}
-          </button>
-        ))}
-      </div>
-    </fieldset>
-  );
 }
 
 export function DocumentLines({
@@ -942,35 +715,5 @@ export function DocumentLines({
         </Table>
       )}
     </section>
-  );
-}
-
-function LineField({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="min-w-0">
-      <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-tertiary">
-        {label}
-      </span>
-      {children}
-    </label>
-  );
-}
-
-function ButtonLine({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-      onClick={onClick}
-    >
-      <Plus className="size-4" aria-hidden="true" />
-      {strings.billingAddLine}
-    </button>
   );
 }

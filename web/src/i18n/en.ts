@@ -7297,6 +7297,9 @@ export const en = {
   quoteStudioDividerWidthHelp: "Set the divider line width.",
   quoteStudioDividerColour: "Line colour",
   quoteStudioChooseDividerColour: "Choose divider colour",
+  quoteStudioChooseColour: "Choose colour",
+  quoteStudioHexColour: "Hex colour",
+  quoteStudioCopyColour: "Copy colour",
   quoteStudioCategoryText: "Text",
   quoteStudioEditQuotationHeader: "Edit quotation header",
   quoteStudioCustomizeQuotation: "Customize quotation",
@@ -7432,6 +7435,8 @@ export const en = {
   quoteStudioWholeImage: "Whole image",
   quoteStudioColumnNumber: (number: number) => `Column ${number}`,
   quoteStudioColumnNameA11y: (number: number) => `Column ${number} name`,
+  quoteStudioRemoveColumnA11y: (label: string) => `Remove ${label}`,
+  quoteStudioRemoveRowA11y: (row: number) => `Remove row ${row}`,
   quoteStudioTableCellA11y: (column: string, row: number) =>
     `${column}, row ${row}`,
   quoteStudioCategoryMedia: "Media",

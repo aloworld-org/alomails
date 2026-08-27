@@ -7251,6 +7251,9 @@ export const de: Partial<Catalog> = {
   quoteStudioDividerWidthHelp: "Legen Sie die Breite der Trennlinie fest.",
   quoteStudioDividerColour: "Linienfarbe",
   quoteStudioChooseDividerColour: "Farbe der Trennlinie auswählen",
+  quoteStudioChooseColour: "Farbe auswählen",
+  quoteStudioHexColour: "Hex-Farbe",
+  quoteStudioCopyColour: "Farbe kopieren",
   quoteStudioCategoryText: "Text",
   quoteStudioEditQuotationHeader: "Angebotskopf bearbeiten",
   quoteStudioCustomizeQuotation: "Angebot anpassen",
@@ -7391,6 +7394,8 @@ export const de: Partial<Catalog> = {
   quoteStudioWholeImage: "Ganzes Bild",
   quoteStudioColumnNumber: (number: number) => `Spalte ${number}`,
   quoteStudioColumnNameA11y: (number: number) => `Name der Spalte ${number}`,
+  quoteStudioRemoveColumnA11y: (label: string) => `${label} entfernen`,
+  quoteStudioRemoveRowA11y: (row: number) => `Zeile ${row} entfernen`,
   quoteStudioTableCellA11y: (column: string, row: number) =>
     `${column}, Zeile ${row}`,
   quoteStudioCategoryMedia: "Medien",

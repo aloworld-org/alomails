@@ -19,14 +19,13 @@
 // projects `paid` from this ledger — so both hand the returned invoice back to
 // the editor rather than letting the two screens drift a read apart.
 import { useCallback, useEffect, useState } from "react";
-import { Banknote } from "lucide-react";
-
-import { Button, Input, Spinner, Table, Td, Th } from "../ds";
+import { Button, Spinner, Table, Td, Th } from "../ds";
 import { strings, useLocale } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
 import { formatDocumentDate } from "./dates";
-import { formatAmount, hundredthsToInput, parseHundredths } from "./money";
-import { DialogFrame, ErrorBanner, Field } from "./parts";
+import { formatAmount } from "./money";
+import { ErrorBanner } from "./parts";
+import { PaymentDialog } from "./PaymentDialog";
 import { StatusChip, type ChipTone } from "./status";
 import type {
   BillingInvoice,
@@ -232,108 +231,3 @@ export function PaymentsPanel({
  * blank is sent as an absent `paidOn`, and the server dates it from its own
  * clock rather than the browser's.
  */
-function PaymentDialog({
-  invoiceId,
-  currency,
-  outstandingCents,
-  onClose,
-  onRecorded,
-}: {
-  invoiceId: string;
-  currency: string;
-  outstandingCents: number;
-  onClose: () => void;
-  onRecorded: (invoice: BillingInvoice) => void;
-}) {
-  const api = useBillingApi();
-  const [amount, setAmount] = useState(
-    outstandingCents > 0 ? hundredthsToInput(outstandingCents) : "",
-  );
-  const [paidOn, setPaidOn] = useState("");
-  const [method, setMethod] = useState("");
-  const [reference, setReference] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const amountCents = parseHundredths(amount);
-
-  async function submit() {
-    if (amountCents === null) return;
-    setBusy(true);
-    try {
-      const recorded = await api.recordPayment(invoiceId, {
-        amountCents,
-        ...(paidOn === "" ? {} : { paidOn }),
-        method,
-        reference,
-      });
-      onRecorded(recorded.invoice);
-    } catch (err) {
-      setError(billingMessage(err, strings.billingActionFailed));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <DialogFrame
-      Icon={Banknote}
-      title={strings.billingRecordPayment}
-      subtitle={strings.billingRecordPaymentHint}
-      error={error}
-      busy={busy}
-      canSubmit={amountCents !== null}
-      submitLabel={strings.billingRecordPayment}
-      onClose={onClose}
-      onSubmit={() => void submit()}
-    >
-      <div className={styles.row}>
-        <Field
-          label={strings.billingFieldAmount(currency)}
-          hint={strings.billingFieldAmountHint}
-          error={
-            amount !== "" && amountCents === null
-              ? strings.billingNotAnAmount
-              : undefined
-          }
-        >
-          <Input
-            inputMode="decimal"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            invalid={amount !== "" && amountCents === null}
-          />
-        </Field>
-        <Field
-          label={strings.billingFieldPaidOn}
-          hint={strings.billingFieldPaidOnHint}
-        >
-          <Input
-            type="date"
-            value={paidOn}
-            onChange={(e) => setPaidOn(e.target.value)}
-          />
-        </Field>
-      </div>
-      <Field
-        label={strings.billingFieldMethod}
-        hint={strings.billingFieldMethodHint}
-      >
-        <Input
-          value={method}
-          onChange={(e) => setMethod(e.target.value)}
-          placeholder={strings.billingMethodPlaceholder}
-        />
-      </Field>
-      <Field
-        label={strings.billingFieldPaymentReference}
-        hint={strings.billingFieldPaymentRefHint}
-      >
-        <Input
-          value={reference}
-          onChange={(e) => setReference(e.target.value)}
-        />
-      </Field>
-    </DialogFrame>
-  );
-}

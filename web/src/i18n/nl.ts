@@ -7144,6 +7144,9 @@ export const nl: Partial<Catalog> = {
   quoteStudioDividerWidthHelp: "Stel de breedte van de scheidingslijn in.",
   quoteStudioDividerColour: "Lijnkleur",
   quoteStudioChooseDividerColour: "Kleur van scheidslijn kiezen",
+  quoteStudioChooseColour: "Kleur kiezen",
+  quoteStudioHexColour: "Hexkleur",
+  quoteStudioCopyColour: "Kleur kopiëren",
   quoteStudioCategoryText: "Tekst",
   quoteStudioEditQuotationHeader: "Offertekop bewerken",
   quoteStudioCustomizeQuotation: "Offerte aanpassen",
@@ -7280,6 +7283,8 @@ export const nl: Partial<Catalog> = {
   quoteStudioWholeImage: "Volledige afbeelding",
   quoteStudioColumnNumber: (number: number) => `Kolom ${number}`,
   quoteStudioColumnNameA11y: (number: number) => `Naam van kolom ${number}`,
+  quoteStudioRemoveColumnA11y: (label: string) => `${label} verwijderen`,
+  quoteStudioRemoveRowA11y: (row: number) => `Rij ${row} verwijderen`,
   quoteStudioTableCellA11y: (column: string, row: number) =>
     `${column}, rij ${row}`,
   quoteStudioCategoryMedia: "Media",

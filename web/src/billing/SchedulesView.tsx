@@ -26,8 +26,8 @@ import { cadenceLabel } from "./cadence";
 import { formatDocumentDate } from "./dates";
 import { formatAmount } from "./money";
 import { ScheduleDialog } from "./ScheduleDialog";
+import { ScheduleChips } from "./ScheduleChips";
 import { BillingLoading, EmptyState, ErrorBanner } from "./parts";
-import { StatusChip } from "./status";
 import type { BillingCustomer, BillingScheduleSummary } from "./types";
 import styles from "./billingStyles";
 
@@ -37,27 +37,6 @@ import styles from "./billingStyles";
  *  "Finished" and "Paused" are different facts and are never shown together:
  *  one ran out of dates, the other was stopped by a colleague, and a reader has
  *  to be able to tell which. */
-function ScheduleChips({ schedule }: { schedule: BillingScheduleSummary }) {
-  if (!schedule.active) {
-    return (
-      <StatusChip tone="muted" label={strings.billingScheduleStatusPaused} />
-    );
-  }
-  if (schedule.ended) {
-    return (
-      <StatusChip tone="muted" label={strings.billingScheduleStatusEnded} />
-    );
-  }
-  return (
-    <>
-      <StatusChip tone="good" label={strings.billingScheduleStatusActive} />
-      {schedule.due && (
-        <StatusChip tone="warn" label={strings.billingScheduleStatusDue} />
-      )}
-    </>
-  );
-}
-
 export function SchedulesView() {
   const api = useBillingApi();
   const locale = useLocale();
