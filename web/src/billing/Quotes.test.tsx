@@ -819,6 +819,48 @@ describe("the offer's transitions", () => {
 });
 
 describe("the quotation document preview", () => {
+  test("uses Billing Your details as the default quotation identity", async () => {
+    render(
+      <QuoteContentStudio
+        quoteId="issuer-details-preview"
+        readOnly
+        preview
+        pricingTable={() => null}
+        tableSubtotal={() => null}
+        lineKeys={[]}
+        issuer={{
+          stated: true,
+          legalName: "alo Studio GmbH",
+          addressLine1: "Friedrichstrasse 88",
+          addressLine2: "",
+          postalCode: "10117",
+          city: "Berlin",
+          country: "DE",
+          vatId: "BE0123456789",
+          registrationNo: "HRB 248610 B",
+          email: "billing@alo.example",
+          phone: "+49 30 555 0182",
+          website: "https://alo.example",
+          iban: null,
+          bic: null,
+          bankName: "",
+          accountHolder: "",
+          footerNote: "Thank you for your business.",
+          baseCurrency: "EUR",
+          updatedBy: null,
+          updatedAt: null,
+        }}
+      />,
+    );
+
+    await screen.findByText("alo Studio GmbH");
+    expect(screen.getByText(/Friedrichstrasse 88/)).toBeTruthy();
+    expect(screen.getByText("billing@alo.example")).toBeTruthy();
+    expect(screen.getByText("VAT BE0123456789")).toBeTruthy();
+    expect(screen.getByText("Company no. HRB 248610 B")).toBeTruthy();
+    expect(screen.getByText("Thank you for your business.")).toBeTruthy();
+  });
+
   test("keeps visible markers on bullet and numbered lists", async () => {
     const quoteId = "list-marker-preview";
     const records = new Map<string, string>();

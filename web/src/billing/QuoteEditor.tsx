@@ -15,7 +15,7 @@
 // A lapsed offer can still be accepted. The store refuses on state, never on a
 // date, and honouring an offer a few days late is a decision a tenant is
 // entitled to make — so "Lapsed" is a chip here, not a locked door.
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Eye, Palette, Pencil } from "lucide-react";
 
@@ -38,7 +38,7 @@ import {
   type QuoteColumns,
   type QuoteContentStudioHandle,
 } from "./QuoteContentStudio";
-import type { BillingQuote } from "./types";
+import type { BillingQuote, BillingSettings } from "./types";
 import styles from "./billingStyles";
 
 export function QuoteEditor() {
@@ -49,9 +49,20 @@ export function QuoteEditor() {
   const pickers = usePickers();
   const quoteStudio = useRef<QuoteContentStudioHandle>(null);
   const [preview, setPreview] = useState(false);
+  const [issuer, setIssuer] = useState<BillingSettings | null>(null);
   const [quoteColumns, setQuoteColumns] = useState<QuoteColumns>(
     DEFAULT_QUOTE_COLUMNS,
   );
+
+  useEffect(() => {
+    let active = true;
+    void api.settings().then((settings) => {
+      if (active && settings) setIssuer(settings);
+    }).catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [api]);
 
   /** The invoice screen for an id, from inside `/billing/quotes/{id}`. */
   const openInvoice = useCallback(
@@ -257,6 +268,7 @@ export function QuoteEditor() {
                 tableSubtotal={tableSubtotal}
                 lineKeys={lineKeys}
                 onColumnsChange={setQuoteColumns}
+                issuer={issuer}
               />
             )
       }

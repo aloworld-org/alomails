@@ -44,6 +44,7 @@ import {
   type QuoteTotalsDetail,
   type QuoteTotalsPlacement,
 } from "./quoteTableOptions";
+import type { BillingSettings } from "./types";
 
 type Theme = "modern" | "editorial" | "minimal";
 type HeaderAlignment = "left" | "right";
@@ -101,6 +102,8 @@ interface HeaderDetails {
   email: string;
   phone: string;
   website: string;
+  vatId: string;
+  registrationNo: string;
 }
 export interface QuoteColumns {
   unit: boolean;
@@ -120,6 +123,7 @@ interface Design {
   logo: string;
   headerAlignment: HeaderAlignment;
   headerDetails: HeaderDetails;
+  headerDetailsCustomized: boolean;
   theme: Theme;
   colors: Colors;
   columns: QuoteColumns;
@@ -150,11 +154,14 @@ const DEFAULT_HEADER_DETAILS: HeaderDetails = {
   email: "",
   phone: "",
   website: "",
+  vatId: "",
+  registrationNo: "",
 };
 const EMPTY: Design = {
   logo: "",
   headerAlignment: "left",
   headerDetails: DEFAULT_HEADER_DETAILS,
+  headerDetailsCustomized: false,
   theme: "modern",
   colors: DEFAULT_COLORS,
   columns: DEFAULT_QUOTE_COLUMNS,
@@ -182,15 +189,39 @@ function legacyDesign(key: string): Design | null {
     const raw = localStorage.getItem(key);
     if (raw === null) return null;
     const saved = JSON.parse(raw) as Partial<Design>;
-    return normalizeDesign({
-      ...EMPTY,
-      ...saved,
-      colors: { ...DEFAULT_COLORS, ...saved.colors },
-      headerDetails: { ...DEFAULT_HEADER_DETAILS, ...saved.headerDetails },
-    });
+    return savedDesign(saved);
   } catch {
     return null;
   }
+}
+
+function savedDesign(saved: Partial<Design>): Design {
+  const headerDetails = { ...DEFAULT_HEADER_DETAILS, ...saved.headerDetails };
+  return normalizeDesign({
+    ...EMPTY,
+    ...saved,
+    colors: { ...DEFAULT_COLORS, ...saved.colors },
+    headerDetails,
+    headerDetailsCustomized:
+      saved.headerDetailsCustomized ??
+      Object.values(headerDetails).some((value) => value.trim().length > 0),
+  });
+}
+
+function headerDetailsFromSettings(settings?: BillingSettings | null): HeaderDetails {
+  if (!settings) return DEFAULT_HEADER_DETAILS;
+  const locality = [settings.postalCode, settings.city].filter(Boolean).join(" ");
+  return {
+    companyName: settings.legalName,
+    address: [settings.addressLine1, settings.addressLine2, locality, settings.country]
+      .filter(Boolean)
+      .join("\n"),
+    email: settings.email,
+    phone: settings.phone,
+    website: settings.website,
+    vatId: settings.vatId ?? "",
+    registrationNo: settings.registrationNo,
+  };
 }
 
 function normalizeDesign(design: Design): Design {
@@ -265,12 +296,7 @@ async function loadDesign(key: string): Promise<Design> {
     );
     database.close();
     if (saved !== undefined)
-      return normalizeDesign({
-        ...EMPTY,
-        ...saved,
-        colors: { ...DEFAULT_COLORS, ...saved.colors },
-        headerDetails: { ...DEFAULT_HEADER_DETAILS, ...saved.headerDetails },
-      });
+      return savedDesign(saved);
   } catch {
     /* Fall through to the small legacy record when IndexedDB is unavailable. */
   }
@@ -333,6 +359,7 @@ export const QuoteContentStudio = forwardRef<
     ) => ReactNode;
     lineKeys: string[];
     onColumnsChange?: (columns: QuoteColumns) => void;
+    issuer?: BillingSettings | null;
   }
 >(function QuoteContentStudio(
   {
@@ -343,6 +370,7 @@ export const QuoteContentStudio = forwardRef<
     tableSubtotal,
     lineKeys,
     onColumnsChange,
+    issuer,
   },
   ref,
 ) {
@@ -357,6 +385,10 @@ export const QuoteContentStudio = forwardRef<
   const imageInput = useRef<HTMLInputElement>(null);
   const replaceImageInput = useRef<HTMLInputElement>(null);
   const pendingImageIndex = useRef<number | null>(null);
+  const issuerHeaderDetails = headerDetailsFromSettings(issuer);
+  const headerDetails = design.headerDetailsCustomized
+    ? design.headerDetails
+    : issuerHeaderDetails;
   useImperativeHandle(
     ref,
     () => ({
@@ -616,8 +648,7 @@ export const QuoteContentStudio = forwardRef<
             design.theme === "minimal" && "[&_article]:shadow-none",
           )}
         >
-          {(design.logo ||
-            Object.values(design.headerDetails).some((value) => value.trim())) && (
+          {(design.logo || Object.values(headerDetails).some((value) => value.trim())) && (
             <div
               className={cx(
                 "group/quote-header relative mb-8 flex min-h-28 items-center justify-between gap-8 rounded-2xl bg-[var(--quote-header-background)] px-6 py-5 max-sm:px-4",
@@ -638,23 +669,29 @@ export const QuoteContentStudio = forwardRef<
                   />
                 )}
                 <div className="min-w-0 text-[var(--quote-text)]">
-                  {design.headerDetails.companyName && (
+                  {headerDetails.companyName && (
                     <p className="text-base font-semibold">
-                      {design.headerDetails.companyName}
+                      {headerDetails.companyName}
                     </p>
                   )}
-                  {design.headerDetails.address && (
+                  {headerDetails.address && (
                     <p className="mt-1 whitespace-pre-line text-xs leading-relaxed opacity-75">
-                      {design.headerDetails.address}
+                      {headerDetails.address}
                     </p>
                   )}
-                  {(design.headerDetails.email ||
-                    design.headerDetails.phone ||
-                    design.headerDetails.website) && (
+                  {(headerDetails.email || headerDetails.phone || headerDetails.website) && (
                     <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs opacity-75">
-                      {design.headerDetails.email && <span>{design.headerDetails.email}</span>}
-                      {design.headerDetails.phone && <span>{design.headerDetails.phone}</span>}
-                      {design.headerDetails.website && <span>{design.headerDetails.website}</span>}
+                      {headerDetails.email && <span>{headerDetails.email}</span>}
+                      {headerDetails.phone && <span>{headerDetails.phone}</span>}
+                      {headerDetails.website && <span>{headerDetails.website}</span>}
+                    </p>
+                  )}
+                  {(headerDetails.vatId || headerDetails.registrationNo) && (
+                    <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs opacity-75">
+                      {headerDetails.vatId && <span>VAT {headerDetails.vatId}</span>}
+                      {headerDetails.registrationNo && (
+                        <span>Company no. {headerDetails.registrationNo}</span>
+                      )}
                     </p>
                   )}
                 </div>
@@ -1056,6 +1093,11 @@ export const QuoteContentStudio = forwardRef<
               onImage={chooseImage}
             />
           )}
+          {issuer?.footerNote.trim() && (
+            <footer className="mt-10 px-1 text-xs leading-relaxed text-[var(--quote-text)] opacity-70">
+              {issuer.footerNote}
+            </footer>
+          )}
         </div>
         <input
           ref={imageInput}
@@ -1099,6 +1141,7 @@ export const QuoteContentStudio = forwardRef<
       {customize && (
         <CustomizeQuote
           design={design}
+          issuerDetails={issuerHeaderDetails}
           saveError={saveError}
           onChange={setDesign}
           onClose={() => setCustomize(false)}
@@ -2685,11 +2728,13 @@ function BlockCommand({
 
 function CustomizeQuote({
   design,
+  issuerDetails,
   saveError,
   onChange,
   onClose,
 }: {
   design: Design;
+  issuerDetails: HeaderDetails;
   saveError: string;
   onChange: React.Dispatch<React.SetStateAction<Design>>;
   onClose: () => void;
@@ -2700,10 +2745,14 @@ function CustomizeQuote({
       ...current,
       colors: { ...current.colors, [name]: value },
     }));
+  const displayedHeaderDetails = design.headerDetailsCustomized
+    ? design.headerDetails
+    : issuerDetails;
   const setHeaderDetail = (name: keyof HeaderDetails, value: string) =>
     onChange((current) => ({
       ...current,
-      headerDetails: { ...current.headerDetails, [name]: value },
+      headerDetails: { ...displayedHeaderDetails, [name]: value },
+      headerDetailsCustomized: true,
     }));
   return (
     <Modal
@@ -2799,35 +2848,48 @@ function CustomizeQuote({
         </section>
         <section className="rounded-2xl border border-default bg-surface p-5 shadow-sm">
           <div>
-            <h3 className="text-base font-semibold text-primary">
-              Company information
-            </h3>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h3 className="text-base font-semibold text-primary">Company information</h3>
+              {design.headerDetailsCustomized ? (
+                <button
+                  type="button"
+                  className="rounded-lg px-3 py-2 text-sm font-semibold text-accent hover:bg-accent-soft"
+                  onClick={() => onChange((current) => ({ ...current, headerDetailsCustomized: false }))}
+                >
+                  Use Your details
+                </button>
+              ) : (
+                <span className="rounded-full bg-accent-soft px-3 py-1.5 text-xs font-semibold text-accent">
+                  Linked to Your details
+                </span>
+              )}
+            </div>
             <p className="mt-1 text-sm leading-relaxed text-secondary">
-              Add the identity and contact details customers should see in the quotation header.
+              These values come from Billing → Your details. Editing one creates an override for this quotation.
             </p>
           </div>
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <HeaderField
               label="Company name"
-              value={design.headerDetails.companyName}
+              value={displayedHeaderDetails.companyName}
               placeholder="Your company name"
               onChange={(value) => setHeaderDetail("companyName", value)}
             />
             <HeaderField
               label="Website"
-              value={design.headerDetails.website}
+              value={displayedHeaderDetails.website}
               placeholder="www.company.com"
               onChange={(value) => setHeaderDetail("website", value)}
             />
             <HeaderField
               label="Email"
-              value={design.headerDetails.email}
+              value={displayedHeaderDetails.email}
               placeholder="sales@company.com"
               onChange={(value) => setHeaderDetail("email", value)}
             />
             <HeaderField
               label="Phone"
-              value={design.headerDetails.phone}
+              value={displayedHeaderDetails.phone}
               placeholder="+49 30 123 456"
               onChange={(value) => setHeaderDetail("phone", value)}
             />
@@ -2835,11 +2897,23 @@ function CustomizeQuote({
               <span className="text-sm font-semibold text-primary">Address</span>
               <textarea
                 className="min-h-24 resize-y rounded-xl border border-default bg-surface px-4 py-3 text-sm leading-relaxed text-primary placeholder:text-tertiary hover:border-accent focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10"
-                value={design.headerDetails.address}
+                value={displayedHeaderDetails.address}
                 placeholder={"Street and number\nPostal code and city\nCountry"}
                 onChange={(event) => setHeaderDetail("address", event.target.value)}
               />
             </label>
+            <HeaderField
+              label="VAT ID"
+              value={displayedHeaderDetails.vatId}
+              placeholder="VAT registration number"
+              onChange={(value) => setHeaderDetail("vatId", value)}
+            />
+            <HeaderField
+              label="Company number"
+              value={displayedHeaderDetails.registrationNo}
+              placeholder="Company registration number"
+              onChange={(value) => setHeaderDetail("registrationNo", value)}
+            />
           </div>
         </section>
         <div className="min-w-0 space-y-7">
