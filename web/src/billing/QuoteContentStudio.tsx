@@ -2026,7 +2026,15 @@ function DividerBlockEditor({
                     compact
                     onClick={() => onChange({ width: choice })}
                   >
-                    <DividerLine block={{ ...block, width: choice, color }} />
+                    <DividerLine
+                      block={{
+                        ...block,
+                        style: "solid",
+                        thickness: "bold",
+                        width: choice,
+                        color,
+                      }}
+                    />
                   </DividerVisualChoice>
                 ))}
               </div>
