@@ -58,6 +58,7 @@ import type { BillingCustomer, BillingQuote, BillingSettings } from "./types";
 type Theme = "modern" | "editorial" | "minimal";
 type HeaderAlignment = "left" | "right";
 type HeaderStyle = "signature" | "editorial" | "band" | "minimal" | "stacked";
+type HeaderRatio = "40-60" | "50-50" | "60-40";
 type ContactQrSize = "small" | "medium" | "large";
 type Block =
   | { id: string; kind: "text"; heading: string; body: string }
@@ -143,6 +144,7 @@ interface Design {
   logo: string;
   headerStyle: HeaderStyle;
   headerAlignment: HeaderAlignment;
+  headerRatio: HeaderRatio;
   headerDetails: HeaderDetails;
   headerDetailsCustomized: boolean;
   customerDetails: CustomerHeaderDetails;
@@ -197,6 +199,7 @@ const EMPTY: Design = {
   logo: "",
   headerStyle: "signature",
   headerAlignment: "left",
+  headerRatio: "50-50",
   headerDetails: DEFAULT_HEADER_DETAILS,
   headerDetailsCustomized: false,
   customerDetails: DEFAULT_CUSTOMER_DETAILS,
@@ -233,6 +236,24 @@ const headerStyleChoices: Array<{ id: HeaderStyle; name: string; help: string }>
   { id: "minimal", name: "Minimal", help: "Quiet, compact and precise" },
   { id: "stacked", name: "Logo stack", help: "Company name beneath the logo" },
 ];
+const headerRatioChoices: Array<{ id: HeaderRatio; columns: string; reverseColumns: string }> = [
+  { id: "40-60", columns: "grid-cols-[2fr_3fr]", reverseColumns: "grid-cols-[3fr_2fr]" },
+  { id: "50-50", columns: "grid-cols-2", reverseColumns: "grid-cols-2" },
+  { id: "60-40", columns: "grid-cols-[3fr_2fr]", reverseColumns: "grid-cols-[2fr_3fr]" },
+];
+
+const headerRatioClasses: Record<HeaderRatio, string> = {
+  "40-60": "md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]",
+  "50-50": "md:grid-cols-2",
+  "60-40": "md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]",
+};
+
+function quotationHeaderRatioClass(ratio: HeaderRatio, alignment: HeaderAlignment) {
+  if (alignment === "left" || ratio === "50-50") return headerRatioClasses[ratio];
+  return ratio === "40-60"
+    ? headerRatioClasses["60-40"]
+    : headerRatioClasses["40-60"];
+}
 
 function HeaderStylePreview({ style }: { style: HeaderStyle }) {
   if (style === "editorial") {
@@ -856,11 +877,7 @@ export const QuoteContentStudio = forwardRef<
                 design.headerStyle === "minimal"
                   ? "border-y border-[var(--quote-table-header)]"
                   : "rounded-2xl border border-[var(--quote-table-header)]",
-                design.headerStyle === "editorial"
-                  ? "md:grid-cols-[0.8fr_1.2fr]"
-                  : design.headerStyle === "stacked"
-                    ? "md:grid-cols-[0.75fr_1.25fr]"
-                    : "md:grid-cols-[1.1fr_0.9fr]",
+                quotationHeaderRatioClass(design.headerRatio, design.headerAlignment),
                 design.headerStyle === "band" &&
                   "border-t-8 border-t-[var(--quote-accent)]",
               )}
@@ -3650,6 +3667,46 @@ function CustomizeQuote({
                   </span>
                 </button>
               ))}
+            </div>
+          </section>
+          <section className="border-t border-subtle pt-7">
+            <div>
+              <h3 className="text-base font-semibold text-primary">Column balance</h3>
+              <p className="mt-1 text-sm text-secondary">
+                Choose how much space the company and customer sides receive.
+              </p>
+            </div>
+            <div className="mt-4 grid max-w-2xl grid-cols-3 gap-3" role="radiogroup" aria-label="Quotation header column balance">
+              {headerRatioChoices.map((choice) => {
+                const selected = design.headerRatio === choice.id;
+                const [company, customer] = choice.id.split("-");
+                return (
+                  <button
+                    key={choice.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    aria-label={`Company ${company} percent, customer ${customer} percent`}
+                    className={cx(
+                      "group relative rounded-xl p-2 transition-colors hover:bg-accent-soft/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
+                      selected && "bg-accent-soft/40",
+                    )}
+                    onClick={() => onChange((current) => ({ ...current, headerRatio: choice.id }))}
+                  >
+                    <span className={cx("grid h-16 gap-1.5 rounded-lg bg-raised p-2", design.headerAlignment === "left" ? choice.columns : choice.reverseColumns)} aria-hidden="true">
+                      <span className={cx("flex items-center justify-center rounded-md bg-surface text-primary", design.headerAlignment === "right" && "order-2", selected && "ring-1 ring-accent/30")}>
+                        <Building2 className="size-5" strokeWidth={1.7} />
+                      </span>
+                      <span className={cx("flex items-center justify-center rounded-md bg-surface text-accent", design.headerAlignment === "right" && "order-1", selected && "ring-1 ring-accent/30")}>
+                        <ContactRound className="size-5" strokeWidth={1.7} />
+                      </span>
+                    </span>
+                    <span className={cx("absolute right-1 top-1 grid size-5 place-items-center rounded-full border", selected ? "border-accent bg-accent text-white" : "border-default bg-surface group-hover:border-accent")} aria-hidden="true">
+                      {selected && <Check className="size-3" />}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </section>
             </>
