@@ -710,28 +710,42 @@ export const QuoteContentStudio = forwardRef<
                   />
                 )}
                 <div className="min-w-0 text-[var(--quote-text)]">
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] opacity-55">
-                    From
-                  </p>
                   {headerDetails.companyName && (
                     <p className="text-lg font-semibold leading-tight tracking-tight">
                       {headerDetails.companyName}
                     </p>
                   )}
-                  {headerDetails.address && (
-                    <p className="mt-2 whitespace-pre-line text-xs leading-5 opacity-70">
-                      {headerDetails.address}
-                    </p>
-                  )}
-                  {(headerDetails.email || headerDetails.phone || headerDetails.website) && (
-                    <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs opacity-70">
-                      {headerDetails.email && <span>{headerDetails.email}</span>}
-                      {headerDetails.phone && <span>{headerDetails.phone}</span>}
-                      {headerDetails.website && <span>{headerDetails.website}</span>}
-                    </p>
-                  )}
+                  <div className="mt-3 grid gap-x-8 gap-y-3 text-xs leading-5 opacity-70 sm:grid-cols-2">
+                    {headerDetails.address && (
+                      <div>
+                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide opacity-70">
+                          Address
+                        </p>
+                        <p className="whitespace-pre-line">{headerDetails.address}</p>
+                      </div>
+                    )}
+                    {(headerDetails.email || headerDetails.phone || headerDetails.website) && (
+                      <div>
+                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide opacity-70">
+                          Contact
+                        </p>
+                        <div
+                          className={cx(
+                            "flex flex-col",
+                            design.headerAlignment === "right"
+                              ? "items-end"
+                              : "items-start",
+                          )}
+                        >
+                          {headerDetails.email && <span>{headerDetails.email}</span>}
+                          {headerDetails.phone && <span>{headerDetails.phone}</span>}
+                          {headerDetails.website && <span className="break-all">{headerDetails.website}</span>}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   {(headerDetails.vatId || headerDetails.registrationNo) && (
-                    <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs opacity-60">
+                    <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-[var(--quote-table-header)] pt-2.5 text-[11px] opacity-60">
                       {headerDetails.vatId && <span>VAT {headerDetails.vatId}</span>}
                       {headerDetails.registrationNo && (
                         <span>Company no. {headerDetails.registrationNo}</span>
