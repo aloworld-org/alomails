@@ -21,7 +21,10 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { DialogProvider } from "../ds";
 import { strings } from "../i18n";
 import { BillingModule } from "./BillingModule";
-import { QuoteContentStudio } from "./QuoteContentStudio";
+import {
+  QuoteContentStudio,
+  saveQuoteTemplateDesign,
+} from "./QuoteContentStudio";
 import type {
   BillingCustomer,
   BillingInvoice,
@@ -841,6 +844,56 @@ describe("the offer's transitions", () => {
 });
 
 describe("the quotation document preview", () => {
+  test.each([
+    [
+      "services" as const,
+      strings.quoteStudioTemplateServicesHeading,
+      strings.quoteStudioTemplateServicesTable,
+    ],
+    [
+      "project" as const,
+      strings.quoteStudioTemplateProjectHeading,
+      strings.quoteStudioTemplateProjectTable,
+    ],
+    [
+      "retainer" as const,
+      strings.quoteStudioTemplateRetainerHeading,
+      strings.quoteStudioTemplateRetainerTable,
+    ],
+  ])("persists the %s template as a distinct quotation document", async (preset, heading, tableTitle) => {
+    const quoteId = `template-${preset}`;
+    const records = new Map<string, string>();
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: {
+        getItem: (key: string) => records.get(key) ?? null,
+        setItem: (key: string, value: string) => records.set(key, value),
+        removeItem: (key: string) => records.delete(key),
+        clear: () => records.clear(),
+        key: (index: number) => [...records.keys()][index] ?? null,
+        get length() {
+          return records.size;
+        },
+      },
+    });
+    await saveQuoteTemplateDesign(quoteId, preset);
+
+    render(
+      <QuoteContentStudio
+        quoteId={quoteId}
+        readOnly
+        preview
+        pricingTable={({ title }) => <p>{title}</p>}
+        tableSubtotal={() => null}
+        lineKeys={[]}
+      />,
+    );
+
+    expect(await screen.findByText(heading)).toBeTruthy();
+    expect(screen.getByText(tableTitle)).toBeTruthy();
+    localStorage.removeItem(`alo:quote-design:${quoteId}`);
+  });
+
   test("uses Billing Your details as the default quotation identity", async () => {
     render(
       <QuoteContentStudio

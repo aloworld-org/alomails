@@ -61,6 +61,7 @@ type HeaderAlignment = "left" | "right";
 type HeaderStyle = "signature" | "editorial" | "band" | "minimal" | "stacked";
 type HeaderRatio = "40-60" | "50-50" | "60-40";
 type ContactQrSize = "small" | "medium" | "large";
+export type QuoteTemplatePreset = "blank" | "services" | "project" | "retainer";
 type Block =
   | { id: string; kind: "text"; heading: string; body: string }
   | { id: string; kind: "heading"; level: 1 | 2 | 3; text: string }
@@ -223,6 +224,128 @@ const EMPTY: Design = {
   showTaxNote: false,
   blocks: [{ id: "pricing-table", kind: "pricing" }],
 };
+
+function templateBlockId(kind: string) {
+  return `${kind}-${crypto.randomUUID()}`;
+}
+
+function templateDesign(preset: QuoteTemplatePreset): Design {
+  if (preset === "blank") return savedDesign(EMPTY);
+
+  if (preset === "services") {
+    return savedDesign({
+      ...EMPTY,
+      headerStyle: "minimal",
+      theme: "minimal",
+      tableLayout: "compact",
+      totalsPlacement: "footer",
+      blocks: [
+        {
+          id: templateBlockId("heading"),
+          kind: "heading",
+          level: 1,
+          text: strings.quoteStudioTemplateServicesHeading,
+        },
+        {
+          id: templateBlockId("paragraph"),
+          kind: "paragraph",
+          text: strings.quoteStudioTemplateServicesIntroduction,
+        },
+        {
+          id: templateBlockId("pricing"),
+          kind: "pricing",
+          title: strings.quoteStudioTemplateServicesTable,
+          showSubtotal: true,
+        },
+      ],
+    });
+  }
+
+  if (preset === "project") {
+    return savedDesign({
+      ...EMPTY,
+      headerStyle: "band",
+      headerRatio: "60-40",
+      theme: "editorial",
+      tableLayout: "detailed",
+      showProductDescriptions: true,
+      totalsPlacement: "full",
+      blocks: [
+        {
+          id: templateBlockId("heading"),
+          kind: "heading",
+          level: 1,
+          text: strings.quoteStudioTemplateProjectHeading,
+        },
+        {
+          id: templateBlockId("paragraph"),
+          kind: "paragraph",
+          text: strings.quoteStudioTemplateProjectIntroduction,
+        },
+        {
+          id: templateBlockId("list"),
+          kind: "list",
+          ordered: false,
+          columns: 3,
+          items: [
+            strings.quoteStudioTemplateProjectDiscovery,
+            strings.quoteStudioTemplateProjectDelivery,
+            strings.quoteStudioTemplateProjectHandover,
+          ].join("\n"),
+        },
+        {
+          id: templateBlockId("pricing"),
+          kind: "pricing",
+          title: strings.quoteStudioTemplateProjectTable,
+          showSubtotal: true,
+        },
+      ],
+    });
+  }
+
+  return savedDesign({
+    ...EMPTY,
+    headerStyle: "stacked",
+    headerRatio: "40-60",
+    theme: "modern",
+    tableLayout: "detailed",
+    totalsPlacement: "summary",
+    showCurrencyCode: true,
+    blocks: [
+      {
+        id: templateBlockId("heading"),
+        kind: "heading",
+        level: 1,
+        text: strings.quoteStudioTemplateRetainerHeading,
+      },
+      {
+        id: templateBlockId("paragraph"),
+        kind: "paragraph",
+        text: strings.quoteStudioTemplateRetainerIntroduction,
+      },
+      {
+        id: templateBlockId("pricing"),
+        kind: "pricing",
+        title: strings.quoteStudioTemplateRetainerTable,
+        showSubtotal: true,
+      },
+      {
+        id: templateBlockId("divider"),
+        kind: "divider",
+      },
+      {
+        id: templateBlockId("list"),
+        kind: "list",
+        ordered: false,
+        columns: 2,
+        items: [
+          strings.quoteStudioTemplateRetainerReporting,
+          strings.quoteStudioTemplateRetainerSupport,
+        ].join("\n"),
+      },
+    ],
+  });
+}
 const DESIGN_STORE = "quote-designs";
 const DESIGN_DATABASE = "alo-quote-assets";
 const headerRatioChoices: Array<{ id: HeaderRatio; columns: string; reverseColumns: string }> = [
@@ -502,6 +625,19 @@ async function saveDesign(key: string, design: Design): Promise<void> {
   });
   database.close();
   localStorage.removeItem(key);
+}
+
+export async function saveQuoteTemplateDesign(
+  quoteId: string,
+  preset: QuoteTemplatePreset,
+): Promise<void> {
+  const key = `alo:quote-design:${quoteId}`;
+  const design = templateDesign(preset);
+  try {
+    await saveDesign(key, design);
+  } catch {
+    localStorage.setItem(key, JSON.stringify(design));
+  }
 }
 function imageData(file: File, done: (value: string) => void) {
   const reader = new FileReader();

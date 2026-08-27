@@ -204,7 +204,7 @@ interface Props<T extends StoredDocument, A> {
   footer?: ReactNode;
   onBack: () => void;
   /** Called with the document the server just created, to navigate to it. */
-  onCreated: (document: T) => void;
+  onCreated: (document: T, creationTemplate?: string) => void;
   /** Discards the draft. Only ever offered while the document is editable. */
   onDiscard: () => Promise<void>;
   /** Fetches this document's printable page from the server. `undefined`
@@ -274,7 +274,7 @@ export function DocumentEditor<T extends StoredDocument, A>({
 
   async function create() {
     const created = await draft.create();
-    if (created !== null) onCreated(created);
+    if (created !== null) onCreated(created, selectedTemplate);
   }
 
   // Printing shows the STORED document, which is what the server renders, so a

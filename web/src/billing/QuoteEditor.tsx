@@ -35,6 +35,7 @@ import { QuoteChips } from "./status";
 import {
   DEFAULT_QUOTE_COLUMNS,
   QuoteContentStudio,
+  saveQuoteTemplateDesign,
   type QuoteColumns,
   type QuoteContentStudioHandle,
 } from "./QuoteContentStudio";
@@ -402,8 +403,16 @@ export function QuoteEditor() {
         )
       }
       onBack={() => void navigate("..")}
-      onCreated={(created) => {
-        void navigate(`../${created.id}`, { replace: true });
+      onCreated={(created, creationTemplate) => {
+        const preset =
+          creationTemplate === "services" ||
+          creationTemplate === "project" ||
+          creationTemplate === "retainer"
+            ? creationTemplate
+            : "blank";
+        void saveQuoteTemplateDesign(created.id, preset)
+          .catch(() => undefined)
+          .finally(() => void navigate(`../${created.id}`, { replace: true }));
       }}
       onPrint={
         id === undefined ? undefined : () => api.documentHtml("quotes", id)
