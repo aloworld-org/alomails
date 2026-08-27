@@ -143,6 +143,73 @@ fn parse_day(value: Option<&Value>, end_of_day: bool) -> Result<Option<OffsetDat
     Ok(Some(date.midnight().assume_utc()))
 }
 
+/// `GET /settings/locale` → `{ locale: string|null }` — the caller's
+/// server-synced interface language (mail M4.2). `null` means they have never
+/// chosen one; the client then falls back to browser detection, so a fresh
+/// account behaves exactly as before the preference existed.
+pub async fn locale_preference(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let locale = account
+        .acc
+        .locale()
+        .await
+        .map_err(|_| Problem::server_error())?;
+    Ok(Json(json!({ "locale": locale })))
+}
+
+/// `POST /settings/locale` — remember the caller's interface language. Body
+/// `{ locale }`: a language tag such as `"de"`, or `null` to clear the choice
+/// back to browser detection.
+///
+/// The server checks the *shape* (a BCP 47-looking tag) and not the catalog:
+/// which languages actually ship is the web bundle's knowledge, and pinning
+/// the list here would make adding a fifth language a server release. A
+/// well-formed tag the client no longer ships simply falls back to English on
+/// read, which is the same behaviour as an old `localStorage` value.
+pub async fn set_locale_preference(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let v: Value = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let locale = match v.get("locale") {
+        None | Some(Value::Null) => None,
+        Some(Value::String(tag)) if locale_tag_is_well_formed(tag) => Some(tag.as_str()),
+        Some(_) => {
+            return Err(Problem::with(
+                axum::http::StatusCode::UNPROCESSABLE_ENTITY,
+                "locale must be a language tag like \"de\" or \"pt-BR\", or null",
+            ));
+        }
+    };
+    account
+        .acc
+        .set_locale(locale)
+        .await
+        .map_err(Problem::from)?;
+    Ok(Json(json!({ "ok": true })))
+}
+
+/// Whether `tag` looks like a BCP 47 language tag: 2–35 characters of
+/// alphanumeric subtags separated by single hyphens, starting with a 2–8
+/// letter primary subtag. Deliberately a shape check, not a registry check —
+/// see [`set_locale_preference`].
+fn locale_tag_is_well_formed(tag: &str) -> bool {
+    if tag.len() < 2 || tag.len() > 35 {
+        return false;
+    }
+    let mut subtags = tag.split('-');
+    let primary = subtags.next().unwrap_or("");
+    (2..=8).contains(&primary.len())
+        && primary.chars().all(|c| c.is_ascii_alphabetic())
+        && subtags
+            .all(|s| (1..=8).contains(&s.len()) && s.chars().all(|c| c.is_ascii_alphanumeric()))
+}
+
 /// `POST /settings/signature` — set the caller's signature. Body
 /// `{ signature }` (HTML; empty clears it).
 pub async fn set_signature(

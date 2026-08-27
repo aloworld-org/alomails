@@ -1195,6 +1195,21 @@ export class JmapClient {
     await this.#adminPost("/admin/org-footer", { footer });
   }
 
+  /** The caller's server-synced interface language ("de", "fr", …), or null
+   * when they have never chosen one — browser detection then decides. */
+  async localePreference(): Promise<string | null> {
+    const out = (await this.#admin("/settings/locale", { method: "GET" })) as {
+      locale: string | null;
+    };
+    return out.locale;
+  }
+
+  /** Remember the caller's interface language server-side, so their next
+   * sign-in — on any device — speaks it. */
+  async setLocalePreference(locale: string): Promise<void> {
+    await this.#adminPost("/settings/locale", { locale });
+  }
+
   // ---- app-specific passwords (legacy mail clients) -------------------
 
   /** The caller's app passwords, oldest first — records only, no secrets. */

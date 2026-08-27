@@ -7,6 +7,7 @@ import { Fragment } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import { useLocale } from "./i18n";
+import { LocaleSync } from "./i18n/LocaleSync";
 import {
   AuthProvider,
   ForgotPasswordPage,
@@ -65,6 +66,9 @@ export function App() {
       <StackBadge />
       <BrowserRouter>
         <AuthProvider>
+          {/* Outside the locale-keyed fragment on purpose: a locale switch
+              must not remount the component doing the syncing. */}
+          <LocaleSync />
           <DialogProvider>
             <Fragment key={locale}>
               <Routes>

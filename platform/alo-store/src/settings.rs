@@ -154,6 +154,53 @@ impl AccountStore {
         Ok(())
     }
 
+    /// The user's chosen interface language (an IETF-style tag such as
+    /// `"de"`), or `None` when they have never chosen one — the client then
+    /// falls back to detecting the browser's language.
+    ///
+    /// The tag is opaque here: which languages actually ship is the web
+    /// catalog's knowledge, and a stored tag the client no longer recognises
+    /// simply falls back rather than erroring.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn locale(&self) -> Result<Option<String>> {
+        let locale: Option<Option<String>> = sqlx::query_scalar(
+            "SELECT locale FROM user_settings WHERE tenant_id = $1 AND user_id = $2",
+        )
+        .bind(self.tenant.as_str())
+        .bind(self.user.as_str())
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(locale.flatten())
+    }
+
+    /// Sets the user's interface language, or clears the choice with `None`
+    /// (browser detection then decides again). Upsert; `updated_at` is bumped.
+    ///
+    /// # Errors
+    /// [`StoreError::Validation`] if the tag is empty or longer than the 35
+    /// characters BCP 47 allows a language tag; [`StoreError::Db`] on failure.
+    pub async fn set_locale(&self, locale: Option<&str>) -> Result<()> {
+        if let Some(tag) = locale
+            && (tag.is_empty() || tag.len() > 35)
+        {
+            return Err(StoreError::Validation(
+                "a language tag is 1–35 characters".to_owned(),
+            ));
+        }
+        sqlx::query(
+            "INSERT INTO user_settings (tenant_id, user_id, locale) VALUES ($1, $2, $3) \
+             ON CONFLICT (tenant_id, user_id) DO UPDATE SET locale = $3, updated_at = now()",
+        )
+        .bind(self.tenant.as_str())
+        .bind(self.user.as_str())
+        .bind(locale)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
     /// This user's mail filter rules as an opaque JSON string (the structured
     /// form the settings UI edits), or `"[]"` if unset. alo-jmap owns the
     /// rule model; the store only persists the text.

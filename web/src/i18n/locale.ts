@@ -78,13 +78,9 @@ export function getLocale(): Locale {
   return activeLocale;
 }
 
-/**
- * Switches the active language: rebuilds the catalog, persists the
- * choice, updates `<html lang>`, and notifies subscribers so the app
- * re-renders in the new language. A no-op when already active.
- */
-export function setLocale(locale: Locale): void {
-  if (locale === activeLocale) return;
+/** Activates a language locally: catalog, localStorage, `<html lang>`,
+ * subscribers. The shared half of a user switch and a server adoption. */
+function applyLocale(locale: Locale): void {
   activeLocale = locale;
   activeCatalog = buildCatalog(locale);
   try {
@@ -96,6 +92,42 @@ export function setLocale(locale: Locale): void {
     document.documentElement.lang = locale;
   }
   for (const notify of listeners) notify();
+}
+
+// The server-sync seam (mail M4.2). When a session is live, `LocaleSync`
+// registers a writer here so a switcher change is remembered server-side;
+// on anonymous pages no writer is registered and the choice stays local —
+// browser detection remains the whole story before sign-in.
+type RemoteLocaleWriter = (locale: Locale) => void;
+let remoteWriter: RemoteLocaleWriter | null = null;
+
+/** Registers (or, with `null`, removes) the writer that persists a locale
+ * switch to the server. Wired by `LocaleSync` for the signed-in session. */
+export function setRemoteLocaleWriter(writer: RemoteLocaleWriter | null): void {
+  remoteWriter = writer;
+}
+
+/**
+ * Adopts the server-stored preference at sign-in: applies it locally
+ * without writing it back. A `null` (never chosen) or a tag this bundle
+ * does not ship leaves the detected locale in charge — same fallback as
+ * an old `localStorage` value.
+ */
+export function adoptRemoteLocale(value: string | null): void {
+  if (value === null || !isLocale(value) || value === activeLocale) return;
+  applyLocale(value);
+}
+
+/**
+ * Switches the active language: rebuilds the catalog, persists the
+ * choice (locally, and to the server when a session is live), updates
+ * `<html lang>`, and notifies subscribers so the app re-renders in the
+ * new language. A no-op when already active.
+ */
+export function setLocale(locale: Locale): void {
+  if (locale === activeLocale) return;
+  applyLocale(locale);
+  remoteWriter?.(locale);
 }
 
 function subscribe(listener: () => void): () => void {

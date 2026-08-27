@@ -2322,6 +2322,12 @@ pub fn app_with_site_boundaries(
         .route("/settings/mail", get(settings::mail_settings))
         .route("/settings/signature", post(settings::set_signature))
         .route("/settings/out-of-office", post(settings::set_out_of_office))
+        // The server-synced interface language (mail M4.2): read at sign-in,
+        // written when the switcher changes.
+        .route(
+            "/settings/locale",
+            get(settings::locale_preference).post(settings::set_locale_preference),
+        )
         // App-specific passwords for legacy mail clients (mail M1.3): the
         // signed-in user's own credentials, and only theirs — the create
         // response is the one place the secret ever appears.
