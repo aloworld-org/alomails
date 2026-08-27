@@ -1038,7 +1038,7 @@ export const QuoteContentStudio = forwardRef<
                     </p>
                   )}
                 </div>
-                <div className="mt-7 min-w-0 flex-1 text-[var(--quote-text)]">
+                <div className="mt-7 flex min-w-0 flex-1 flex-col text-[var(--quote-text)]">
                   <div
                     className={cx(
                       "grid items-start gap-x-10 gap-y-6 text-sm leading-6",
