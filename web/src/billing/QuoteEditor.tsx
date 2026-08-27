@@ -283,9 +283,14 @@ export function QuoteEditor() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className={styles.linkAction}
+              className={`${styles.linkAction} ${
+                quote.status === "draft" && !preview
+                  ? "!bg-accent-soft !text-accent shadow-sm hover:!bg-accent-soft hover:!text-accent"
+                  : ""
+              }`}
               onClick={() => void editAsDraft()}
               disabled={preview}
+              aria-pressed={quote.status === "draft" && !preview}
               title={
                 preview
                   ? "Exit preview before editing this quote"
@@ -313,7 +318,11 @@ export function QuoteEditor() {
             </button>
             <button
               type="button"
-              className={styles.linkAction}
+              className={`${styles.linkAction} ${
+                preview
+                  ? "!bg-accent-soft !text-accent shadow-sm hover:!bg-accent-soft hover:!text-accent"
+                  : ""
+              }`}
               aria-pressed={preview}
               onClick={() => setPreview((value) => !value)}
             >
