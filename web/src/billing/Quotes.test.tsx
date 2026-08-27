@@ -506,6 +506,25 @@ describe("the offer's transitions", () => {
     expect(
       actions.getByRole("button", { name: strings.billingPrint }),
     ).toBeTruthy();
+
+    fireEvent.click(actions.getByRole("button", { name: "Preview" }));
+    expect(
+      actions.getByRole("button", { name: "Exit preview" }).getAttribute(
+        "aria-pressed",
+      ),
+    ).toBe("true");
+    expect(
+      (actions.getByRole("button", { name: "Customize" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    expect((edit as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.click(actions.getByRole("button", { name: "Exit preview" }));
+    expect(actions.getByRole("button", { name: "Preview" })).toBeTruthy();
+    expect(
+      (actions.getByRole("button", { name: "Customize" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
   });
 
   test("editing a finalized quote creates an editable revision with the same lines", async () => {
@@ -571,6 +590,10 @@ describe("the offer's transitions", () => {
     // A lapsed offer can still be accepted: the store refuses on state, never
     // on a date, so this screen must not lock the door either.
     expect(screen.getByText(strings.billingQuoteLapsed)).toBeTruthy();
+    expect(
+      (screen.getByRole("button", { name: "Customize" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
     expect(
       screen.queryByRole("button", { name: strings.billingSendQuote }),
     ).toBeNull();

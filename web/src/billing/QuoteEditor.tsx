@@ -247,7 +247,7 @@ export function QuoteEditor() {
               <QuoteContentStudio
                 ref={quoteStudio}
                 quoteId={id}
-                readOnly={preview}
+                readOnly={draft.readOnly || preview}
                 preview={preview}
                 pricingTable={pricingTable}
                 tableSubtotal={tableSubtotal}
@@ -263,9 +263,11 @@ export function QuoteEditor() {
               type="button"
               className={styles.linkAction}
               onClick={() => void editAsDraft()}
-              disabled={quote.status === "draft"}
+              disabled={quote.status === "draft" || preview}
               title={
-                quote.status === "draft"
+                preview
+                  ? "Exit preview before editing this quote"
+                  : quote.status === "draft"
                   ? "This quote is already editable"
                   : "Create an editable revision"
               }
@@ -276,6 +278,14 @@ export function QuoteEditor() {
               type="button"
               className={styles.linkAction}
               onClick={() => quoteStudio.current?.customize()}
+              disabled={quote.status !== "draft" || preview}
+              title={
+                preview
+                  ? "Exit preview before customizing this quote"
+                  : quote.status !== "draft"
+                    ? "Create an editable revision before customizing"
+                    : "Customize quotation"
+              }
             >
               <Palette size={15} aria-hidden="true" /> Customize
             </button>
@@ -285,7 +295,8 @@ export function QuoteEditor() {
               aria-pressed={preview}
               onClick={() => setPreview((value) => !value)}
             >
-              <Eye size={15} aria-hidden="true" /> Preview
+              <Eye size={15} aria-hidden="true" />
+              {preview ? "Exit preview" : "Preview"}
             </button>
           </div>
         )
