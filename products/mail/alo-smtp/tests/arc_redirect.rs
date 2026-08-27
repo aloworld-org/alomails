@@ -98,6 +98,7 @@ async fn sieve_redirect_is_arc_sealed_and_validates() {
         keys: Arc::new(keys),
         domain: "sealer.test".to_owned(),
         selector: key.selector.clone(),
+        second_selector: None,
     });
 
     let spooldir = tempfile::tempdir().unwrap();

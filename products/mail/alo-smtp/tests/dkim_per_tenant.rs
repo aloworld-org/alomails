@@ -115,6 +115,7 @@ async fn per_tenant_key_signs_and_validates_not_the_file_key() {
             keys: Arc::new(file_keys),
             domain: file_domain.to_owned(),
             selector: file_selector.to_owned(),
+            second_selector: None,
         })
         .with_dkim_store(Arc::clone(&store));
 

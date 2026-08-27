@@ -542,18 +542,58 @@ fn build_submission_auth(
         } else {
             KeyAlgorithm::RsaSha256
         };
-        let keys = FileKeyStore::new().with_key(
+        let mut keys = FileKeyStore::new().with_key(
             &dkim.domain,
             &dkim.selector,
             dkim.key_path.clone(),
             algorithm,
         );
+        // Dual-signing (RFC 8463, M4.5): register the second key and put the
+        // RSA selector first — some verifiers cannot read Ed25519 yet, and
+        // the first signature is the one they try (the same courtesy the
+        // per-tenant path applies). Config guarantees the pair differs in
+        // algorithm, so exactly one of them is the RSA key.
+        let (selector, second_selector) = match &dkim.second {
+            Some(second) => {
+                let second_algorithm = if second.ed25519 {
+                    KeyAlgorithm::Ed25519Sha256
+                } else {
+                    KeyAlgorithm::RsaSha256
+                };
+                keys = keys.with_key(
+                    &dkim.domain,
+                    &second.selector,
+                    second.key_path.clone(),
+                    second_algorithm,
+                );
+                // The record the operator must have published (public
+                // material only) — printed so a mismatch is a diff away,
+                // not a deliverability investigation.
+                tracing::info!(
+                    record_name = %format!("{}._domainkey.{}", second.selector, dkim.domain),
+                    record_value = %second.dns_record,
+                    "second DKIM key active; its selector must publish this record"
+                );
+                if second.ed25519 {
+                    (dkim.selector.clone(), Some(second.selector.clone()))
+                } else {
+                    (second.selector.clone(), Some(dkim.selector.clone()))
+                }
+            }
+            None => (dkim.selector.clone(), None),
+        };
+        tracing::info!(
+            domain = %dkim.domain,
+            selector = %selector,
+            second_selector = second_selector.as_deref().unwrap_or("-"),
+            "DKIM signing enabled"
+        );
         auth = auth.with_signing(SigningConfig {
             keys: Arc::new(keys),
             domain: dkim.domain.clone(),
-            selector: dkim.selector.clone(),
+            selector,
+            second_selector,
         });
-        tracing::info!(domain = %dkim.domain, selector = %dkim.selector, "DKIM signing enabled");
     }
     Ok(auth)
 }

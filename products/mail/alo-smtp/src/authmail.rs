@@ -72,8 +72,16 @@ pub struct SigningConfig {
     pub keys: Arc<dyn KeyStore>,
     /// Signing domain (`d=`).
     pub domain: String,
-    /// Selector (`s=`).
+    /// Selector (`s=`) of the first signature; also the key that seals
+    /// ARC (a set is a chain with one `i=` per hop, so ARC never
+    /// dual-signs). In a dual-signing deployment the wiring puts the
+    /// RSA key here — when two keys are configured, the RSA one leads.
     pub selector: String,
+    /// Selector of a second signature (RFC 8463 dual-signing): when
+    /// set, every outbound message carries one signature per key, so a
+    /// verifier that cannot read Ed25519 still has the RSA one. `None`
+    /// signs once — byte-identical to before the second key existed.
+    pub second_selector: Option<String>,
 }
 
 /// The trust-stack context attached to a listener. `disabled()` (no
@@ -483,18 +491,29 @@ impl AuthMail {
             tracing::error!(%domain, "no per-domain key signed; trying the configured key");
         }
 
-        // Fallback: the configured deployment key (the single-tenant path).
+        // Fallback: the configured deployment key(s) (the single-tenant
+        // path). With a second key configured (RFC 8463 dual-signing) the
+        // message carries one signature per key, RSA first — the wiring
+        // ordered the selectors that way for verifiers that cannot read
+        // Ed25519 yet.
         let signing = self.signing.as_ref()?;
-        let params = SignParams::new(&signing.domain, &signing.selector);
-        match dkim::sign(signing.keys.as_ref(), &message, &params).await {
-            Ok(value) => Some(format!("DKIM-Signature: {value}\r\n")),
-            Err(error) => {
-                // Signing failure must not lose the message; log and
-                // send it unsigned (deliverability degrades, mail flows).
-                tracing::error!(%error, "DKIM signing failed; sending unsigned");
-                None
+        let mut headers = String::new();
+        for selector in std::iter::once(&signing.selector).chain(&signing.second_selector) {
+            let params = SignParams::new(&signing.domain, selector);
+            match dkim::sign(signing.keys.as_ref(), &message, &params).await {
+                Ok(value) => headers.push_str(&format!("DKIM-Signature: {value}\r\n")),
+                Err(error) => {
+                    // One key failing must not cost the other its
+                    // signature — and a total failure must not lose the
+                    // message (deliverability degrades, mail flows).
+                    tracing::error!(
+                        %error, %selector,
+                        "DKIM signing failed for a configured key"
+                    );
+                }
             }
         }
+        (!headers.is_empty()).then_some(headers)
     }
 
     /// ARC-seals a message about to be forwarded (Sieve `redirect`,

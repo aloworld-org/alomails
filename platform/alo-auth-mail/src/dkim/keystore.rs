@@ -223,6 +223,23 @@ pub fn ed25519_key_from_pkcs8(pkcs8_der: &[u8]) -> Option<(Zeroizing<Vec<u8>>, V
     Some((Zeroizing::new(key.to_bytes().to_vec()), public))
 }
 
+/// The algorithm a PKCS#8 private key actually signs with — read from the key
+/// bytes, or `None` when it is neither RSA nor Ed25519.
+///
+/// For callers that must pair a key with its `a=` tag from configuration: a
+/// declared algorithm the key cannot produce yields a signature that looks
+/// fine locally and fails at every receiver, so the key itself is the only
+/// authority worth asking.
+pub fn algorithm_of_pkcs8(pkcs8_der: &[u8]) -> Option<KeyAlgorithm> {
+    if super::rsa_public::spki_from_pkcs8(pkcs8_der).is_some() {
+        return Some(KeyAlgorithm::RsaSha256);
+    }
+    if ed25519_key_from_pkcs8(pkcs8_der).is_some() {
+        return Some(KeyAlgorithm::Ed25519Sha256);
+    }
+    None
+}
+
 /// A stored RSA signing key, from the PKCS#8 DER the store holds.
 ///
 /// The counterpart of [`ed25519_signing_key_from_seed`] for a domain that signs
@@ -274,6 +291,20 @@ pub fn txt_record_for(algorithm: &str, public_raw: &[u8]) -> Option<String> {
         "ed25519" => Some(ed25519_txt_record(public_raw)),
         _ => None,
     }
+}
+
+/// Committed test-fixture keys, for exercising the RSA signing path in tests:
+/// RSA is never generated in-process (the pure-Rust `rsa` crate is forbidden —
+/// ADR 0008 / 0014), so suites share this pair instead of each carrying a
+/// copy. **Not a secret** — generated solely for tests, published in a public
+/// repository, and never valid for any real domain.
+#[cfg(any(test, feature = "test-fixtures"))]
+pub mod fixture_keys {
+    /// RSA-2048 PKCS#8 private key, base64 DER.
+    pub const RSA_PKCS8_B64: &str = "MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCkPJ+lNnVsCtlXohG6bV1IqZ3LMmQvG3p3rCzmf3BfgyLBeZK1Y7vraGOIwOyUqqa2i2h0s05R3T4khdkqRPPTBpxzEXnHeqMMLfwxZ9pJznAMRdzTP5h0SbnkTqSTrEe9zRk9PIiwLfoFH2FvH0dP1YOcoJodo7nK8Jdip+KTeqMbuyDPlkOwFiXzNBhsijB+fBrioAJjJgZ3UJWggYVoEMqjvARO7nibYJMufh2q8HTb1/lhEKT377djacw07CBuJKep8cj+d685gS+0yO4aFOCNgAuYDIaeEjNs3+BIwtleU67TH9O8WCQQwEDJbmvPQvH6escBstHpH1Rp2RqjAgMBAAECggEAIkDkmPwJNG3004KhSO0LUh7SIrGRVIPaIIB/4tj8cmcyxgBZmUxCQsBEVh7KmN0YpSThNcm50XgfwFVMLDUyVzZfRd6EtBZ/UAh9Oz6qN89+7ghaHJL8dHB1/UhrqcL6OXs/wtZPudL0/MGFPDxdTqi86NtUGU9u7gUMxc43AsPxHGo//f6h0iemPo5o303t8BRY2PQyP1piMCbSZhbucEStNhLP+AoJn1C8vjSS8ahbL7WEwDPNAf2gyLpdFnpb3x7CsDKHXBLjI3G3kBtYKf2FxVpHaHk5Gyv+kDoaG3rWDAz0PFkQCA2e1dVTAMvvpDbin6Rnq84ikt8rM6SDgQKBgQDPVlBtf9gps0qOI4a7so+V29i8XzReXLlz1HbWnE0dNTflUe/vxzq7fxF2RBsgBfIvG/0jWdo2Wk6+J4t1jTRXvYk+ueRjhG50wfjD/q6jGTEzKg7Rp+BLXQnrxbBkiQEVmyeaaFZ+o5aR5JUJqn2ey5x2rtG+RTEZKq1447uvgQKBgQDKyKjYe/9R7RwyLGSoJRqxJcsaw6ReIHbwSnLWcF52gQVP/KnG4bIdmMbKmhHoyQNjcX9V12fHku6QQAOmh109j3j/pJkDGYUXBmuuQAa3RUtUQjALOQutupU7PacZunBZL5+iLp9ozDKc9h9rQru2ztfFQbIhchI4O8Hbnv4cIwKBgAE73EKqjhjBbmImJ/kZ+OzFYCbO0jr1hk0AKKziRTs1Q93jfPAKWXkgKnRvt1Gbd3N8USdSs4+7Pdi314adjoAvKo/q/0bwVM/xD4/rBhMGZVqOl4P74cPRC+wRQxl2D0GXqMasdEdQpea8W36xOwok4At8wtbFBqPFsz6S7F0BAoGAd73zjhnyU0NLMglqyqtWTqK9gylhpr9O3Gdp1lx2O03GgEv3SNw/HCD5yesehjIkkRUVFvBidMO7oWxbe3tVQKO21GYygFUSdN0yuqtOC+ycJb4LtqTR051ov5mRUaz46IEpp1AWi4CAppTjSqgWRkVvvigj8oH0ZkZLG8+Px7cCgYBjRbw4h3DZp4K+WmVzMaK5YWGaAK/CMsHcAsiYl2vmiIOaJfe1IJjroGFxWZQ6y7xTDm2cAVwH+D904goMvFpKbIFBfLg2zRT0X6nJDXm+lSpk/ekjmXmmIOZfD1fa0UVZ1oDozyCAZ5EkZXXfYqAWV1jpzB8BRmVzhUNaA/vB+Q==";
+    /// The matching SubjectPublicKeyInfo public key, base64 DER — the `p=`
+    /// of the DNS record that verifies what the private half signs.
+    pub const RSA_SPKI_B64: &str = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApDyfpTZ1bArZV6IRum1dSKmdyzJkLxt6d6ws5n9wX4MiwXmStWO762hjiMDslKqmtotodLNOUd0+JIXZKkTz0waccxF5x3qjDC38MWfaSc5wDEXc0z+YdEm55E6kk6xHvc0ZPTyIsC36BR9hbx9HT9WDnKCaHaO5yvCXYqfik3qjG7sgz5ZDsBYl8zQYbIowfnwa4qACYyYGd1CVoIGFaBDKo7wETu54m2CTLn4dqvB029f5YRCk9++3Y2nMNOwgbiSnqfHI/nevOYEvtMjuGhTgjYALmAyGnhIzbN/gSMLZXlOu0x/TvFgkEMBAyW5rz0Lx+nrHAbLR6R9UadkaowIDAQAB";
 }
 
 /// Loads a PKCS#8 PEM private key from disk, refusing group/world-readable

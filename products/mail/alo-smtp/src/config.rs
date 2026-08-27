@@ -1,7 +1,7 @@
 //! Runtime configuration for the SMTP service, read from environment.
 
 use std::net::SocketAddr;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use crate::egress::EgressMap;
@@ -84,6 +84,16 @@ pub const ENV_DKIM_KEY: &str = "ALO_SMTP_DKIM_KEY";
 /// Environment variable selecting the DKIM algorithm (`ed25519` or the
 /// default `rsa`).
 pub const ENV_DKIM_ALGORITHM: &str = "ALO_SMTP_DKIM_ALGORITHM";
+/// Environment variable for the second DKIM selector (RFC 8463
+/// dual-signing): with [`ENV_DKIM_KEY2`], outbound mail carries one
+/// signature per key — the RSA one first, for verifiers that cannot
+/// read Ed25519 yet. The pair's algorithms are read from the key
+/// files at startup and must differ; publish the second selector's
+/// DNS record BEFORE setting these.
+pub const ENV_DKIM_SELECTOR2: &str = "ALO_SMTP_DKIM_SELECTOR2";
+/// Environment variable for the second DKIM private-key PEM path
+/// (see [`ENV_DKIM_SELECTOR2`]).
+pub const ENV_DKIM_KEY2: &str = "ALO_SMTP_DKIM_KEY2";
 /// Environment flag for ARC sealing of Sieve-redirect forwards
 /// (RFC 8617). **Default on**; set to `false`/`off` to disable (the
 /// rollback switch — forwards then break downstream DMARC again).
@@ -293,6 +303,34 @@ pub struct DkimSigning {
     pub key_path: PathBuf,
     /// `true` for Ed25519 (RFC 8463), `false` for RSA.
     pub ed25519: bool,
+    /// A second signing key for the same domain (RFC 8463 dual-signing,
+    /// M4.5): every submitted message then carries one signature per key,
+    /// so receivers that cannot read Ed25519 still verify the RSA one.
+    /// `None` signs once — byte-identical to before the pair existed.
+    pub second: Option<DkimSecondKey>,
+}
+
+/// The second DKIM signing key of a dual-signing deployment.
+///
+/// Its algorithm is **read from the key file at startup, never declared**:
+/// an `a=` tag the key cannot produce yields a signature that looks fine
+/// here and fails at every receiver, surfacing as lost delivery weeks
+/// later rather than as an error now. Startup refuses a pair whose keys
+/// sign the same algorithm — the second signature exists to cover the
+/// other family.
+#[derive(Debug, Clone)]
+pub struct DkimSecondKey {
+    /// Selector (`s=`) the second key's DNS record is published under.
+    pub selector: String,
+    /// Path to the PKCS#8 PEM private key.
+    pub key_path: PathBuf,
+    /// `true` when the key file holds an Ed25519 key — detected, not
+    /// configured.
+    pub ed25519: bool,
+    /// The TXT record value the selector must publish (public material
+    /// only), derived from the key file so the operator can diff it
+    /// against DNS. Startup logs it beside the record name.
+    pub dns_record: String,
 }
 
 /// Paths to a TLS certificate chain and its private key (PEM).
@@ -599,34 +637,26 @@ impl SmtpConfig {
     }
 
     /// Reads DKIM signing config; all three of domain/selector/key must
-    /// be set together, or none (signing disabled).
+    /// be set together, or none (signing disabled). A second key pair
+    /// (dual-signing, M4.5) is validated against its key file at startup.
     fn dkim_from_env() -> Result<Option<DkimSigning>, SmtpError> {
-        let domain = std::env::var(ENV_DKIM_DOMAIN)
-            .ok()
-            .filter(|s| !s.is_empty());
-        let selector = std::env::var(ENV_DKIM_SELECTOR)
-            .ok()
-            .filter(|s| !s.is_empty());
-        let key = std::env::var(ENV_DKIM_KEY).ok().filter(|s| !s.is_empty());
-        match (domain, selector, key) {
-            (Some(domain), Some(selector), Some(key)) => {
-                let ed25519 = std::env::var(ENV_DKIM_ALGORITHM)
-                    .map(|a| a.eq_ignore_ascii_case("ed25519"))
-                    .unwrap_or(false);
-                Ok(Some(DkimSigning {
-                    domain,
-                    selector,
-                    key_path: PathBuf::from(key),
-                    ed25519,
-                }))
-            }
-            (None, None, None) => Ok(None),
-            _ => Err(SmtpError::Config {
-                message: format!(
-                    "{ENV_DKIM_DOMAIN}, {ENV_DKIM_SELECTOR}, and {ENV_DKIM_KEY} must be set together"
-                ),
-            }),
+        let get = |name: &str| std::env::var(name).ok().filter(|s| !s.is_empty());
+        let mut signing = assemble_dkim_signing(
+            get(ENV_DKIM_DOMAIN),
+            get(ENV_DKIM_SELECTOR),
+            get(ENV_DKIM_KEY),
+            get(ENV_DKIM_ALGORITHM),
+            get(ENV_DKIM_SELECTOR2),
+            get(ENV_DKIM_KEY2),
+        )?;
+        if let Some(signing) = &mut signing
+            && let Some(second) = &mut signing.second
+        {
+            (second.ed25519, second.dns_record) =
+                validate_second_dkim_key(&signing.key_path, signing.ed25519, &second.key_path)
+                    .map_err(|message| SmtpError::Config { message })?;
         }
+        Ok(signing)
     }
 
     fn outbound_from_env() -> Result<Option<OutboundConfig>, SmtpError> {
@@ -742,6 +772,137 @@ fn validate_campaign_return_path(
     Ok(address)
 }
 
+/// The pairing rules for DKIM signing config, separated from the env read so
+/// they are testable without process-global state. Every refusal names the
+/// variable: a half-configured pair must fail at startup, not sign half.
+fn assemble_dkim_signing(
+    domain: Option<String>,
+    selector: Option<String>,
+    key: Option<String>,
+    algorithm: Option<String>,
+    selector2: Option<String>,
+    key2: Option<String>,
+) -> Result<Option<DkimSigning>, SmtpError> {
+    let second = match (selector2, key2) {
+        (Some(selector), Some(key)) => Some(DkimSecondKey {
+            selector,
+            key_path: PathBuf::from(key),
+            // Filled from the key file by the caller; never declared.
+            ed25519: false,
+            dns_record: String::new(),
+        }),
+        (None, None) => None,
+        _ => {
+            return Err(SmtpError::Config {
+                message: format!("{ENV_DKIM_SELECTOR2} and {ENV_DKIM_KEY2} must be set together"),
+            });
+        }
+    };
+    match (domain, selector, key) {
+        (Some(domain), Some(selector), Some(key)) => {
+            if let Some(second) = &second
+                && second.selector == selector
+            {
+                return Err(SmtpError::Config {
+                    message: format!(
+                        "{ENV_DKIM_SELECTOR2} must differ from {ENV_DKIM_SELECTOR}: two keys \
+                         cannot share {selector}._domainkey.{domain}"
+                    ),
+                });
+            }
+            let ed25519 = algorithm
+                .map(|a| a.eq_ignore_ascii_case("ed25519"))
+                .unwrap_or(false);
+            Ok(Some(DkimSigning {
+                domain,
+                selector,
+                key_path: PathBuf::from(key),
+                ed25519,
+                second,
+            }))
+        }
+        (None, None, None) if second.is_some() => Err(SmtpError::Config {
+            message: format!(
+                "a second DKIM key needs the first: set {ENV_DKIM_DOMAIN}, \
+                 {ENV_DKIM_SELECTOR}, and {ENV_DKIM_KEY} as well"
+            ),
+        }),
+        (None, None, None) => Ok(None),
+        _ => Err(SmtpError::Config {
+            message: format!(
+                "{ENV_DKIM_DOMAIN}, {ENV_DKIM_SELECTOR}, and {ENV_DKIM_KEY} must be set together"
+            ),
+        }),
+    }
+}
+
+/// The key-file rules for dual-signing (RFC 8463, M4.5), run at startup only
+/// when a second key is configured — a single-key deployment never reads its
+/// key before signing time, exactly as before.
+///
+/// Returns whether the **second** key is Ed25519 and the TXT record value its
+/// selector must publish (public material only — derived from the key so the
+/// operator can diff it against DNS). Refuses, naming the variable: an
+/// unreadable or unrecognisable key file, a primary key that contradicts its
+/// declared [`ENV_DKIM_ALGORITHM`] (a lying config would put an `a=` tag on
+/// signatures the key cannot produce), and a pair signing the same algorithm
+/// (the second signature exists to cover the other family). The error strings
+/// carry file paths and algorithm names only — never key bytes
+/// (`load_pkcs8_pem`'s own contract).
+fn validate_second_dkim_key(
+    primary_key: &Path,
+    primary_declared_ed25519: bool,
+    second_key: &Path,
+) -> Result<(bool, String), String> {
+    use alo_auth_mail::dkim::keystore::{
+        KeyAlgorithm, algorithm_of_pkcs8, ed25519_key_from_pkcs8, load_pkcs8_pem, txt_record_for,
+    };
+    use alo_auth_mail::dkim::rsa_public;
+    let read = |name: &str, path: &Path| -> Result<(KeyAlgorithm, Vec<u8>), String> {
+        let der = load_pkcs8_pem(path)
+            .map_err(|reason| format!("{name}={}: {reason}", path.display()))?;
+        let unreadable = || {
+            format!(
+                "{name}={}: the key is neither an RSA nor an Ed25519 private key",
+                path.display()
+            )
+        };
+        let algorithm = algorithm_of_pkcs8(&der).ok_or_else(unreadable)?;
+        // The public half, in the encoding its DNS record publishes.
+        let public = match algorithm {
+            KeyAlgorithm::RsaSha256 => rsa_public::spki_from_pkcs8(&der).ok_or_else(unreadable)?,
+            KeyAlgorithm::Ed25519Sha256 => ed25519_key_from_pkcs8(&der).ok_or_else(unreadable)?.1,
+        };
+        Ok((algorithm, public))
+    };
+    let (primary, _) = read(ENV_DKIM_KEY, primary_key)?;
+    let declared = if primary_declared_ed25519 {
+        KeyAlgorithm::Ed25519Sha256
+    } else {
+        KeyAlgorithm::RsaSha256
+    };
+    if primary != declared {
+        return Err(format!(
+            "{ENV_DKIM_ALGORITHM} says {} but the key at {ENV_DKIM_KEY} is {}: \
+             signatures would name an algorithm the key cannot produce",
+            declared.tag(),
+            primary.tag()
+        ));
+    }
+    let (second, second_public) = read(ENV_DKIM_KEY2, second_key)?;
+    if second == primary {
+        return Err(format!(
+            "both DKIM keys are {}: dual-signing (RFC 8463) needs one RSA and one \
+             Ed25519 key, so each receiver can verify the family it understands",
+            second.tag()
+        ));
+    }
+    let ed25519 = second == KeyAlgorithm::Ed25519Sha256;
+    let tag = if ed25519 { "ed25519" } else { "rsa" };
+    let record = txt_record_for(tag, &second_public).unwrap_or_default(); // both tags render; unreachable in practice
+    Ok((ed25519, record))
+}
+
 fn env_bool(name: &str) -> Result<bool, SmtpError> {
     match std::env::var(name) {
         Err(_) => Ok(false),
@@ -785,7 +946,7 @@ fn env_addr(name: &str) -> Result<Option<SocketAddr>, SmtpError> {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
 
@@ -828,5 +989,154 @@ mod tests {
         assert!(validate_campaign_return_path("bounces@elsewhere.test", &hosted, &db).is_err());
         // No local delivery: the intake would have nowhere to write.
         assert!(validate_campaign_return_path("bounces@news.example.com", &hosted, &None).is_err());
+    }
+
+    /// The DKIM pairing rules (M4.5): a half-configured pair fails at startup
+    /// naming the variable, never signs half. Tested on the pure assembly
+    /// half — env mutation would race other tests.
+    #[test]
+    fn dkim_pairing_rules_refuse_half_configured_signing() {
+        let some = |s: &str| Some(s.to_owned());
+        // No signing at all is a valid state.
+        assert!(
+            assemble_dkim_signing(None, None, None, None, None, None)
+                .unwrap()
+                .is_none()
+        );
+        // The primary triple comes together or not at all.
+        assert!(assemble_dkim_signing(some("d.test"), None, None, None, None, None).is_err());
+        // The second pair comes together or not at all.
+        for (selector2, key2) in [(some("s2"), None), (None, some("/k2"))] {
+            assert!(
+                assemble_dkim_signing(
+                    some("d.test"),
+                    some("s1"),
+                    some("/k1"),
+                    None,
+                    selector2,
+                    key2
+                )
+                .is_err(),
+                "a half-set second pair must be refused"
+            );
+        }
+        // A second key without a first is a refusal, not a promotion.
+        assert!(
+            assemble_dkim_signing(None, None, None, None, some("s2"), some("/k2")).is_err(),
+            "a second key needs the first"
+        );
+        // Two keys cannot share a selector: one DNS name cannot publish both.
+        assert!(
+            assemble_dkim_signing(
+                some("d.test"),
+                some("s1"),
+                some("/k1"),
+                None,
+                some("s1"),
+                some("/k2")
+            )
+            .is_err()
+        );
+        // The good dual shape parses; the second's algorithm is filled from
+        // the key file later, never from these arguments.
+        let signing = assemble_dkim_signing(
+            some("d.test"),
+            some("s1"),
+            some("/k1"),
+            some("rsa"),
+            some("s2"),
+            some("/k2"),
+        )
+        .unwrap()
+        .expect("signing configured");
+        assert!(!signing.ed25519);
+        assert_eq!(signing.second.expect("a second key").selector, "s2");
+        // And a single-key deployment still parses exactly as before.
+        let single =
+            assemble_dkim_signing(some("d.test"), some("s1"), some("/k1"), None, None, None)
+                .unwrap()
+                .expect("signing configured");
+        assert!(single.second.is_none());
+    }
+
+    // The committed RSA-2048 test fixture (see
+    // `alo_auth_mail::dkim::keystore::fixture_keys`) — RSA is never
+    // generated in-process (ADR 0008).
+    use alo_auth_mail::dkim::keystore::fixture_keys::RSA_PKCS8_B64;
+
+    /// Writes a PKCS#8 PEM the way an operator leaves one: owner-readable
+    /// only, so the keystore's permission check passes on Unix (a no-op on
+    /// Windows, where the check does not apply).
+    fn write_key_pem(path: &std::path::Path, der: &[u8]) {
+        use base64::Engine;
+        let b64 = base64::engine::general_purpose::STANDARD.encode(der);
+        let pem = format!("-----BEGIN PRIVATE KEY-----\n{b64}\n-----END PRIVATE KEY-----\n");
+        std::fs::write(path, pem).unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600)).unwrap();
+        }
+    }
+
+    /// The dual-signing key-file rules (M4.5): the algorithms are read from
+    /// the keys themselves, a config that contradicts its key is refused, and
+    /// a pair that covers only one algorithm family is refused.
+    #[test]
+    fn dual_dkim_key_rules_read_the_files_not_the_flags() {
+        use alo_auth_mail::dkim::keystore::{ed25519_signing_key_from_seed, generate_ed25519_key};
+        use base64::Engine;
+        let dir = tempfile::tempdir().unwrap();
+
+        let rsa_path = dir.path().join("rsa.pem");
+        let rsa_der = base64::engine::general_purpose::STANDARD
+            .decode(RSA_PKCS8_B64)
+            .unwrap();
+        write_key_pem(&rsa_path, &rsa_der);
+
+        let ed = generate_ed25519_key().expect("keygen");
+        let ed_der = ed25519_signing_key_from_seed(ed.seed.as_ref())
+            .expect("from seed")
+            .pkcs8_der;
+        let ed_path = dir.path().join("ed25519.pem");
+        write_key_pem(&ed_path, &ed_der);
+
+        // The production shape: RSA primary (declared rsa), Ed25519 second —
+        // and the record to publish is derived from the second key itself.
+        let (ed25519, record) = validate_second_dkim_key(&rsa_path, false, &ed_path)
+            .expect("the production pair validates");
+        assert!(ed25519);
+        let expected_p = base64::engine::general_purpose::STANDARD.encode(ed.public_raw);
+        assert_eq!(record, format!("v=DKIM1; k=ed25519; p={expected_p}"));
+        // The mirrored shape works too — the RSA key is then the second.
+        let (ed25519, record) = validate_second_dkim_key(&ed_path, true, &rsa_path)
+            .expect("the mirrored pair validates");
+        assert!(!ed25519);
+        assert!(record.starts_with("v=DKIM1; k=rsa; p="), "{record}");
+        // Two keys of one family cover nobody extra: refused.
+        let error = validate_second_dkim_key(&ed_path, true, &ed_path)
+            .expect_err("a same-algorithm pair must be refused");
+        assert!(error.contains("both"), "{error}");
+        // A primary flag the key contradicts would put a lying `a=` tag on
+        // every signature: refused, naming the flag.
+        let error = validate_second_dkim_key(&rsa_path, true, &ed_path)
+            .expect_err("a declared algorithm the key cannot produce must be refused");
+        assert!(error.contains(ENV_DKIM_ALGORITHM), "{error}");
+        // A missing or unreadable second key file is named by its variable.
+        let error = validate_second_dkim_key(&rsa_path, false, &dir.path().join("absent.pem"))
+            .expect_err("a missing key file must be refused");
+        assert!(error.contains(ENV_DKIM_KEY2), "{error}");
+        // A file that is not a key at all is refused — and the refusal never
+        // echoes file contents.
+        let garbage = dir.path().join("garbage.pem");
+        std::fs::write(&garbage, b"-----BEGIN CERTIFICATE-----\nnope\n").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&garbage, std::fs::Permissions::from_mode(0o600)).unwrap();
+        }
+        let error =
+            validate_second_dkim_key(&rsa_path, false, &garbage).expect_err("garbage is not a key");
+        assert!(!error.contains("nope"), "{error}");
     }
 }

@@ -757,11 +757,9 @@ mod tests {
     const KAT_SIGNED_B64: &str = "REtJTS1TaWduYXR1cmU6IHY9MTsgYT1yc2Etc2hhMjU2OyBjPXJlbGF4ZWQvcmVsYXhlZDsgZD1leGFtcGxlLmNvbTsNCiBpPUBleGFtcGxlLmNvbTsgcT1kbnMvdHh0OyBzPWthdDsgdD0xNzg1MTM4OTA0OyBoPWZyb20gOiB0byA6IHN1YmplY3QNCiA6IGRhdGU7IGJoPSs5MFdjTWRrMHkyWGFGcFROV2QxSDA5YklXZ2hFQ1I2RUFnQ3VDVTBGNlE9Ow0KIGI9R3F2M3k3R3R4RytJUTgwdS9wK0g5SCtoYkpqZDNlNkp3dTlBZDlVZTM3VFZqdFFqZzhmdFNsSjdRS1ovaDhOcFh1VDJiDQogRGZQM2Y2ZUVDL2ZVSndwZ1RRb24wZ2lKZll1dXZQSEFqSDl4UjdyZ1BEdWdPV0YxbDB3SmRDU2xXVUhIV09oN2tLd1REMTgNCiAzU2JleURkNFIrNFhHcXlPWjcvdEl0ZmZJQ2VPV1RMeGUrSWE3L2R0VFk4QUMwYXJRVzNoSlloM1dzZEV5dFRCNEZVRWFQWA0KIGlzdXgzN1E1ai95aGtrcXBZNDNtYmJkSS9zSmQ5azZqbStFcURzZzg2QUN3UkhMbEV5ZFpKQnFja0R5WnJSLzI4WnZ3SDlWDQogY0pXM0RoaDJkeXU5TUZVa2ZQNVdjVkRIUGU4QVlXWkF0cDhra3ZLeEx5ZlI4MGx4bXo2Q1VYdW9mUTR3PT0NCkZyb206IGFsaWNlQGV4YW1wbGUuY29tDQpUbzogYm9iQGV4YW1wbGUub3JnDQpTdWJqZWN0OiBLQVQNCkRhdGU6IE1vbiwgMjcgSnVsIDIwMjYgMDA6MDA6MDAgKzAwMDANCg0Ka25vd24gYW5zd2VyIHRlc3QgYm9keQ0K";
     const KAT_SPKI_B64: &str = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzKI7slCL74n+ZokHGvNBM0RX0sP9Ah+UChO2ACzg+sIHQZ1paLNANrZeSr4G0lSdrBg+nywtwGZkEyRaBVLeX7F4bxwCaXUgxnf0z7AzXrw1LIlm6gNofyIVxBMwhs3FquZuYkrq5NHfEHsUfLGb0ynUGvib2CpJW+onoxkrwAGf51fYkLuGf7GRP2kQUGo4jSc+3ciCwKIV7EDa76iFEWoO2LxHNk286vUE0friHOkzv0x77dg4VxbaWrW7K5TfsxWFuilgiF6BebXy0GMEF5vUcFATIKedCPA+XG0MaqyRJKJBGNurPf9wibcS9jN2mGRafOES4BO8QRL5G9GhKwIDAQAB";
 
-    // A test-only RSA-2048 keypair (PKCS#8 private / SPKI public, base64
-    // DER). Not a secret — generated solely to exercise the ring RSA
-    // path (sign + SPKI-unwrap + verify).
-    const RSA_PKCS8_B64: &str = "MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCkPJ+lNnVsCtlXohG6bV1IqZ3LMmQvG3p3rCzmf3BfgyLBeZK1Y7vraGOIwOyUqqa2i2h0s05R3T4khdkqRPPTBpxzEXnHeqMMLfwxZ9pJznAMRdzTP5h0SbnkTqSTrEe9zRk9PIiwLfoFH2FvH0dP1YOcoJodo7nK8Jdip+KTeqMbuyDPlkOwFiXzNBhsijB+fBrioAJjJgZ3UJWggYVoEMqjvARO7nibYJMufh2q8HTb1/lhEKT377djacw07CBuJKep8cj+d685gS+0yO4aFOCNgAuYDIaeEjNs3+BIwtleU67TH9O8WCQQwEDJbmvPQvH6escBstHpH1Rp2RqjAgMBAAECggEAIkDkmPwJNG3004KhSO0LUh7SIrGRVIPaIIB/4tj8cmcyxgBZmUxCQsBEVh7KmN0YpSThNcm50XgfwFVMLDUyVzZfRd6EtBZ/UAh9Oz6qN89+7ghaHJL8dHB1/UhrqcL6OXs/wtZPudL0/MGFPDxdTqi86NtUGU9u7gUMxc43AsPxHGo//f6h0iemPo5o303t8BRY2PQyP1piMCbSZhbucEStNhLP+AoJn1C8vjSS8ahbL7WEwDPNAf2gyLpdFnpb3x7CsDKHXBLjI3G3kBtYKf2FxVpHaHk5Gyv+kDoaG3rWDAz0PFkQCA2e1dVTAMvvpDbin6Rnq84ikt8rM6SDgQKBgQDPVlBtf9gps0qOI4a7so+V29i8XzReXLlz1HbWnE0dNTflUe/vxzq7fxF2RBsgBfIvG/0jWdo2Wk6+J4t1jTRXvYk+ueRjhG50wfjD/q6jGTEzKg7Rp+BLXQnrxbBkiQEVmyeaaFZ+o5aR5JUJqn2ey5x2rtG+RTEZKq1447uvgQKBgQDKyKjYe/9R7RwyLGSoJRqxJcsaw6ReIHbwSnLWcF52gQVP/KnG4bIdmMbKmhHoyQNjcX9V12fHku6QQAOmh109j3j/pJkDGYUXBmuuQAa3RUtUQjALOQutupU7PacZunBZL5+iLp9ozDKc9h9rQru2ztfFQbIhchI4O8Hbnv4cIwKBgAE73EKqjhjBbmImJ/kZ+OzFYCbO0jr1hk0AKKziRTs1Q93jfPAKWXkgKnRvt1Gbd3N8USdSs4+7Pdi314adjoAvKo/q/0bwVM/xD4/rBhMGZVqOl4P74cPRC+wRQxl2D0GXqMasdEdQpea8W36xOwok4At8wtbFBqPFsz6S7F0BAoGAd73zjhnyU0NLMglqyqtWTqK9gylhpr9O3Gdp1lx2O03GgEv3SNw/HCD5yesehjIkkRUVFvBidMO7oWxbe3tVQKO21GYygFUSdN0yuqtOC+ycJb4LtqTR051ov5mRUaz46IEpp1AWi4CAppTjSqgWRkVvvigj8oH0ZkZLG8+Px7cCgYBjRbw4h3DZp4K+WmVzMaK5YWGaAK/CMsHcAsiYl2vmiIOaJfe1IJjroGFxWZQ6y7xTDm2cAVwH+D904goMvFpKbIFBfLg2zRT0X6nJDXm+lSpk/ekjmXmmIOZfD1fa0UVZ1oDozyCAZ5EkZXXfYqAWV1jpzB8BRmVzhUNaA/vB+Q==";
-    const RSA_SPKI_B64: &str = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApDyfpTZ1bArZV6IRum1dSKmdyzJkLxt6d6ws5n9wX4MiwXmStWO762hjiMDslKqmtotodLNOUd0+JIXZKkTz0waccxF5x3qjDC38MWfaSc5wDEXc0z+YdEm55E6kk6xHvc0ZPTyIsC36BR9hbx9HT9WDnKCaHaO5yvCXYqfik3qjG7sgz5ZDsBYl8zQYbIowfnwa4qACYyYGd1CVoIGFaBDKo7wETu54m2CTLn4dqvB029f5YRCk9++3Y2nMNOwgbiSnqfHI/nevOYEvtMjuGhTgjYALmAyGnhIzbN/gSMLZXlOu0x/TvFgkEMBAyW5rz0Lx+nrHAbLR6R9UadkaowIDAQAB";
+    // The committed RSA-2048 fixture pair (see `keystore::fixture_keys`),
+    // exercising the ring RSA path (sign + SPKI-unwrap + verify).
+    use keystore::fixture_keys::{RSA_PKCS8_B64, RSA_SPKI_B64};
 
     #[tokio::test]
     async fn rsa_sign_then_verify_roundtrip() {
@@ -888,6 +886,29 @@ mod tests {
         out.extend_from_slice(b"\r\n");
         out.extend_from_slice(RAW_MSG);
         out
+    }
+
+    #[test]
+    fn a_keys_algorithm_is_read_from_its_bytes_not_guessed() {
+        // The RSA fixture reads as RSA, a generated Ed25519 key as Ed25519,
+        // and bytes that are neither are nothing — the caller must refuse,
+        // not default (a wrong `a=` tag signs garbage every receiver rejects).
+        use ed25519_dalek::SigningKey as EdSigningKey;
+        use ed25519_dalek::pkcs8::EncodePrivateKey;
+        let rsa = BASE64.decode(RSA_PKCS8_B64).unwrap();
+        assert_eq!(
+            keystore::algorithm_of_pkcs8(&rsa),
+            Some(KeyAlgorithm::RsaSha256)
+        );
+        let ed = EdSigningKey::from_bytes(&[11u8; 32])
+            .to_pkcs8_der()
+            .unwrap();
+        assert_eq!(
+            keystore::algorithm_of_pkcs8(ed.as_bytes()),
+            Some(KeyAlgorithm::Ed25519Sha256)
+        );
+        assert_eq!(keystore::algorithm_of_pkcs8(b"not a key"), None);
+        assert_eq!(keystore::algorithm_of_pkcs8(&[]), None);
     }
 
     #[test]

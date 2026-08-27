@@ -286,3 +286,94 @@ async fn a_generated_key_needs_no_file_and_publishes_what_it_generated() {
     assert_eq!(active.len(), 1, "one active key per algorithm");
     assert_eq!(active[0].selector, again.selector);
 }
+
+/// Writes the committed RSA fixture as a PKCS#8 PEM an operator might hand us
+/// (RSA is never generated in-process — ADR 0008).
+fn write_rsa_key(dir: &Path) -> PathBuf {
+    use alo_auth_mail::dkim::keystore::fixture_keys::RSA_PKCS8_B64;
+    let der = base64::engine::general_purpose::STANDARD
+        .decode(RSA_PKCS8_B64)
+        .unwrap();
+    let b64 = base64::engine::general_purpose::STANDARD.encode(&der);
+    let pem = format!("-----BEGIN PRIVATE KEY-----\n{b64}\n-----END PRIVATE KEY-----\n");
+    let path = dir.join("rsa.pem");
+    std::fs::write(&path, pem).unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+    }
+    path
+}
+
+#[tokio::test]
+async fn a_second_algorithm_key_joins_the_first_rather_than_replacing_it() {
+    // The dual-signing shape (RFC 8463, M4.5): an RSA key under its own
+    // selector, then an Ed25519 key under a second selector. Installing the
+    // second must not retire the first — retiring cross-algorithm would halve
+    // the domain's verifiable audience for as long as DNS took to catch up —
+    // and each install names its own record.
+    let Some(store) = store().await else { return };
+    let tenant = store.create_tenant("dkim-install-dual").await.unwrap();
+    let domain = format!("dual{}.test", suffix(&tenant));
+    let dir = tempfile::tempdir().unwrap();
+
+    let rsa = dkim_install::run(
+        &store,
+        &InstallRequest {
+            tenant: tenant.as_str().to_owned(),
+            domain: domain.clone(),
+            selector: Some("mail".to_owned()),
+            key_path: Some(write_rsa_key(dir.path())),
+        },
+    )
+    .await
+    .expect("the RSA key installs");
+    assert_eq!(rsa.algorithm, "rsa");
+    assert_eq!(rsa.record_name, format!("mail._domainkey.{domain}"));
+    assert!(rsa.record_value.starts_with("v=DKIM1; k=rsa; p="));
+
+    let ed = dkim_install::run(
+        &store,
+        &InstallRequest {
+            tenant: tenant.as_str().to_owned(),
+            domain: domain.clone(),
+            selector: None, // generated Ed25519 derives its own second selector
+            key_path: None,
+        },
+    )
+    .await
+    .expect("the Ed25519 key installs beside it");
+    assert_eq!(ed.algorithm, "ed25519");
+    assert_ne!(ed.selector, rsa.selector, "two records, two names");
+
+    // Both are active, and the signer would emit the RSA signature first —
+    // the family every verifier reads leads.
+    let active = store.active_dkim_materials(&domain).await.unwrap();
+    assert_eq!(active.len(), 2, "one active key per algorithm, both kept");
+    assert_eq!(active[0].algorithm, "rsa");
+    assert_eq!(active[0].selector, rsa.selector);
+    assert_eq!(active[1].algorithm, "ed25519");
+    assert_eq!(active[1].selector, ed.selector);
+
+    // Rotating the Ed25519 key must leave the RSA one untouched.
+    let rotated = dkim_install::run(
+        &store,
+        &InstallRequest {
+            tenant: tenant.as_str().to_owned(),
+            domain: domain.clone(),
+            selector: None,
+            key_path: None,
+        },
+    )
+    .await
+    .expect("the Ed25519 key rotates");
+    let active = store.active_dkim_materials(&domain).await.unwrap();
+    assert_eq!(active.len(), 2, "rotation retires only its own algorithm");
+    assert_eq!(active[0].algorithm, "rsa");
+    assert_eq!(
+        active[0].selector, rsa.selector,
+        "the RSA key must survive an Ed25519 rotation"
+    );
+    assert_eq!(active[1].selector, rotated.selector);
+}
