@@ -221,6 +221,74 @@ const headerStyleChoices: Array<{ id: HeaderStyle; name: string; help: string }>
   { id: "stacked", name: "Logo stack", help: "Company name beneath the logo" },
 ];
 
+function HeaderStylePreview({ style }: { style: HeaderStyle }) {
+  if (style === "editorial") {
+    return (
+      <span className="flex h-20 items-end justify-between rounded-xl bg-raised p-3" aria-hidden="true">
+        <span className="space-y-2">
+          <span className="block h-2 w-20 rounded-full bg-primary/25" />
+          <span className="block h-1.5 w-12 rounded-full bg-primary/10" />
+        </span>
+        <span className="mb-auto size-7 rounded-lg bg-accent-soft" />
+      </span>
+    );
+  }
+  if (style === "band") {
+    return (
+      <span className="flex h-20 overflow-hidden rounded-xl bg-raised" aria-hidden="true">
+        <span className="flex w-2/5 flex-col justify-center gap-2 bg-accent px-3">
+          <span className="block size-6 rounded-md bg-white/80" />
+          <span className="block h-1.5 w-12 rounded-full bg-white/70" />
+        </span>
+        <span className="flex flex-1 flex-col justify-center gap-2 px-3">
+          <span className="block h-2 w-16 rounded-full bg-primary/25" />
+          <span className="block h-1.5 w-10 rounded-full bg-primary/10" />
+        </span>
+      </span>
+    );
+  }
+  if (style === "minimal") {
+    return (
+      <span className="flex h-20 items-center justify-between border-y border-default px-2" aria-hidden="true">
+        <span className="flex items-center gap-2">
+          <span className="size-6 rounded-full border border-accent/40" />
+          <span className="block h-1.5 w-12 rounded-full bg-primary/20" />
+        </span>
+        <span className="block h-1.5 w-12 rounded-full bg-accent" />
+      </span>
+    );
+  }
+  if (style === "stacked") {
+    return (
+      <span className="grid h-20 grid-cols-[0.8fr_1.2fr] overflow-hidden rounded-xl bg-raised" aria-hidden="true">
+        <span className="flex flex-col items-center justify-center gap-1.5">
+          <span className="size-7 rounded-lg bg-accent-soft" />
+          <span className="block h-1.5 w-12 rounded-full bg-primary/20" />
+        </span>
+        <span className="flex flex-col justify-center gap-2 border-l border-default px-3">
+          <span className="block h-2 w-16 rounded-full bg-primary/25" />
+          <span className="block h-1.5 w-10 rounded-full bg-accent/60" />
+        </span>
+      </span>
+    );
+  }
+  return (
+    <span className="grid h-20 grid-cols-[1.1fr_0.9fr] overflow-hidden rounded-xl bg-raised" aria-hidden="true">
+      <span className="flex items-center gap-2.5 px-3">
+        <span className="size-7 rounded-lg bg-accent-soft" />
+        <span className="space-y-1.5">
+          <span className="block h-2 w-14 rounded-full bg-primary/25" />
+          <span className="block h-1.5 w-10 rounded-full bg-primary/10" />
+        </span>
+      </span>
+      <span className="flex flex-col justify-center gap-2 border-l border-default px-3">
+        <span className="block h-1.5 w-12 rounded-full bg-accent/60" />
+        <span className="block h-1.5 w-8 rounded-full bg-primary/10" />
+      </span>
+    </span>
+  );
+}
+
 function formatDocumentDate(value: string | null | undefined) {
   if (!value) return null;
   const [year, month, day] = value.split("-").map(Number);
@@ -740,15 +808,19 @@ export const QuoteContentStudio = forwardRef<
                   ? "border-y border-[var(--quote-table-header)]"
                   : "rounded-2xl border border-[var(--quote-table-header)]",
                 design.headerStyle === "editorial"
-                  ? "md:grid-cols-[1.2fr_0.8fr]"
-                  : "md:grid-cols-[1.1fr_0.9fr]",
+                  ? "md:grid-cols-[0.8fr_1.2fr]"
+                  : design.headerStyle === "stacked"
+                    ? "md:grid-cols-[0.75fr_1.25fr]"
+                    : "md:grid-cols-[1.1fr_0.9fr]",
                 design.headerStyle === "band" &&
-                  "border-l-[6px] border-l-[var(--quote-accent)]",
+                  "border-t-8 border-t-[var(--quote-accent)]",
               )}
             >
               <div
                 className={cx(
                   "flex min-w-0 flex-col px-8 py-8 max-sm:px-5 max-sm:py-6",
+                  design.headerStyle === "editorial" && "md:py-12",
+                  design.headerStyle === "minimal" && "md:px-6 md:py-6",
                   design.headerAlignment === "right" && "md:order-2",
                 )}
               >
@@ -764,7 +836,11 @@ export const QuoteContentStudio = forwardRef<
                     <img
                       src={design.logo}
                       alt="Company logo"
-                      className="h-16 w-20 shrink-0 object-contain"
+                      className={cx(
+                        "h-16 w-20 shrink-0 object-contain",
+                        design.headerStyle === "stacked" && "h-20 w-24",
+                        design.headerStyle === "minimal" && "h-10 w-14",
+                      )}
                     />
                   )}
                   {headerDetails.companyName && (
@@ -828,6 +904,8 @@ export const QuoteContentStudio = forwardRef<
               <div
                 className={cx(
                   "flex min-w-0 flex-col border-[var(--quote-table-header)] px-8 py-8 max-sm:border-t max-sm:px-5 max-sm:py-6 md:border-l",
+                  design.headerStyle === "editorial" && "md:px-10 md:py-12",
+                  design.headerStyle === "minimal" && "md:px-6 md:py-6",
                   design.headerAlignment === "right" &&
                     "md:order-1 md:border-l-0 md:border-r",
                 )}
@@ -839,7 +917,7 @@ export const QuoteContentStudio = forwardRef<
                   <p
                     className={cx(
                       "mt-2 font-semibold leading-none tracking-tight text-[var(--quote-text)]",
-                      design.headerStyle === "editorial" ? "text-3xl" : "text-2xl",
+                      design.headerStyle === "editorial" ? "text-4xl" : "text-2xl",
                     )}
                   >
                     {quote?.number ?? "Draft quotation"}
@@ -3275,29 +3353,7 @@ function CustomizeQuote({
                     onChange((current) => ({ ...current, headerStyle: choice.id }))
                   }
                 >
-                  <span
-                    className={cx(
-                      "flex h-16 items-center gap-3 rounded-xl bg-raised px-3",
-                      choice.id === "stacked" && "flex-col justify-center gap-1.5",
-                    )}
-                    aria-hidden="true"
-                  >
-                    <span
-                      className={cx(
-                        "size-8 rounded-lg bg-accent-soft",
-                        choice.id === "band" && "rounded-none border-l-4 border-accent",
-                      )}
-                    />
-                    <span className={cx("flex-1 space-y-1.5", choice.id === "stacked" && "flex-none") }>
-                      <span className="block h-2 w-2/3 rounded-full bg-primary/20" />
-                      <span className="block h-1.5 w-1/2 rounded-full bg-primary/10" />
-                    </span>
-                    <span className={cx("h-8 w-px bg-primary/10", choice.id === "stacked" && "hidden")} />
-                    <span className={cx("w-1/4 space-y-1.5", choice.id === "stacked" && "hidden")}>
-                      <span className="block h-1.5 rounded-full bg-accent/60" />
-                      <span className="block h-1.5 rounded-full bg-primary/10" />
-                    </span>
-                  </span>
+                  <HeaderStylePreview style={choice.id} />
                   <span className="mt-4 flex items-start justify-between gap-3">
                     <span>
                       <strong className="block text-sm font-semibold text-primary">
