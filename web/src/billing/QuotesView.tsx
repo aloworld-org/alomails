@@ -145,7 +145,7 @@ export function QuotesView() {
   );
 
   return (
-    <div className={styles.page}>
+    <div className={cx(styles.page, "!pb-6 max-[52rem]:!pb-4")}>
       <Toolbar label={strings.billingQuotes} className={styles.listBar}>
         <Input
           className="max-w-[380px] flex-1"

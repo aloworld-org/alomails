@@ -354,6 +354,9 @@ describe("the quote list", () => {
     expect(
       screen.getByText(strings.billingDeleteQuoteDraftConfirm),
     ).toBeTruthy();
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: strings.dialogCancel }),
+    );
 
     press(strings.billingDeleteQuoteDraft);
     await waitFor(() =>
