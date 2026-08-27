@@ -55,4 +55,15 @@ describe("browser defaults only shrink", () => {
     expect(checkbox).toContain("peer-checked:bg-accent");
     expect(checkbox).not.toContain("accent-accent");
   });
+
+  test("feature code never delegates colour selection to the browser", () => {
+    const offenders = sourceFiles(SRC).flatMap((file) => {
+      const source = withoutComments(readFileSync(file, "utf8"));
+      return /type=["']color["']/.test(source)
+        ? [relative(SRC, file).split("\\").join("/")]
+        : [];
+    });
+
+    expect(offenders, "Use the shared Alo ColorPicker instead of a browser-owned colour control").toEqual([]);
+  });
 });

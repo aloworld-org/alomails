@@ -26,7 +26,7 @@ import {
 
 import { strings } from "../../i18n";
 import { surface } from "../../product";
-import { IconButton, Select, Toolbar, ToolbarDivider, useDialogs } from "../../ds";
+import { ColorPicker, IconButton, Select, Toolbar, ToolbarDivider, useDialogs } from "../../ds";
 import styles from "./RichTextEditor.module.css";
 
 /** Largest inline image edge (px); wider images are downscaled before embedding. */
@@ -124,6 +124,8 @@ export function RichTextEditor({ initialHtml, onChange, placeholder, autoFocus }
   // (the surface ↔ mail import cycle leaves it unset at module init).
   const composeInserts = surface.composeInserts;
   const [size, setSize] = useState("3");
+  const [textColor, setTextColor] = useState("#102A43");
+  const [highlightColor, setHighlightColor] = useState("#FFF2A8");
 
   useEffect(() => {
     const el = ref.current;
@@ -357,25 +359,26 @@ export function RichTextEditor({ initialHtml, onChange, placeholder, autoFocus }
           exec("strikeThrough"),
         )}
 
-        <label className={styles.color} title={strings.textColor}>
-          <Baseline size={16} />
-          <input
-            type="color"
-            className={styles.colorInput}
-            onMouseDown={saveRange}
-            onChange={(e) => execRestored("foreColor", e.target.value)}
-          />
-        </label>
-        <label className={styles.color} title={strings.highlight}>
-          <Highlighter size={16} />
-          <input
-            type="color"
-            className={styles.colorInput}
-            defaultValue="#fff2a8"
-            onMouseDown={saveRange}
-            onChange={(e) => execRestored("hiliteColor", e.target.value)}
-          />
-        </label>
+        <ColorPicker
+          label={strings.textColor}
+          value={textColor}
+          triggerIcon={<Baseline size={16} />}
+          onPointerDown={saveRange}
+          onChange={(next) => {
+            setTextColor(next);
+            execRestored("foreColor", next);
+          }}
+        />
+        <ColorPicker
+          label={strings.highlight}
+          value={highlightColor}
+          triggerIcon={<Highlighter size={16} />}
+          onPointerDown={saveRange}
+          onChange={(next) => {
+            setHighlightColor(next);
+            execRestored("hiliteColor", next);
+          }}
+        />
         {divider("d1")}
 
         {tool("ul", strings.bulletList, <List size={16} />, () => exec("insertUnorderedList"))}

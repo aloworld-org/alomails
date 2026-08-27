@@ -42,7 +42,7 @@ import {
   X,
 } from "lucide-react";
 
-import { Button, ChoicePicker, IconButton, Modal, Select, cx } from "../ds";
+import { Button, ChoicePicker, ColorPicker, IconButton, Modal, Select, cx } from "../ds";
 import {
   QuoteTableOptionsProvider,
   type QuoteLineContent,
@@ -3745,24 +3745,15 @@ function ColorField({
   value: string;
   onChange: (value: string) => void;
 }) {
-  const valid = /^#[0-9a-f]{6}$/i.test(value);
   const fieldId = `quote-colour-${label.replace(/\s+/g, "-").toLowerCase()}`;
   return (
     <div className="flex min-h-20 items-center gap-4 rounded-xl border border-default bg-surface px-4 py-3 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/10">
-      <label
-        className="relative grid size-14 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-xl border border-default bg-surface"
-        htmlFor={`${fieldId}-picker`}
-        title={`Choose ${label.toLowerCase()} colour`}
-      >
-        <input
-          id={`${fieldId}-picker`}
-          type="color"
-          value={valid ? value : DEFAULT_COLORS.accent}
-          aria-label={`Choose ${label.toLowerCase()} colour`}
-          className="size-11 cursor-pointer rounded-lg border-0 bg-transparent p-0 [&::-moz-color-swatch]:rounded-lg [&::-moz-color-swatch]:border [&::-moz-color-swatch]:border-black/10 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-lg [&::-webkit-color-swatch]:border [&::-webkit-color-swatch]:border-black/10"
-          onChange={(event) => onChange(event.target.value)}
-        />
-      </label>
+      <ColorPicker
+        label={`Choose ${label.toLowerCase()} colour`}
+        value={value}
+        onChange={onChange}
+        triggerClassName="!size-14 !rounded-xl"
+      />
       <div className="min-w-0 flex-1">
         <label
           className="block text-sm font-semibold text-primary"

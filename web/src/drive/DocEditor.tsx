@@ -14,8 +14,7 @@ import {
   type CSSProperties,
   type SyntheticEvent,
 } from "react";
-import { createPortal } from "react-dom";
-import { AlignCenter, AlignLeft, AlignRight, Bold, ChevronDown, Code2, FileText, Highlighter, ImagePlus, IndentDecrease, IndentIncrease, Italic, LayoutTemplate, Link2, List, ListChecks, ListOrdered, MessageSquarePlus, Minus, Pipette, Plus, Printer, Redo2, Search, Sigma, Sparkles, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
+import { AlignCenter, AlignLeft, AlignRight, Bold, Code2, FileText, Highlighter, ImagePlus, IndentDecrease, IndentIncrease, Italic, LayoutTemplate, Link2, List, ListChecks, ListOrdered, MessageSquarePlus, Minus, Plus, Printer, Redo2, Search, Sigma, Sparkles, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
 import {
   useCreateBlockNote,
   SuggestionMenuController,
@@ -28,7 +27,7 @@ import "@blocknote/mantine/style.css";
 
 import { strings } from "../i18n";
 import { useJmapClient } from "../jmap";
-import { Spinner } from "../ds";
+import { ColorPicker, Spinner } from "../ds";
 import { docSchema } from "./docBlocks";
 import { driveErrorReason } from "./parts";
 import styles from "./DocEditor.module.css";
@@ -684,53 +683,6 @@ const NAMED_COLORS: Record<string, string> = {
   purple: "#7950f2",
 };
 
-type Hsva = { h: number; s: number; v: number; a: number };
-const BRAND_COLORS_KEY = "alo-document-brand-colors";
-const BRAND_COLORS_EVENT = "alo-brand-colors-change";
-
-function readBrandColors() {
-  try {
-    const saved = JSON.parse(window.localStorage.getItem(BRAND_COLORS_KEY) ?? "[]") as unknown;
-    if (Array.isArray(saved)) return saved.filter((color): color is string => typeof color === "string" && /^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(color)).slice(0, 16);
-  } catch {
-    // Invalid local preferences fall back to an empty brand palette.
-  }
-  return [];
-}
-
-function rgbToHsva(r: number, g: number, b: number, a = 1): Hsva {
-  const rn = r / 255; const gn = g / 255; const bn = b / 255;
-  const max = Math.max(rn, gn, bn); const min = Math.min(rn, gn, bn); const delta = max - min;
-  let h = 0;
-  if (delta !== 0) {
-    if (max === rn) h = 60 * (((gn - bn) / delta) % 6);
-    else if (max === gn) h = 60 * ((bn - rn) / delta + 2);
-    else h = 60 * ((rn - gn) / delta + 4);
-  }
-  return { h: h < 0 ? h + 360 : h, s: max === 0 ? 0 : delta / max, v: max, a };
-}
-
-function hsvaToRgb({ h, s, v }: Hsva) {
-  const c = v * s; const x = c * (1 - Math.abs(((h / 60) % 2) - 1)); const m = v - c;
-  const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
-  return { r: Math.round((r + m) * 255), g: Math.round((g + m) * 255), b: Math.round((b + m) * 255) };
-}
-
-function colorToHsva(color: string, fallback: string): Hsva {
-  const source = color === "default" ? fallback : NAMED_COLORS[color] ?? color;
-  const hex = source.match(/^#([0-9a-f]{6})([0-9a-f]{2})?$/i);
-  if (hex?.[1]) return rgbToHsva(Number.parseInt(hex[1].slice(0, 2), 16), Number.parseInt(hex[1].slice(2, 4), 16), Number.parseInt(hex[1].slice(4, 6), 16), hex[2] ? Number.parseInt(hex[2], 16) / 255 : 1);
-  const rgba = source.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)$/i);
-  if (rgba?.[1] && rgba[2] && rgba[3]) return rgbToHsva(Number(rgba[1]), Number(rgba[2]), Number(rgba[3]), rgba[4] === undefined ? 1 : Number(rgba[4]));
-  return colorToHsva(fallback, "#102a43");
-}
-
-function hsvaToValue(hsva: Hsva) {
-  const { r, g, b } = hsvaToRgb(hsva);
-  const hex = `#${[r, g, b].map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
-  return hsva.a >= .995 ? hex : `${hex}${Math.round(hsva.a * 255).toString(16).padStart(2, "0")}`;
-}
-
 function DocColorPicker({ label, resetLabel, value, fallback, variant, onPick }: {
   label: string;
   resetLabel: string;
@@ -739,121 +691,18 @@ function DocColorPicker({ label, resetLabel, value, fallback, variant, onPick }:
   variant: "text" | "highlight";
   onPick: (value: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const [position, setPosition] = useState({ left: 0, top: 0 });
-  const [hsva, setHsva] = useState(() => colorToHsva(value, fallback));
-  const [brandColors, setBrandColors] = useState(readBrandColors);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const popoverRef = useRef<HTMLDivElement>(null);
-  const svRef = useRef<HTMLDivElement>(null);
-  const color = hsvaToValue(hsva);
+  const resolved = value === "default" ? fallback : NAMED_COLORS[value] ?? value;
+  const color = /^#[0-9a-f]{6}/i.test(resolved) ? resolved.slice(0, 7) : fallback;
 
-  useEffect(() => setHsva(colorToHsva(value, fallback)), [fallback, value]);
-
-  useEffect(() => {
-    const sync = () => setBrandColors(readBrandColors());
-    window.addEventListener(BRAND_COLORS_EVENT, sync);
-    window.addEventListener("storage", sync);
-    return () => {
-      window.removeEventListener(BRAND_COLORS_EVENT, sync);
-      window.removeEventListener("storage", sync);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    const close = (event: PointerEvent) => {
-      const target = event.target as Node;
-      if (!triggerRef.current?.contains(target) && !popoverRef.current?.contains(target)) setOpen(false);
-    };
-    const dismiss = () => setOpen(false);
-    document.addEventListener("pointerdown", close);
-    window.addEventListener("resize", dismiss);
-    window.addEventListener("scroll", dismiss, true);
-    return () => {
-      document.removeEventListener("pointerdown", close);
-      window.removeEventListener("resize", dismiss);
-      window.removeEventListener("scroll", dismiss, true);
-    };
-  }, [open]);
-
-  const toggle = () => {
-    const rect = triggerRef.current?.getBoundingClientRect();
-    if (rect) setPosition({ left: Math.max(8, Math.min(rect.left, window.innerWidth - 296)), top: Math.max(8, Math.min(rect.bottom + 6, window.innerHeight - 500)) });
-    setOpen((current) => !current);
-  };
-
-  const update = (next: Hsva) => {
-    setHsva(next);
-    onPick(hsvaToValue(next));
-  };
-
-  const storeBrandColors = (colors: string[]) => {
-    window.localStorage.setItem(BRAND_COLORS_KEY, JSON.stringify(colors));
-    setBrandColors(colors);
-    window.dispatchEvent(new Event(BRAND_COLORS_EVENT));
-  };
-
-  const saveBrandColor = () => {
-    const saved = color.toUpperCase();
-    storeBrandColors([saved, ...brandColors.filter((item) => item.toUpperCase() !== saved)].slice(0, 16));
-  };
-
-  const updateSv = (clientX: number, clientY: number) => {
-    const rect = svRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    update({ ...hsva, s: Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)), v: Math.max(0, Math.min(1, 1 - (clientY - rect.top) / rect.height)) });
-  };
-
-  const pickScreenColor = async () => {
-    const EyeDropper = (window as unknown as { EyeDropper?: new () => { open: () => Promise<{ sRGBHex: string }> } }).EyeDropper;
-    if (!EyeDropper) return;
-    try {
-      const result = await new EyeDropper().open();
-      update({ ...colorToHsva(result.sRGBHex, fallback), a: hsva.a });
-    } catch {
-      // Cancelling the browser eyedropper is not an error for the user.
-    }
-  };
-
-  const rgb = hsvaToRgb(hsva);
-  const hex = [rgb.r, rgb.g, rgb.b].map((channel) => channel.toString(16).padStart(2, "0")).join("").toUpperCase();
-
-  return <div className={styles.docColorPicker}>
-    <button ref={triggerRef} type="button" className={styles.docColorMain} title={label} aria-label={label} aria-expanded={open} onClick={toggle}>
-      {variant === "text" ? <span className={styles.textColorGlyph}>A</span> : <Highlighter className={styles.highlightColorGlyph} size={16} />}
-      <span className={styles.docColorSwatch} style={{ backgroundColor: color }} />
-      <ChevronDown className={styles.docColorChevron} size={12} />
-    </button>
-    {open && createPortal(<div ref={popoverRef} className={styles.docColorPopover} style={position} role="dialog" aria-label={label}>
-      <div ref={svRef} className={styles.docColorSpectrum} style={{ backgroundColor: `hsl(${hsva.h} 100% 50%)` }} onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); updateSv(event.clientX, event.clientY); }} onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) updateSv(event.clientX, event.clientY); }}>
-        <span className={styles.docColorSpectrumCursor} style={{ left: `${hsva.s * 100}%`, top: `${(1 - hsva.v) * 100}%` }} />
-      </div>
-      <div className={styles.docColorSliderRow}>
-        <button type="button" className={styles.docEyedropper} onClick={() => void pickScreenColor()} aria-label={strings.docColorEyedropper} title={strings.docColorEyedropper}><Pipette size={17} /></button>
-        <span className={styles.docColorPreview} style={{ backgroundColor: color }} />
-        <input className={styles.docHueSlider} type="range" min="0" max="360" value={Math.round(hsva.h)} aria-label={label} onChange={(event) => update({ ...hsva, h: Number(event.target.value) })} />
-      </div>
-      <div className={styles.docColorSliderRow}>
-        <span className={styles.docColorChecker} />
-        <input className={styles.docAlphaSlider} style={{ "--picker-color": `rgb(${rgb.r} ${rgb.g} ${rgb.b})` } as CSSProperties} type="range" min="0" max="100" value={Math.round(hsva.a * 100)} aria-label={strings.docColorOpacity} onChange={(event) => update({ ...hsva, a: Number(event.target.value) / 100 })} />
-      </div>
-      <div className={styles.docColorFields}>
-        <span>{strings.docColorHex}</span>
-        <label>#<input key={hex} defaultValue={hex} maxLength={6} aria-label={strings.docColorHex} onChange={(event) => { const next = event.target.value.replace(/[^0-9a-f]/gi, "").slice(0, 6); if (next.length === 6) update({ ...colorToHsva(`#${next}`, fallback), a: hsva.a }); }} /></label>
-        <label><input type="number" min="0" max="100" value={Math.round(hsva.a * 100)} aria-label={strings.docColorOpacity} onChange={(event) => update({ ...hsva, a: Math.max(0, Math.min(100, Number(event.target.value))) / 100 })} />%</label>
-      </div>
-      <div className={styles.docBrandColorsHead}>
-        <strong>{strings.docBrandColors}</strong>
-        <button type="button" onClick={saveBrandColor} aria-label={strings.docSaveBrandColor} title={strings.docSaveBrandColor}><Plus size={15} />{strings.docSaveBrandColor}</button>
-      </div>
-      {brandColors.length > 0 && <div className={styles.docBrandColors}>
-        {brandColors.map((brandColor) => <span key={brandColor} className={styles.docBrandColor}>
-          <button type="button" className={styles.docBrandColorPick} style={{ backgroundColor: brandColor }} aria-label={brandColor} title={brandColor} onClick={() => update(colorToHsva(brandColor, fallback))} />
-          <button type="button" className={styles.docBrandColorRemove} onClick={() => storeBrandColors(brandColors.filter((item) => item !== brandColor))} aria-label={`${strings.docRemoveBrandColor}: ${brandColor}`} title={strings.docRemoveBrandColor}><X size={10} /></button>
-        </span>)}
-      </div>}
-      <button type="button" className={styles.docColorDefault} onClick={() => { onPick("default"); setOpen(false); }}><X size={13} />{resetLabel}</button>
-    </div>, document.body)}
-  </div>;
+  return (
+    <ColorPicker
+      label={label}
+      value={color}
+      onChange={onPick}
+      triggerIcon={variant === "text" ? <span className="text-sm font-semibold">A</span> : <Highlighter size={16} />}
+      triggerClassName="!size-8 !rounded-md !border-0 !bg-transparent"
+      resetLabel={resetLabel}
+      onReset={() => onPick("default")}
+    />
+  );
 }

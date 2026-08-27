@@ -11,6 +11,8 @@ export type { PanelWidth } from "./usePanelWidth";
 export { Button } from "./Button";
 export type { ButtonVariant, ButtonSize } from "./Button";
 export { IconButton } from "./IconButton";
+export { ColorPicker } from "./ColorPicker";
+export type { ColorPickerProps } from "./ColorPicker";
 export { Avatar } from "./Avatar";
 export { Spinner } from "./Spinner";
 export { DialogProvider } from "./Dialog";

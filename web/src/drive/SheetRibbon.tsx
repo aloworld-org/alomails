@@ -76,6 +76,7 @@ import {
 } from "lucide-react";
 
 import { strings } from "../i18n";
+import { ColorPicker } from "../ds";
 import type { SheetChartKind } from "./sheetDocument";
 import styles from "./SheetRibbon.module.css";
 
@@ -1017,7 +1018,7 @@ function RibbonMenu({ label, icon, disabled, children, variant = "standard", for
   );
 }
 
-/** An icon button that opens the native colour picker and reports the chosen hex. */
+/** An Alo colour control shared with the rest of the application. */
 function ColorBtn({
   label,
   onPick,
@@ -1033,26 +1034,18 @@ function ColorBtn({
   formatKey?: string;
   selectedColor?: string;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
   const normalizedColor = /^#[0-9a-f]{6}$/i.test(selectedColor) ? selectedColor : "#000000";
 
-  useEffect(() => {
-    if (inputRef.current !== null && inputRef.current.value.toLowerCase() !== normalizedColor.toLowerCase()) {
-      inputRef.current.value = normalizedColor;
-    }
-  }, [normalizedColor]);
-
   return (
-    <label className={styles.colorBtn} data-format-key={formatKey} title={label} aria-label={label}>
-      {children}
-      <input
-        ref={inputRef}
-        type="color"
-        className={styles.colorInput}
-        disabled={disabled}
-        defaultValue={normalizedColor}
-        onChange={(e) => onPick(e.target.value)}
-      />
-    </label>
+    <ColorPicker
+      label={label}
+      value={normalizedColor}
+      onChange={onPick}
+      disabled={disabled}
+      triggerIcon={children}
+      {...(formatKey === undefined ? {} : { formatKey })}
+      {...(styles.colorBtn === undefined ? {} : { className: styles.colorBtn })}
+      triggerClassName="!size-8 !rounded-md !border-0 !bg-transparent"
+    />
   );
 }
