@@ -44,10 +44,11 @@ import {
   type QuoteTotalsDetail,
   type QuoteTotalsPlacement,
 } from "./quoteTableOptions";
-import type { BillingSettings } from "./types";
+import type { BillingQuote, BillingSettings } from "./types";
 
 type Theme = "modern" | "editorial" | "minimal";
 type HeaderAlignment = "left" | "right";
+type HeaderStyle = "signature" | "editorial" | "band" | "minimal";
 type Block =
   | { id: string; kind: "text"; heading: string; body: string }
   | { id: string; kind: "heading"; level: 1 | 2 | 3; text: string }
@@ -121,6 +122,7 @@ export const DEFAULT_QUOTE_COLUMNS: QuoteColumns = {
 };
 interface Design {
   logo: string;
+  headerStyle: HeaderStyle;
   headerAlignment: HeaderAlignment;
   headerDetails: HeaderDetails;
   headerDetailsCustomized: boolean;
@@ -159,6 +161,7 @@ const DEFAULT_HEADER_DETAILS: HeaderDetails = {
 };
 const EMPTY: Design = {
   logo: "",
+  headerStyle: "signature",
   headerAlignment: "left",
   headerDetails: DEFAULT_HEADER_DETAILS,
   headerDetailsCustomized: false,
@@ -183,6 +186,23 @@ const themeChoices: Array<{ id: Theme; name: string; help: string }> = [
   { id: "editorial", name: "Editorial", help: "Story-led headings" },
   { id: "minimal", name: "Minimal", help: "Quiet and precise" },
 ];
+const headerStyleChoices: Array<{ id: HeaderStyle; name: string; help: string }> = [
+  { id: "signature", name: "Signature", help: "Balanced identity and quote details" },
+  { id: "editorial", name: "Editorial", help: "A confident title-led opening" },
+  { id: "band", name: "Brand band", help: "A stronger branded introduction" },
+  { id: "minimal", name: "Minimal", help: "Quiet, compact and precise" },
+];
+
+function formatDocumentDate(value: string | null | undefined) {
+  if (!value) return null;
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return value;
+  return new Intl.DateTimeFormat(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
+}
 
 function legacyDesign(key: string): Design | null {
   try {
@@ -360,6 +380,8 @@ export const QuoteContentStudio = forwardRef<
     lineKeys: string[];
     onColumnsChange?: (columns: QuoteColumns) => void;
     issuer?: BillingSettings | null;
+    quote?: BillingQuote | null;
+    customerName?: string;
   }
 >(function QuoteContentStudio(
   {
@@ -371,6 +393,8 @@ export const QuoteContentStudio = forwardRef<
     lineKeys,
     onColumnsChange,
     issuer,
+    quote,
+    customerName = "",
   },
   ref,
 ) {
@@ -648,29 +672,40 @@ export const QuoteContentStudio = forwardRef<
             design.theme === "minimal" && "[&_article]:shadow-none",
           )}
         >
-          {(design.logo || Object.values(headerDetails).some((value) => value.trim())) && (
+          {(design.logo ||
+            quote ||
+            customerName ||
+            Object.values(headerDetails).some((value) => value.trim())) && (
             <div
               className={cx(
-                "group/quote-header relative mb-8 flex min-h-28 items-center justify-between gap-8 rounded-2xl bg-[var(--quote-header-background)] px-6 py-5 max-sm:px-4",
-                design.headerAlignment === "right" && "flex-row-reverse",
+                "group/quote-header relative mb-8 grid gap-8 overflow-hidden bg-[var(--quote-header-background)] px-8 py-7 max-sm:px-5",
+                design.headerStyle === "minimal"
+                  ? "border-y border-[var(--quote-table-header)]"
+                  : "rounded-2xl border border-[var(--quote-table-header)]",
+                design.headerStyle === "editorial"
+                  ? "md:grid-cols-[1.25fr_0.75fr]"
+                  : "md:grid-cols-2",
+                design.headerStyle === "band" &&
+                  "border-l-[6px] border-l-[var(--quote-accent)]",
               )}
             >
               <div
                 className={cx(
-                  "flex min-w-0 items-center gap-4",
-                  design.headerAlignment === "right" && "flex-row-reverse text-right",
+                  "flex min-w-0 items-start gap-5",
+                  design.headerAlignment === "right" &&
+                    "md:order-2 md:flex-row-reverse md:text-right",
                 )}
               >
                 {design.logo && (
                   <img
                     src={design.logo}
                     alt="Company logo"
-                    className="max-h-16 max-w-48 shrink-0 object-contain"
+                    className="max-h-20 max-w-48 shrink-0 object-contain"
                   />
                 )}
                 <div className="min-w-0 text-[var(--quote-text)]">
                   {headerDetails.companyName && (
-                    <p className="text-base font-semibold">
+                    <p className="text-lg font-semibold tracking-tight">
                       {headerDetails.companyName}
                     </p>
                   )}
@@ -696,7 +731,45 @@ export const QuoteContentStudio = forwardRef<
                   )}
                 </div>
               </div>
-              <span className="h-1 w-20 rounded-full bg-[var(--quote-accent)]" />
+              <div
+                className={cx(
+                  "min-w-0 border-[var(--quote-table-header)] md:border-l md:pl-8",
+                  design.headerAlignment === "right" &&
+                    "md:order-1 md:border-l-0 md:border-r md:pl-0 md:pr-8",
+                )}
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--quote-accent)]">
+                  Quotation
+                </p>
+                <p
+                  className={cx(
+                    "mt-2 font-semibold tracking-tight text-[var(--quote-text)]",
+                    design.headerStyle === "editorial" ? "text-3xl" : "text-2xl",
+                  )}
+                >
+                  {quote?.number ?? "Draft quotation"}
+                </p>
+                {customerName && (
+                  <p className="mt-3 text-sm text-[var(--quote-text)] opacity-75">
+                    Prepared for <span className="font-semibold">{customerName}</span>
+                  </p>
+                )}
+                <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3 text-xs text-[var(--quote-text)]">
+                  <div>
+                    <dt className="font-semibold uppercase tracking-wide opacity-55">Issued</dt>
+                    <dd className="mt-1 font-medium">
+                      {formatDocumentDate(quote?.sentDate) ?? "On finalization"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold uppercase tracking-wide opacity-55">Valid until</dt>
+                    <dd className="mt-1 font-medium">
+                      {formatDocumentDate(quote?.validUntil) ??
+                        `${quote?.validDays ?? 30} days after issue`}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
               {!readOnly && (
                 <button
                   type="button"
@@ -2917,6 +2990,71 @@ function CustomizeQuote({
           </div>
         </section>
         <div className="min-w-0 space-y-7">
+          <section>
+            <h3 className="text-base font-semibold text-primary">Header style</h3>
+            <p className="mt-1 text-sm text-secondary">
+              Choose a professional composition. Your saved company information fills it automatically.
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {headerStyleChoices.map((choice) => (
+                <button
+                  key={choice.id}
+                  type="button"
+                  aria-pressed={design.headerStyle === choice.id}
+                  className={cx(
+                    "relative min-h-40 rounded-2xl border p-4 text-left transition-colors hover:border-accent hover:bg-accent-soft/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
+                    design.headerStyle === choice.id
+                      ? "border-accent bg-accent-soft/25"
+                      : "border-default bg-surface",
+                  )}
+                  onClick={() =>
+                    onChange((current) => ({ ...current, headerStyle: choice.id }))
+                  }
+                >
+                  <span
+                    className="flex h-16 items-center gap-3 rounded-xl bg-raised px-3"
+                    aria-hidden="true"
+                  >
+                    <span
+                      className={cx(
+                        "size-8 rounded-lg bg-accent-soft",
+                        choice.id === "band" && "rounded-none border-l-4 border-accent",
+                      )}
+                    />
+                    <span className="flex-1 space-y-1.5">
+                      <span className="block h-2 w-2/3 rounded-full bg-primary/20" />
+                      <span className="block h-1.5 w-1/2 rounded-full bg-primary/10" />
+                    </span>
+                    <span className="h-8 w-px bg-primary/10" />
+                    <span className="w-1/4 space-y-1.5">
+                      <span className="block h-1.5 rounded-full bg-accent/60" />
+                      <span className="block h-1.5 rounded-full bg-primary/10" />
+                    </span>
+                  </span>
+                  <span className="mt-4 flex items-start justify-between gap-3">
+                    <span>
+                      <strong className="block text-sm font-semibold text-primary">
+                        {choice.name}
+                      </strong>
+                      <small className="mt-1 block text-xs leading-relaxed text-secondary">
+                        {choice.help}
+                      </small>
+                    </span>
+                    <span
+                      className={cx(
+                        "grid size-5 shrink-0 place-items-center rounded-full border",
+                        design.headerStyle === choice.id
+                          ? "border-accent bg-accent text-white"
+                          : "border-default",
+                      )}
+                    >
+                      {design.headerStyle === choice.id && <Check className="size-3" />}
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
           <section>
             <div>
               <h3 className="text-base font-semibold text-primary">

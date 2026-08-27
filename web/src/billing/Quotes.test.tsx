@@ -256,7 +256,7 @@ describe("the quote list", () => {
     reply("/billing/quotes", "GET", { quotes: [SENT] });
     ui("/billing/quotes");
 
-    expect(await screen.findByText("QUO-2026-00004")).toBeTruthy();
+    expect((await screen.findAllByText("QUO-2026-00004")).length).toBeGreaterThan(0);
     const table = within(screen.getByRole("table"));
     expect(table.getByText("Acme GmbH")).toBeTruthy();
     // €226.88 is the server's gross; nothing here adds up the lines.
@@ -656,7 +656,7 @@ describe("the offer's transitions", () => {
     // A transition carries no input at all.
     expect(lastWrite()?.body).toBeUndefined();
 
-    expect(await screen.findByText("QUO-2026-00004")).toBeTruthy();
+    expect((await screen.findAllByText("QUO-2026-00004")).length).toBeGreaterThan(0);
     expect(screen.getByText(strings.billingQuoteSentNotice)).toBeTruthy();
     expect(screen.queryByLabelText(strings.billingColQty)).toBeNull();
   });
@@ -708,7 +708,7 @@ describe("the offer's transitions", () => {
     fireEvent.click(
       screen.getByRole("button", { name: strings.billingFromQuote }),
     );
-    expect(await screen.findByText("QUO-2026-00004")).toBeTruthy();
+    expect((await screen.findAllByText("QUO-2026-00004")).length).toBeGreaterThan(0);
     expect(screen.getByText(strings.billingQuoteStatusAccepted)).toBeTruthy();
   });
 
@@ -762,7 +762,7 @@ describe("the offer's transitions", () => {
     ).toBeTruthy();
     expect(screen.getByText(strings.billingQuoteStatusDeclined)).toBeTruthy();
     // The number stays, and so does the document.
-    expect(screen.getByText("QUO-2026-00004")).toBeTruthy();
+    expect(screen.getAllByText("QUO-2026-00004").length).toBeGreaterThan(0);
   });
 
   test("an accepted offer names the invoice it became", async () => {
