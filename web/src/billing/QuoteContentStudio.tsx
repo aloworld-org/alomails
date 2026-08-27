@@ -96,6 +96,7 @@ type Block =
     };
 interface Colors {
   accent: string;
+  contactIcons: string;
   background: string;
   headerBackground: string;
   text: string;
@@ -159,6 +160,7 @@ interface Design {
 }
 const DEFAULT_COLORS: Colors = {
   accent: "#e76f51",
+  contactIcons: "#e76f51",
   background: "#faf7f2",
   headerBackground: "#ffffff",
   text: "#102a43",
@@ -592,6 +594,7 @@ export const QuoteContentStudio = forwardRef<
     if (!(document instanceof HTMLElement)) return;
     const values = {
       "--quote-accent": design.colors.accent,
+      "--quote-contact-icons": design.colors.contactIcons,
       "--quote-background": design.colors.background,
       "--quote-header-background": design.colors.headerBackground,
       "--quote-text": design.colors.text,
@@ -867,19 +870,19 @@ export const QuoteContentStudio = forwardRef<
                         <div className="flex flex-col gap-1.5 opacity-80">
                           {headerDetails.email && (
                             <span className="flex items-center gap-2.5">
-                              <Mail className="size-4 shrink-0 text-[var(--quote-accent)]" aria-hidden="true" />
+                              <Mail className="size-4 shrink-0 text-[var(--quote-contact-icons)]" aria-hidden="true" />
                               {headerDetails.email}
                             </span>
                           )}
                           {headerDetails.phone && (
                             <span className="flex items-center gap-2.5">
-                              <Phone className="size-4 shrink-0 text-[var(--quote-accent)]" aria-hidden="true" />
+                              <Phone className="size-4 shrink-0 text-[var(--quote-contact-icons)]" aria-hidden="true" />
                               {headerDetails.phone}
                             </span>
                           )}
                           {headerDetails.website && (
                             <span className="flex items-center gap-2.5 break-all">
-                              <Globe2 className="size-4 shrink-0 text-[var(--quote-accent)]" aria-hidden="true" />
+                              <Globe2 className="size-4 shrink-0 text-[var(--quote-contact-icons)]" aria-hidden="true" />
                               {headerDetails.website.replace(/^https?:\/\//, "")}
                             </span>
                           )}
@@ -958,13 +961,13 @@ export const QuoteContentStudio = forwardRef<
                             <div className="flex flex-col gap-1.5 opacity-75">
                               {customerDetails.email && (
                                 <span className="flex items-center gap-2">
-                                  <Mail className="size-3.5 shrink-0 text-[var(--quote-accent)]" aria-hidden="true" />
+                                  <Mail className="size-4 shrink-0 text-[var(--quote-contact-icons)]" aria-hidden="true" />
                                   {customerDetails.email}
                                 </span>
                               )}
                               {customerDetails.phone && (
                                 <span className="flex items-center gap-2">
-                                  <Phone className="size-3.5 shrink-0 text-[var(--quote-accent)]" aria-hidden="true" />
+                                  <Phone className="size-4 shrink-0 text-[var(--quote-contact-icons)]" aria-hidden="true" />
                                   {customerDetails.phone}
                                 </span>
                               )}
@@ -3504,6 +3507,12 @@ function CustomizeQuote({
                     help="Brand actions & highlights"
                     value={design.colors.accent}
                     onChange={(value) => setColor("accent", value)}
+                  />
+                  <ColorField
+                    label="Contact icons"
+                    help="Email, phone, and website icons"
+                    value={design.colors.contactIcons}
+                    onChange={(value) => setColor("contactIcons", value)}
                   />
                   <ColorField
                     label="Page"
