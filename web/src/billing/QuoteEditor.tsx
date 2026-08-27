@@ -283,11 +283,11 @@ export function QuoteEditor() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className={`${styles.linkAction} ${
+              className={
                 quote.status === "draft" && !preview
-                  ? "!min-h-10 !rounded-xl !bg-accent-soft !px-4 !text-accent hover:!bg-accent-soft hover:!text-accent"
-                  : ""
-              }`}
+                  ? "inline-flex min-h-10 items-center gap-2 rounded-xl bg-accent-soft px-4 py-2 text-sm font-medium text-accent no-underline transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
+                  : styles.linkAction
+              }
               onClick={() => void editAsDraft()}
               disabled={preview}
               aria-pressed={quote.status === "draft" && !preview}
@@ -318,11 +318,11 @@ export function QuoteEditor() {
             </button>
             <button
               type="button"
-              className={`${styles.linkAction} ${
+              className={
                 preview
-                  ? "!min-h-10 !rounded-xl !bg-accent-soft !px-4 !text-accent hover:!bg-accent-soft hover:!text-accent"
-                  : ""
-              }`}
+                  ? "inline-flex min-h-10 items-center gap-2 rounded-xl bg-accent-soft px-4 py-2 text-sm font-medium text-accent no-underline transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
+                  : styles.linkAction
+              }
               aria-pressed={preview}
               onClick={() => setPreview((value) => !value)}
             >
