@@ -1,0 +1,16 @@
+{
+  "name": "alo workplace",
+  "short_name": "alo",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f1ec",
+  "theme_color": "#f4f1ec",
+  "icons": [
+    { "src": "/icons/workplace.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icons/workplace-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/workplace-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/workplace-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

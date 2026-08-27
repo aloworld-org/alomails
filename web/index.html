@@ -7,6 +7,9 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Before main.tsx, while <title> still holds the build-stamped brand:
+         injects the product's manifest + icons (installability). -->
+    <script type="module" src="/src/pwa/install.ts"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
