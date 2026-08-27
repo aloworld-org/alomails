@@ -1,23 +1,5 @@
-// One quote, on the same shell as an invoice — because it is the same
-// document until somebody says yes.
-//
-// The four transitions an offer has, and why each asks first:
-//
-// - **Send** assigns the offer's number and freezes its prices. What the
-//   customer is holding cannot then quietly change under them.
-// - **Accept** closes the offer *and* raises the draft invoice for it, in one
-//   server transaction, with a copy of every line at the price it was offered
-//   at. This screen then goes to that invoice, because that is the document
-//   that now needs work — nothing has been issued yet.
-// - **Decline** and **expire** close the offer without business. Both are
-//   terminal: a change of mind is a new quote, not a reopened one.
-//
-// A lapsed offer can still be accepted. The store refuses on state, never on a
-// date, and honouring an offer a few days late is a decision a tenant is
-// entitled to make — so "Lapsed" is a chip here, not a locked door.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Eye, Palette, Pencil } from "lucide-react";
 
 import { RecordHistory } from "../audit";
 import { useDialogs } from "../ds";
@@ -26,10 +8,8 @@ import { useBillingApi } from "./api";
 import { formatDocumentDate } from "./dates";
 import type { DocumentAction } from "./DocumentActions";
 import { DocumentEditor } from "./DocumentEditor";
-import type { CreationTemplate } from "./DocumentEditor";
 import type { DocumentHeader, DocumentPatch } from "./documentDraft";
 import { useDocumentDraft } from "./documentDraft";
-import { blankRow, rowFromProduct } from "./lineRows";
 import { Field } from "./parts";
 import { usePickers } from "./pickers";
 import { QuoteChips } from "./status";
@@ -42,6 +22,8 @@ import {
 } from "./QuoteContentStudio";
 import type { BillingQuote, BillingSettings } from "./types";
 import styles from "./billingStyles";
+import { quoteCreationTemplates } from "./quoteCreationTemplates";
+import { QuoteEditorToolbar } from "./QuoteEditorToolbar";
 
 export function QuoteEditor() {
   const { id } = useParams<{ id: string }>();
@@ -260,49 +242,7 @@ export function QuoteEditor() {
   }
 
   const invoiceId = draft.aside;
-  const services = pickers.products.filter(
-    (product) => !product.stocked && !product.archived,
-  );
-  const rowsFromProducts =
-    (products: typeof services) => (nextKey: () => string) =>
-      products.map((product) =>
-        rowFromProduct({ ...blankRow(nextKey()), qty: "1" }, product),
-      );
-  const monthly = services.find(
-    (product) => product.unit.toLowerCase() === "month",
-  );
-  const creationTemplates: CreationTemplate[] = [
-    {
-      key: "blank",
-      name: strings.billingQuoteTemplateBlank,
-      description: strings.billingQuoteTemplateBlankDescription,
-      preview: "blank",
-      buildRows: () => [],
-    },
-    {
-      key: "services",
-      name: strings.billingQuoteTemplateServices,
-      description: strings.billingQuoteTemplateServicesDescription,
-      preview: "services",
-      buildRows: rowsFromProducts(services.slice(0, 2)),
-    },
-    {
-      key: "project",
-      name: strings.billingQuoteTemplateProject,
-      description: strings.billingQuoteTemplateProjectDescription,
-      preview: "project",
-      buildRows: rowsFromProducts(services.slice(0, 3)),
-    },
-    {
-      key: "retainer",
-      name: strings.billingQuoteTemplateRetainer,
-      description: strings.billingQuoteTemplateRetainerDescription,
-      preview: "retainer",
-      buildRows: rowsFromProducts(
-        monthly === undefined ? services.slice(0, 1) : [monthly],
-      ),
-    },
-  ];
+  const creationTemplates = quoteCreationTemplates(pickers.products);
 
   return (
     <DocumentEditor
@@ -354,67 +294,19 @@ export function QuoteEditor() {
       }
       editorActions={
         quote === null ? null : (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className={
-                quote.status === "draft" && !preview
-                  ? "inline-flex min-h-10 items-center gap-2 rounded-xl bg-accent-soft px-4 py-2 text-sm font-medium text-accent no-underline transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
-                  : styles.linkAction
-              }
-              onClick={editDraft}
-              disabled={creatingRevision}
-              aria-pressed={quote.status === "draft" && !preview}
-              title={
-                preview
-                  ? strings.billingQuoteExitPreviewToEdit
-                  : quote.status === "draft"
-                    ? strings.billingQuoteEditContent
-                    : strings.billingQuoteCreateRevision
-              }
-            >
-              <Pencil size={15} aria-hidden="true" />
-              {quote.status === "draft"
-                ? strings.billingQuoteEdit
-                : strings.billingQuoteCreateRevisionAction}
-            </button>
-            <button
-              type="button"
-              className={styles.linkAction}
-              onClick={customizeQuote}
-              disabled={creatingRevision}
-              title={
-                preview
-                  ? strings.billingQuoteExitPreviewToCustomize
-                  : quote.status !== "draft"
-                    ? strings.billingQuoteCreateRevisionToCustomize
-                    : strings.quoteStudioCustomizeQuotation
-              }
-            >
-              <Palette size={15} aria-hidden="true" />{" "}
-              {strings.quoteStudioCustomizeQuotation}
-            </button>
-            <button
-              type="button"
-              className={
-                preview
-                  ? "inline-flex min-h-10 items-center gap-2 rounded-xl bg-accent-soft px-4 py-2 text-sm font-medium text-accent no-underline transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
-                  : styles.linkAction
-              }
-              aria-pressed={preview}
-              onClick={() => {
-                const next = new URLSearchParams(searchParams);
-                if (preview) next.delete("preview");
-                else next.set("preview", "1");
-                setSearchParams(next, { replace: true });
-              }}
-            >
-              <Eye size={15} aria-hidden="true" />
-              {preview
-                ? strings.billingExitPreview
-                : strings.billingQuotationPreview}
-            </button>
-          </div>
+          <QuoteEditorToolbar
+            creatingRevision={creatingRevision}
+            draft={quote.status === "draft"}
+            preview={preview}
+            onCustomize={customizeQuote}
+            onEdit={editDraft}
+            onTogglePreview={() => {
+              const next = new URLSearchParams(searchParams);
+              if (preview) next.delete("preview");
+              else next.set("preview", "1");
+              setSearchParams(next, { replace: true });
+            }}
+          />
         )
       }
       presentationReadOnly={preview}
