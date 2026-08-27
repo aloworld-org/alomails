@@ -72,13 +72,16 @@ const styles = {
   templatePickerTitle: "m-0 text-sm font-semibold text-primary",
   templatePickerHint: "mb-0 mt-1 text-xs leading-relaxed text-tertiary",
   templateGrid:
-    "grid grid-cols-4 gap-2 max-[46rem]:grid-cols-2 max-[28rem]:grid-cols-1",
+    "grid grid-cols-4 gap-3 max-[46rem]:grid-cols-2 max-[28rem]:grid-cols-1",
   templateCard:
-    "flex min-h-28 flex-col items-start gap-3 rounded-2xl border border-default bg-surface !px-4 !py-4 text-left shadow-sm transition-[border-color,background-color,box-shadow] hover:border-accent/40 hover:bg-accent-soft hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
+    "group relative flex min-h-52 flex-col items-start gap-3 rounded-2xl border border-default bg-surface !p-3 text-left shadow-sm transition-colors duration-150 hover:border-accent/50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
   templateCardActive:
-    "!border-accent !bg-accent-soft ring-1 ring-accent/20 [&>span:first-child]:text-accent",
-  templateCardName: "block text-sm font-semibold leading-snug text-primary",
-  templateCardDescription: "block text-xs leading-relaxed text-secondary",
+    "!border-accent !bg-accent-soft ring-1 ring-accent/15 [&_.template-name]:text-accent",
+  templateCardPreview:
+    "block h-32 w-full overflow-hidden rounded-xl bg-raised p-2 ring-1 ring-inset ring-subtle",
+  templateCardName:
+    "template-name block px-1 text-sm font-semibold leading-snug text-primary",
+  templateCardDescription: "sr-only",
   templateItems:
     "rounded-xl border border-accent/25 bg-accent-soft p-4 text-sm text-secondary shadow-sm",
   templateItemsHead:

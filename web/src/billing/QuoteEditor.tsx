@@ -211,24 +211,28 @@ export function QuoteEditor() {
       key: "blank",
       name: strings.billingQuoteTemplateBlank,
       description: strings.billingQuoteTemplateBlankDescription,
+      preview: "blank",
       buildRows: () => [],
     },
     {
       key: "services",
       name: strings.billingQuoteTemplateServices,
       description: strings.billingQuoteTemplateServicesDescription,
+      preview: "services",
       buildRows: rowsFromProducts(services.slice(0, 2)),
     },
     {
       key: "project",
       name: strings.billingQuoteTemplateProject,
       description: strings.billingQuoteTemplateProjectDescription,
+      preview: "project",
       buildRows: rowsFromProducts(services.slice(0, 3)),
     },
     {
       key: "retainer",
       name: strings.billingQuoteTemplateRetainer,
       description: strings.billingQuoteTemplateRetainerDescription,
+      preview: "retainer",
       buildRows: rowsFromProducts(
         monthly === undefined ? services.slice(0, 1) : [monthly],
       ),

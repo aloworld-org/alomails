@@ -70,7 +70,88 @@ export interface CreationTemplate {
   key: string;
   name: string;
   description: string;
+  preview: "blank" | "services" | "project" | "retainer";
   buildRows: (nextKey: () => string) => LineRow[];
+}
+
+function CreationTemplatePreview({
+  kind,
+}: {
+  kind: CreationTemplate["preview"];
+}) {
+  const line = "h-1.5 rounded-full bg-[#CBD5E1]";
+  const strongLine = "h-2 rounded-full bg-[#102A43]";
+  const accentLine = "h-1.5 rounded-full bg-[#E76F51]";
+
+  if (kind === "blank") {
+    return (
+      <span className="flex h-full items-center justify-center rounded-xl border border-dashed border-[#CBD5E1] bg-white">
+        <span className="flex size-8 items-center justify-center rounded-lg bg-[#FCE9E3] text-lg font-medium text-[#E76F51]">
+          +
+        </span>
+      </span>
+    );
+  }
+
+  if (kind === "project") {
+    return (
+      <span className="flex h-full flex-col overflow-hidden rounded-xl bg-white">
+        <span className="h-7 bg-[#E76F51]" />
+        <span className="grid flex-1 grid-cols-[0.8fr_1.2fr] gap-3 p-3">
+          <span className="rounded-lg bg-[#FCE9E3]" />
+          <span className="flex flex-col gap-2 pt-1">
+            <span className={`${strongLine} w-3/4`} />
+            <span className={`${line} w-full`} />
+            <span className={`${line} w-4/5`} />
+            <span className={`${accentLine} mt-auto w-2/5 self-end`} />
+          </span>
+        </span>
+      </span>
+    );
+  }
+
+  if (kind === "retainer") {
+    return (
+      <span className="flex h-full flex-col rounded-xl bg-white p-3">
+        <span className="flex items-start justify-between gap-3">
+          <span className="flex flex-1 flex-col gap-2">
+            <span className={`${strongLine} w-2/3`} />
+            <span className={`${line} w-1/2`} />
+          </span>
+          <span className="rounded-lg bg-[#FCE9E3] px-2 py-1 text-[9px] font-semibold text-[#E76F51]">
+            12×
+          </span>
+        </span>
+        <span className="mt-3 flex flex-1 flex-col justify-center gap-2 rounded-lg bg-[#F3F0EA] px-3">
+          <span className="flex items-center justify-between gap-3">
+            <span className={`${line} w-2/5`} />
+            <span className={`${strongLine} w-1/4`} />
+          </span>
+          <span className="flex items-center justify-between gap-3">
+            <span className={`${line} w-1/2`} />
+            <span className={`${accentLine} w-1/5`} />
+          </span>
+        </span>
+      </span>
+    );
+  }
+
+  return (
+    <span className="flex h-full flex-col rounded-xl bg-white p-3">
+      <span className="mb-3 flex items-start justify-between gap-3">
+        <span className={`${strongLine} w-2/5`} />
+        <span className={`${accentLine} w-1/5`} />
+      </span>
+      <span className="flex flex-1 flex-col divide-y divide-[#E7E1D8] rounded-lg border border-[#E7E1D8]">
+        {["w-3/4", "w-1/2", "w-2/3"].map((width) => (
+          <span key={width} className="flex flex-1 items-center justify-between gap-3 px-2">
+            <span className={`${line} ${width}`} />
+            <span className="size-2 rounded-full bg-[#F4B5A5]" />
+          </span>
+        ))}
+      </span>
+    </span>
+  );
 }
 
 interface Props<T extends StoredDocument, A> {
@@ -466,6 +547,12 @@ export function DocumentEditor<T extends StoredDocument, A>({
                       draft.edit({ rows: template.buildRows(draft.nextKey) });
                     }}
                   >
+                    <span
+                      className={styles.templateCardPreview}
+                      aria-hidden="true"
+                    >
+                      <CreationTemplatePreview kind={template.preview} />
+                    </span>
                     <span className={styles.templateCardName}>
                       {template.name}
                     </span>
