@@ -558,7 +558,7 @@ describe("the quote draft editor", () => {
 });
 
 describe("the offer's transitions", () => {
-  test("keeps the quotation action bar stable and disables unavailable actions", async () => {
+  test("keeps the quotation action bar stable and lets editing leave preview", async () => {
     reply("/billing/quotes/quo-1", "GET", { quote: DRAFT, invoiceId: null });
     ui("/billing/quotes/quo-1");
 
@@ -596,12 +596,10 @@ describe("the offer's transitions", () => {
           name: strings.quoteStudioCustomizeQuotation,
         }) as HTMLButtonElement
       ).disabled,
-    ).toBe(true);
-    expect((edit as HTMLButtonElement).disabled).toBe(true);
+    ).toBe(false);
+    expect((edit as HTMLButtonElement).disabled).toBe(false);
 
-    fireEvent.click(
-      actions.getByRole("button", { name: strings.billingExitPreview }),
-    );
+    fireEvent.click(edit);
     expect(
       actions.getByRole("button", { name: strings.billingQuotationPreview }),
     ).toBeTruthy();
@@ -615,7 +613,7 @@ describe("the offer's transitions", () => {
     expect((edit as HTMLButtonElement).disabled).toBe(false);
   });
 
-  test("a finalized quote cannot silently create another draft", async () => {
+  test("a finalized quote asks before creating an editable revision", async () => {
     reply("/billing/quotes/quo-2", "GET", { quote: SENT, invoiceId: null });
     ui("/billing/quotes/quo-2");
     await screen.findByText(strings.billingQuoteSentNotice);
@@ -623,8 +621,15 @@ describe("the offer's transitions", () => {
     const edit = screen.getByRole("button", {
       name: strings.billingQuoteEdit,
     }) as HTMLButtonElement;
-    expect(edit.disabled).toBe(true);
+    expect(edit.disabled).toBe(false);
     fireEvent.click(edit);
+    expect(
+      await screen.findByRole("heading", {
+        name: strings.billingQuoteCreateRevisionTitle,
+      }),
+    ).toBeTruthy();
+    expect(lastWrite()).toBeUndefined();
+    fireEvent.click(screen.getByRole("button", { name: strings.cancel }));
     expect(lastWrite()).toBeUndefined();
   });
 
@@ -669,7 +674,7 @@ describe("the offer's transitions", () => {
           name: strings.quoteStudioCustomizeQuotation,
         }) as HTMLButtonElement
       ).disabled,
-    ).toBe(true);
+    ).toBe(false);
     expect(
       screen.queryByRole("button", { name: strings.billingSendQuote }),
     ).toBeNull();

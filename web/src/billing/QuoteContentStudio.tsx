@@ -724,7 +724,7 @@ export const QuoteContentStudio = forwardRef<
         const target = root.current?.querySelector<HTMLElement>(
           'input:not([disabled]), textarea:not([disabled]), [contenteditable="true"]',
         );
-        target?.scrollIntoView({ behavior: "smooth", block: "center" });
+        target?.scrollIntoView?.({ behavior: "smooth", block: "center" });
         target?.focus({ preventScroll: true });
       },
       copyTo: (nextQuoteId) =>

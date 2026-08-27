@@ -20,6 +20,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Eye, Palette, Pencil } from "lucide-react";
 
 import { RecordHistory } from "../audit";
+import { useDialogs } from "../ds";
 import { strings, useLocale } from "../i18n";
 import { useBillingApi } from "./api";
 import { formatDocumentDate } from "./dates";
@@ -48,6 +49,7 @@ export function QuoteEditor() {
   const locale = useLocale();
   const navigate = useNavigate();
   const pickers = usePickers();
+  const { confirm } = useDialogs();
   const quoteStudio = useRef<QuoteContentStudioHandle>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const preview = searchParams.get("preview") === "1";
@@ -55,6 +57,7 @@ export function QuoteEditor() {
   const [quoteColumns, setQuoteColumns] = useState<QuoteColumns>(
     DEFAULT_QUOTE_COLUMNS,
   );
+  const [creatingRevision, setCreatingRevision] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -109,11 +112,87 @@ export function QuoteEditor() {
   });
   const quote = draft.document;
 
+  const leavePreview = useCallback(
+    (nextAction?: "edit" | "customize") => {
+      const next = new URLSearchParams(searchParams);
+      next.delete("preview");
+      if (nextAction !== undefined) next.set("action", nextAction);
+      setSearchParams(next, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
+
+  useEffect(() => {
+    if (quote?.status !== "draft" || preview) return;
+    const action = searchParams.get("action");
+    if (action !== "edit" && action !== "customize") return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("action");
+    setSearchParams(next, { replace: true });
+    if (action === "customize") quoteStudio.current?.customize();
+    else quoteStudio.current?.edit();
+  }, [preview, quote, searchParams, setSearchParams]);
+
+  const createRevision = useCallback(
+    async (nextAction: "edit" | "customize") => {
+      if (quote === null || creatingRevision) return;
+      const accepted = await confirm({
+        title: strings.billingQuoteCreateRevisionTitle,
+        message: strings.billingQuoteCreateRevisionConfirm,
+        confirmLabel: strings.billingQuoteCreateRevisionAction,
+      });
+      if (!accepted) return;
+      setCreatingRevision(true);
+      try {
+        const created = await api.createQuote({
+          customerId: quote.customerId,
+          currency: quote.currency,
+          validDays: quote.validDays,
+          reference: quote.reference,
+          note: quote.note,
+          lines: quote.lines.map((line) => ({
+            description: line.description,
+            unit: line.unit,
+            qtyMilli: line.qtyMilli,
+            unitPriceCents: line.unitPriceCents,
+            vatRateBp: line.vatRateBp,
+            ...(line.productId == null ? {} : { productId: line.productId }),
+          })),
+        });
+        await quoteStudio.current?.copyTo(created.id).catch(() => undefined);
+        await navigate(`../${created.id}?action=${nextAction}`);
+      } finally {
+        setCreatingRevision(false);
+      }
+    },
+    [api, confirm, creatingRevision, navigate, quote],
+  );
+
   const editDraft = useCallback(() => {
     if (quote === null) return;
-    if (quote.status !== "draft") return;
+    if (quote.status !== "draft") {
+      void createRevision("edit");
+      return;
+    }
+    if (preview) {
+      leavePreview("edit");
+      return;
+    }
     quoteStudio.current?.edit();
-  }, [quote]);
+  }, [createRevision, leavePreview, preview, quote]);
+
+  const customizeQuote = useCallback(() => {
+    if (quote === null) return;
+    if (quote.status !== "draft") {
+      void createRevision("customize");
+      return;
+    }
+    if (preview) {
+      leavePreview("customize");
+      return;
+    }
+    quoteStudio.current?.customize();
+  }, [createRevision, leavePreview, preview, quote]);
 
   const actions: DocumentAction[] = [];
   if (quote !== null && id !== undefined) {
@@ -284,7 +363,7 @@ export function QuoteEditor() {
                   : styles.linkAction
               }
               onClick={editDraft}
-              disabled={preview || quote.status !== "draft"}
+              disabled={creatingRevision}
               aria-pressed={quote.status === "draft" && !preview}
               title={
                 preview
@@ -299,8 +378,8 @@ export function QuoteEditor() {
             <button
               type="button"
               className={styles.linkAction}
-              onClick={() => quoteStudio.current?.customize()}
-              disabled={quote.status !== "draft" || preview}
+              onClick={customizeQuote}
+              disabled={creatingRevision}
               title={
                 preview
                   ? strings.billingQuoteExitPreviewToCustomize
