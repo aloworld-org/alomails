@@ -3237,8 +3237,8 @@ function CustomizeQuote({
               role="switch"
               aria-checked={design.showContactQr}
               className={cx(
-                "relative h-7 w-12 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
-                design.showContactQr ? "bg-accent" : "bg-muted",
+                "relative h-7 w-12 shrink-0 rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
+                design.showContactQr ? "border-accent bg-accent" : "border-default bg-raised",
               )}
               onClick={() => onChange((current) => ({ ...current, showContactQr: !current.showContactQr }))}
             >
@@ -3246,7 +3246,7 @@ function CustomizeQuote({
               <span className="sr-only">Show contact QR code</span>
             </button>
           </div>
-          <div className={cx("mt-7 grid gap-7 xl:grid-cols-2", !design.showContactQr && "pointer-events-none opacity-45")}>
+          <div className="mt-7 grid gap-7 xl:grid-cols-2">
             <fieldset>
               <legend className="text-sm font-semibold text-primary">Placement</legend>
               <p className="mt-1 text-xs text-secondary">Choose where the code sits beneath your company details.</p>
@@ -3263,7 +3263,13 @@ function CustomizeQuote({
                         ? "border-accent bg-accent-soft/30"
                         : "border-default bg-surface hover:border-accent",
                     )}
-                    onClick={() => onChange((current) => ({ ...current, contactQrAlignment: alignment }))}
+                    onClick={() =>
+                      onChange((current) => ({
+                        ...current,
+                        showContactQr: true,
+                        contactQrAlignment: alignment,
+                      }))
+                    }
                   >
                     <span className={cx("flex h-16 items-end gap-3 rounded-lg bg-raised p-3", alignment === "right" && "flex-row-reverse")} aria-hidden="true">
                       <span className="grid size-9 shrink-0 place-items-center rounded-md bg-surface text-accent ring-1 ring-default">
@@ -3294,7 +3300,13 @@ function CustomizeQuote({
                         ? "border-accent bg-accent-soft/30"
                         : "border-default bg-surface hover:border-accent",
                     )}
-                    onClick={() => onChange((current) => ({ ...current, contactQrSize: size }))}
+                    onClick={() =>
+                      onChange((current) => ({
+                        ...current,
+                        showContactQr: true,
+                        contactQrSize: size,
+                      }))
+                    }
                   >
                     <span className="flex h-12 items-center justify-center" aria-hidden="true">
                       <QrCode className={cx("text-accent", size === "small" ? "size-6" : size === "large" ? "size-11" : "size-8")} />
@@ -3309,7 +3321,9 @@ function CustomizeQuote({
                 label="QR code colour"
                 help="Choose a dark colour for reliable scanning"
                 value={design.contactQrColor}
-                onChange={(contactQrColor) => onChange((current) => ({ ...current, contactQrColor }))}
+                onChange={(contactQrColor) =>
+                  onChange((current) => ({ ...current, showContactQr: true, contactQrColor }))
+                }
               />
             </div>
           </div>
