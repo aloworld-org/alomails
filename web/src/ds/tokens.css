@@ -31,7 +31,7 @@
   --verdigris-200: #f1bdad;
   --verdigris-400: #ea8368;
   --verdigris-500: #e76f51; /* base terracotta */
-  --verdigris-600: #d65b3e;
+  --verdigris-600: #d96247;
   --verdigris-700: #b84a32;
   --verdigris-800: #8f3a28;
 
@@ -276,9 +276,9 @@
      The two shorthands are what stylesheets have always written. They are now
      composed from their parts, because a utility cannot take a shorthand: a
      Tailwind duration and a Tailwind easing are set separately, and a second
-     literal `120ms` written beside this one is exactly the drift the token
+     literal `150ms` written beside this one is exactly the drift the token
      layer exists to prevent. */
-  --duration-fast: 120ms;
+  --duration-fast: 150ms;
   --duration-base: 180ms;
   --ease-standard: ease;
   --transition-fast: var(--duration-fast) var(--ease-standard);

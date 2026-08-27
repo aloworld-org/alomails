@@ -27,7 +27,7 @@ export type ButtonSize = "sm" | "md";
 const BASE =
   "inline-flex shrink-0 items-center justify-center gap-2 rounded-md " +
   "font-ui font-medium leading-none whitespace-nowrap " +
-  "transition-[background-color,color,border-color,box-shadow] " +
+  "transition-all " +
   "duration-[var(--duration-fast)] ease-standard " +
   "disabled:cursor-not-allowed";
 
@@ -52,9 +52,11 @@ const VARIANT = {
   // Primary is the universal call-to-action treatment. `--accent` is alo's
   // brand orange (#e76f51); screens must not replace it with a local fill.
   primary:
-    "!bg-accent !text-on-accent " +
+    "!h-10 !rounded-lg !px-4 !text-sm !bg-accent !text-on-accent shadow-sm " +
     "enabled:hover:!bg-accent-hover enabled:active:!bg-accent-active " +
-    DISABLED_NEUTRAL,
+    "enabled:active:scale-[0.98] focus-visible:outline-none " +
+    "focus-visible:ring-4 focus-visible:ring-accent/15 " +
+    "disabled:pointer-events-none disabled:opacity-50",
   secondary:
     "bg-accent-secondary text-on-accent " +
     "enabled:hover:bg-accent-secondary-hover " +
@@ -101,11 +103,9 @@ export function Button({
   return (
     <button type={type} className={classes} {...rest}>
       {icon !== undefined && (
-        // `1.125em`, so the icon scales with the button's own type rather than
-        // being a second size that has to be kept in step with it. One
-        // drawing's proportion, like the knob in `Toggle`, so it stays a
-        // literal rather than becoming a token nothing else would read.
-        <span className="inline-flex items-center [&_svg]:size-[1.125em]">
+        // Primary CTA icons are exactly 16px; keeping the icon slot here makes
+        // that contract consistent across every module.
+        <span className="inline-flex items-center [&_svg]:size-4">
           {icon}
         </span>
       )}
