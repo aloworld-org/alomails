@@ -553,8 +553,19 @@ export function DocumentEditor<T extends StoredDocument, A>({
                     >
                       <CreationTemplatePreview kind={template.preview} />
                     </span>
-                    <span className={styles.templateCardName}>
-                      {template.name}
+                    <span className={styles.templateCardFooter}>
+                      <span className={styles.templateCardName}>
+                        {template.name}
+                      </span>
+                      <span
+                        className={cx(
+                          styles.templateCardCheck,
+                          active && styles.templateCardCheckActive,
+                        )}
+                        aria-hidden="true"
+                      >
+                        <Check className="size-3.5" strokeWidth={2.5} />
+                      </span>
                     </span>
                     <span className={styles.templateCardDescription}>
                       {template.description}
