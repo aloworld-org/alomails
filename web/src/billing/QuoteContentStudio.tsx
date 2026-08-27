@@ -2031,7 +2031,7 @@ function DividerBlockEditor({
                         ...block,
                         style: "solid",
                         thickness: "bold",
-                        width: choice,
+                        width: 100,
                         color,
                       }}
                     />
