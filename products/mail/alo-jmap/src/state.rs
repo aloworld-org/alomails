@@ -50,6 +50,11 @@ pub struct AppState {
     /// From `ALO_JMAP_SESSION_ORIGINS`, comma-separated hosts (no scheme).
     pub session_origins: Vec<String>,
 
+    /// Web Push sending (mail M5.3): the VAPID identity + HTTP client the
+    /// dispatcher delivers with, and the public key the subscription routes
+    /// advertise. `None` means no VAPID key is configured: the settings
+    /// surface reports push as unavailable and nothing is ever sent.
+    pub web_push: Option<Arc<crate::push_notify::WebPush>>,
     /// Junk training: Rspamd learn calls on moves into/out of Junk.
     /// `None` disables training (mail management is unaffected).
     pub junk_learner: Option<std::sync::Arc<crate::junk_learn::JunkLearner>>,

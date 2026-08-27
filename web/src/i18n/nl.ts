@@ -681,6 +681,29 @@ export const nl: Partial<Catalog> = {
   appPasswordCreateError:
     "Kon het app-wachtwoord niet aanmaken — geef het een korte naam; een account heeft er hoogstens 20.",
   appPasswordRevokeError: "Kon het niet intrekken — probeer het opnieuw.",
+  // Meldingen (Web Push, Instellingen)
+  settingsNotifications: "Meldingen",
+  settingsNotificationsHint:
+    "Krijg een seintje op dit apparaat zodra er iets binnenkomt — ook als alo gesloten is. Elk apparaat meldt zich apart aan, en u kunt elk apparaat hier weer uitzetten.",
+  pushLoadError:
+    "Kon uw meldingsinstellingen niet laden — probeer het opnieuw.",
+  pushNotAvailable: "Meldingen staan op deze server nog niet aan.",
+  pushUnsupported:
+    "Deze browser kan geen meldingen van geïnstalleerde apps tonen.",
+  pushThisDevice: "Meldingen op dit apparaat",
+  pushOnNote:
+    "Aan — u hoort het bij nieuwe e-mail, ook als alo niet open staat.",
+  pushOffNote: "Uit — dit apparaat blijft stil.",
+  pushEnable: "Aanzetten",
+  pushDisable: "Uitzetten",
+  pushPermissionBlocked:
+    "De browser blokkeert meldingen voor deze site. Sta ze toe in de site-instellingen van de browser en probeer het opnieuw.",
+  pushThisDeviceTag: "Dit apparaat",
+  pushDeviceSince: (date: string) => `Sinds ${date}`,
+  pushDeviceRemove: (name: string) => `Meldingen stoppen op ${name}`,
+  pushPrivacyNote:
+    "Een melding is alleen een seintje — wat er binnenkwam blijft in alo tot u het opent.",
+  pushError: "Kon de meldingen niet bijwerken — probeer het opnieuw.",
   userShareAccess: "Gedeelde toegang",
   delegateTitle: (email: string) => `Wie ${email} kan openen`,
   delegateIntro:

@@ -120,7 +120,15 @@ pub struct StateChangeMsg {
 #[derive(Clone, Default)]
 pub struct PushHub {
     inner: Arc<Mutex<HashMap<String, broadcast::Sender<StateChangeMsg>>>>,
+    /// The Web Push tap (mail M5.3): every published change is also handed
+    /// to the dispatcher that wakes CLOSED apps, so it deliberately does not
+    /// depend on anyone holding an EventSource open — the broadcast half
+    /// serves the connected, this half serves the absent.
+    tap: Arc<Mutex<Option<TapSender>>>,
 }
+
+/// The Web Push tap's feed: a tenant id and the change published to it.
+pub type TapSender = tokio::sync::mpsc::UnboundedSender<(String, StateChangeMsg)>;
 
 impl PushHub {
     /// A fresh hub.
@@ -135,8 +143,22 @@ impl PushHub {
             .clone()
     }
 
-    /// Publishes a change to a tenant's channel (no-op if nobody listens).
+    /// Routes every future publish into `tx` as well (the Web Push
+    /// dispatcher's feed). One tap: wiring a second replaces the first.
+    pub fn set_tap(&self, tx: TapSender) {
+        let mut tap = self.tap.lock().unwrap_or_else(|p| p.into_inner());
+        *tap = Some(tx);
+    }
+
+    /// Publishes a change to a tenant's channel (no-op if nobody listens)
+    /// and to the Web Push tap when one is wired.
     pub fn publish(&self, tenant: &str, msg: StateChangeMsg) {
+        {
+            let tap = self.tap.lock().unwrap_or_else(|p| p.into_inner());
+            if let Some(tx) = tap.as_ref() {
+                let _ = tx.send((tenant.to_owned(), msg.clone()));
+            }
+        }
         let map = self.inner.lock().unwrap_or_else(|p| p.into_inner());
         if let Some(tx) = map.get(tenant) {
             let _ = tx.send(msg);
@@ -208,8 +230,11 @@ pub async fn event_source(
         .into_response())
 }
 
-/// The RFC 8620 §7.1 `StateChange` object for one account.
-fn state_change_json(msg: &StateChangeMsg) -> serde_json::Value {
+/// The RFC 8620 §7.1 `StateChange` object for one account. Shared with the
+/// Web Push dispatcher (mail M5.3), whose payloads are this object and
+/// nothing more — type names, an account id and an opaque state string,
+/// never message content.
+pub(crate) fn state_change_json(msg: &StateChangeMsg) -> serde_json::Value {
     let mut types = Map::new();
     for t in &msg.types {
         types.insert((*t).to_owned(), json!(msg.state));

@@ -88,6 +88,7 @@ async fn a_missing_submission_listener_is_a_server_fault_not_a_forbidden_sender(
         // The whole point of this test.
         submission_addr: None,
         session_origins: Vec::new(),
+        web_push: None,
         junk_learner: None,
         personal_domains: Vec::new(),
         signup_limiter: alo_identity::ratelimit::RateLimiter::new(),

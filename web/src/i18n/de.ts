@@ -823,6 +823,31 @@ export const de: Partial<Catalog> = {
     "Das App-Passwort konnte nicht erstellt werden — geben Sie ihm einen kurzen Namen; ein Konto kann höchstens 20 haben.",
   appPasswordRevokeError:
     "Widerruf fehlgeschlagen — bitte versuchen Sie es erneut.",
+  // Benachrichtigungen (Web Push, Einstellungen)
+  settingsNotifications: "Benachrichtigungen",
+  settingsNotificationsHint:
+    "Erhalten Sie auf diesem Gerät ein Zeichen, sobald etwas Neues ankommt — auch wenn alo geschlossen ist. Jedes Gerät meldet sich einzeln an, und Sie können jedes hier wieder abschalten.",
+  pushLoadError:
+    "Ihre Benachrichtigungseinstellungen konnten nicht geladen werden — bitte versuchen Sie es erneut.",
+  pushNotAvailable:
+    "Benachrichtigungen sind auf diesem Server noch nicht eingeschaltet.",
+  pushUnsupported:
+    "Dieser Browser kann keine Benachrichtigungen installierter Apps anzeigen.",
+  pushThisDevice: "Benachrichtigungen auf diesem Gerät",
+  pushOnNote:
+    "Ein — Sie erfahren von neuer E-Mail, auch wenn alo nicht geöffnet ist.",
+  pushOffNote: "Aus — dieses Gerät bleibt still.",
+  pushEnable: "Einschalten",
+  pushDisable: "Ausschalten",
+  pushPermissionBlocked:
+    "Der Browser blockiert Benachrichtigungen für diese Website. Erlauben Sie sie in den Website-Einstellungen des Browsers und versuchen Sie es erneut.",
+  pushThisDeviceTag: "Dieses Gerät",
+  pushDeviceSince: (date: string) => `Seit ${date}`,
+  pushDeviceRemove: (name: string) => `Benachrichtigungen auf ${name} beenden`,
+  pushPrivacyNote:
+    "Eine Benachrichtigung ist nur ein Zeichen — was ankam, bleibt in alo, bis Sie es öffnen.",
+  pushError:
+    "Die Benachrichtigungen konnten nicht aktualisiert werden — bitte versuchen Sie es erneut.",
   // Admin — mailbox delegation
   userShareAccess: "Freigegebener Zugriff",
   delegateTitle: (email: string) => `Wer auf ${email} zugreifen kann`,

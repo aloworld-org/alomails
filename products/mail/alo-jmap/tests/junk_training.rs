@@ -139,6 +139,7 @@ async fn junk_moves_train_rspamd_and_keyword_changes_do_not() {
         // No extra front-end hosts in a harness: the session advertises the
         // configured base, which is what these tests assert against.
         session_origins: Vec::new(),
+        web_push: None,
         junk_learner: JunkLearner::new(format!("http://{mock_addr}"), None),
         personal_domains: Vec::new(),
         signup_limiter: alo_identity::ratelimit::RateLimiter::new(),

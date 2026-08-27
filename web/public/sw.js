@@ -45,6 +45,69 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// Web Push (mail M5.3). The payload is the JMAP StateChange object — type
+// names, an account id, an opaque state string; the server never puts a
+// subject line, a sender or a body in it, so the notification here is
+// generic on purpose and the app fetches real data when opened. Shown only
+// when no alo window is focused: someone looking at the app does not need
+// the operating system to repeat it.
+const PUSH_TEXT = {
+  en: { mail: "New mail", other: "Something new happened", open: "Open alo" },
+  fr: { mail: "Nouveau message", other: "Du nouveau", open: "Ouvrir alo" },
+  nl: { mail: "Nieuwe e-mail", other: "Er is iets nieuws", open: "alo openen" },
+  de: { mail: "Neue E-Mail", other: "Es gibt Neuigkeiten", open: "alo öffnen" },
+};
+
+function pushText() {
+  const lang = (self.navigator && self.navigator.language) || "en";
+  return PUSH_TEXT[lang.slice(0, 2)] || PUSH_TEXT.en;
+}
+
+self.addEventListener("push", (event) => {
+  let changedTypes = [];
+  try {
+    const payload = event.data ? event.data.json() : null;
+    for (const account of Object.values((payload && payload.changed) || {})) {
+      changedTypes = changedTypes.concat(Object.keys(account));
+    }
+  } catch {
+    // An unreadable payload still means "something changed".
+  }
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((windows) => {
+        if (windows.some((w) => w.focused)) return undefined;
+        const text = pushText();
+        const title =
+          changedTypes.includes("Email") || changedTypes.includes("Mailbox")
+            ? text.mail
+            : text.other;
+        return self.registration.showNotification(title, {
+          body: text.open,
+          tag: "alo-state",
+          icon: "/icons/mail-192.png",
+          data: { url: "/" },
+        });
+      }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((windows) => {
+        const existing = windows[0];
+        if (existing) return existing.focus();
+        return self.clients.openWindow(
+          (event.notification.data && event.notification.data.url) || "/",
+        );
+      }),
+  );
+});
+
 self.addEventListener("fetch", (event) => {
   const request = event.request;
   // Navigations only. API calls, asset loads, auth redirects and everything

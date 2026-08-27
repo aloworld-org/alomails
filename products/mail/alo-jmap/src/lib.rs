@@ -181,6 +181,8 @@ pub mod projects_time;
 pub mod projects_updates;
 pub mod projects_weeks;
 pub mod push;
+pub mod push_notify;
+pub mod push_subscriptions;
 pub mod readiness;
 pub mod reset_route;
 pub mod schedule;
@@ -227,6 +229,7 @@ pub mod state;
 pub mod submission;
 pub mod tasks;
 pub mod unsubscribe;
+pub mod web_push;
 pub mod wopi;
 pub mod workspace_search;
 

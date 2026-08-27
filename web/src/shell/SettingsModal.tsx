@@ -6,6 +6,7 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import {
+  Bell,
   Building2,
   KeyRound,
   PenLine,
@@ -28,6 +29,7 @@ import { useJmapClient } from "../jmap";
 import { RichTextEditor } from "../mail/components/RichTextEditor";
 import { AppPasswordsSection } from "./AppPasswordsSection";
 import { FiltersSection } from "./FiltersSection";
+import { PushSection } from "./PushSection";
 import { SharingSection } from "./SharingSection";
 import styles from "./SettingsModal.module.css";
 
@@ -36,7 +38,13 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-type Tab = "general" | "filters" | "sharing" | "appPasswords" | "org";
+type Tab =
+  | "general"
+  | "filters"
+  | "sharing"
+  | "notifications"
+  | "appPasswords"
+  | "org";
 
 export function SettingsModal({ isAdmin, onClose }: SettingsModalProps) {
   const client = useJmapClient();
@@ -127,6 +135,11 @@ export function SettingsModal({ isAdmin, onClose }: SettingsModalProps) {
       key: "sharing",
       label: strings.settingsSharing,
       icon: <Users size={16} />,
+    },
+    {
+      key: "notifications",
+      label: strings.settingsNotifications,
+      icon: <Bell size={16} />,
     },
     {
       key: "appPasswords",
@@ -320,6 +333,18 @@ export function SettingsModal({ isAdmin, onClose }: SettingsModalProps) {
                   {strings.settingsSharingHint}
                 </p>
                 <SharingSection />
+              </section>
+            )}
+
+            {tab === "notifications" && (
+              <section className={styles.section}>
+                <h3 className={styles.sectionTitle}>
+                  {strings.settingsNotifications}
+                </h3>
+                <p className={styles.sectionDesc}>
+                  {strings.settingsNotificationsHint}
+                </p>
+                <PushSection />
               </section>
             )}
 

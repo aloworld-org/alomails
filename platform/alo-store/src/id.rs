@@ -815,6 +815,14 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// One Web Push subscription — a browser installation a user opted into
+    /// notifications on (mail M5.3). Identifies the *device record* (endpoint
+    /// URL + the client's encryption keys), never a notification: payloads are
+    /// built per send, carry ids and counts only, and are stored nowhere.
+    PushSubscriptionId
+);
+
+opaque_id!(
     /// A meeting. Distinct from the opaque room name the media engine is told:
     /// that is generated separately so the engine cannot be correlated back to
     /// a workspace record by anyone reading its logs.

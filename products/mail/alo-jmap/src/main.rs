@@ -42,6 +42,22 @@ async fn main() -> ExitCode {
         }
     };
 
+    // `--generate-vapid-key` mints the Web Push signing key (mail M5.3) and
+    // prints the `.env` line to set — run once per deployment, offline.
+    if std::env::args().nth(1).as_deref() == Some("--generate-vapid-key") {
+        return match alo_jmap::web_push::VapidKeys::generate_key_b64() {
+            Ok(key) => {
+                println!("ALO_VAPID_KEY={key}");
+                println!("ALO_VAPID_SUBJECT=mailto:postmaster@your-domain  # set a real contact");
+                ExitCode::SUCCESS
+            }
+            Err(error) => {
+                eprintln!("alo-jmap: {error}");
+                ExitCode::FAILURE
+            }
+        };
+    }
+
     // `--healthcheck` TCP-probes the bind address over loopback and exits.
     if std::env::args().nth(1).as_deref() == Some("--healthcheck") {
         return match healthcheck(addr).await {
@@ -365,6 +381,15 @@ async fn run(addr: SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
         .map_err(|_| "could not initialise the credential authority")?;
 
     let state = app_state(store, identity, base_url);
+
+    // Web Push dispatcher (mail M5.3), wired only when a VAPID key is
+    // configured: every state change published to the hub also fans out to
+    // the changed account's subscribed browsers, so a closed app can still
+    // say "something arrived".
+    if let Some(web_push) = state.web_push.clone() {
+        alo_jmap::push_notify::wire(&state.push, Arc::clone(&state.store), web_push);
+        tracing::info!("web push enabled");
+    }
 
     // Background scheduled-send sweeper (send later): submit drafts whose chosen
     // time has arrived, through the same outbound path as an interactive send.

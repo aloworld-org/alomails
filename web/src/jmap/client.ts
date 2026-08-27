@@ -127,6 +127,22 @@ export interface AppPassword {
   lastUsedAt: string | null;
 }
 
+/** One Web Push device registration as its owner sees it — the record only;
+ * the encryption keys never come back out of the server. */
+export interface PushSubscriptionRecord {
+  id: string;
+  endpoint: string;
+  createdAt: string;
+}
+
+/** The Web Push settings surface: whether this deployment can send at all,
+ * the key browsers subscribe with, and the caller's registered devices. */
+export interface PushSettings {
+  enabled: boolean;
+  publicKey: string | null;
+  subscriptions: PushSubscriptionRecord[];
+}
+
 export class JmapClient {
   #fetch: AuthorizedFetch;
   #session: Session | null = null;
@@ -1235,6 +1251,35 @@ export class JmapClient {
   /** Revoke an app password immediately — it fails on the next connection. */
   async revokeAppPassword(id: string): Promise<void> {
     await this.#admin(`/settings/app-passwords/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+  }
+
+  // ---- Web Push notifications (per-device opt-in) ---------------------
+
+  /** The caller's push settings: availability, the subscription key, and
+   * their registered devices. */
+  async pushSettings(): Promise<PushSettings> {
+    return (await this.#admin("/settings/push-subscriptions", {
+      method: "GET",
+    })) as PushSettings;
+  }
+
+  /** Register (or refresh) this browser's push subscription — the W3C
+   * `PushSubscription.toJSON()` shape, stored per device. */
+  async createPushSubscription(subscription: {
+    endpoint: string;
+    keys: { p256dh: string; auth: string };
+  }): Promise<{ id: string }> {
+    return (await this.#adminPost(
+      "/settings/push-subscriptions",
+      subscription,
+    )) as { id: string };
+  }
+
+  /** Remove one device immediately — pushes to it stop with the record. */
+  async deletePushSubscription(id: string): Promise<void> {
+    await this.#admin(`/settings/push-subscriptions/${encodeURIComponent(id)}`, {
       method: "DELETE",
     });
   }

@@ -49,6 +49,10 @@ base64 = { workspace = true }
 # HMAC-signed, stateless WOPI access tokens for the Collabora office editor.
 sha2 = { workspace = true }
 hmac = { workspace = true }
+# Web Push (mail M5.3): VAPID ES256 tokens (RFC 8292) and aes128gcm payload
+# encryption toward the browser (RFC 8291) — ECDH, HKDF and AES-GCM all from
+# the one crypto crate the platform already trusts.
+ring = { workspace = true }
 # Outbound IMAP client for the Gmail/Outlook import wizard: implicit-TLS
 # (rustls + ring, no OpenSSL) with real cert verification against the
 # Mozilla roots — the user's credentials go over this wire.

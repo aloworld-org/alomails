@@ -188,6 +188,7 @@ pub mod project_hours;
 pub mod project_milestones;
 pub mod project_templates;
 pub mod project_updates;
+pub mod push_subscriptions;
 pub mod reset;
 pub mod rfc2047;
 pub mod schedule;
@@ -526,12 +527,13 @@ pub use id::{
     InsightTileId, InvCountId, InvLocationId, InvMoveId, InvPoReceiptId, InvPurchaseOrderId,
     InvReorderRuleId, InvSalesOrderId, InvSoDeliveryId, InvSoInvoiceId, InvStockHoldId,
     InvSupplierId, LabelId, MailboxId, MeetingId, MessageId, ProjectId, ProjectMilestoneId,
-    SiteBookingAppointmentId, SiteBookingId, SiteCatalogCategoryId, SiteCatalogId,
-    SiteCatalogItemId, SiteCollectionId, SiteDomainPurchaseId, SiteFormId, SiteFormSubmissionId,
-    SiteId, SiteKnowledgeSourceId, SiteLeadLinkId, SiteOrderId, SitePageId, SitePostId,
-    SitePublishId, SitePublishScheduleId, SiteShopItemId, SiteStockFulfilmentId, SiteStockOrderId,
-    SiteTicketEventId, SiteTicketFulfilmentId, SiteTicketHoldId, SiteTicketOrderId, SpaceId,
-    SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
+    PushSubscriptionId, SiteBookingAppointmentId, SiteBookingId, SiteCatalogCategoryId,
+    SiteCatalogId, SiteCatalogItemId, SiteCollectionId, SiteDomainPurchaseId, SiteFormId,
+    SiteFormSubmissionId, SiteId, SiteKnowledgeSourceId, SiteLeadLinkId, SiteOrderId, SitePageId,
+    SitePostId, SitePublishId, SitePublishScheduleId, SiteShopItemId, SiteStockFulfilmentId,
+    SiteStockOrderId, SiteTicketEventId, SiteTicketFulfilmentId, SiteTicketHoldId,
+    SiteTicketOrderId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId,
+    UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
@@ -583,6 +585,10 @@ pub use project_templates::{
 };
 pub use project_updates::{
     ProjectUpdate, ProjectUpdateAttachment, ProjectUpdateState, UPDATE_BODY_MAX, UPDATE_LIST_MAX,
+};
+pub use push_subscriptions::{
+    PUSH_ENDPOINT_MAX_CHARS, PUSH_KEY_MAX_CHARS, PUSH_SUBSCRIPTIONS_MAX, PushDelivery,
+    PushSubscriptionRow,
 };
 pub use reset::PendingReset;
 pub use schedule::DueSend;

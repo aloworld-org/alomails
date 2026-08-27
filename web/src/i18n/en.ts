@@ -732,6 +732,26 @@ export const en = {
   appPasswordCreateError:
     "Couldn't create the app password — give it a short name, and note an account holds at most 20.",
   appPasswordRevokeError: "Couldn't revoke it — please try again.",
+  // Notifications (Web Push, Settings)
+  settingsNotifications: "Notifications",
+  settingsNotificationsHint:
+    "Get a nudge on this device when something new arrives — even with alo closed. Each device opts in on its own, and you can switch any of them off from here.",
+  pushLoadError: "Couldn't load your notification settings — please try again.",
+  pushNotAvailable: "Notifications aren't switched on for this server yet.",
+  pushUnsupported: "This browser can't show notifications from installed apps.",
+  pushThisDevice: "Notifications on this device",
+  pushOnNote: "On — you'll hear about new mail even when alo isn't open.",
+  pushOffNote: "Off — this device stays quiet.",
+  pushEnable: "Turn on",
+  pushDisable: "Turn off",
+  pushPermissionBlocked:
+    "The browser is blocking notifications for this site. Allow them in the browser's site settings, then try again.",
+  pushThisDeviceTag: "This device",
+  pushDeviceSince: (date: string) => `Since ${date}`,
+  pushDeviceRemove: (name: string) => `Stop notifications on ${name}`,
+  pushPrivacyNote:
+    "A notification is only a nudge — what actually arrived stays in alo until you open it.",
+  pushError: "Couldn't update notifications — please try again.",
   // Admin — mailbox delegation
   userShareAccess: "Shared access",
   delegateTitle: (email: string) => `Who can access ${email}`,

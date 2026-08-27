@@ -147,6 +147,7 @@ dependencies = [
  "mail-parser",
  "pdf-extract",
  "reqwest",
+ "ring",
  "rustls",
  "rustls-pki-types",
  "serde",

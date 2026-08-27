@@ -692,6 +692,31 @@ export const fr: Partial<Catalog> = {
   appPasswordCreateError:
     "Création impossible — donnez-lui un nom court, et notez qu’un compte en détient au plus 20.",
   appPasswordRevokeError: "Révocation impossible — veuillez réessayer.",
+  // Notifications (Web Push, Réglages)
+  settingsNotifications: "Notifications",
+  settingsNotificationsHint:
+    "Recevez un signe sur cet appareil dès que quelque chose arrive — même quand alo est fermé. Chaque appareil s'active séparément, et vous pouvez en désactiver n'importe lequel ici.",
+  pushLoadError:
+    "Impossible de charger vos réglages de notifications — veuillez réessayer.",
+  pushNotAvailable:
+    "Les notifications ne sont pas encore activées sur ce serveur.",
+  pushUnsupported:
+    "Ce navigateur ne peut pas afficher les notifications des applications installées.",
+  pushThisDevice: "Notifications sur cet appareil",
+  pushOnNote:
+    "Activées — vous serez prévenu·e des nouveaux messages même quand alo n'est pas ouvert.",
+  pushOffNote: "Désactivées — cet appareil reste silencieux.",
+  pushEnable: "Activer",
+  pushDisable: "Désactiver",
+  pushPermissionBlocked:
+    "Le navigateur bloque les notifications pour ce site. Autorisez-les dans les réglages du site du navigateur, puis réessayez.",
+  pushThisDeviceTag: "Cet appareil",
+  pushDeviceSince: (date: string) => `Depuis le ${date}`,
+  pushDeviceRemove: (name: string) => `Arrêter les notifications sur ${name}`,
+  pushPrivacyNote:
+    "Une notification n'est qu'un signe — ce qui est arrivé reste dans alo jusqu'à ce que vous l'ouvriez.",
+  pushError:
+    "Impossible de mettre à jour les notifications — veuillez réessayer.",
   userShareAccess: "Accès partagé",
   delegateTitle: (email: string) => `Qui peut accéder à ${email}`,
   delegateIntro:

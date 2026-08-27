@@ -116,6 +116,7 @@ fn app_state(store: &Arc<Store>, sink_addr: Option<String>) -> AppState {
         base_url: "http://test".into(),
         submission_addr: sink_addr,
         session_origins: Vec::new(),
+        web_push: None,
         junk_learner: None,
         personal_domains: Vec::new(),
         signup_limiter: alo_identity::ratelimit::RateLimiter::new(),

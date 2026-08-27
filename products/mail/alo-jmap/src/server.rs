@@ -33,12 +33,12 @@ use crate::{
     inventory_so_invoice, inventory_stock, inventory_supplier_prices, inventory_suppliers,
     invite_route, meet_routes, module_access, projects_clients, projects_invoices, projects_plan,
     projects_reports, projects_templates, projects_time, projects_updates, projects_weeks, push,
-    readiness, reset_route, schedule, scoped_roles, security, session, settings, share,
-    signup_route, site_protection, site_schedule, site_version_preview, site_versions, sites,
-    sites_attribution, sites_bookings, sites_catalogs, sites_chat, sites_conversions,
-    sites_domain_purchases, sites_heatmap, sites_knowledge, sites_orders, sites_palette,
-    sites_shop_config, sites_shop_items, sites_shop_settings, sites_templates, sites_tickets,
-    snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    push_subscriptions, readiness, reset_route, schedule, scoped_roles, security, session,
+    settings, share, signup_route, site_protection, site_schedule, site_version_preview,
+    site_versions, sites, sites_attribution, sites_bookings, sites_catalogs, sites_chat,
+    sites_conversions, sites_domain_purchases, sites_heatmap, sites_knowledge, sites_orders,
+    sites_palette, sites_shop_config, sites_shop_items, sites_shop_settings, sites_templates,
+    sites_tickets, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -2339,6 +2339,18 @@ pub fn app_with_site_boundaries(
             "/settings/app-passwords/{id}",
             delete(app_passwords::revoke_app_password),
         )
+        // Web Push subscriptions (mail M5.3): the signed-in user's own
+        // devices, and only theirs — key material goes in and never comes
+        // back out.
+        .route(
+            "/settings/push-subscriptions",
+            get(push_subscriptions::list_push_subscriptions)
+                .post(push_subscriptions::create_push_subscription),
+        )
+        .route(
+            "/settings/push-subscriptions/{id}",
+            delete(push_subscriptions::delete_push_subscription),
+        )
         .route("/admin/org-footer", post(settings::set_org_footer))
         .layer(DefaultBodyLimit::max(upload_limit))
         // The business audit trail (B2.13). Applied to the routes rather than
@@ -2424,6 +2436,7 @@ pub fn app_state(store: Arc<Store>, identity: Identity, base_url: impl Into<Stri
                     .collect()
             })
             .unwrap_or_default(),
+        web_push: crate::push_notify::WebPush::from_env(),
         junk_learner: crate::junk_learn::JunkLearner::from_env(),
         personal_domains: std::env::var("ALO_PERSONAL_DOMAINS")
             .ok()

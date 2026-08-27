@@ -256,6 +256,124 @@ describe("the version-bump path end to end", () => {
   });
 });
 
+describe("sw.js push notifications", () => {
+  interface PushEvent {
+    waitUntil: (p: Promise<unknown>) => void;
+    data: { json: () => unknown } | null | undefined;
+  }
+  interface ClickEvent {
+    waitUntil: (p: Promise<unknown>) => void;
+    notification: { close: () => void; data?: { url?: string } };
+  }
+
+  /** Evaluate the real sw.js with the push-side seams mocked. */
+  function loadPushWorker(options?: {
+    windows?: { focused: boolean; focus?: () => void }[];
+    language?: string;
+  }) {
+    const listeners: Record<string, (event: never) => void> = {};
+    const showNotification = vi.fn(async () => {});
+    const openWindow = vi.fn(async () => {});
+    const windows = options?.windows ?? [];
+    const self = {
+      addEventListener: (type: string, fn: (event: never) => void) => {
+        listeners[type] = fn;
+      },
+      skipWaiting: vi.fn(async () => {}),
+      registration: { showNotification },
+      navigator: { language: options?.language ?? "en" },
+      clients: {
+        claim: vi.fn(async () => {}),
+        matchAll: vi.fn(async () => windows),
+        openWindow,
+      },
+    };
+    new Function("self", "caches", "fetch", "Request", "Response", SW_SOURCE)(
+      self,
+      new FakeCaches(),
+      vi.fn(),
+      FakeRequest,
+      Response,
+    );
+    const push = async (data: PushEvent["data"]) => {
+      const waits: Promise<unknown>[] = [];
+      (listeners.push as (event: PushEvent) => void)({
+        waitUntil: (p) => waits.push(p),
+        data,
+      });
+      await Promise.all(waits);
+    };
+    const click = async (notification: ClickEvent["notification"]) => {
+      const waits: Promise<unknown>[] = [];
+      (listeners.notificationclick as (event: ClickEvent) => void)({
+        waitUntil: (p) => waits.push(p),
+        notification,
+      });
+      await Promise.all(waits);
+    };
+    return { showNotification, openWindow, windows, push, click };
+  }
+
+  const stateChange = {
+    "@type": "StateChange",
+    changed: { "user-1": { Email: "state-9", Mailbox: "state-9" } },
+  };
+
+  it("a mail state change shows the generic mail notification — never payload detail", async () => {
+    const sw = loadPushWorker();
+    await sw.push({ json: () => stateChange });
+    expect(sw.showNotification).toHaveBeenCalledTimes(1);
+    const [title, opts] = sw.showNotification.mock.calls[0] as unknown as [
+      string,
+      { body: string; tag: string },
+    ];
+    expect(title).toBe("New mail");
+    // Nothing from the payload — no account id, no state string — reaches
+    // the notification the OS shows.
+    expect(`${title} ${opts.body}`).not.toContain("user-1");
+    expect(`${title} ${opts.body}`).not.toContain("state-9");
+    expect(opts.tag).toBe("alo-state");
+  });
+
+  it("speaks the device's language", async () => {
+    const sw = loadPushWorker({ language: "de-DE" });
+    await sw.push({ json: () => stateChange });
+    expect((sw.showNotification.mock.calls[0] as unknown[])[0]).toBe(
+      "Neue E-Mail",
+    );
+  });
+
+  it("stays quiet while an alo window is focused", async () => {
+    const sw = loadPushWorker({ windows: [{ focused: true }] });
+    await sw.push({ json: () => stateChange });
+    expect(sw.showNotification).not.toHaveBeenCalled();
+  });
+
+  it("an unreadable payload still nudges rather than failing silently", async () => {
+    const sw = loadPushWorker();
+    await sw.push({
+      json: () => {
+        throw new Error("not json");
+      },
+    });
+    expect(sw.showNotification).toHaveBeenCalledTimes(1);
+  });
+
+  it("a click focuses an existing window, or opens the app when none is open", async () => {
+    const focus = vi.fn();
+    const focused = loadPushWorker({ windows: [{ focused: false, focus }] });
+    await focused.click({ close: () => {}, data: { url: "/" } });
+    expect(focus).toHaveBeenCalled();
+    expect(focused.openWindow).not.toHaveBeenCalled();
+
+    const empty = loadPushWorker();
+    const close = vi.fn();
+    await empty.click({ close, data: { url: "/" } });
+    expect(close).toHaveBeenCalled();
+    expect(empty.openWindow).toHaveBeenCalledWith("/");
+  });
+});
+
 describe("offline.html", () => {
   it("is fully self-contained — no external stylesheet, script, font or image", () => {
     expect(OFFLINE_HTML).not.toMatch(/<link/i);

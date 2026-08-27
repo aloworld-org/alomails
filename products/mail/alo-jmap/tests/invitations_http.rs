@@ -123,6 +123,7 @@ fn app_with_sink(store: &Arc<Store>, identity: &Identity, sink_addr: String) -> 
         base_url: "https://test".into(),
         submission_addr: Some(sink_addr),
         session_origins: Vec::new(),
+        web_push: None,
         junk_learner: None,
         personal_domains: Vec::new(),
         signup_limiter: alo_identity::ratelimit::RateLimiter::new(),
