@@ -55,7 +55,7 @@ import type { BillingCustomer, BillingQuote, BillingSettings } from "./types";
 
 type Theme = "modern" | "editorial" | "minimal";
 type HeaderAlignment = "left" | "right";
-type HeaderStyle = "signature" | "editorial" | "band" | "minimal";
+type HeaderStyle = "signature" | "editorial" | "band" | "minimal" | "stacked";
 type Block =
   | { id: string; kind: "text"; heading: string; body: string }
   | { id: string; kind: "heading"; level: 1 | 2 | 3; text: string }
@@ -218,6 +218,7 @@ const headerStyleChoices: Array<{ id: HeaderStyle; name: string; help: string }>
   { id: "editorial", name: "Editorial", help: "A confident title-led opening" },
   { id: "band", name: "Brand band", help: "A stronger branded introduction" },
   { id: "minimal", name: "Minimal", help: "Quiet, compact and precise" },
+  { id: "stacked", name: "Logo stack", help: "Company name beneath the logo" },
 ];
 
 function formatDocumentDate(value: string | null | undefined) {
@@ -751,7 +752,14 @@ export const QuoteContentStudio = forwardRef<
                   design.headerAlignment === "right" && "md:order-2",
                 )}
               >
-                <div className="flex min-w-0 items-center gap-5">
+                <div
+                  className={cx(
+                    "flex min-w-0 gap-5",
+                    design.headerStyle === "stacked"
+                      ? "flex-col items-start gap-3"
+                      : "items-center",
+                  )}
+                >
                   {design.logo && (
                     <img
                       src={design.logo}
@@ -847,29 +855,41 @@ export const QuoteContentStudio = forwardRef<
                       {customerDetails.contactName && (
                         <p className="mt-1 text-xs opacity-75">{customerDetails.contactName}</p>
                       )}
-                      {customerDetails.address && (
-                        <p className="mt-2 whitespace-pre-line text-xs leading-relaxed opacity-70">
-                          {customerDetails.address}
-                        </p>
-                      )}
-                      {(customerDetails.email || customerDetails.phone) && (
-                        <div className="mt-2 flex flex-col gap-1.5 text-xs opacity-75">
-                          {customerDetails.email && (
-                            <span className="flex items-center gap-2">
-                              <Mail className="size-3.5 shrink-0 text-[var(--quote-accent)]" aria-hidden="true" />
-                              {customerDetails.email}
-                            </span>
-                          )}
-                          {customerDetails.phone && (
-                            <span className="flex items-center gap-2">
-                              <Phone className="size-3.5 shrink-0 text-[var(--quote-accent)]" aria-hidden="true" />
-                              {customerDetails.phone}
-                            </span>
-                          )}
-                        </div>
-                      )}
+                      <div className="mt-4 grid gap-x-8 gap-y-4 text-xs leading-relaxed sm:grid-cols-2">
+                        {customerDetails.address && (
+                          <div>
+                            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] opacity-55">
+                              Address
+                            </p>
+                            <p className="whitespace-pre-line opacity-75">{customerDetails.address}</p>
+                          </div>
+                        )}
+                        {(customerDetails.email || customerDetails.phone) && (
+                          <div>
+                            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] opacity-55">
+                              Contact
+                            </p>
+                            <div className="flex flex-col gap-1.5 opacity-75">
+                              {customerDetails.email && (
+                                <span className="flex items-center gap-2">
+                                  <Mail className="size-3.5 shrink-0 text-[var(--quote-accent)]" aria-hidden="true" />
+                                  {customerDetails.email}
+                                </span>
+                              )}
+                              {customerDetails.phone && (
+                                <span className="flex items-center gap-2">
+                                  <Phone className="size-3.5 shrink-0 text-[var(--quote-accent)]" aria-hidden="true" />
+                                  {customerDetails.phone}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                       {customerDetails.vatId && (
-                        <p className="mt-2 text-xs opacity-65">{`VAT ${customerDetails.vatId}`}</p>
+                        <p className="mt-4 border-t border-[var(--quote-table-header)] pt-3 text-xs opacity-65">
+                          {`VAT ${customerDetails.vatId}`}
+                        </p>
                       )}
                     </div>
                   )}
@@ -3239,7 +3259,7 @@ function CustomizeQuote({
             <p className="mt-1 text-sm text-secondary">
               Choose a professional composition. Your saved company information fills it automatically.
             </p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
               {headerStyleChoices.map((choice) => (
                 <button
                   key={choice.id}
@@ -3256,7 +3276,10 @@ function CustomizeQuote({
                   }
                 >
                   <span
-                    className="flex h-16 items-center gap-3 rounded-xl bg-raised px-3"
+                    className={cx(
+                      "flex h-16 items-center gap-3 rounded-xl bg-raised px-3",
+                      choice.id === "stacked" && "flex-col justify-center gap-1.5",
+                    )}
                     aria-hidden="true"
                   >
                     <span
@@ -3265,12 +3288,12 @@ function CustomizeQuote({
                         choice.id === "band" && "rounded-none border-l-4 border-accent",
                       )}
                     />
-                    <span className="flex-1 space-y-1.5">
+                    <span className={cx("flex-1 space-y-1.5", choice.id === "stacked" && "flex-none") }>
                       <span className="block h-2 w-2/3 rounded-full bg-primary/20" />
                       <span className="block h-1.5 w-1/2 rounded-full bg-primary/10" />
                     </span>
-                    <span className="h-8 w-px bg-primary/10" />
-                    <span className="w-1/4 space-y-1.5">
+                    <span className={cx("h-8 w-px bg-primary/10", choice.id === "stacked" && "hidden")} />
+                    <span className={cx("w-1/4 space-y-1.5", choice.id === "stacked" && "hidden")}>
                       <span className="block h-1.5 rounded-full bg-accent/60" />
                       <span className="block h-1.5 rounded-full bg-primary/10" />
                     </span>
