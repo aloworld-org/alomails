@@ -66,7 +66,7 @@ export function TotalsPanel({
             ))
           ) : (
             <div className={styles.totalsRow}>
-              <dt>VAT</dt>
+              <dt>{strings.billingColVat}</dt>
               <dd className={styles.numeric}>{amount(totals.vatCents)}</dd>
             </div>
           ))}
@@ -82,7 +82,7 @@ export function TotalsPanel({
       </dl>
       {options.enabled && options.showTaxNote && (
         <p className="mt-3 text-xs text-tertiary">
-          VAT is shown separately from the net amount.
+          {strings.billingVatSeparateNote}
         </p>
       )}
       {stale && (

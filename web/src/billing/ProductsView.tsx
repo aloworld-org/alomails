@@ -88,7 +88,7 @@ export function ProductsView() {
         onCreate={() => setEditing(null)}
         busy={loading}
         showCreate={products.length > 0}
-        beforeCreate={<Button variant="ghost" icon={<Upload aria-hidden="true" />} onClick={() => setImporting(true)}>Import prices</Button>}
+        beforeCreate={<Button variant="ghost" icon={<Upload aria-hidden="true" />} onClick={() => setImporting(true)}>{strings.billingImportPrices}</Button>}
       />
 
       {error !== null && <ErrorBanner message={error} />}

@@ -298,13 +298,13 @@ export function QuoteEditor() {
               aria-pressed={quote.status === "draft" && !preview}
               title={
                 preview
-                  ? "Exit preview before editing this quote"
+                  ? strings.billingQuoteExitPreviewToEdit
                   : quote.status === "draft"
-                  ? "Edit quotation content"
-                  : "Create an editable revision"
+                  ? strings.billingQuoteEditContent
+                  : strings.billingQuoteCreateRevision
               }
             >
-              <Pencil size={15} aria-hidden="true" /> Edit quote
+              <Pencil size={15} aria-hidden="true" /> {strings.billingQuoteEdit}
             </button>
             <button
               type="button"
@@ -313,13 +313,13 @@ export function QuoteEditor() {
               disabled={quote.status !== "draft" || preview}
               title={
                 preview
-                  ? "Exit preview before customizing this quote"
+                  ? strings.billingQuoteExitPreviewToCustomize
                   : quote.status !== "draft"
-                    ? "Create an editable revision before customizing"
-                    : "Customize quotation"
+                    ? strings.billingQuoteCreateRevisionToCustomize
+                    : strings.quoteStudioCustomizeQuotation
               }
             >
-              <Palette size={15} aria-hidden="true" /> Customize
+              <Palette size={15} aria-hidden="true" /> {strings.quoteStudioCustomizeQuotation}
             </button>
             <button
               type="button"
@@ -332,7 +332,7 @@ export function QuoteEditor() {
               onClick={() => setPreview((value) => !value)}
             >
               <Eye size={15} aria-hidden="true" />
-              {preview ? "Exit preview" : "Preview"}
+              {preview ? strings.billingExitPreview : strings.billingQuotationPreview}
             </button>
           </div>
         )

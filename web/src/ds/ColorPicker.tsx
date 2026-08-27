@@ -12,6 +12,7 @@ import {
 import { cx } from "./cx";
 import { IconButton } from "./IconButton";
 import { useDismiss } from "./useDismiss";
+import { strings } from "../i18n";
 
 interface Rgb { r: number; g: number; b: number }
 interface Hsv { h: number; s: number; v: number }
@@ -188,14 +189,14 @@ export function ColorPicker({
           </div>
           <div className="space-y-5 p-5">
             <div className="flex items-center gap-4">
-              <IconButton label="Pick a colour from the screen" icon={<Pipette />} onClick={() => void useEyedropper()} />
+              <IconButton label={strings.colorPickerEyedropper} icon={<Pipette />} onClick={() => void useEyedropper()} />
               <span className="size-11 shrink-0 rounded-full border border-default" style={{ backgroundColor: hex }} />
               <input
                 type="range"
                 min="0"
                 max="360"
                 value={Math.round(hsv.h)}
-                aria-label="Hue"
+                aria-label={strings.colorPickerHue}
                 className="h-3 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-[linear-gradient(to_right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)] accent-accent [&::-moz-range-thumb]:size-6 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:bg-accent [&::-webkit-slider-thumb]:size-6 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:shadow-md"
                 onChange={(event) => updateHsv({ ...hsv, h: Number(event.target.value) })}
               />
@@ -206,7 +207,7 @@ export function ColorPicker({
                   <input
                     inputMode="numeric"
                     value={Math.round(rgb[channel])}
-                    aria-label={`${channel.toUpperCase()} value`}
+                    aria-label={strings.colorPickerChannelValue(channel.toUpperCase())}
                     className="h-11 min-w-0 rounded-xl border border-default bg-surface px-3 text-center text-base font-medium text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/10"
                     onChange={(event) => updateRgb(channel, event.target.value)}
                   />
@@ -217,24 +218,24 @@ export function ColorPicker({
           </div>
           <div className="space-y-3 border-t border-subtle px-5 py-4">
             <div className="grid grid-cols-[auto_minmax(9rem,1fr)_auto] items-center gap-3">
-              <span className="text-xs font-semibold text-secondary">HEX</span>
+              <span className="text-xs font-semibold text-secondary">{strings.colorPickerHex}</span>
               <input
                 value={hex}
-                aria-label="Hex colour"
+                aria-label={strings.colorPickerHexColour}
                 className="h-10 min-w-0 rounded-xl border border-default bg-surface px-3 font-mono text-sm font-medium uppercase text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/10"
                 onChange={(event) => {
                   const next = event.target.value.startsWith("#") ? event.target.value : `#${event.target.value}`;
                   if (/^#[0-9a-f]{6}$/i.test(next)) onChange(next.toUpperCase());
                 }}
               />
-              <IconButton label="Copy hex colour" icon={<Copy />} onClick={() => void navigator.clipboard?.writeText(hex)} />
+              <IconButton label={strings.colorPickerCopyHex} icon={<Copy />} onClick={() => void navigator.clipboard?.writeText(hex)} />
             </div>
             <div className="flex items-center justify-end gap-2">
               {presets.slice(0, 4).map((preset) => (
                 <button
                   key={preset}
                   type="button"
-                  aria-label={`Use ${preset}`}
+                  aria-label={strings.colorPickerUseColour(preset)}
                   className="grid size-9 place-items-center rounded-full border border-default"
                   style={{ backgroundColor: preset }}
                   onClick={() => onChange(preset)}
@@ -244,7 +245,7 @@ export function ColorPicker({
               ))}
               <button
                 type="button"
-                aria-label="Save current colour"
+                aria-label={strings.colorPickerSaveColour}
                 className="grid size-9 place-items-center rounded-lg border border-default text-secondary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
                 onClick={() => {
                   const next = [hex, ...savedColors.filter((item) => item !== hex)].slice(0, 8);
@@ -266,7 +267,7 @@ export function ColorPicker({
                   setOpen(false);
                 }}
               >
-                {resetLabel ?? "Use default colour"}
+                {resetLabel ?? strings.colorPickerUseDefault}
               </button>
             </div>
           )}

@@ -143,31 +143,31 @@ function ProductImageEditor({
 }) {
   return (
     <Modal
-      title="Edit product image"
+      title={strings.billingEditProductImage}
       icon={<Crop className="size-5" />}
       onClose={onClose}
       wide
-      actions={<IconButton label="Close image editor" icon={<X />} onClick={onClose} />}
+      actions={<IconButton label={strings.billingCloseImageEditor} icon={<X />} onClick={onClose} />}
       footer={
         <div className="ml-auto flex items-center gap-3">
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={onApply}>Apply image</Button>
+          <Button variant="ghost" onClick={onClose}>{strings.cancel}</Button>
+          <Button onClick={onApply}>{strings.billingApplyImage}</Button>
         </div>
       }
     >
       <div className="grid min-h-0 gap-5 lg:grid-cols-[minmax(0,1fr)_15rem]">
-        <section className="rounded-xl border border-default bg-app p-5" aria-label="PDF preview">
+        <section className="rounded-xl border border-default bg-app p-5" aria-label={strings.billingPdfPreview}>
           <div className="mx-auto max-w-xl rounded-lg border border-default bg-surface p-8 shadow-sm">
             <div className="mb-5 flex items-center justify-between border-b border-subtle pb-4">
               <div>
-                <span className="text-xs font-semibold uppercase tracking-wide text-accent">Quotation preview</span>
-                <p className="mt-1 text-sm text-secondary">This is the image size and crop used in the PDF.</p>
+                <span className="text-xs font-semibold uppercase tracking-wide text-accent">{strings.billingQuotationPreview}</span>
+                <p className="mt-1 text-sm text-secondary">{strings.billingImagePdfHelp}</p>
               </div>
-              <span className="text-xs font-medium text-tertiary">A4</span>
+              <span className="text-xs font-medium text-tertiary">{strings.billingPdfPaperSizeA4}</span>
             </div>
             <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 rounded-lg border border-subtle p-4">
               <div className="size-24 overflow-hidden rounded-lg border border-default bg-raised/30">
-                <img src={draft.image} alt="Product PDF preview" className={imageClasses(draft)} />
+                <img src={draft.image} alt={strings.billingProductPdfPreview} className={imageClasses(draft)} />
               </div>
               <div className="min-w-0">
                 <div className="h-3 w-3/4 rounded-full bg-default" />
@@ -181,14 +181,14 @@ function ProductImageEditor({
 
         <aside className="flex flex-col gap-5">
           <EditorChoice
-            label="Crop style"
+            label={strings.billingCropStyle}
             value={draft.imageFit}
-            choices={[["cover", "Fill frame"], ["contain", "Show full image"]]}
+            choices={[["cover", strings.billingFillFrame], ["contain", strings.billingShowFullImage]]}
             onChange={(imageFit) => onChange({ ...draft, imageFit })}
           />
           <fieldset>
             <legend className="mb-2 text-xs font-semibold uppercase tracking-wide text-tertiary">
-              Zoom
+              {strings.billingZoom}
             </legend>
             <div className="grid grid-cols-3 gap-2">
               {[75, 100, 125, 150, 200].map((zoom) => (
@@ -208,9 +208,9 @@ function ProductImageEditor({
                 </button>
               ))}
               <label className="relative">
-                <span className="sr-only">Custom zoom percentage</span>
+                <span className="sr-only">{strings.billingCustomZoom}</span>
                 <input
-                  aria-label="Custom zoom percentage"
+                  aria-label={strings.billingCustomZoom}
                   type="number"
                   min="50"
                   max="200"
@@ -236,13 +236,13 @@ function ProductImageEditor({
               </label>
             </div>
             <p className="mt-2 text-xs leading-relaxed text-secondary">
-              Use 50–90% to show more of the image, or more than 100% for a tighter crop.
+              {strings.billingZoomHelp}
             </p>
           </fieldset>
           <EditorChoice
-            label="Focus area"
+            label={strings.billingFocusArea}
             value={draft.imagePosition}
-            choices={[["center", "Centre"], ["top", "Top"], ["bottom", "Bottom"], ["left", "Left"], ["right", "Right"]]}
+            choices={[["center", strings.billingCentre], ["top", strings.billingTop], ["bottom", strings.billingBottom], ["left", strings.billingLeft], ["right", strings.billingRight]]}
             onChange={(imagePosition) => onChange({ ...draft, imagePosition })}
           />
         </aside>
@@ -361,8 +361,7 @@ export function DocumentLines({
             {title ?? strings.billingLines}
           </h2>
           <p className="mt-1 text-sm text-secondary">
-            Add, edit, remove, or drag products and services into the right
-            order.
+            {strings.billingPricingTableEditorHelp}
           </p>
         </div>
         {rows.length === 0 ? (
@@ -372,7 +371,7 @@ export function DocumentLines({
               {strings.billingNoLines}
             </p>
             <p className="mt-1 text-sm text-secondary">
-              Add a service, product, fee, or discount to continue.
+              {strings.billingPricingTableEmptyHelp}
             </p>
           </div>
         ) : (
@@ -477,12 +476,12 @@ export function DocumentLines({
                       >
                         {content.image ? (
                           <>
-                            <img src={content.image} alt="Product" className={imageClasses(content)} />
+                            <img src={content.image} alt={strings.billingProductImage} className={imageClasses(content)} />
                             <button
                               type="button"
                               className="absolute right-2 top-2 grid size-9 place-items-center rounded-lg border border-default bg-surface text-primary shadow-sm transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
-                              aria-label="Edit product image"
-                              title="Edit product image"
+                              aria-label={strings.billingEditProductImage}
+                              title={strings.billingEditProductImage}
                               onClick={() => setEditingImage(imageDraft(detailKey, content))}
                             >
                               <Pencil className="size-4" aria-hidden="true" />
@@ -497,14 +496,14 @@ export function DocumentLines({
                       </div>
                       <div>
                         <strong className="block text-sm font-semibold text-primary">
-                          Product image
+                          {strings.billingProductImage}
                         </strong>
                         <p className="mt-1 text-xs text-secondary">
-                          Shown beside this item in the customer quotation.
+                          {strings.billingProductImageHelp}
                         </p>
                         <div className="mt-2 flex flex-wrap gap-2">
                           <label className="inline-flex min-h-9 cursor-pointer items-center rounded-lg border border-default bg-surface px-3 text-xs font-semibold text-primary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent">
-                            {content.image ? "Replace image" : "Upload image"}
+                            {content.image ? strings.billingReplaceImage : strings.billingUploadImage}
                             <input
                               type="file"
                               accept="image/png,image/jpeg,image/webp"
@@ -526,7 +525,7 @@ export function DocumentLines({
                                 })
                               }
                             >
-                              Remove
+                              {strings.billingRemoveImage}
                             </button>
                           )}
                         </div>
@@ -648,12 +647,12 @@ export function DocumentLines({
                   {tableOptions.enabled && tableOptions.showDescriptions && (
                     <label className="mt-4 block">
                       <span className="text-xs font-semibold uppercase tracking-wide text-tertiary">
-                        Product description
+                        {strings.billingProductDescription}
                       </span>
                       <textarea
                         className="mt-2 min-h-20 w-full resize-y rounded-md border border-default bg-surface px-3 py-3 text-sm leading-relaxed text-primary placeholder:text-tertiary focus:border-accent focus:outline-none"
                         value={content.description}
-                        placeholder="Add specifications, materials, scope, or other useful details…"
+                        placeholder={strings.billingProductDescriptionPlaceholder}
                         onChange={(event) =>
                           tableOptions.updateLineContent(detailKey, {
                             description: event.target.value,
@@ -713,7 +712,7 @@ export function DocumentLines({
           <thead>
             <tr>
               {tableOptions.enabled && tableOptions.showImages && (
-                <Th>Image</Th>
+                <Th>{strings.billingImage}</Th>
               )}
               <Th>{strings.billingColDescription}</Th>
               {(columns?.unit ?? true) && (

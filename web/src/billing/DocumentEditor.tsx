@@ -267,7 +267,7 @@ export function DocumentEditor<T extends StoredDocument, A>({
           columns={lineColumns}
           title={
             typeof documentBody === "function"
-              ? title ?? "Pricing table"
+              ? title ?? strings.quoteStudioPricingTable
               : undefined
           }
           onChange={(next) => {
@@ -330,18 +330,18 @@ export function DocumentEditor<T extends StoredDocument, A>({
     }`;
     const rowsToShow: Array<{ label: string; value: string; total?: boolean }> =
       presentation.detail === "total"
-        ? [{ label: "Total", value: totalAmount, total: true }]
+        ? [{ label: strings.billingTotalsGross, value: totalAmount, total: true }]
         : [
-            { label: "Net", value: amount(netCents) },
+            { label: strings.billingTotalsNet, value: amount(netCents) },
             ...(presentation.detail === "breakdown"
               ? Array.from(netByRate)
                   .sort(([left], [right]) => left - right)
                   .map(([rate, net]) => ({
-                    label: `VAT at ${formatRate(rate, locale)}`,
+                    label: strings.billingVatAtRate(formatRate(rate, locale)),
                     value: amount(Math.round((net * rate) / 10_000)),
                   }))
-              : [{ label: "VAT", value: amount(vatCents) }]),
-            { label: "Total", value: totalAmount, total: true },
+              : [{ label: strings.billingVat, value: amount(vatCents) }]),
+            { label: strings.billingTotalsGross, value: totalAmount, total: true },
           ];
     return (
       <div
@@ -395,7 +395,7 @@ export function DocumentEditor<T extends StoredDocument, A>({
           </dl>
           {presentation.showTaxNote && (
             <p className="mt-3 text-xs text-tertiary">
-              VAT is shown separately and included in the total.
+              {strings.billingVatIncludedNote}
             </p>
           )}
         </div>

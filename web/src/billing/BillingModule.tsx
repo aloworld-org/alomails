@@ -40,7 +40,11 @@ import { SettingsView } from "./SettingsView";
 const TABS = [
   { path: "customers", label: () => strings.billingCustomers, Icon: Building2 },
   { path: "products", label: () => strings.billingProducts, Icon: Tags },
-  { path: "connections", label: () => "Price connections", Icon: PlugZap },
+  {
+    path: "connections",
+    label: () => strings.billingPriceConnections,
+    Icon: PlugZap,
+  },
   { path: "quotes", label: () => strings.billingQuotes, Icon: FileText },
   { path: "invoices", label: () => strings.billingInvoices, Icon: ReceiptText },
   // What bills itself again on a rhythm (B2.11). After the documents it

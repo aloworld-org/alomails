@@ -499,30 +499,48 @@ describe("the offer's transitions", () => {
       name: strings.billingDraftQuote,
     });
     const actions = within(title.parentElement as HTMLElement);
-    const edit = actions.getByRole("button", { name: "Edit quote" });
+    const edit = actions.getByRole("button", {
+      name: strings.billingQuoteEdit,
+    });
     expect((edit as HTMLButtonElement).disabled).toBe(false);
-    expect(actions.getByRole("button", { name: "Customize" })).toBeTruthy();
-    expect(actions.getByRole("button", { name: "Preview" })).toBeTruthy();
+    expect(
+      actions.getByRole("button", {
+        name: strings.quoteStudioCustomizeQuotation,
+      }),
+    ).toBeTruthy();
+    expect(
+      actions.getByRole("button", { name: strings.billingQuotationPreview }),
+    ).toBeTruthy();
     expect(
       actions.getByRole("button", { name: strings.billingPrint }),
     ).toBeTruthy();
 
-    fireEvent.click(actions.getByRole("button", { name: "Preview" }));
+    fireEvent.click(
+      actions.getByRole("button", { name: strings.billingQuotationPreview }),
+    );
     expect(
-      actions.getByRole("button", { name: "Exit preview" }).getAttribute(
+      actions.getByRole("button", { name: strings.billingExitPreview }).getAttribute(
         "aria-pressed",
       ),
     ).toBe("true");
     expect(
-      (actions.getByRole("button", { name: "Customize" }) as HTMLButtonElement)
+      (actions.getByRole("button", {
+        name: strings.quoteStudioCustomizeQuotation,
+      }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
     expect((edit as HTMLButtonElement).disabled).toBe(true);
 
-    fireEvent.click(actions.getByRole("button", { name: "Exit preview" }));
-    expect(actions.getByRole("button", { name: "Preview" })).toBeTruthy();
+    fireEvent.click(
+      actions.getByRole("button", { name: strings.billingExitPreview }),
+    );
     expect(
-      (actions.getByRole("button", { name: "Customize" }) as HTMLButtonElement)
+      actions.getByRole("button", { name: strings.billingQuotationPreview }),
+    ).toBeTruthy();
+    expect(
+      (actions.getByRole("button", {
+        name: strings.quoteStudioCustomizeQuotation,
+      }) as HTMLButtonElement)
         .disabled,
     ).toBe(false);
     expect((edit as HTMLButtonElement).disabled).toBe(false);
@@ -540,7 +558,9 @@ describe("the offer's transitions", () => {
       quote: { ...DRAFT, id: "quo-revision", lines: SENT.lines },
       invoiceId: null,
     });
-    fireEvent.click(screen.getByRole("button", { name: "Edit quote" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.billingQuoteEdit }),
+    );
 
     await waitFor(() => expect(lastWrite()?.url).toContain("/billing/quotes"));
     expect(lastWrite()?.method).toBe("POST");
@@ -592,7 +612,9 @@ describe("the offer's transitions", () => {
     // on a date, so this screen must not lock the door either.
     expect(screen.getByText(strings.billingQuoteLapsed)).toBeTruthy();
     expect(
-      (screen.getByRole("button", { name: "Customize" }) as HTMLButtonElement)
+      (screen.getByRole("button", {
+        name: strings.quoteStudioCustomizeQuotation,
+      }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
     expect(

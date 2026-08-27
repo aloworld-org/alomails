@@ -81,7 +81,7 @@ describe("pricing-table product image editor", () => {
 
   test("opens when the product image is double-clicked", () => {
     renderLines();
-    fireEvent.doubleClick(screen.getByRole("img", { name: "Product" }));
+    fireEvent.doubleClick(screen.getByRole("img", { name: "Product image" }));
     expect(screen.getByRole("dialog", { name: "Edit product image" })).toBeTruthy();
   });
 });

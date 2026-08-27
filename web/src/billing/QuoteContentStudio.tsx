@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 
 import { Button, ChoicePicker, ColorPicker, IconButton, Modal, Select, cx } from "../ds";
+import { strings, useLocale } from "../i18n";
 import {
   QuoteTableOptionsProvider,
   type QuoteLineContent,
@@ -224,18 +225,6 @@ const EMPTY: Design = {
 };
 const DESIGN_STORE = "quote-designs";
 const DESIGN_DATABASE = "alo-quote-assets";
-const themeChoices: Array<{ id: Theme; name: string; help: string }> = [
-  { id: "modern", name: "Modern", help: "Clean and confident" },
-  { id: "editorial", name: "Editorial", help: "Story-led headings" },
-  { id: "minimal", name: "Minimal", help: "Quiet and precise" },
-];
-const headerStyleChoices: Array<{ id: HeaderStyle; name: string; help: string }> = [
-  { id: "signature", name: "Signature", help: "Balanced identity and quote details" },
-  { id: "editorial", name: "Editorial", help: "A confident title-led opening" },
-  { id: "band", name: "Brand band", help: "A stronger branded introduction" },
-  { id: "minimal", name: "Minimal", help: "Quiet, compact and precise" },
-  { id: "stacked", name: "Logo stack", help: "Company name beneath the logo" },
-];
 const headerRatioChoices: Array<{ id: HeaderRatio; columns: string; reverseColumns: string }> = [
   { id: "40-60", columns: "grid-cols-[2fr_3fr]", reverseColumns: "grid-cols-[3fr_2fr]" },
   { id: "50-50", columns: "grid-cols-2", reverseColumns: "grid-cols-2" },
@@ -323,11 +312,11 @@ function HeaderStylePreview({ style }: { style: HeaderStyle }) {
   );
 }
 
-function formatDocumentDate(value: string | null | undefined) {
+function formatDocumentDate(value: string | null | undefined, locale: string) {
   if (!value) return null;
   const [year, month, day] = value.split("-").map(Number);
   if (!year || !month || !day) return value;
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -466,7 +455,7 @@ function designDatabase(): Promise<IDBDatabase> {
     request.onerror = () =>
       reject(
         request.error ??
-          new Error("The quotation design database could not be opened."),
+          new Error(strings.quoteStudioDesignDatabaseError),
       );
   });
 }
@@ -503,12 +492,12 @@ async function saveDesign(key: string, design: Design): Promise<void> {
     transaction.onerror = () =>
       reject(
         transaction.error ??
-          new Error("The quotation design could not be saved."),
+          new Error(strings.quoteStudioDesignSaveError),
       );
     transaction.onabort = () =>
       reject(
         transaction.error ??
-          new Error("The quotation design save was cancelled."),
+          new Error(strings.quoteStudioDesignSaveCancelled),
       );
   });
   database.close();
@@ -571,6 +560,7 @@ export const QuoteContentStudio = forwardRef<
   },
   ref,
 ) {
+  const locale = useLocale();
   const storageKey = `alo:quote-design:${quoteId}`;
   const [design, setDesign] = useState<Design>(EMPTY);
   const [ready, setReady] = useState(false);
@@ -596,7 +586,7 @@ export const QuoteContentStudio = forwardRef<
       customize: () => setCustomizeMode("document"),
       edit: () => {
         const target = root.current?.querySelector<HTMLElement>(
-          'input:not([disabled]), textarea:not([disabled]), [contenteditable="true"], button[aria-label="Edit quotation header"]',
+          'input:not([disabled]), textarea:not([disabled]), [contenteditable="true"]',
         );
         target?.scrollIntoView({ behavior: "smooth", block: "center" });
         target?.focus({ preventScroll: true });
@@ -629,9 +619,7 @@ export const QuoteContentStudio = forwardRef<
         })
         .catch(() => {
           if (current)
-            setSaveError(
-              "This design could not be saved. Try a smaller image or upload it again.",
-            );
+            setSaveError(strings.quoteStudioDesignSaveRetry);
         });
     }, 200);
     return () => {
@@ -708,10 +696,9 @@ export const QuoteContentStudio = forwardRef<
             kind,
             rowKeys: [],
             showSubtotal: true,
-            title: `Pricing table ${
-              current.blocks.filter((block) => block.kind === "pricing")
-                .length + 1
-            }`,
+            title: strings.quoteStudioPricingTableNumber(
+              current.blocks.filter((block) => block.kind === "pricing").length + 1,
+            ),
           },
           ...current.blocks
             .slice(index)
@@ -728,9 +715,9 @@ export const QuoteContentStudio = forwardRef<
         id,
         kind,
         columns: [
-          { id: crypto.randomUUID(), label: "Column 1" },
-          { id: crypto.randomUUID(), label: "Column 2" },
-          { id: crypto.randomUUID(), label: "Column 3" },
+          { id: crypto.randomUUID(), label: strings.quoteStudioColumnNumber(1) },
+          { id: crypto.randomUUID(), label: strings.quoteStudioColumnNumber(2) },
+          { id: crypto.randomUUID(), label: strings.quoteStudioColumnNumber(3) },
         ],
         rows: [
           {
@@ -829,10 +816,10 @@ export const QuoteContentStudio = forwardRef<
           bgColor="#ffffff"
           level="M"
           marginSize={0}
-          title={`Save ${headerDetails.companyName} contact details`}
+          title={strings.quoteStudioScanToSave}
         />
       </div>
-      <p className="mt-1 text-[9px] font-medium leading-tight opacity-60">Scan to save</p>
+      <p className="mt-1 text-[9px] font-medium leading-tight opacity-60">{strings.quoteStudioScanToSave}</p>
     </div>
   ) : null;
 
@@ -851,10 +838,10 @@ export const QuoteContentStudio = forwardRef<
           <header className="flex flex-wrap items-center justify-between gap-4 border-b border-subtle px-6 py-4 max-md:px-4">
             <div>
               <h2 className="text-base font-semibold text-primary">
-                Build your quotation
+                {strings.quoteStudioBuildTitle}
               </h2>
               <p className="mt-0.5 text-sm text-secondary">
-                Add content directly. Changes save automatically.
+                {strings.quoteStudioBuildHelp}
               </p>
             </div>
           </header>
@@ -901,7 +888,7 @@ export const QuoteContentStudio = forwardRef<
                   {design.logo && (
                     <img
                       src={design.logo}
-                      alt="Company logo"
+                      alt={strings.quoteStudioCompanyLogo}
                       className={cx(
                         "h-16 w-20 shrink-0 object-contain",
                         design.headerStyle === "stacked" && "h-20 w-24",
@@ -930,7 +917,7 @@ export const QuoteContentStudio = forwardRef<
                     {headerDetails.address && (
                       <div>
                         <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] opacity-55">
-                          Address
+                          {strings.quoteStudioAddress}
                         </p>
                         <p className="whitespace-pre-line opacity-80">{headerDetails.address}</p>
                       </div>
@@ -938,7 +925,7 @@ export const QuoteContentStudio = forwardRef<
                     {(headerDetails.email || headerDetails.phone || headerDetails.website) && (
                       <div>
                         <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] opacity-55">
-                          Contact
+                          {strings.quoteStudioContact}
                         </p>
                         <div className="flex min-w-0 flex-col gap-1.5 opacity-80">
                             {headerDetails.email && (
@@ -969,7 +956,7 @@ export const QuoteContentStudio = forwardRef<
                       {headerDetails.vatId && (
                         <div>
                           <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-55">
-                            VAT ID
+                            {strings.quoteStudioVatId}
                           </dt>
                           <dd className="mt-1.5 font-semibold">{headerDetails.vatId}</dd>
                         </div>
@@ -977,7 +964,7 @@ export const QuoteContentStudio = forwardRef<
                       {headerDetails.registrationNo && (
                         <div>
                           <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-55">
-                            Company number
+                            {strings.quoteStudioCompanyNumber}
                           </dt>
                           <dd className="mt-1.5 font-semibold">{headerDetails.registrationNo}</dd>
                         </div>
@@ -997,7 +984,7 @@ export const QuoteContentStudio = forwardRef<
               >
                 <div className="max-w-lg">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--quote-accent)]">
-                    Quotation
+                    {strings.quoteStudioQuotation}
                   </p>
                   <p
                     className={cx(
@@ -1005,12 +992,12 @@ export const QuoteContentStudio = forwardRef<
                       design.headerStyle === "editorial" ? "text-4xl" : "text-2xl",
                     )}
                   >
-                    {quote?.number ?? "Draft quotation"}
+                    {quote?.number ?? strings.quoteStudioDraftQuotation}
                   </p>
                   {Object.values(customerDetails).some(Boolean) && (
                     <div className="mt-5 text-[var(--quote-text)]">
                       <p className="text-[11px] font-semibold uppercase tracking-wide opacity-55">
-                        Prepared for
+                        {strings.quoteStudioPreparedFor}
                       </p>
                       {customerDetails.companyName && (
                         <p className="mt-1 text-xl font-semibold leading-tight tracking-tight">
@@ -1024,7 +1011,7 @@ export const QuoteContentStudio = forwardRef<
                         {customerDetails.address && (
                           <div>
                             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] opacity-55">
-                              Address
+                              {strings.quoteStudioAddress}
                             </p>
                             <p className="whitespace-pre-line opacity-80">{customerDetails.address}</p>
                           </div>
@@ -1032,7 +1019,7 @@ export const QuoteContentStudio = forwardRef<
                         {(customerDetails.email || customerDetails.phone) && (
                           <div>
                             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] opacity-55">
-                              Contact
+                              {strings.quoteStudioContact}
                             </p>
                             <div className="flex flex-col gap-1.5 opacity-80">
                               {customerDetails.email && (
@@ -1061,15 +1048,15 @@ export const QuoteContentStudio = forwardRef<
                 </div>
                 <dl className="mt-auto grid max-w-lg grid-cols-2 gap-x-10 gap-y-3 border-t border-[var(--quote-table-header)] pt-4 text-xs text-[var(--quote-text)]">
                   <div>
-                    <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-55">Issued</dt>
+                    <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-55">{strings.quoteStudioIssued}</dt>
                     <dd className="mt-1.5 font-semibold">
-                      {formatDocumentDate(quote?.sentDate) ?? "On finalization"}
+                      {formatDocumentDate(quote?.sentDate, locale) ?? strings.quoteStudioOnFinalization}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-55">Valid until</dt>
+                    <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-55">{strings.quoteStudioValidUntil}</dt>
                     <dd className="mt-1.5 font-semibold">
-                      {formatDocumentDate(quote?.validUntil) ??
+                      {formatDocumentDate(quote?.validUntil, locale) ??
                         `${quote?.validDays ?? 30} days after issue`}
                     </dd>
                   </div>
@@ -1080,10 +1067,10 @@ export const QuoteContentStudio = forwardRef<
                   type="button"
                   className="absolute right-4 top-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-accent-soft px-4 py-2 text-sm font-medium text-accent transition-colors duration-150 hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15"
                   onClick={() => setCustomizeMode("header")}
-                  aria-label="Edit quotation header"
+                  aria-label={strings.quoteStudioEditHeader}
                 >
                   <Pencil className="size-4" aria-hidden="true" />
-                  Edit header
+                  {strings.quoteStudioEditHeader}
                 </button>
               )}
             </div>
@@ -1109,7 +1096,7 @@ export const QuoteContentStudio = forwardRef<
                           {block.kind === "pricing" ? (
                             <label className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
                               <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-tertiary">
-                                Table name
+                                {strings.quoteStudioTableName}
                               </span>
                               <span className="relative block min-w-0">
                                 <Pencil
@@ -1118,9 +1105,9 @@ export const QuoteContentStudio = forwardRef<
                                 />
                                 <input
                                   className="min-h-10 w-full min-w-52 rounded-lg border border-default bg-surface py-2 pl-9 pr-3 text-sm font-semibold text-primary placeholder:text-tertiary hover:border-accent focus:border-accent focus:outline-none"
-                                  value={block.title ?? "Pricing table"}
-                                  aria-label="Table name"
-                                  placeholder="Pricing table"
+                                  value={block.title ?? strings.quoteStudioPricingTable}
+                                  aria-label={strings.quoteStudioTableName}
+                                  placeholder={strings.quoteStudioPricingTable}
                                   onChange={(event) =>
                                     update(block.id, {
                                       title: event.target.value,
@@ -1147,8 +1134,8 @@ export const QuoteContentStudio = forwardRef<
                                         accent
                                         label={
                                           block.showSubtotal === false
-                                            ? "Show subtotal"
-                                            : "Hide subtotal"
+                                            ? strings.quoteStudioShowSubtotal
+                                            : strings.quoteStudioHideSubtotal
                                         }
                                         onClick={() =>
                                           update(block.id, {
@@ -1162,7 +1149,7 @@ export const QuoteContentStudio = forwardRef<
                                     )}
                                     <BlockCommand
                                       accent
-                                      label="Table settings"
+                                      label={strings.quoteStudioTableSettings}
                                       onClick={() => setTableSettings(true)}
                                     >
                                       <Palette className="size-4" />
@@ -1172,7 +1159,7 @@ export const QuoteContentStudio = forwardRef<
                                 {block.kind === "image" && (
                                   <BlockCommand
                                     accent
-                                    label="Edit block"
+                                    label={strings.quoteStudioEditBlock}
                                     onClick={() => setEditingImageId(block.id)}
                                   >
                                     <Pencil className="size-4" />
@@ -1182,14 +1169,14 @@ export const QuoteContentStudio = forwardRef<
                             )}
                             <div className="flex flex-wrap items-center gap-2">
                               <BlockCommand
-                                label="Move up"
+                                label={strings.quoteStudioMoveUp}
                                 disabled={index === 0}
                                 onClick={() => moveBlock(index, -1)}
                               >
                                 <ArrowUp className="size-4" />
                               </BlockCommand>
                               <BlockCommand
-                                label="Move down"
+                                label={strings.quoteStudioMoveDown}
                                 disabled={index === design.blocks.length - 1}
                                 onClick={() => moveBlock(index, 1)}
                               >
@@ -1197,7 +1184,7 @@ export const QuoteContentStudio = forwardRef<
                               </BlockCommand>
                               {block.kind !== "pricing" && (
                                 <BlockCommand
-                                  label="Duplicate"
+                                  label={strings.quoteStudioDuplicate}
                                   onClick={() => duplicateBlock(index)}
                                 >
                                   <Copy className="size-4" />
@@ -1205,7 +1192,7 @@ export const QuoteContentStudio = forwardRef<
                               )}
                             </div>
                             <BlockCommand
-                              label="Delete"
+                              label={strings.quoteStudioDelete}
                               danger
                               disabled={
                                 block.kind === "pricing" &&
@@ -1241,7 +1228,7 @@ export const QuoteContentStudio = forwardRef<
                               ...(block.rowKeys === undefined
                                 ? {}
                                 : { rowKeys: block.rowKeys }),
-                              title: block.title ?? "Pricing table",
+                              title: block.title ?? strings.quoteStudioPricingTable,
                               onRowKeysChange: (rowKeys) =>
                                 update(block.id, { rowKeys }),
                             })}
@@ -1280,7 +1267,7 @@ export const QuoteContentStudio = forwardRef<
                               <Select
                                 fullWidth
                                 value={String(block.level)}
-                                aria-label="Heading level"
+                                aria-label={strings.quoteStudioHeadingLevel}
                                 onChange={(event) =>
                                   update(block.id, {
                                     level: Number(event.target.value) as
@@ -1288,14 +1275,14 @@ export const QuoteContentStudio = forwardRef<
                                   })
                                 }
                               >
-                                <option value="1">Heading 1</option>
-                                <option value="2">Heading 2</option>
-                                <option value="3">Heading 3</option>
+                                <option value="1">{strings.quoteStudioHeading1}</option>
+                                <option value="2">{strings.quoteStudioHeading2}</option>
+                                <option value="3">{strings.quoteStudioHeading3}</option>
                               </Select>
                               <InlineRichTextEditor
                                 value={block.text}
-                                placeholder="Section heading"
-                                aria-label="Section heading"
+                                placeholder={strings.quoteStudioSectionHeading}
+                                aria-label={strings.quoteStudioSectionHeading}
                                 onChange={(text) => update(block.id, { text })}
                               />
                             </div>
@@ -1306,8 +1293,8 @@ export const QuoteContentStudio = forwardRef<
                           ) : (
                             <RichTextEditor
                               value={block.text}
-                              label="Paragraph"
-                              placeholder="Write a paragraph…"
+                              label={strings.quoteStudioParagraph}
+                              placeholder={strings.quoteStudioWriteParagraph}
                               onChange={(text) => update(block.id, { text })}
                             />
                           )
@@ -1327,14 +1314,14 @@ export const QuoteContentStudio = forwardRef<
                             <div className="grid gap-3">
                               <RichTextEditor
                                 value={block.text}
-                                label="Quotation"
-                                placeholder="Add a customer quote or important statement…"
+                                label={strings.quoteStudioQuotation}
+                                placeholder={strings.quoteStudioImportantStatement}
                                 onChange={(text) => update(block.id, { text })}
                               />
                               <InlineRichTextEditor
                                 value={block.attribution}
-                                placeholder="Attribution (optional)"
-                                aria-label="Quote attribution"
+                                placeholder={strings.quoteStudioAttribution}
+                                aria-label={strings.quoteStudioQuoteAttribution}
                                 onChange={(attribution) =>
                                   update(block.id, { attribution })
                                 }
@@ -1426,8 +1413,8 @@ export const QuoteContentStudio = forwardRef<
                             <div>
                               <InlineRichTextEditor
                                 value={block.heading}
-                                placeholder="Section heading"
-                                aria-label="Section heading"
+                                placeholder={strings.quoteStudioSectionHeading}
+                                aria-label={strings.quoteStudioSectionHeading}
                                 onChange={(heading) =>
                                   update(block.id, { heading })
                                 }
@@ -1435,8 +1422,8 @@ export const QuoteContentStudio = forwardRef<
                               <div className="mt-3">
                                 <RichTextEditor
                                   value={block.body}
-                                  label="Section text"
-                                  placeholder="Write the information your customer needs…"
+                                  label={strings.quoteStudioSectionText}
+                                  placeholder={strings.quoteStudioSectionTextPlaceholder}
                                   onChange={(body) =>
                                     update(block.id, { body })
                                   }
@@ -1589,22 +1576,22 @@ function ListBlockEditor({
     <div>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-primary">List layout</p>
+          <p className="text-sm font-semibold text-primary">{strings.quoteStudioListLayout}</p>
           <p className="mt-0.5 text-xs text-secondary">
-            Split longer lists into easy-to-scan columns.
+            {strings.quoteStudioListLayoutHelp}
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs font-semibold text-secondary">
-          <span>Columns</span>
+          <span>{strings.quoteStudioColumns}</span>
           <div className="w-36">
             <ChoicePicker
               value={String(columns)}
-              label={`${ordered ? "Numbered" : "Bullet"} list columns`}
-              placeholder="Choose columns"
+              label={ordered ? strings.quoteStudioNumberedListColumns : strings.quoteStudioBulletListColumns}
+              placeholder={strings.quoteStudioChooseColumns}
               options={[
-                { value: "1", label: "1 column" },
-                { value: "2", label: "2 columns" },
-                { value: "3", label: "3 columns" },
+                { value: "1", label: strings.quoteStudioColumnCount(1) },
+                { value: "2", label: strings.quoteStudioColumnCount(2) },
+                { value: "3", label: strings.quoteStudioColumnCount(3) },
               ]}
               onChange={(value) =>
                 onChange({ columns: Number(value) as 1 | 2 | 3 })
@@ -1630,27 +1617,27 @@ function ListBlockEditor({
             </span>
             <InlineRichTextEditor
               value={item}
-              aria-label={`${ordered ? "Numbered" : "Bullet"} item ${index + 1}`}
-              placeholder="Write an item"
+              aria-label={ordered ? strings.quoteStudioNumberedItemA11y(index + 1) : strings.quoteStudioBulletItemA11y(index + 1)}
+              placeholder={strings.quoteStudioWriteItem}
               onChange={(value) => replace(index, value)}
             />
             <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover/list-item:opacity-100 group-focus-within/list-item:opacity-100 max-md:col-span-2 max-md:justify-self-end max-md:opacity-100">
               <BlockCommand
-                label="Move item up"
+                label={strings.quoteStudioMoveItemUp}
                 disabled={index === 0}
                 onClick={() => move(index, -1)}
               >
                 <ArrowUp className="size-4" />
               </BlockCommand>
               <BlockCommand
-                label="Move item down"
+                label={strings.quoteStudioMoveItemDown}
                 disabled={index === rows.length - 1}
                 onClick={() => move(index, 1)}
               >
                 <ArrowDown className="size-4" />
               </BlockCommand>
               <BlockCommand
-                label="Remove item"
+                label={strings.quoteStudioRemoveItem}
                 danger
                 onClick={() => remove(index)}
               >
@@ -1665,7 +1652,7 @@ function ListBlockEditor({
         className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-default bg-surface px-4 text-sm font-semibold text-primary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
         onClick={() => onChange({ items: items === "" ? "\n" : `${items}\n` })}
       >
-        <Plus className="size-4" aria-hidden="true" /> Add item below
+        <Plus className="size-4" aria-hidden="true" /> {strings.quoteStudioAddItemBelow}
       </button>
     </div>
   );
@@ -1746,13 +1733,13 @@ function InlineRichTextEditor({
         <div
           className="absolute bottom-[calc(100%+0.5rem)] left-3 z-20 flex items-center gap-1 rounded-xl border border-default bg-surface p-1.5 shadow-lg"
           role="toolbar"
-          aria-label="List item formatting"
+          aria-label={strings.quoteStudioListItemFormatting}
           onMouseDown={(event) => event.preventDefault()}
         >
-          <RichTextCommand label="Bold" onClick={() => command("bold")}>
+          <RichTextCommand label={strings.quoteStudioBold} onClick={() => command("bold")}>
             <Bold className="size-4" />
           </RichTextCommand>
-          <RichTextCommand label="Italic" onClick={() => command("italic")}>
+          <RichTextCommand label={strings.quoteStudioItalic} onClick={() => command("italic")}>
             <Italic className="size-4" />
           </RichTextCommand>
         </div>
@@ -1846,7 +1833,7 @@ function QuotationBlockImage({
     >
       <img
         src={block.src}
-        alt={block.caption || "Quotation image"}
+        alt={block.caption || strings.quoteStudioQuotationImageAlt}
         className={cx(
           "transition-transform duration-200",
           aspect === "natural"
@@ -1923,44 +1910,43 @@ function ImageBlockEditor({
 }) {
   return (
     <Modal
-      title="Edit content block"
+      title={strings.quoteStudioEditContentBlock}
       icon={<ImagePlus className="size-5" />}
       onClose={onClose}
       wide="extra"
       footer={
         <>
           <p className="mr-auto text-xs text-secondary">
-            Changes are shown immediately in the quotation.
+            {strings.quoteStudioChangesImmediate}
           </p>
-          <Button onClick={onClose}>Done</Button>
+          <Button onClick={onClose}>{strings.quoteStudioDone}</Button>
         </>
       }
     >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h3 className="text-base font-semibold text-primary">
-          Compose image and text
+          {strings.quoteStudioComposeImageText}
         </h3>
         <p className="w-full text-sm text-secondary">
-          Arrange the block once and see exactly how it will appear in the
-          quotation.
+          {strings.quoteStudioComposeImageTextHelp}
         </p>
       </div>
       <section className="border-y border-subtle py-5">
-        <h4 className="text-sm font-semibold text-primary">Layout tools</h4>
+        <h4 className="text-sm font-semibold text-primary">{strings.quoteStudioLayoutTools}</h4>
         <p className="mt-1 text-xs text-secondary">
-          Choose how this content block will appear in the quotation.
+          {strings.quoteStudioLayoutToolsHelp}
         </p>
         <div className="mt-5 flex flex-col gap-5">
           <div className="grid items-start gap-6 md:grid-cols-[minmax(0,3fr)_minmax(0,5fr)]">
             <div>
               <ImageOptionGroup
-                label="Composition"
+                label={strings.quoteStudioComposition}
                 visual="composition"
                 value={block.placement ?? "full"}
                 options={[
-                  ["full", "Below image"],
-                  ["left", "Image left"],
-                  ["right", "Image right"],
+                  ["full", strings.quoteStudioBelowImage],
+                  ["left", strings.quoteStudioImageLeft],
+                  ["right", strings.quoteStudioImageRight],
                 ]}
                 onChange={(placement) => onChange({ placement })}
               />
@@ -1976,25 +1962,25 @@ function ImageBlockEditor({
           <div className="grid items-start gap-6 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)_minmax(0,3fr)]">
             <div>
               <ImageOptionGroup
-                label="Image frame"
+                label={strings.quoteStudioImageFrame}
                 visual="frame"
                 value={block.aspect ?? "landscape"}
                 options={[
-                  ["natural", "Natural"],
-                  ["landscape", "Wide"],
-                  ["square", "Square"],
+                  ["natural", strings.quoteStudioNatural],
+                  ["landscape", strings.quoteStudioWide],
+                  ["square", strings.quoteStudioSquare],
                 ]}
                 onChange={(aspect) => onChange({ aspect })}
               />
             </div>
             <div>
               <ImageOptionGroup
-                label="Fit"
+                label={strings.quoteStudioFit}
                 visual="fit"
                 value={block.fit ?? "cover"}
                 options={[
-                  ["cover", "Fill frame"],
-                  ["contain", "Whole image"],
+                  ["cover", strings.quoteStudioFillFrame],
+                  ["contain", strings.quoteStudioWholeImage],
                 ]}
                 onChange={(fit) =>
                   onChange({
@@ -2036,13 +2022,13 @@ function ImageBlockEditor({
       >
         <section className="min-w-0">
           <div className="mb-2 flex min-h-10 items-center justify-between gap-3">
-            <h4 className="text-sm font-semibold text-primary">Image</h4>
+            <h4 className="text-sm font-semibold text-primary">{strings.quoteStudioImage}</h4>
             <button
               type="button"
               className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-default bg-surface px-3 text-xs font-semibold text-secondary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
               onClick={onReplace}
             >
-              <Upload className="size-4" aria-hidden="true" /> Replace
+              <Upload className="size-4" aria-hidden="true" /> {strings.quoteStudioReplace}
             </button>
           </div>
           <div className="rounded-2xl border border-default bg-surface p-3 shadow-sm">
@@ -2052,14 +2038,14 @@ function ImageBlockEditor({
         <section className="min-w-0">
           <RichTextEditor
             value={block.body ?? ""}
-            placeholder="Explain the product, project, or result shown in the image."
+            placeholder={strings.quoteStudioImageDescriptionPlaceholder}
             onChange={(body) => onChange({ body })}
           />
           <div className="mt-4">
             <RichTextEditor
               value={block.caption}
-              label="Caption"
-              placeholder="Optional short caption"
+              label={strings.quoteStudioCaption}
+              placeholder={strings.quoteStudioCaptionPlaceholder}
               onChange={(caption) => onChange({ caption })}
             />
           </div>
@@ -2112,7 +2098,7 @@ function RichTextContent({ value }: { value: string }) {
 
 function RichTextEditor({
   value,
-  label = "Supporting text",
+  label = strings.quoteStudioSupportingText,
   placeholder,
   onChange,
 }: {
@@ -2171,7 +2157,7 @@ function RichTextEditor({
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => setShowTools((current) => !current)}
         >
-          <Type className="size-4" aria-hidden="true" /> Text tools
+          <Type className="size-4" aria-hidden="true" /> {strings.quoteStudioTextTools}
         </button>
       </div>
       <div className="relative">
@@ -2179,47 +2165,47 @@ function RichTextEditor({
           <div
             className="absolute -top-12 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-default bg-surface p-1.5 shadow-lg"
             role="toolbar"
-            aria-label="Text formatting"
+            aria-label={strings.quoteStudioTextFormatting}
             onMouseDown={(event) => event.preventDefault()}
           >
-            <RichTextCommand label="Bold" onClick={() => command("bold")}>
+            <RichTextCommand label={strings.quoteStudioBold} onClick={() => command("bold")}>
               <Bold className="size-4" />
             </RichTextCommand>
-            <RichTextCommand label="Italic" onClick={() => command("italic")}>
+            <RichTextCommand label={strings.quoteStudioItalic} onClick={() => command("italic")}>
               <Italic className="size-4" />
             </RichTextCommand>
             <RichTextCommand
-              label="Heading 1"
+              label={strings.quoteStudioHeading1}
               onClick={() => command("formatBlock", "h1")}
             >
               <Heading1 className="size-4" />
             </RichTextCommand>
             <RichTextCommand
-              label="Heading 2"
+              label={strings.quoteStudioHeading2}
               onClick={() => command("formatBlock", "h2")}
             >
               <Heading2 className="size-4" />
             </RichTextCommand>
             <RichTextCommand
-              label="Heading 3"
+              label={strings.quoteStudioHeading3}
               onClick={() => command("formatBlock", "h3")}
             >
               <Heading3 className="size-4" />
             </RichTextCommand>
             <RichTextCommand
-              label="Paragraph"
+              label={strings.quoteStudioParagraph}
               onClick={() => command("formatBlock", "p")}
             >
               <Pilcrow className="size-4" />
             </RichTextCommand>
             <RichTextCommand
-              label="Bullet list"
+              label={strings.quoteStudioBulletList}
               onClick={() => command("insertUnorderedList")}
             >
               <List className="size-4" />
             </RichTextCommand>
             <RichTextCommand
-              label="Numbered list"
+              label={strings.quoteStudioNumberedList}
               onClick={() => command("insertOrderedList")}
             >
               <ListOrdered className="size-4" />
@@ -2307,13 +2293,13 @@ function ImageColumnRatioPicker({
   const disabled = placement === "full";
   return (
     <fieldset className="min-w-0" disabled={disabled}>
-      <legend className="sr-only">Column width</legend>
+      <legend className="sr-only">{strings.quoteStudioColumnWidth}</legend>
       <div className="mb-2 flex items-center justify-between gap-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-tertiary">
-          Column width
+          {strings.quoteStudioColumnWidth}
         </p>
         {disabled && (
-          <span className="text-[11px] text-tertiary">Side-by-side only</span>
+          <span className="text-[11px] text-tertiary">{strings.quoteStudioSideBySideOnly}</span>
         )}
       </div>
       <div className="grid grid-cols-5 gap-1.5">
@@ -2515,7 +2501,7 @@ function ImageZoomControl({
       <div className="flex items-center justify-between gap-3">
         <div>
           <h4 className="text-xs font-semibold uppercase tracking-wide text-tertiary">
-            Zoom
+            {strings.quoteStudioZoom}
           </h4>
         </div>
         <button
@@ -2524,14 +2510,14 @@ function ImageZoomControl({
           disabled={value === 100}
           onClick={() => onChange(100)}
         >
-          Reset
+          {strings.quoteStudioReset}
         </button>
       </div>
       <div className="mt-2 grid grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-1 rounded-xl border border-default bg-raised/60 p-1 shadow-sm">
         <button
           type="button"
           className="grid size-10 place-items-center rounded-lg text-primary transition-colors hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-35"
-          aria-label="Zoom out"
+          aria-label={strings.quoteStudioZoomOut}
           disabled={index <= minimumIndex}
           onClick={() => onChange(previous)}
         >
@@ -2543,7 +2529,7 @@ function ImageZoomControl({
         <button
           type="button"
           className="grid size-10 place-items-center rounded-lg text-primary transition-colors hover:bg-accent-soft hover:text-accent disabled:cursor-not-allowed disabled:opacity-35"
-          aria-label="Zoom in"
+          aria-label={strings.quoteStudioZoomIn}
           disabled={index === IMAGE_ZOOM_STEPS.length - 1}
           onClick={() => onChange(next)}
         >
@@ -2580,7 +2566,7 @@ function GeneralTableBlock({
     const columns = block.columns.slice(0, count);
     while (columns.length < count) {
       const number = columns.length + 1;
-      columns.push({ id: crypto.randomUUID(), label: `Column ${number}` });
+      columns.push({ id: crypto.randomUUID(), label: strings.quoteStudioColumnNumber(number) });
     }
     onChange({
       columns,
@@ -2652,24 +2638,23 @@ function GeneralTableBlock({
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-primary">
-            Information table
+            {strings.quoteStudioInformationTable}
           </h3>
           <p className="mt-1 text-xs text-secondary">
-            Rename columns, then add as many rows or columns as the document
-            needs.
+            {strings.quoteStudioInformationTableHelp}
           </p>
         </div>
         <label className="grid min-w-40 gap-1 text-xs font-semibold text-secondary">
-          Columns
+          {strings.quoteStudioColumns}
           <Select
             fullWidth
             value={String(block.columns.length)}
-            aria-label="Number of table columns"
+            aria-label={strings.quoteStudioTableColumnCount}
             onChange={(event) => setColumnCount(Number(event.target.value))}
           >
             {[1, 2, 3, 4, 5, 6].map((count) => (
               <option key={count} value={count}>
-                {count} {count === 1 ? "column" : "columns"}
+                {strings.quoteStudioColumnCount(count)}
               </option>
             ))}
           </Select>
@@ -2687,8 +2672,8 @@ function GeneralTableBlock({
                   <div className="flex items-center gap-2">
                     <InlineRichTextEditor
                       value={column.label}
-                      aria-label={`Column ${columnIndex + 1} name`}
-                      placeholder={`Column ${columnIndex + 1}`}
+                      aria-label={strings.quoteStudioColumnNameA11y(columnIndex + 1)}
+                      placeholder={strings.quoteStudioColumnNumber(columnIndex + 1)}
                       onChange={(label) =>
                         onChange({
                           columns: block.columns.map((item) =>
@@ -2709,7 +2694,7 @@ function GeneralTableBlock({
                   </div>
                 </th>
               ))}
-              <th className="w-12" aria-label="Row actions" />
+              <th className="w-12" aria-label={strings.quoteStudioRowActions} />
             </tr>
           </thead>
           <tbody>
@@ -2718,15 +2703,15 @@ function GeneralTableBlock({
                 key={row.id}
                 className="group/table-row border-t border-default"
               >
-                {block.columns.map((column) => (
+                {block.columns.map((column, columnIndex) => (
                   <td
                     key={column.id}
                     className="border-r border-default p-2 last:border-r-0"
                   >
                     <InlineRichTextEditor
                       value={row.cells[column.id] ?? ""}
-                      aria-label={`${column.label || "Column"}, row ${rowIndex + 1}`}
-                      placeholder="Enter value"
+                      aria-label={strings.quoteStudioTableCellA11y(column.label || strings.quoteStudioColumnNumber(columnIndex + 1), rowIndex + 1)}
+                      placeholder={strings.quoteStudioEnterValue}
                       onChange={(value) =>
                         onChange({
                           rows: block.rows.map((item) =>
@@ -2765,7 +2750,7 @@ function GeneralTableBlock({
         </table>
         {block.rows.length === 0 && (
           <div className="px-5 py-8 text-center text-sm text-secondary">
-            Add the first row to begin this table.
+            {strings.quoteStudioAddFirstRow}
           </div>
         )}
       </div>
@@ -2774,7 +2759,7 @@ function GeneralTableBlock({
         className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-default bg-surface px-4 text-sm font-semibold text-primary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
         onClick={addRow}
       >
-        <Plus className="size-4" aria-hidden="true" /> Add row below
+        <Plus className="size-4" aria-hidden="true" /> {strings.quoteStudioAddRowBelow}
       </button>
     </div>
   );
@@ -2783,23 +2768,23 @@ function GeneralTableBlock({
 function blockName(block: Block): string {
   switch (block.kind) {
     case "heading":
-      return "Heading";
+      return strings.quoteStudioHeading;
     case "paragraph":
-      return "Paragraph";
+      return strings.quoteStudioParagraph;
     case "quote":
-      return "Quote";
+      return strings.quoteStudioQuote;
     case "list":
-      return block.ordered ? "Numbered list" : "Bullet list";
+      return block.ordered ? strings.quoteStudioNumberedList : strings.quoteStudioBulletList;
     case "divider":
-      return "Divider";
+      return strings.quoteStudioDivider;
     case "image":
-      return "Image";
+      return strings.quoteStudioImage;
     case "pricing":
-      return "Pricing table";
+      return strings.quoteStudioPricingTable;
     case "table":
-      return "Table";
+      return strings.quoteStudioTable;
     default:
-      return "Text";
+      return strings.quoteStudioCategoryText;
   }
 }
 
@@ -2817,7 +2802,7 @@ function BottomComposer({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const add = (kind: InsertKind, label: string, ordered = false) => {
+  const add = (kind: InsertKind, ordered = false) => {
     onAdd(index, kind, ordered);
     setOpen(false);
     setQuery("");
@@ -2825,49 +2810,49 @@ function BottomComposer({
   const options: Array<{
     label: string;
     help: string;
-    category: "Text" | "Media" | "Tables" | "Layout";
+    category: "text" | "media" | "tables" | "layout";
     Icon: typeof AlignLeft;
     action: () => void;
   }> = [
     {
-      label: "Heading",
-      help: "Choose H1, H2, or H3",
-      category: "Text",
+      label: strings.quoteStudioHeading,
+      help: strings.quoteStudioHeadingHelp,
+      category: "text",
       Icon: Type,
-      action: () => add("heading", "Heading"),
+      action: () => add("heading"),
     },
     {
-      label: "Paragraph",
-      help: "Add explanatory text",
-      category: "Text",
+      label: strings.quoteStudioParagraph,
+      help: strings.quoteStudioParagraphHelp,
+      category: "text",
       Icon: AlignLeft,
-      action: () => add("paragraph", "Paragraph"),
+      action: () => add("paragraph"),
     },
     {
-      label: "Quote",
-      help: "Highlight a statement",
-      category: "Text",
+      label: strings.quoteStudioQuote,
+      help: strings.quoteStudioQuoteHelp,
+      category: "text",
       Icon: Quote,
-      action: () => add("quote", "Quote"),
+      action: () => add("quote"),
     },
     {
-      label: "Bullet list",
-      help: "List key points",
-      category: "Text",
+      label: strings.quoteStudioBulletList,
+      help: strings.quoteStudioBulletListHelp,
+      category: "text",
       Icon: List,
-      action: () => add("list", "Bullet list"),
+      action: () => add("list"),
     },
     {
-      label: "Numbered list",
-      help: "Show ordered steps",
-      category: "Text",
+      label: strings.quoteStudioNumberedList,
+      help: strings.quoteStudioNumberedListHelp,
+      category: "text",
       Icon: ListOrdered,
-      action: () => add("list", "Numbered list", true),
+      action: () => add("list", true),
     },
     {
-      label: "Image",
-      help: "Upload and arrange a visual",
-      category: "Media",
+      label: strings.quoteStudioImage,
+      help: strings.quoteStudioImageHelp,
+      category: "media",
       Icon: ImagePlus,
       action: () => {
         onImage(index);
@@ -2876,28 +2861,35 @@ function BottomComposer({
       },
     },
     {
-      label: "Pricing table",
-      help: "Group products and services",
-      category: "Tables",
+      label: strings.quoteStudioPricingTable,
+      help: strings.quoteStudioPricingTableHelp,
+      category: "tables",
       Icon: Table2,
-      action: () => add("pricing", "Pricing table"),
+      action: () => add("pricing"),
     },
     {
-      label: "Table",
-      help: "Create flexible rows and columns",
-      category: "Tables",
+      label: strings.quoteStudioTable,
+      help: strings.quoteStudioTableHelp,
+      category: "tables",
       Icon: Rows3,
-      action: () => add("table", "Table"),
+      action: () => add("table"),
     },
     {
-      label: "Divider",
-      help: "Separate document sections",
-      category: "Layout",
+      label: strings.quoteStudioDivider,
+      help: strings.quoteStudioDividerHelp,
+      category: "layout",
       Icon: Minus,
-      action: () => add("divider", "Divider"),
+      action: () => add("divider"),
     },
   ];
-  const categories = ["Text", "Media", "Tables", "Layout"] as const;
+  const categories = ["text", "media", "tables", "layout"] as const;
+  const categoryLabels = {
+    text: strings.quoteStudioCategoryText,
+    media: strings.quoteStudioCategoryMedia,
+    tables: strings.quoteStudioCategoryTables,
+    layout: strings.quoteStudioCategoryLayout,
+    results: strings.quoteStudioSearchResults,
+  } as const;
   const normalizedQuery = query.trim().toLowerCase();
   const visibleOptions = options.filter((option) =>
     `${option.label} ${option.help} ${option.category}`
@@ -2907,7 +2899,7 @@ function BottomComposer({
   return (
     <div
       className="relative flex flex-col items-center py-2"
-      aria-label="Add quotation content"
+      aria-label={strings.quoteStudioAddContentA11y}
     >
       <div className="flex w-full items-center gap-3">
         <span
@@ -2918,13 +2910,13 @@ function BottomComposer({
           type="button"
           className="group inline-flex min-h-9 items-center gap-2 rounded-full px-3 text-xs font-semibold text-secondary transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
           aria-expanded={open}
-          aria-label="Add content below"
+          aria-label={strings.quoteStudioAddContentBelow}
           onClick={() => setOpen((value) => !value)}
         >
           <span className="grid size-6 place-items-center rounded-full bg-accent-soft text-accent transition-colors group-hover:bg-accent group-hover:text-on-accent">
             <Plus className="size-3.5" aria-hidden="true" />
           </span>
-          Add content
+          {strings.quoteStudioAddContent}
         </button>
         <span
           className="h-px flex-1 bg-[var(--quote-table-header)]"
@@ -2936,15 +2928,15 @@ function BottomComposer({
           <div className="p-5 pb-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="font-semibold text-primary">Add to quotation</h3>
+                <h3 className="font-semibold text-primary">{strings.quoteStudioAddToQuotation}</h3>
                 <p className="mt-0.5 text-sm text-secondary">
-                  Choose what should appear next in the document.
+                  {strings.quoteStudioAddToQuotationHelp}
                 </p>
               </div>
               <button
                 type="button"
                 className="rounded-lg p-2 text-secondary hover:bg-accent-soft hover:text-accent"
-                aria-label="Close block picker"
+                aria-label={strings.quoteStudioCloseBlockPicker}
                 onClick={() => setOpen(false)}
               >
                 <X className="size-4" />
@@ -2956,8 +2948,8 @@ function BottomComposer({
                 autoFocus
                 className="min-w-0 flex-1 appearance-none !border-0 bg-transparent !p-0 text-sm text-primary !shadow-none !outline-none !ring-0 placeholder:text-tertiary focus:!border-0 focus:!outline-none focus:!ring-0"
                 value={query}
-                placeholder="Search blocks..."
-                aria-label="Search quotation blocks"
+                placeholder={strings.quoteStudioSearchBlocks}
+                aria-label={strings.quoteStudioSearchBlocksA11y}
                 onChange={(event) => setQuery(event.target.value)}
                 onKeyDown={(event) => {
                   if (event.key === "Escape") setOpen(false);
@@ -2968,10 +2960,10 @@ function BottomComposer({
           <div className="max-h-[min(65vh,40rem)] overflow-y-auto border-t border-default px-5">
             {(normalizedQuery === ""
               ? categories
-              : (["Search results"] as const)
+              : (["results"] as const)
             ).map((section, sectionIndex) => {
               const sectionOptions =
-                section === "Search results"
+                section === "results"
                   ? visibleOptions
                   : visibleOptions.filter(
                       (option) => option.category === section,
@@ -2990,7 +2982,7 @@ function BottomComposer({
                     id={`quote-blocks-${section.toLowerCase().replace(" ", "-")}`}
                     className="mb-2 text-xs font-semibold uppercase tracking-wide text-tertiary"
                   >
-                    {section}
+                    {categoryLabels[section]}
                   </h4>
                   <div className="grid gap-1 sm:grid-cols-2">
                     {sectionOptions.map(({ label, help, Icon, action }) => (
@@ -3010,9 +3002,9 @@ function BottomComposer({
           {visibleOptions.length === 0 && (
             <div className="border-t border-default px-5 py-8 text-center">
               <p className="text-sm font-semibold text-primary">
-                No matching blocks
+                {strings.quoteStudioNoMatchingBlocks}
               </p>
-              <p className="mt-1 text-xs text-secondary">Try another name.</p>
+              <p className="mt-1 text-xs text-secondary">{strings.quoteStudioTryAnotherName}</p>
             </div>
           )}
         </div>
@@ -3057,11 +3049,13 @@ function EmptyBuilder({ readOnly }: { readOnly: boolean }) {
     <div className="flex min-h-28 items-center justify-center rounded-xl border border-dashed border-default bg-[var(--quote-background)] px-6 py-8 text-center">
       <div>
         <h3 className="text-base font-semibold text-primary">
-          {readOnly ? "No proposal content" : "Start your quotation below"}
+          {readOnly
+            ? strings.quoteStudioNoProposalContent
+            : strings.quoteStudioStartQuotationBelow}
         </h3>
         {!readOnly && (
           <p className="mt-1 text-sm text-secondary">
-            Add text, a heading, or an image as the first block.
+            {strings.quoteStudioFirstBlockHelp}
           </p>
         )}
       </div>
@@ -3124,6 +3118,18 @@ function CustomizeQuote({
   onClose: () => void;
 }) {
   const logoInput = useRef<HTMLInputElement>(null);
+  const themeChoices: Array<{ id: Theme; name: string; help: string }> = [
+    { id: "modern", name: strings.quoteStudioModern, help: strings.quoteStudioModernHelp },
+    { id: "editorial", name: strings.quoteStudioEditorial, help: strings.quoteStudioEditorialHelp },
+    { id: "minimal", name: strings.quoteStudioMinimal, help: strings.quoteStudioMinimalHelp },
+  ];
+  const headerStyleChoices: Array<{ id: HeaderStyle; name: string; help: string }> = [
+    { id: "signature", name: strings.quoteStudioSignature, help: strings.quoteStudioSignatureHelp },
+    { id: "editorial", name: strings.quoteStudioEditorial, help: strings.quoteStudioHeaderEditorialHelp },
+    { id: "band", name: strings.quoteStudioBrandBand, help: strings.quoteStudioBrandBandHelp },
+    { id: "minimal", name: strings.quoteStudioMinimal, help: strings.quoteStudioHeaderMinimalHelp },
+    { id: "stacked", name: strings.quoteStudioLogoStack, help: strings.quoteStudioLogoStackHelp },
+  ];
   const setColor = (name: keyof Colors, value: string) =>
     onChange((current) => ({
       ...current,
@@ -3149,7 +3155,7 @@ function CustomizeQuote({
     }));
   return (
     <Modal
-      title={mode === "header" ? "Edit quotation header" : "Customize quotation"}
+      title={mode === "header" ? strings.quoteStudioEditQuotationHeader : strings.quoteStudioCustomizeQuotation}
       icon={mode === "header" ? <Building2 className="size-5" /> : <Palette className="size-5" />}
       onClose={onClose}
       wide="extra"
@@ -3157,7 +3163,7 @@ function CustomizeQuote({
         <button
           type="button"
           className="flex size-9 items-center justify-center rounded-lg text-tertiary hover:bg-raised hover:text-primary"
-          aria-label="Close"
+          aria-label={strings.quoteStudioClose}
           onClick={onClose}
         >
           <X className="size-4" />
@@ -3171,9 +3177,9 @@ function CustomizeQuote({
               saveError ? "text-danger" : "text-secondary",
             )}
           >
-            {saveError || "Changes are saved automatically."}
+            {saveError || strings.quoteStudioChangesSavedAutomatically}
           </p>
-          <Button onClick={onClose}>Done</Button>
+          <Button onClick={onClose}>{strings.quoteStudioDone}</Button>
         </div>
       }
     >
@@ -3182,9 +3188,9 @@ function CustomizeQuote({
           <>
         <section className="flex flex-wrap items-center gap-5 rounded-2xl border border-default bg-raised/35 p-5">
           <div className="min-w-52 flex-1">
-            <h3 className="text-base font-semibold text-primary">Brand mark</h3>
+            <h3 className="text-base font-semibold text-primary">{strings.quoteStudioBrandMark}</h3>
             <p className="mt-1 text-sm leading-relaxed text-secondary">
-              Shown at the top of the customer quotation.
+              {strings.quoteStudioBrandMarkHelp}
             </p>
           </div>
           <button
@@ -3195,7 +3201,7 @@ function CustomizeQuote({
             {design.logo ? (
               <img
                 src={design.logo}
-                alt="Quote logo"
+                alt={strings.quoteStudioQuoteLogo}
                 className="max-h-20 max-w-full object-contain"
               />
             ) : (
@@ -3204,7 +3210,7 @@ function CustomizeQuote({
                   <Upload className="size-5" />
                 </span>
                 <span>
-                  <strong className="sr-only">Upload your logo</strong>
+                  <strong className="sr-only">{strings.quoteStudioUploadLogo}</strong>
                 </span>
               </span>
             )}
@@ -3216,7 +3222,7 @@ function CustomizeQuote({
               onClick={() => logoInput.current?.click()}
             >
               <Upload className="size-4" />
-              {design.logo ? "Replace" : "Choose file"}
+              {design.logo ? strings.quoteStudioReplace : strings.quoteStudioChooseFile}
             </button>
             <button
               type="button"
@@ -3224,7 +3230,7 @@ function CustomizeQuote({
               className="min-h-9 rounded-lg px-3 text-sm font-semibold text-secondary transition-colors hover:bg-danger-tint hover:text-danger disabled:cursor-not-allowed disabled:text-tertiary disabled:opacity-40"
               onClick={() => onChange((current) => ({ ...current, logo: "" }))}
             >
-              Remove
+              {strings.quoteStudioRemove}
             </button>
           </div>
           <input
@@ -3248,9 +3254,9 @@ function CustomizeQuote({
                 <QrCode className="size-5" aria-hidden="true" />
               </span>
               <div>
-                <h3 className="text-xl font-semibold tracking-tight text-primary">Contact QR code</h3>
+                <h3 className="text-xl font-semibold tracking-tight text-primary">{strings.quoteStudioQrTitle}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-secondary">
-                  Let customers scan and save your company contact details.
+                  {strings.quoteStudioQrHelp}
                 </p>
               </div>
             </div>
@@ -3265,20 +3271,20 @@ function CustomizeQuote({
               onClick={() => onChange((current) => ({ ...current, showContactQr: !current.showContactQr }))}
             >
               <span className={cx("absolute top-1 size-5 rounded-full bg-white shadow-sm transition-[left]", design.showContactQr ? "left-6" : "left-1")} />
-              <span className="sr-only">Show contact QR code</span>
+              <span className="sr-only">{strings.quoteStudioShowQr}</span>
             </button>
           </div>
           <div className="mt-7 grid gap-7 xl:grid-cols-2">
             <fieldset>
-              <legend className="text-sm font-semibold text-primary">Placement</legend>
-              <p className="mt-1 text-xs text-secondary">Choose where the code sits beneath your company details.</p>
+              <legend className="text-sm font-semibold text-primary">{strings.quoteStudioPlacement}</legend>
+              <p className="mt-1 text-xs text-secondary">{strings.quoteStudioPlacementHelp}</p>
               <div className="mt-4 grid grid-cols-2 gap-3">
                 {(["left", "right"] as const).map((alignment) => (
                   <button
                     key={alignment}
                     type="button"
                     aria-pressed={design.contactQrAlignment === alignment}
-                    aria-label={`Place QR code on the ${alignment}`}
+                    aria-label={strings.quoteStudioQrPlacementA11y(alignment === "left" ? strings.quoteStudioLeft : strings.quoteStudioRight)}
                     className={cx(
                       "group relative min-h-24 cursor-pointer rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
                       design.contactQrAlignment === alignment
@@ -3302,7 +3308,7 @@ function CustomizeQuote({
                         <span className="block h-1.5 w-2/3 rounded-full bg-primary/10" />
                       </span>
                     </span>
-                    <span className="mt-2 block text-center text-xs font-semibold capitalize text-primary">{alignment}</span>
+                    <span className="mt-2 block text-center text-xs font-semibold text-primary">{alignment === "left" ? strings.quoteStudioLeft : strings.quoteStudioRight}</span>
                     <span
                       className={cx(
                         "absolute right-2 top-2 grid size-5 place-items-center rounded-full border transition-colors",
@@ -3319,8 +3325,8 @@ function CustomizeQuote({
               </div>
             </fieldset>
             <fieldset>
-              <legend className="text-sm font-semibold text-primary">Size</legend>
-              <p className="mt-1 text-xs text-secondary">Preview the QR footprint in the quotation header.</p>
+              <legend className="text-sm font-semibold text-primary">{strings.quoteStudioSize}</legend>
+              <p className="mt-1 text-xs text-secondary">{strings.quoteStudioSizeHelp}</p>
               <div className="mt-4 grid grid-cols-3 gap-3">
                 {(["small", "medium", "large"] as const).map((size) => (
                   <button
@@ -3344,7 +3350,7 @@ function CustomizeQuote({
                     <span className="flex h-12 items-center justify-center" aria-hidden="true">
                       <QrCode className={cx("text-accent", size === "small" ? "size-6" : size === "large" ? "size-11" : "size-8")} />
                     </span>
-                    <span className="mt-2 block text-center text-xs font-semibold capitalize text-primary">{size}</span>
+                    <span className="mt-2 block text-center text-xs font-semibold text-primary">{size === "small" ? strings.quoteStudioSmall : size === "medium" ? strings.quoteStudioMedium : strings.quoteStudioLarge}</span>
                     <span
                       className={cx(
                         "absolute right-2 top-2 grid size-5 place-items-center rounded-full border transition-colors",
@@ -3362,8 +3368,8 @@ function CustomizeQuote({
             </fieldset>
             <div className="xl:col-span-2">
               <ColorField
-                label="QR code colour"
-                help="Choose a dark colour for reliable scanning"
+                label={strings.quoteStudioQrColour}
+                help={strings.quoteStudioQrColourHelp}
                 value={design.contactQrColor}
                 onChange={(contactQrColor) =>
                   onChange((current) => ({ ...current, showContactQr: true, contactQrColor }))
@@ -3381,12 +3387,12 @@ function CustomizeQuote({
                 </span>
                 <div>
                   <h3 className="text-xl font-semibold tracking-tight text-primary">
-                    Company information
+                    {strings.quoteStudioCompanyInformation}
                   </h3>
                   <p className="mt-2 text-sm leading-relaxed text-secondary">
-                    These values come from Billing → Your details.
+                    {strings.quoteStudioCompanyLinkedHelp}
                     <span className="block">
-                      Editing one creates an override for this quotation.
+                      {strings.quoteStudioOverrideHelp}
                     </span>
                   </p>
                 </div>
@@ -3398,64 +3404,64 @@ function CustomizeQuote({
                   icon={<RotateCcw aria-hidden="true" />}
                   onClick={() => onChange((current) => ({ ...current, headerDetailsCustomized: false }))}
                 >
-                  Use Your details
+                  {strings.quoteStudioUseYourDetails}
                 </Button>
               ) : (
                 <span className="inline-flex min-h-10 items-center gap-2 rounded-full bg-accent-soft px-4 text-sm font-semibold text-accent">
                   <Link className="size-4" aria-hidden="true" />
-                  Linked to Your details
+                  {strings.quoteStudioLinkedYourDetails}
                 </span>
               )}
             </div>
           </div>
           <div className="mt-8 grid gap-x-8 gap-y-5 sm:grid-cols-2">
             <HeaderField
-              label="Company name"
+              label={strings.quoteStudioCompanyName}
               icon={<Building2 />}
               value={displayedHeaderDetails.companyName}
-              placeholder="Your company name"
+              placeholder={strings.quoteStudioCompanyNamePlaceholder}
               onChange={(value) => setHeaderDetail("companyName", value)}
             />
             <HeaderField
-              label="Website"
+              label={strings.quoteStudioWebsite}
               icon={<Globe2 />}
               value={displayedHeaderDetails.website}
-              placeholder="www.company.com"
+              placeholder={strings.quoteStudioWebsitePlaceholder}
               onChange={(value) => setHeaderDetail("website", value)}
             />
             <HeaderField
-              label="Email"
+              label={strings.quoteStudioEmail}
               icon={<Mail />}
               value={displayedHeaderDetails.email}
-              placeholder="sales@company.com"
+              placeholder={strings.quoteStudioEmailPlaceholder}
               onChange={(value) => setHeaderDetail("email", value)}
             />
             <HeaderField
-              label="Phone"
+              label={strings.quoteStudioPhone}
               icon={<Phone />}
               value={displayedHeaderDetails.phone}
-              placeholder="+49 30 123 456"
+              placeholder={strings.quoteStudioPhonePlaceholder}
               onChange={(value) => setHeaderDetail("phone", value)}
             />
             <label className="grid gap-2 sm:col-span-2">
-              <span className="text-sm font-semibold text-primary">Address</span>
+              <span className="text-sm font-semibold text-primary">{strings.quoteStudioAddress}</span>
               <textarea
                 className="min-h-32 resize-y rounded-xl border border-default bg-surface px-4 py-4 text-base leading-relaxed text-primary placeholder:text-tertiary hover:border-accent focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10"
                 value={displayedHeaderDetails.address}
-                placeholder={"Street and number\nPostal code and city\nCountry"}
+                placeholder={strings.quoteStudioAddressPlaceholder}
                 onChange={(event) => setHeaderDetail("address", event.target.value)}
               />
             </label>
             <HeaderField
-              label="VAT ID"
+              label={strings.quoteStudioVatId}
               value={displayedHeaderDetails.vatId}
-              placeholder="VAT registration number"
+              placeholder={strings.quoteStudioVatPlaceholder}
               onChange={(value) => setHeaderDetail("vatId", value)}
             />
             <HeaderField
-              label="Company number"
+              label={strings.quoteStudioCompanyNumber}
               value={displayedHeaderDetails.registrationNo}
-              placeholder="Company registration number"
+              placeholder={strings.quoteStudioCompanyNumberPlaceholder}
               onChange={(value) => setHeaderDetail("registrationNo", value)}
             />
           </div>
@@ -3468,12 +3474,12 @@ function CustomizeQuote({
               </span>
               <div>
                 <h3 className="text-xl font-semibold tracking-tight text-primary">
-                  Customer information
+                  {strings.quoteStudioCustomerInformation}
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-secondary">
-                  Shown beneath Prepared for in the quotation header.
+                  {strings.quoteStudioCustomerInformationHelp}
                   <span className="block">
-                    Editing a value creates an override for this quotation only.
+                    {strings.quoteStudioCustomerOverrideHelp}
                   </span>
                 </p>
               </div>
@@ -3490,57 +3496,57 @@ function CustomizeQuote({
                   }))
                 }
               >
-                Use selected customer
+                {strings.quoteStudioUseSelectedCustomer}
               </Button>
             ) : (
               <span className="inline-flex min-h-10 items-center gap-2 rounded-full bg-accent-soft px-4 text-sm font-semibold text-accent">
                 <Link className="size-4" aria-hidden="true" />
-                Linked to selected customer
+                {strings.quoteStudioLinkedSelectedCustomer}
               </span>
             )}
           </div>
           <div className="mt-8 grid gap-x-8 gap-y-5 sm:grid-cols-2">
             <HeaderField
-              label="Company name"
+              label={strings.quoteStudioCompanyName}
               icon={<Building2 />}
               value={displayedCustomerDetails.companyName}
-              placeholder="Customer company name"
+              placeholder={strings.quoteStudioCustomerCompanyPlaceholder}
               onChange={(value) => setCustomerDetail("companyName", value)}
             />
             <HeaderField
-              label="Contact person"
+              label={strings.quoteStudioContactPerson}
               icon={<ContactRound />}
               value={displayedCustomerDetails.contactName}
-              placeholder="Contact name"
+              placeholder={strings.quoteStudioContactNamePlaceholder}
               onChange={(value) => setCustomerDetail("contactName", value)}
             />
             <HeaderField
-              label="Email"
+              label={strings.quoteStudioEmail}
               icon={<Mail />}
               value={displayedCustomerDetails.email}
-              placeholder="contact@customer.com"
+              placeholder={strings.quoteStudioCustomerEmailPlaceholder}
               onChange={(value) => setCustomerDetail("email", value)}
             />
             <HeaderField
-              label="Phone"
+              label={strings.quoteStudioPhone}
               icon={<Phone />}
               value={displayedCustomerDetails.phone}
-              placeholder="+49 30 123 456"
+              placeholder={strings.quoteStudioPhonePlaceholder}
               onChange={(value) => setCustomerDetail("phone", value)}
             />
             <label className="grid gap-2 sm:col-span-2">
-              <span className="text-sm font-semibold text-primary">Address</span>
+              <span className="text-sm font-semibold text-primary">{strings.quoteStudioAddress}</span>
               <textarea
                 className="min-h-32 resize-y rounded-xl border border-default bg-surface px-4 py-4 text-base leading-relaxed text-primary placeholder:text-tertiary hover:border-accent focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10"
                 value={displayedCustomerDetails.address}
-                placeholder={"Street and number\nPostal code and city\nCountry"}
+                placeholder={strings.quoteStudioAddressPlaceholder}
                 onChange={(event) => setCustomerDetail("address", event.target.value)}
               />
             </label>
             <HeaderField
-              label="VAT ID"
+              label={strings.quoteStudioVatId}
               value={displayedCustomerDetails.vatId}
-              placeholder="Customer VAT registration number"
+              placeholder={strings.quoteStudioCustomerVatPlaceholder}
               onChange={(value) => setCustomerDetail("vatId", value)}
             />
           </div>
@@ -3551,9 +3557,9 @@ function CustomizeQuote({
           {mode === "header" && (
             <>
           <section>
-            <h3 className="text-base font-semibold text-primary">Header style</h3>
+            <h3 className="text-base font-semibold text-primary">{strings.quoteStudioHeaderStyle}</h3>
             <p className="mt-1 text-sm text-secondary">
-              Choose a professional composition. Your saved company information fills it automatically.
+              {strings.quoteStudioHeaderStyleHelp}
             </p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
               {headerStyleChoices.map((choice) => (
@@ -3599,10 +3605,10 @@ function CustomizeQuote({
           <section>
             <div>
               <h3 className="text-base font-semibold text-primary">
-                Header arrangement
+                {strings.quoteStudioHeaderArrangement}
               </h3>
               <p className="mt-1 text-sm text-secondary">
-                Choose which side carries your company identity.
+                {strings.quoteStudioHeaderArrangementHelp}
               </p>
             </div>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -3646,10 +3652,10 @@ function CustomizeQuote({
                   <span className="flex items-start justify-between gap-5 pt-5">
                     <span>
                       <strong className="block text-sm font-semibold text-primary">
-                        Logo {alignment}
+                        {alignment === "left" ? strings.quoteStudioLogoLeft : strings.quoteStudioLogoRight}
                       </strong>
                       <small className="mt-1 block text-xs font-normal leading-relaxed text-secondary">
-                        Company identity on the {alignment}; quote details opposite.
+                        {alignment === "left" ? strings.quoteStudioLogoLeftHelp : strings.quoteStudioLogoRightHelp}
                       </small>
                     </span>
                     <span
@@ -3671,22 +3677,22 @@ function CustomizeQuote({
           </section>
           <section className="border-t border-subtle pt-7">
             <div>
-              <h3 className="text-base font-semibold text-primary">Column balance</h3>
+              <h3 className="text-base font-semibold text-primary">{strings.quoteStudioColumnBalance}</h3>
               <p className="mt-1 text-sm text-secondary">
-                Choose how much space the company and customer sides receive.
+                {strings.quoteStudioColumnBalanceHelp}
               </p>
             </div>
-            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3" role="radiogroup" aria-label="Quotation header column balance">
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3" role="radiogroup" aria-label={strings.quoteStudioColumnBalanceA11y}>
               {headerRatioChoices.map((choice) => {
                 const selected = design.headerRatio === choice.id;
-                const [company, customer] = choice.id.split("-");
+                const [company = "50", customer = "50"] = choice.id.split("-");
                 return (
                   <button
                     key={choice.id}
                     type="button"
                     role="radio"
                     aria-checked={selected}
-                    aria-label={`Company ${company} percent, customer ${customer} percent`}
+                    aria-label={strings.quoteStudioColumnRatioA11y(company, customer)}
                     className={cx(
                       "group relative rounded-2xl p-3 transition-colors hover:bg-accent-soft/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
                       selected && "bg-accent-soft/40",
@@ -3717,10 +3723,10 @@ function CustomizeQuote({
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h3 className="text-2xl font-semibold tracking-tight text-primary">
-                  Document palette
+                  {strings.quoteStudioDocumentPalette}
                 </h3>
                 <p className="mt-2 text-base text-secondary">
-                  Control the customer-facing page and pricing table colours.
+                  {strings.quoteStudioDocumentPaletteHelp}
                 </p>
               </div>
               <Button
@@ -3734,7 +3740,7 @@ function CustomizeQuote({
                   }))
                 }
               >
-                Reset to defaults
+                {strings.quoteStudioResetDefaults}
               </Button>
             </div>
             <div className="mt-8 grid gap-8 xl:grid-cols-2 xl:gap-0">
@@ -3744,50 +3750,50 @@ function CustomizeQuote({
                     <FileText className="size-5" aria-hidden="true" />
                   </span>
                   <div>
-                    <h4 className="text-base font-semibold text-primary">Document</h4>
-                    <p className="mt-1 text-sm text-secondary">Brand, page, header, and copy.</p>
+                    <h4 className="text-base font-semibold text-primary">{strings.quoteStudioDocument}</h4>
+                    <p className="mt-1 text-sm text-secondary">{strings.quoteStudioDocumentHelp}</p>
                   </div>
                 </div>
                 <div className="grid gap-3">
                   <ColorField
-                    label="Accent"
-                    help="Brand actions & highlights"
+                    label={strings.quoteStudioAccent}
+                    help={strings.quoteStudioAccentHelp}
                     value={design.colors.accent}
                     onChange={(value) => setColor("accent", value)}
                   />
                   <ColorField
-                    label="Contact icons"
-                    help="Email, phone, and website icons"
+                    label={strings.quoteStudioContactIcons}
+                    help={strings.quoteStudioContactIconsHelp}
                     value={design.colors.contactIcons}
                     onChange={(value) => setColor("contactIcons", value)}
                   />
                   <ColorField
-                    label="Page"
-                    help="Customer-facing background"
+                    label={strings.quoteStudioPage}
+                    help={strings.quoteStudioPageHelp}
                     value={design.colors.background}
                     onChange={(value) => setColor("background", value)}
                   />
                   <ColorField
-                    label="Header"
-                    help="Header background"
+                    label={strings.quoteStudioHeader}
+                    help={strings.quoteStudioHeaderHelp}
                     value={design.colors.headerBackground}
                     onChange={(value) => setColor("headerBackground", value)}
                   />
                   <ColorField
-                    label="Text"
-                    help="Primary text"
+                    label={strings.quoteStudioText}
+                    help={strings.quoteStudioTextHelp}
                     value={design.colors.text}
                     onChange={(value) => setColor("text", value)}
                   />
                   <ColorField
-                    label="Bullet dots"
-                    help="List markers"
+                    label={strings.quoteStudioBulletDots}
+                    help={strings.quoteStudioListMarkers}
                     value={design.colors.bulletMarker}
                     onChange={(value) => setColor("bulletMarker", value)}
                   />
                   <ColorField
-                    label="Number markers"
-                    help="Numbered steps"
+                    label={strings.quoteStudioNumberMarkers}
+                    help={strings.quoteStudioNumberedSteps}
                     value={design.colors.numberMarker}
                     onChange={(value) => setColor("numberMarker", value)}
                   />
@@ -3799,20 +3805,20 @@ function CustomizeQuote({
                     <Table2 className="size-5" aria-hidden="true" />
                   </span>
                   <div>
-                    <h4 className="text-base font-semibold text-primary">Pricing tables</h4>
-                    <p className="mt-1 text-sm text-secondary">Keep headings and rows easy to scan.</p>
+                    <h4 className="text-base font-semibold text-primary">{strings.quoteStudioPricingTables}</h4>
+                    <p className="mt-1 text-sm text-secondary">{strings.quoteStudioPricingTablesHelp}</p>
                   </div>
                 </div>
                 <div className="grid gap-3">
                   <ColorField
-                    label="Table heading"
-                    help="Table header background"
+                    label={strings.quoteStudioTableHeading}
+                    help={strings.quoteStudioTableHeadingHelp}
                     value={design.colors.tableHeader}
                     onChange={(value) => setColor("tableHeader", value)}
                   />
                   <ColorField
-                    label="Table rows"
-                    help="Default row background"
+                    label={strings.quoteStudioTableRows}
+                    help={strings.quoteStudioTableRowsHelp}
                     value={design.colors.tableRows}
                     onChange={(value) => setColor("tableRows", value)}
                   />
@@ -3823,10 +3829,10 @@ function CustomizeQuote({
           <section className="border-t border-subtle pt-7">
             <div>
               <h3 className="text-base font-semibold text-primary">
-                Typography
+                {strings.quoteStudioTypography}
               </h3>
               <p className="mt-1 text-sm text-secondary">
-                Choose the reading style that best matches your brand.
+                {strings.quoteStudioTypographyHelp}
               </p>
             </div>
             <div className="mt-5 grid gap-4 sm:grid-cols-3">
@@ -3860,7 +3866,7 @@ function CustomizeQuote({
                           "font-light uppercase tracking-[0.14em]",
                       )}
                     >
-                      Proposal
+                      {strings.quoteStudioProposal}
                     </span>
                     <span
                       className={cx(
@@ -3919,7 +3925,7 @@ function CustomizeTable({
 }) {
   return (
     <Modal
-      title="Table settings"
+      title={strings.quoteStudioTableSettings}
       icon={<Table2 className="size-5" />}
       onClose={onClose}
       wide
@@ -3927,7 +3933,7 @@ function CustomizeTable({
         <button
           type="button"
           className="flex size-9 items-center justify-center rounded-lg text-tertiary hover:bg-accent-soft hover:text-accent"
-          aria-label="Close table settings"
+          aria-label={strings.quoteStudioCloseTableSettings}
           onClick={onClose}
         >
           <X className="size-4" />
@@ -3941,24 +3947,23 @@ function CustomizeTable({
               saveError ? "text-danger" : "text-secondary",
             )}
           >
-            {saveError || "Table changes are saved automatically."}
+            {saveError || strings.quoteStudioTableChangesSavedAutomatically}
           </p>
-          <Button onClick={onClose}>Done</Button>
+          <Button onClick={onClose}>{strings.quoteStudioDone}</Button>
         </>
       }
     >
       <section>
-        <h3 className="text-sm font-semibold text-primary">Choose a layout</h3>
+        <h3 className="text-sm font-semibold text-primary">{strings.quoteStudioChooseLayout}</h3>
         <p className="mt-1 text-sm text-secondary">
-          Select a starting point, then adjust the visible content and columns
-          below.
+          {strings.quoteStudioChooseLayoutHelp}
         </p>
         <div className="mt-5 grid gap-5 sm:grid-cols-3">
           {(
             [
-              ["compact", "Compact", "Names and prices only"],
-              ["detailed", "Detailed", "Descriptions with optional images"],
-              ["catalogue", "Catalogue", "Larger product images and details"],
+              ["compact", strings.quoteStudioCompact, strings.quoteStudioCompactHelp],
+              ["detailed", strings.quoteStudioDetailed, strings.quoteStudioDetailedHelp],
+              ["catalogue", strings.quoteStudioCatalogue, strings.quoteStudioCatalogueHelp],
             ] as const
           ).map(([layout, label, help]) => (
             <button
@@ -4011,14 +4016,14 @@ function CustomizeTable({
       </section>
 
       <section className="mt-8 border-t border-subtle pt-7">
-        <h3 className="text-sm font-semibold text-primary">Product content</h3>
+        <h3 className="text-sm font-semibold text-primary">{strings.quoteStudioProductContent}</h3>
         <p className="mt-1 text-sm text-secondary">
-          Optional information shown with each product or service.
+          {strings.quoteStudioProductContentHelp}
         </p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <TableToggle
-            label="Product images"
-            help="Upload an image for each table row"
+            label={strings.quoteStudioProductImages}
+            help={strings.quoteStudioProductImagesHelp}
             checked={design.showProductImages}
             onClick={() =>
               onChange((current) => ({
@@ -4028,8 +4033,8 @@ function CustomizeTable({
             }
           />
           <TableToggle
-            label="Product descriptions"
-            help="Add specifications or scope beneath each item"
+            label={strings.quoteStudioProductDescriptions}
+            help={strings.quoteStudioProductDescriptionsHelp}
             checked={design.showProductDescriptions}
             onClick={() =>
               onChange((current) => ({
@@ -4042,24 +4047,24 @@ function CustomizeTable({
       </section>
 
       <section className="mt-8 border-t border-subtle pt-7">
-        <h3 className="text-sm font-semibold text-primary">Visible columns</h3>
+        <h3 className="text-sm font-semibold text-primary">{strings.quoteStudioVisibleColumns}</h3>
         <p className="mt-1 text-sm text-secondary">
-          Product name and quotation total always remain visible.
+          {strings.quoteStudioVisibleColumnsHelp}
         </p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {(
             [
-              ["unit", "Unit"],
-              ["quantity", "Quantity"],
-              ["unitPrice", "Unit price"],
-              ["vat", "VAT rate"],
-              ["net", "Line total"],
+              ["unit", strings.quoteStudioUnit],
+              ["quantity", strings.quoteStudioQuantity],
+              ["unitPrice", strings.quoteStudioUnitPrice],
+              ["vat", strings.quoteStudioVatRate],
+              ["net", strings.quoteStudioLineTotal],
             ] as const
           ).map(([key, label]) => (
             <TableToggle
               key={key}
               label={label}
-              help={`Show the ${label.toLowerCase()} column`}
+              help={strings.quoteStudioShowColumn(label)}
               checked={design.columns[key]}
               onClick={() =>
                 onChange((current) => ({
@@ -4074,18 +4079,17 @@ function CustomizeTable({
 
       <section className="mt-8 border-t border-subtle pt-7">
         <h3 className="text-sm font-semibold text-primary">
-          Pricing table totals
+          {strings.quoteStudioPricingTableTotals}
         </h3>
         <p className="mt-1 text-sm text-secondary">
-          Choose how the amount summary appears beneath each pricing table.
-          Every table keeps its own subtotal.
+          {strings.quoteStudioPricingTableTotalsHelp}
         </p>
         <div className="mt-5 grid gap-5 sm:grid-cols-3">
           {(
             [
-              ["summary", "Summary card", "Compact and right aligned"],
-              ["full", "Full width", "Balances the entire table"],
-              ["footer", "Table footer", "Feels attached to the rows"],
+              ["summary", strings.quoteStudioSummaryCard, strings.quoteStudioSummaryCardHelp],
+              ["full", strings.quoteStudioFullWidth, strings.quoteStudioFullWidthHelp],
+              ["footer", strings.quoteStudioTableFooter, strings.quoteStudioTableFooterHelp],
             ] as const
           ).map(([placement, label, help]) => (
             <button
@@ -4132,14 +4136,14 @@ function CustomizeTable({
         </div>
 
         <h4 className="mt-10 border-t border-subtle pt-7 text-xs font-semibold uppercase tracking-wide text-tertiary">
-          Amount details
+          {strings.quoteStudioAmountDetails}
         </h4>
         <div className="mt-5 grid gap-4 sm:grid-cols-3">
           {(
             [
-              ["total", "Total only", "The shortest summary"],
-              ["summary", "Net, VAT and total", "Recommended for most quotes"],
-              ["breakdown", "VAT breakdown", "Show every VAT rate"],
+              ["total", strings.quoteStudioTotalOnly, strings.quoteStudioTotalOnlyHelp],
+              ["summary", strings.quoteStudioNetVatTotal, strings.quoteStudioNetVatTotalHelp],
+              ["breakdown", strings.quoteStudioVatBreakdown, strings.quoteStudioVatBreakdownHelp],
             ] as const
           ).map(([detail, label, help]) => (
             <TableToggle
@@ -4155,8 +4159,8 @@ function CustomizeTable({
         </div>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <TableToggle
-            label="Currency code"
-            help="Show EUR, USD, or the quote currency"
+            label={strings.quoteStudioCurrencyCode}
+            help={strings.quoteStudioCurrencyCodeHelp}
             checked={design.showCurrencyCode}
             onClick={() =>
               onChange((current) => ({
@@ -4166,8 +4170,8 @@ function CustomizeTable({
             }
           />
           <TableToggle
-            label="Emphasize total"
-            help="Give the final amount stronger hierarchy"
+            label={strings.quoteStudioEmphasizeTotal}
+            help={strings.quoteStudioEmphasizeTotalHelp}
             checked={design.emphasizeTotal}
             onClick={() =>
               onChange((current) => ({
@@ -4177,8 +4181,8 @@ function CustomizeTable({
             }
           />
           <TableToggle
-            label="VAT note"
-            help="Explain that VAT is shown separately"
+            label={strings.quoteStudioVatNote}
+            help={strings.quoteStudioVatNoteHelp}
             checked={design.showTaxNote}
             onClick={() =>
               onChange((current) => ({
