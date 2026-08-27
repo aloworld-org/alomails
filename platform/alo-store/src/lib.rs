@@ -58,6 +58,7 @@ pub mod blob;
 pub mod calendar;
 pub mod calendar_availability;
 pub mod campaign_audience;
+pub mod campaign_bounce;
 pub mod campaign_consent;
 pub mod campaign_content;
 pub mod campaign_dispatch;
@@ -350,6 +351,7 @@ pub use campaign_audience::{
     AUDIENCE_PAGE_MAX, AudienceMember, AudiencePage, AudienceSource, CampaignRecipient,
     normalise_address,
 };
+pub use campaign_bounce::{BounceVerdict, CAMPAIGN_BOUNCE_MESSAGE_MAX, NewCampaignBounce};
 pub use campaign_consent::{
     CONSENT_STATEMENT_MAX, CampaignConsent, ConsentEvidence, ConsentSource, NewCampaignConsent,
 };
@@ -513,7 +515,7 @@ pub use id::{
     AppPasswordId, AttachmentId, BankLineId, BankMatchId, BankStatementId, BaseFieldId,
     BaseRecordId, BaseTableId, BaseViewId, BillingBillId, BillingCustomerId, BillingInvoiceId,
     BillingLineId, BillingPaymentId, BillingProductId, BillingQuoteId, BillingScheduleId, BlobId,
-    CalendarId, CampaignConsentId, CampaignId, CampaignSegmentId, CampaignSendId,
+    CalendarId, CampaignBounceId, CampaignConsentId, CampaignId, CampaignSegmentId, CampaignSendId,
     CampaignSuppressionId, CampaignUnsubscribeTokenId, CategoryId, ChatAgentId, ChatChannelId,
     ChatMessageId, ChatProposalId, ChatToolRunId, CommentId, ContactId, CrmActivityId, CrmDealId,
     CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId, FinAccountId, FinCategoryId,

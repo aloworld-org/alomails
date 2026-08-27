@@ -34,6 +34,10 @@ pub struct LocalDelivery {
     /// context holding the signing keys. `None` disables sealing
     /// (forwards then break downstream DMARC — dev/test only).
     sealer: Option<Arc<AuthMail>>,
+    /// The campaign return path (M4.4): the one address whose mail is a
+    /// bounce intake rather than a mailbox. Lowercased at construction;
+    /// `None` disables the intake (today's behaviour byte-for-byte).
+    campaign_return_path: Option<String>,
 }
 
 impl LocalDelivery {
@@ -75,6 +79,7 @@ impl LocalDelivery {
             spool,
             hostname,
             sealer: None,
+            campaign_return_path: None,
         }
     }
 
@@ -86,6 +91,27 @@ impl LocalDelivery {
         self
     }
 
+    /// Routes one address to the campaign bounce intake instead of a
+    /// mailbox (M4.4). `None` disables the intake.
+    #[must_use]
+    pub fn with_campaign_return_path(mut self, address: Option<String>) -> Self {
+        self.campaign_return_path = address.map(|a| a.to_ascii_lowercase());
+        self
+    }
+
+    /// Whether `email` is the campaign return path. Case-insensitive, and
+    /// subaddress-tolerant the way every other local mailbox is (RFC 5233):
+    /// `bounces+anything@…` reaches the same intake, so a future
+    /// per-recipient return path (VERP, roadmap C2.10) is already
+    /// deliverable without another RCPT change.
+    fn is_campaign_return_path(&self, email: &str) -> bool {
+        let Some(bounce) = &self.campaign_return_path else {
+            return false;
+        };
+        let email = email.to_ascii_lowercase();
+        &email == bounce || strip_subaddress(&email).is_some_and(|base| &base == bounce)
+    }
+
     /// The shared store handle, so the submission role can build a
     /// `alo-identity` over the same pool.
     pub fn store(&self) -> &Arc<Store> {
@@ -95,6 +121,11 @@ impl LocalDelivery {
     /// Whether `email` is a real local mailbox (for the RCPT-time check).
     /// Subaddress-aware: `user+tag@domain` resolves to `user@domain`.
     pub async fn recipient_exists(&self, email: &str) -> bool {
+        // The campaign return path is deliverable by configuration, not by
+        // having a mailbox — its delivery is the bounce intake.
+        if self.is_campaign_return_path(email) {
+            return true;
+        }
         // A user/alias, or a distribution-list address with at least one member.
         matches!(self.resolve_recipients(email).await, Ok(targets) if !targets.is_empty())
     }
@@ -142,6 +173,19 @@ impl LocalDelivery {
         rcpts: &[String],
     ) -> DeliveryOutcome {
         for rcpt in rcpts {
+            // The campaign return path is not a mailbox: its delivery is the
+            // bounce intake (M4.4). A store fault defers exactly like a
+            // mailbox delivery fault — the sender retries, and the intake's
+            // suppress-first ordering makes the retry safe.
+            if self.is_campaign_return_path(rcpt) {
+                match crate::bounce_intake::intake_campaign_bounce(&self.store, message).await {
+                    Ok(_receipt) => continue,
+                    Err(error) => {
+                        tracing::error!(%error, "campaign bounce intake failed; deferring");
+                        return DeliveryOutcome::Transient;
+                    }
+                }
+            }
             let targets = match self.resolve_recipients(rcpt).await {
                 Ok(targets) if !targets.is_empty() => targets,
                 // Accepted at RCPT but gone now (rare TOCTOU), or a DB error:

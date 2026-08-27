@@ -19,6 +19,7 @@ pub mod address;
 pub mod auth;
 pub mod authmail;
 pub mod backoff;
+pub mod bounce_intake;
 /// A canned loopback HTTP responder shared by the Rspamd-facing tests.
 #[cfg(test)]
 pub mod canned_http;
@@ -34,6 +35,7 @@ pub mod data;
 pub mod dkim_install;
 pub mod dmarc_reporter;
 pub mod dsn;
+pub mod dsn_parse;
 pub mod egress;
 pub mod envelope;
 pub mod error;

@@ -116,6 +116,14 @@ pub const ENV_CLAMAV_ADDR: &str = "ALO_SMTP_CLAMAV_ADDR";
 /// Environment variable for the clamd scan timeout in seconds
 /// (default 20 — large multi-attachment messages take a moment).
 pub const ENV_CLAMAV_TIMEOUT_SECS: &str = "ALO_SMTP_CLAMAV_TIMEOUT_SECS";
+/// Environment variable naming the campaign return path — the address
+/// campaign mail's bounces come back to (e.g. `bounces@news.alomails.com`).
+/// When set, the MX accepts it for delivery and routes it to the bounce
+/// intake (RFC 3464 parsing → hard bounces suppress, ADR 0044 §4). Its
+/// domain must be in [`ENV_LOCAL_DOMAINS`] and local delivery must be
+/// configured, or the setting could not do anything and startup refuses it.
+/// Unset disables the intake.
+pub const ENV_CAMPAIGN_RETURN_PATH: &str = "ALO_SMTP_CAMPAIGN_RETURN_PATH";
 /// Environment variable for the MTA-STS policy listener address; unset
 /// disables serving the policy.
 pub const ENV_MTA_STS_ADDR: &str = "ALO_SMTP_MTA_STS_ADDR";
@@ -226,6 +234,9 @@ pub struct SmtpConfig {
     /// delivered into the store (with Sieve at the boundary) instead of the
     /// spool. `None` keeps the receive-only spool behaviour.
     pub database_url: Option<String>,
+    /// The campaign return path ([`ENV_CAMPAIGN_RETURN_PATH`]), lowercased;
+    /// `None` disables the bounce intake.
+    pub campaign_return_path: Option<String>,
     /// ARC sealing (RFC 8617) of Sieve-redirect forwards. On by
     /// default; [`ENV_ARC_SEALING`]`=off` is the operational off-switch.
     pub arc_sealing: bool,
@@ -457,6 +468,8 @@ impl SmtpConfig {
             });
         }
 
+        let campaign_return_path = campaign_return_path_from_env(&local_domains, &database_url)?;
+
         // ARC sealing defaults ON (an unsealed forward fails downstream
         // DMARC); the env var is the explicit off-switch.
         let arc_sealing = std::env::var(ENV_ARC_SEALING).is_err() || env_bool(ENV_ARC_SEALING)?;
@@ -495,6 +508,7 @@ impl SmtpConfig {
             clamav,
             mta_sts,
             database_url,
+            campaign_return_path,
             arc_sealing,
             dmarc_reports,
             dmarc_report_min_age,
@@ -669,6 +683,65 @@ impl SmtpConfig {
     }
 }
 
+/// Reads and validates the campaign return path. Every rule here exists so a
+/// misconfiguration fails at startup with a message naming the variable,
+/// rather than as a bounce address that silently answers 550 in production:
+/// the address must look like one, its domain must be hosted (or the RCPT
+/// anti-relay guard refuses it before delivery is consulted), and local
+/// delivery must be on (the intake writes into the store).
+fn campaign_return_path_from_env(
+    local_domains: &[String],
+    database_url: &Option<String>,
+) -> Result<Option<String>, SmtpError> {
+    match std::env::var(ENV_CAMPAIGN_RETURN_PATH) {
+        Ok(raw) if !raw.is_empty() => {
+            validate_campaign_return_path(&raw, local_domains, database_url).map(Some)
+        }
+        _ => Ok(None),
+    }
+}
+
+/// The validation half of [`campaign_return_path_from_env`], separated from
+/// the env read so the rules are testable without process-global state.
+fn validate_campaign_return_path(
+    raw: &str,
+    local_domains: &[String],
+    database_url: &Option<String>,
+) -> Result<String, SmtpError> {
+    let address = raw.trim().to_ascii_lowercase();
+    let Some((local, domain)) = address.split_once('@') else {
+        return Err(SmtpError::Config {
+            message: format!(
+                "{ENV_CAMPAIGN_RETURN_PATH}={raw} is not an address; expected e.g. bounces@news.example.com"
+            ),
+        });
+    };
+    if local.is_empty() || domain.is_empty() || address.contains(char::is_whitespace) {
+        return Err(SmtpError::Config {
+            message: format!(
+                "{ENV_CAMPAIGN_RETURN_PATH}={raw} is not an address; expected e.g. bounces@news.example.com"
+            ),
+        });
+    }
+    if !local_domains.iter().any(|d| d == domain) {
+        return Err(SmtpError::Config {
+            message: format!(
+                "{ENV_CAMPAIGN_RETURN_PATH}: {domain} is not in {ENV_LOCAL_DOMAINS}, \
+                 so the MX would refuse the bounce address it is meant to accept"
+            ),
+        });
+    }
+    if database_url.is_none() {
+        return Err(SmtpError::Config {
+            message: format!(
+                "{ENV_CAMPAIGN_RETURN_PATH} needs local delivery (DATABASE_URL): \
+                 the bounce intake writes into the store"
+            ),
+        });
+    }
+    Ok(address)
+}
+
 fn env_bool(name: &str) -> Result<bool, SmtpError> {
     match std::env::var(name) {
         Err(_) => Ok(false),
@@ -722,5 +795,38 @@ mod tests {
         // tests, and the numeric floors are compile-time asserts above.
         let addr: SocketAddr = DEFAULT_ADDR.parse().unwrap();
         assert_eq!(addr.port(), 2525);
+    }
+
+    /// The campaign return path's startup rules (M4.4): every misconfiguration
+    /// fails loudly at startup, naming the variable — never as a bounce
+    /// address that silently answers 550 in production. Tested on the pure
+    /// validation half; env mutation would race other tests.
+    #[test]
+    fn campaign_return_path_rules_refuse_what_production_would_regret() {
+        let hosted = vec!["news.example.com".to_owned()];
+        let db = Some("postgres://x".to_owned());
+
+        // The good shape: trimmed, lowercased, accepted.
+        assert_eq!(
+            validate_campaign_return_path(" Bounces@News.Example.COM ", &hosted, &db).unwrap(),
+            "bounces@news.example.com"
+        );
+        // Not an address at all.
+        for bad in [
+            "bounces",
+            "@news.example.com",
+            "bounces@",
+            "a b@news.example.com",
+        ] {
+            assert!(
+                validate_campaign_return_path(bad, &hosted, &db).is_err(),
+                "{bad} should be refused"
+            );
+        }
+        // A domain the MX does not host: the RCPT anti-relay guard would
+        // refuse the address before delivery ever saw it.
+        assert!(validate_campaign_return_path("bounces@elsewhere.test", &hosted, &db).is_err());
+        // No local delivery: the intake would have nowhere to write.
+        assert!(validate_campaign_return_path("bounces@news.example.com", &hosted, &None).is_err());
     }
 }

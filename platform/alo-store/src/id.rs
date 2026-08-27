@@ -799,6 +799,14 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// One message that arrived at the campaign return path (mail M4.4, ADR
+    /// 0044 §4). Identifies the *receipt*, never a person: the row is the
+    /// host-level record of what came back and what it fired, and the
+    /// per-tenant consequence is a `campaign_suppression` row with its own id.
+    CampaignBounceId
+);
+
+opaque_id!(
     /// One app-specific password a user issued for a legacy mail client
     /// (IMAP/POP3/SMTP) that cannot carry a second factor. Identifies the
     /// *credential record* — name, creation, last use — never the secret:

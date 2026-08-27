@@ -250,8 +250,12 @@ pub async fn run(config: SmtpConfig) -> Result<(), SmtpError> {
                 Arc::clone(&spool),
                 config.hostname.clone(),
             )
-            .await?;
-            tracing::info!("local delivery into the store is enabled");
+            .await?
+            .with_campaign_return_path(config.campaign_return_path.clone());
+            tracing::info!(
+                campaign_return_path = config.campaign_return_path.is_some(),
+                "local delivery into the store is enabled"
+            );
             Some(ld)
         }
         None => None,
