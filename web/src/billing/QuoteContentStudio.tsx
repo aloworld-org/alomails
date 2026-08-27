@@ -684,20 +684,20 @@ export const QuoteContentStudio = forwardRef<
             Object.values(headerDetails).some((value) => value.trim())) && (
             <div
               className={cx(
-                "group/quote-header relative mb-8 grid gap-8 overflow-hidden bg-[var(--quote-header-background)] px-8 py-7 max-sm:px-5",
+                "group/quote-header relative mb-8 grid overflow-hidden bg-[var(--quote-header-background)]",
                 design.headerStyle === "minimal"
                   ? "border-y border-[var(--quote-table-header)]"
                   : "rounded-2xl border border-[var(--quote-table-header)]",
                 design.headerStyle === "editorial"
-                  ? "md:grid-cols-[1.25fr_0.75fr]"
-                  : "md:grid-cols-2",
+                  ? "md:grid-cols-[1.15fr_0.85fr]"
+                  : "md:grid-cols-[1.05fr_0.95fr]",
                 design.headerStyle === "band" &&
                   "border-l-[6px] border-l-[var(--quote-accent)]",
               )}
             >
               <div
                 className={cx(
-                  "flex min-w-0 items-start gap-5",
+                  "flex min-w-0 items-start gap-6 px-8 py-8 max-sm:flex-col max-sm:px-5 max-sm:py-6",
                   design.headerAlignment === "right" &&
                     "md:order-2 md:flex-row-reverse md:text-right",
                 )}
@@ -706,29 +706,32 @@ export const QuoteContentStudio = forwardRef<
                   <img
                     src={design.logo}
                     alt="Company logo"
-                    className="max-h-20 max-w-48 shrink-0 object-contain"
+                    className="h-20 w-24 shrink-0 object-contain"
                   />
                 )}
                 <div className="min-w-0 text-[var(--quote-text)]">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] opacity-55">
+                    From
+                  </p>
                   {headerDetails.companyName && (
-                    <p className="text-lg font-semibold tracking-tight">
+                    <p className="text-lg font-semibold leading-tight tracking-tight">
                       {headerDetails.companyName}
                     </p>
                   )}
                   {headerDetails.address && (
-                    <p className="mt-1 whitespace-pre-line text-xs leading-relaxed opacity-75">
+                    <p className="mt-2 whitespace-pre-line text-xs leading-5 opacity-70">
                       {headerDetails.address}
                     </p>
                   )}
                   {(headerDetails.email || headerDetails.phone || headerDetails.website) && (
-                    <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs opacity-75">
+                    <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs opacity-70">
                       {headerDetails.email && <span>{headerDetails.email}</span>}
                       {headerDetails.phone && <span>{headerDetails.phone}</span>}
                       {headerDetails.website && <span>{headerDetails.website}</span>}
                     </p>
                   )}
                   {(headerDetails.vatId || headerDetails.registrationNo) && (
-                    <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs opacity-75">
+                    <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs opacity-60">
                       {headerDetails.vatId && <span>VAT {headerDetails.vatId}</span>}
                       {headerDetails.registrationNo && (
                         <span>Company no. {headerDetails.registrationNo}</span>
@@ -739,37 +742,40 @@ export const QuoteContentStudio = forwardRef<
               </div>
               <div
                 className={cx(
-                  "min-w-0 border-[var(--quote-table-header)] md:border-l md:pl-8",
+                  "min-w-0 border-[var(--quote-table-header)] px-8 py-8 max-sm:border-t max-sm:px-5 max-sm:py-6 md:border-l",
                   design.headerAlignment === "right" &&
-                    "md:order-1 md:border-l-0 md:border-r md:pl-0 md:pr-8",
+                    "md:order-1 md:border-l-0 md:border-r",
                 )}
               >
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--quote-accent)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--quote-accent)]">
                   Quotation
                 </p>
                 <p
                   className={cx(
-                    "mt-2 font-semibold tracking-tight text-[var(--quote-text)]",
+                    "mt-2 font-semibold leading-none tracking-tight text-[var(--quote-text)]",
                     design.headerStyle === "editorial" ? "text-3xl" : "text-2xl",
                   )}
                 >
                   {quote?.number ?? "Draft quotation"}
                 </p>
                 {customerName && (
-                  <p className="mt-3 text-sm text-[var(--quote-text)] opacity-75">
-                    Prepared for <span className="font-semibold">{customerName}</span>
-                  </p>
+                  <div className="mt-5 text-[var(--quote-text)]">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide opacity-55">
+                      Prepared for
+                    </p>
+                    <p className="mt-1 text-sm font-semibold">{customerName}</p>
+                  </div>
                 )}
-                <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3 text-xs text-[var(--quote-text)]">
+                <dl className="mt-6 grid grid-cols-2 gap-x-8 gap-y-3 text-xs text-[var(--quote-text)]">
                   <div>
-                    <dt className="font-semibold uppercase tracking-wide opacity-55">Issued</dt>
-                    <dd className="mt-1 font-medium">
+                    <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-55">Issued</dt>
+                    <dd className="mt-1.5 font-semibold">
                       {formatDocumentDate(quote?.sentDate) ?? "On finalization"}
                     </dd>
                   </div>
                   <div>
-                    <dt className="font-semibold uppercase tracking-wide opacity-55">Valid until</dt>
-                    <dd className="mt-1 font-medium">
+                    <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-55">Valid until</dt>
+                    <dd className="mt-1.5 font-semibold">
                       {formatDocumentDate(quote?.validUntil) ??
                         `${quote?.validDays ?? 30} days after issue`}
                     </dd>
