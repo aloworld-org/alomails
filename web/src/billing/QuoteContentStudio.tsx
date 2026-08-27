@@ -13,6 +13,7 @@ import {
   Bold,
   Check,
   Copy,
+  FileText,
   Heading1,
   Heading2,
   Heading3,
@@ -36,7 +37,7 @@ import {
   X,
 } from "lucide-react";
 
-import { Button, ChoicePicker, Modal, Select, cx } from "../ds";
+import { Button, ChoicePicker, IconButton, Modal, Select, cx } from "../ds";
 import {
   QuoteTableOptionsProvider,
   type QuoteLineContent,
@@ -142,11 +143,11 @@ interface Design {
 }
 const DEFAULT_COLORS: Colors = {
   accent: "#e76f51",
-  background: "#fffefc",
-  headerBackground: "#fffefc",
+  background: "#faf7f2",
+  headerBackground: "#ffffff",
   text: "#102a43",
   tableHeader: "#f3f0ea",
-  tableRows: "#fffefc",
+  tableRows: "#ffffff",
   bulletMarker: "#e76f51",
   numberMarker: "#e76f51",
 };
@@ -3128,19 +3129,20 @@ function CustomizeQuote({
               ))}
             </div>
           </section>
-          <section className="border-t border-subtle pt-6">
-            <div className="flex items-center justify-between gap-3">
+          <section className="rounded-2xl border border-subtle bg-surface p-6 shadow-sm sm:p-8">
+            <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h3 className="text-base font-semibold text-primary">
+                <h3 className="text-2xl font-semibold tracking-tight text-primary">
                   Document palette
                 </h3>
-                <p className="mt-1 text-sm text-secondary">
+                <p className="mt-2 text-base text-secondary">
                   Control the customer-facing page and pricing table colours.
                 </p>
               </div>
-              <button
-                type="button"
-                className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-default bg-surface px-3.5 text-sm font-semibold text-secondary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<RotateCcw aria-hidden="true" />}
                 onClick={() =>
                   onChange((current) => ({
                     ...current,
@@ -3148,70 +3150,79 @@ function CustomizeQuote({
                   }))
                 }
               >
-                <RotateCcw className="size-4" aria-hidden="true" />
-                Reset
-              </button>
+                Reset to defaults
+              </Button>
             </div>
-            <div className="mt-5 grid gap-6 xl:grid-cols-2">
+            <div className="mt-8 grid gap-8 xl:grid-cols-2 xl:gap-0">
               <div>
-                <div className="mb-4">
-                  <h4 className="text-sm font-semibold text-primary">
-                    Document
-                  </h4>
-                  <p className="mt-0.5 text-xs text-secondary">
-                    Brand, page, header, and copy.
-                  </p>
+                <div className="mb-6 flex items-center gap-4">
+                  <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+                    <FileText className="size-5" aria-hidden="true" />
+                  </span>
+                  <div>
+                    <h4 className="text-base font-semibold text-primary">Document</h4>
+                    <p className="mt-1 text-sm text-secondary">Brand, page, header, and copy.</p>
+                  </div>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                <div className="grid gap-3">
                   <ColorField
                     label="Accent"
+                    help="Brand actions & highlights"
                     value={design.colors.accent}
                     onChange={(value) => setColor("accent", value)}
                   />
                   <ColorField
                     label="Page"
+                    help="Customer-facing background"
                     value={design.colors.background}
                     onChange={(value) => setColor("background", value)}
                   />
                   <ColorField
                     label="Header"
+                    help="Header background"
                     value={design.colors.headerBackground}
                     onChange={(value) => setColor("headerBackground", value)}
                   />
                   <ColorField
                     label="Text"
+                    help="Primary text"
                     value={design.colors.text}
                     onChange={(value) => setColor("text", value)}
                   />
                   <ColorField
                     label="Bullet dots"
+                    help="List markers"
                     value={design.colors.bulletMarker}
                     onChange={(value) => setColor("bulletMarker", value)}
                   />
                   <ColorField
                     label="Number markers"
+                    help="Numbered steps"
                     value={design.colors.numberMarker}
                     onChange={(value) => setColor("numberMarker", value)}
                   />
                 </div>
               </div>
-              <div className="xl:border-l xl:border-subtle xl:pl-6">
-                <div className="mb-4">
-                  <h4 className="text-sm font-semibold text-primary">
-                    Pricing tables
-                  </h4>
-                  <p className="mt-0.5 text-xs text-secondary">
-                    Keep headings and rows easy to scan.
-                  </p>
+              <div className="border-t border-subtle pt-8 xl:border-l xl:border-t-0 xl:pl-8 xl:pt-0">
+                <div className="mb-6 flex items-center gap-4">
+                  <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+                    <Table2 className="size-5" aria-hidden="true" />
+                  </span>
+                  <div>
+                    <h4 className="text-base font-semibold text-primary">Pricing tables</h4>
+                    <p className="mt-1 text-sm text-secondary">Keep headings and rows easy to scan.</p>
+                  </div>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                <div className="grid gap-3">
                   <ColorField
                     label="Table heading"
+                    help="Table header background"
                     value={design.colors.tableHeader}
                     onChange={(value) => setColor("tableHeader", value)}
                   />
                   <ColorField
                     label="Table rows"
+                    help="Default row background"
                     value={design.colors.tableRows}
                     onChange={(value) => setColor("tableRows", value)}
                   />
@@ -3702,19 +3713,21 @@ function TableToggle({
 
 function ColorField({
   label,
+  help,
   value,
   onChange,
 }: {
   label: string;
+  help: string;
   value: string;
   onChange: (value: string) => void;
 }) {
   const valid = /^#[0-9a-f]{6}$/i.test(value);
   const fieldId = `quote-colour-${label.replace(/\s+/g, "-").toLowerCase()}`;
   return (
-    <div className="flex min-h-16 items-center gap-3 rounded-xl border border-default bg-surface p-3 transition-colors hover:border-accent focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/10">
+    <div className="flex min-h-20 items-center gap-4 rounded-xl border border-default bg-surface px-4 py-3 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/10">
       <label
-        className="relative grid size-11 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-lg border border-default bg-surface shadow-sm"
+        className="relative grid size-14 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-xl border border-default bg-surface"
         htmlFor={`${fieldId}-picker`}
         title={`Choose ${label.toLowerCase()} colour`}
       >
@@ -3723,32 +3736,38 @@ function ColorField({
           type="color"
           value={valid ? value : DEFAULT_COLORS.accent}
           aria-label={`Choose ${label.toLowerCase()} colour`}
-          className="size-8 cursor-pointer rounded-md border-0 bg-transparent p-0 [&::-moz-color-swatch]:rounded-md [&::-moz-color-swatch]:border [&::-moz-color-swatch]:border-black/10 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-md [&::-webkit-color-swatch]:border [&::-webkit-color-swatch]:border-black/10"
+          className="size-11 cursor-pointer rounded-lg border-0 bg-transparent p-0 [&::-moz-color-swatch]:rounded-lg [&::-moz-color-swatch]:border [&::-moz-color-swatch]:border-black/10 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-lg [&::-webkit-color-swatch]:border [&::-webkit-color-swatch]:border-black/10"
           onChange={(event) => onChange(event.target.value)}
         />
       </label>
       <div className="min-w-0 flex-1">
         <label
-          className="block text-xs font-semibold text-secondary"
+          className="block text-sm font-semibold text-primary"
           htmlFor={fieldId}
         >
           {label}
         </label>
-        <input
-          id={fieldId}
-          value={value.toUpperCase()}
-          aria-label={`${label} hex colour`}
-          className="mt-0.5 h-6 min-w-0 w-full border-0 bg-transparent p-0 font-mono text-sm font-semibold uppercase text-primary shadow-none outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0"
-          maxLength={7}
-          spellCheck={false}
-          onChange={(event) => {
-            const next = event.target.value.startsWith("#")
-              ? event.target.value
-              : `#${event.target.value}`;
-            onChange(next.slice(0, 7));
-          }}
-        />
+        <p className="mt-1 text-xs text-secondary">{help}</p>
       </div>
+      <input
+        id={fieldId}
+        value={value.toUpperCase()}
+        aria-label={`${label} hex colour`}
+        className="h-10 w-[6.25rem] shrink-0 rounded-lg border border-default bg-raised px-3 font-mono text-sm font-medium uppercase text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/10"
+        maxLength={7}
+        spellCheck={false}
+        onChange={(event) => {
+          const next = event.target.value.startsWith("#")
+            ? event.target.value
+            : `#${event.target.value}`;
+          onChange(next.slice(0, 7));
+        }}
+      />
+      <IconButton
+        label={`Copy ${label.toLowerCase()} colour`}
+        icon={<Copy />}
+        onClick={() => void navigator.clipboard?.writeText(value.toUpperCase())}
+      />
     </div>
   );
 }
