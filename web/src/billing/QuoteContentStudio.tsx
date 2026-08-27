@@ -92,6 +92,15 @@ interface Colors {
   text: string;
   tableHeader: string;
   tableRows: string;
+  bulletMarker: string;
+  numberMarker: string;
+}
+interface HeaderDetails {
+  companyName: string;
+  address: string;
+  email: string;
+  phone: string;
+  website: string;
 }
 export interface QuoteColumns {
   unit: boolean;
@@ -110,6 +119,7 @@ export const DEFAULT_QUOTE_COLUMNS: QuoteColumns = {
 interface Design {
   logo: string;
   headerAlignment: HeaderAlignment;
+  headerDetails: HeaderDetails;
   theme: Theme;
   colors: Colors;
   columns: QuoteColumns;
@@ -131,10 +141,20 @@ const DEFAULT_COLORS: Colors = {
   text: "#102a43",
   tableHeader: "#f3f0ea",
   tableRows: "#fffefc",
+  bulletMarker: "#e76f51",
+  numberMarker: "#e76f51",
+};
+const DEFAULT_HEADER_DETAILS: HeaderDetails = {
+  companyName: "",
+  address: "",
+  email: "",
+  phone: "",
+  website: "",
 };
 const EMPTY: Design = {
   logo: "",
   headerAlignment: "left",
+  headerDetails: DEFAULT_HEADER_DETAILS,
   theme: "modern",
   colors: DEFAULT_COLORS,
   columns: DEFAULT_QUOTE_COLUMNS,
@@ -166,6 +186,7 @@ function legacyDesign(key: string): Design | null {
       ...EMPTY,
       ...saved,
       colors: { ...DEFAULT_COLORS, ...saved.colors },
+      headerDetails: { ...DEFAULT_HEADER_DETAILS, ...saved.headerDetails },
     });
   } catch {
     return null;
@@ -248,6 +269,7 @@ async function loadDesign(key: string): Promise<Design> {
         ...EMPTY,
         ...saved,
         colors: { ...DEFAULT_COLORS, ...saved.colors },
+        headerDetails: { ...DEFAULT_HEADER_DETAILS, ...saved.headerDetails },
       });
   } catch {
     /* Fall through to the small legacy record when IndexedDB is unavailable. */
@@ -394,6 +416,8 @@ export const QuoteContentStudio = forwardRef<
       "--quote-text": design.colors.text,
       "--quote-table-header": design.colors.tableHeader,
       "--quote-table-row": design.colors.tableRows,
+      "--quote-bullet-marker": design.colors.bulletMarker,
+      "--quote-number-marker": design.colors.numberMarker,
     };
     Object.entries(values).forEach(([name, value]) =>
       document.style.setProperty(name, value),
@@ -592,18 +616,49 @@ export const QuoteContentStudio = forwardRef<
             design.theme === "minimal" && "[&_article]:shadow-none",
           )}
         >
-          {design.logo && (
+          {(design.logo ||
+            Object.values(design.headerDetails).some((value) => value.trim())) && (
             <div
               className={cx(
                 "group/quote-header relative mb-8 flex min-h-28 items-center justify-between gap-8 rounded-2xl bg-[var(--quote-header-background)] px-6 py-5 max-sm:px-4",
                 design.headerAlignment === "right" && "flex-row-reverse",
               )}
             >
-              <img
-                src={design.logo}
-                alt="Company logo"
-                className="max-h-16 max-w-56 object-contain"
-              />
+              <div
+                className={cx(
+                  "flex min-w-0 items-center gap-4",
+                  design.headerAlignment === "right" && "flex-row-reverse text-right",
+                )}
+              >
+                {design.logo && (
+                  <img
+                    src={design.logo}
+                    alt="Company logo"
+                    className="max-h-16 max-w-48 shrink-0 object-contain"
+                  />
+                )}
+                <div className="min-w-0 text-[var(--quote-text)]">
+                  {design.headerDetails.companyName && (
+                    <p className="text-base font-semibold">
+                      {design.headerDetails.companyName}
+                    </p>
+                  )}
+                  {design.headerDetails.address && (
+                    <p className="mt-1 whitespace-pre-line text-xs leading-relaxed opacity-75">
+                      {design.headerDetails.address}
+                    </p>
+                  )}
+                  {(design.headerDetails.email ||
+                    design.headerDetails.phone ||
+                    design.headerDetails.website) && (
+                    <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs opacity-75">
+                      {design.headerDetails.email && <span>{design.headerDetails.email}</span>}
+                      {design.headerDetails.phone && <span>{design.headerDetails.phone}</span>}
+                      {design.headerDetails.website && <span>{design.headerDetails.website}</span>}
+                    </p>
+                  )}
+                </div>
+              </div>
               <span className="h-1 w-20 rounded-full bg-[var(--quote-accent)]" />
               {!readOnly && (
                 <button
@@ -892,7 +947,7 @@ export const QuoteContentStudio = forwardRef<
                                       className="flex min-w-0 items-start gap-3"
                                     >
                                       <span
-                                        className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-[var(--quote-accent)] text-xs font-semibold text-white"
+                                        className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-[var(--quote-number-marker)] text-xs font-semibold text-white"
                                         aria-hidden="true"
                                       >
                                         {itemIndex + 1}
@@ -922,7 +977,7 @@ export const QuoteContentStudio = forwardRef<
                                       className="flex min-w-0 items-start gap-3"
                                     >
                                       <span
-                                        className="mt-2 size-2 shrink-0 rounded-full bg-[var(--quote-accent)]"
+                                        className="mt-2 size-2 shrink-0 rounded-full bg-[var(--quote-bullet-marker)]"
                                         aria-hidden="true"
                                       />
                                       <span className="min-w-0 flex-1">
@@ -2645,6 +2700,11 @@ function CustomizeQuote({
       ...current,
       colors: { ...current.colors, [name]: value },
     }));
+  const setHeaderDetail = (name: keyof HeaderDetails, value: string) =>
+    onChange((current) => ({
+      ...current,
+      headerDetails: { ...current.headerDetails, [name]: value },
+    }));
   return (
     <Modal
       title="Customize quotation"
@@ -2736,6 +2796,51 @@ function CustomizeQuote({
                 );
             }}
           />
+        </section>
+        <section className="rounded-2xl border border-default bg-surface p-5 shadow-sm">
+          <div>
+            <h3 className="text-base font-semibold text-primary">
+              Company information
+            </h3>
+            <p className="mt-1 text-sm leading-relaxed text-secondary">
+              Add the identity and contact details customers should see in the quotation header.
+            </p>
+          </div>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <HeaderField
+              label="Company name"
+              value={design.headerDetails.companyName}
+              placeholder="Your company name"
+              onChange={(value) => setHeaderDetail("companyName", value)}
+            />
+            <HeaderField
+              label="Website"
+              value={design.headerDetails.website}
+              placeholder="www.company.com"
+              onChange={(value) => setHeaderDetail("website", value)}
+            />
+            <HeaderField
+              label="Email"
+              value={design.headerDetails.email}
+              placeholder="sales@company.com"
+              onChange={(value) => setHeaderDetail("email", value)}
+            />
+            <HeaderField
+              label="Phone"
+              value={design.headerDetails.phone}
+              placeholder="+49 30 123 456"
+              onChange={(value) => setHeaderDetail("phone", value)}
+            />
+            <label className="grid gap-2 sm:col-span-2">
+              <span className="text-sm font-semibold text-primary">Address</span>
+              <textarea
+                className="min-h-24 resize-y rounded-xl border border-default bg-surface px-4 py-3 text-sm leading-relaxed text-primary placeholder:text-tertiary hover:border-accent focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10"
+                value={design.headerDetails.address}
+                placeholder={"Street and number\nPostal code and city\nCountry"}
+                onChange={(event) => setHeaderDetail("address", event.target.value)}
+              />
+            </label>
+          </div>
         </section>
         <div className="min-w-0 space-y-7">
           <section>
@@ -2865,6 +2970,16 @@ function CustomizeQuote({
                     label="Text"
                     value={design.colors.text}
                     onChange={(value) => setColor("text", value)}
+                  />
+                  <ColorField
+                    label="Bullet dots"
+                    value={design.colors.bulletMarker}
+                    onChange={(value) => setColor("bulletMarker", value)}
+                  />
+                  <ColorField
+                    label="Number markers"
+                    value={design.colors.numberMarker}
+                    onChange={(value) => setColor("numberMarker", value)}
                   />
                 </div>
               </div>
@@ -3423,5 +3538,31 @@ function ColorField({
         />
       </div>
     </div>
+  );
+}
+
+function HeaderField({
+  label,
+  value,
+  placeholder,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  placeholder: string;
+  onChange: (value: string) => void;
+}) {
+  const fieldId = `quote-header-${label.replace(/\s+/g, "-").toLowerCase()}`;
+  return (
+    <label className="grid gap-2" htmlFor={fieldId}>
+      <span className="text-sm font-semibold text-primary">{label}</span>
+      <input
+        id={fieldId}
+        className="min-h-11 rounded-xl border border-default bg-surface px-4 text-sm text-primary placeholder:text-tertiary hover:border-accent focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10"
+        value={value}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </label>
   );
 }

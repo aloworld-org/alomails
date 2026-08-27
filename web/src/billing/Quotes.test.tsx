@@ -839,6 +839,17 @@ describe("the quotation document preview", () => {
     storage.setItem(
       `alo:quote-design:${quoteId}`,
       JSON.stringify({
+        headerDetails: {
+          companyName: "Alo Manufacturing",
+          address: "12 Market Street\nBerlin",
+          email: "sales@example.com",
+          phone: "+49 30 123 456",
+          website: "example.com",
+        },
+        colors: {
+          bulletMarker: "#2f855a",
+          numberMarker: "#9b5de5",
+        },
         blocks: [
           {
             id: "bullet-list",
@@ -870,10 +881,23 @@ describe("the quotation document preview", () => {
     );
 
     await screen.findByText("First benefit");
+    expect(screen.getByText("Alo Manufacturing")).toBeTruthy();
+    expect(screen.getByText(/12 Market Street/)).toBeTruthy();
+    expect(screen.getByText("sales@example.com")).toBeTruthy();
     expect(
       view.container.querySelector('ul li > span[aria-hidden="true"]'),
     ).toBeTruthy();
+    expect(
+      view.container.querySelector(
+        'ul li > span.bg-\\[var\\(--quote-bullet-marker\\)\\]',
+      ),
+    ).toBeTruthy();
     expect(screen.getByText("1", { selector: "ol li > span" })).toBeTruthy();
+    expect(
+      view.container.querySelector(
+        'ol li > span.bg-\\[var\\(--quote-number-marker\\)\\]',
+      ),
+    ).toBeTruthy();
     storage.removeItem(`alo:quote-design:${quoteId}`);
   });
 });
