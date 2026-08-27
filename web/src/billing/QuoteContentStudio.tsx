@@ -1961,7 +1961,10 @@ function DividerBlockEditor({
             <legend className="text-sm font-semibold text-primary">
               {strings.quoteStudioDividerStyle}
             </legend>
-            <div className="mt-3 grid grid-cols-3 gap-3">
+            <p className="mt-1 text-sm text-secondary">
+              {strings.quoteStudioDividerStyleHelp}
+            </p>
+            <div className="mt-5 grid grid-cols-3 gap-5">
               {styleChoices.map((choice) => (
                 <DividerVisualChoice
                   key={choice.value}
@@ -1982,7 +1985,10 @@ function DividerBlockEditor({
               <legend className="text-sm font-semibold text-primary">
                 {strings.quoteStudioDividerThickness}
               </legend>
-              <div className="mt-3 grid grid-cols-3 gap-3">
+              <p className="mt-1 text-sm text-secondary">
+                {strings.quoteStudioDividerThicknessHelp}
+              </p>
+              <div className="mt-5 grid grid-cols-3 gap-4">
                 {thicknessChoices.map((choice) => (
                   <DividerVisualChoice
                     key={choice.value}
@@ -2008,7 +2014,10 @@ function DividerBlockEditor({
               <legend className="text-sm font-semibold text-primary">
                 {strings.quoteStudioDividerWidth}
               </legend>
-              <div className="mt-3 grid grid-cols-4 gap-3">
+              <p className="mt-1 text-sm text-secondary">
+                {strings.quoteStudioDividerWidthHelp}
+              </p>
+              <div className="mt-5 grid grid-cols-4 gap-4">
                 {widthChoices.map((choice) => (
                   <DividerVisualChoice
                     key={choice}
@@ -2075,23 +2084,29 @@ function DividerVisualChoice({
       type="button"
       aria-pressed={selected}
       className={cx(
-        "relative flex flex-col rounded-xl border px-3 py-3 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
-        compact ? "min-h-20" : "min-h-28",
+        "relative flex flex-col rounded-xl border bg-surface p-4 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
+        compact ? "min-h-28" : "min-h-40",
         selected
-          ? "border-accent bg-surface text-primary"
-          : "border-default bg-surface text-primary hover:border-accent hover:bg-accent-soft/30",
+          ? "border-accent bg-accent-soft/20 text-primary"
+          : "border-default text-primary hover:border-accent hover:bg-accent-soft/20",
       )}
       onClick={onClick}
     >
       {selected && (
-        <span className="absolute right-2.5 top-2.5 inline-flex size-5 items-center justify-center rounded-full bg-accent text-white">
+        <span className="absolute right-3 top-3 inline-flex size-5 items-center justify-center rounded-full bg-accent text-white">
           <Check className="size-3.5" aria-hidden="true" />
         </span>
       )}
-      <span className="flex min-h-9 w-full items-center pr-6" aria-hidden="true">
+      <span
+        className={cx(
+          "flex w-full items-center px-3 pr-8",
+          compact ? "min-h-10" : "min-h-16",
+        )}
+        aria-hidden="true"
+      >
         {children}
       </span>
-      <span className="mt-auto pt-3 text-center text-xs font-medium text-primary">
+      <span className="mt-auto pt-4 text-center text-sm font-medium text-primary">
         {label}
       </span>
     </button>
