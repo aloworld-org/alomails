@@ -7198,6 +7198,7 @@ export const en = {
   quoteStudioCustomerEmailPlaceholder: "contact@customer.com",
   quoteStudioCustomerVatPlaceholder: "Customer VAT registration number",
   quoteStudioOnFinalization: "On finalization",
+  quoteStudioDaysAfterIssue: (days: string) => `${days} days after issue`,
   quoteStudioSupportingText: "Supporting text",
   quoteStudioHeading: "Heading",
   quoteStudioHeadingHelp: "Choose H1, H2, or H3",

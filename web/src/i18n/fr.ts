@@ -7101,6 +7101,7 @@ export const fr: Partial<Catalog> = {
   quoteStudioCustomerEmailPlaceholder: "contact@client.com",
   quoteStudioCustomerVatPlaceholder: "Numéro de TVA du client",
   quoteStudioOnFinalization: "Lors de la finalisation",
+  quoteStudioDaysAfterIssue: (days: string) => `${days} jours après l’émission`,
   quoteStudioSupportingText: "Texte d’accompagnement",
   quoteStudioHeading: "Titre",
   quoteStudioHeadingHelp: "Choisissez H1, H2 ou H3",

@@ -7035,6 +7035,7 @@ export const nl: Partial<Catalog> = {
   quoteStudioCustomerEmailPlaceholder: "contact@klant.nl",
   quoteStudioCustomerVatPlaceholder: "Btw-nummer van de klant",
   quoteStudioOnFinalization: "Bij definitief maken",
+  quoteStudioDaysAfterIssue: (days: string) => `${days} dagen na uitgifte`,
   quoteStudioSupportingText: "Begeleidende tekst",
   quoteStudioHeading: "Kop",
   quoteStudioHeadingHelp: "Kies H1, H2 of H3",

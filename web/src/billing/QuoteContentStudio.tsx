@@ -952,7 +952,7 @@ export const QuoteContentStudio = forwardRef<
                     {design.contactQrAlignment === "right" && contactQrNode}
                   </div>
                   {(headerDetails.vatId || headerDetails.registrationNo) && (
-                    <dl className="mt-6 grid grid-cols-2 gap-x-10 gap-y-3 border-t border-[var(--quote-table-header)] pt-4 text-xs text-[var(--quote-text)]">
+                    <dl className="mt-auto grid grid-cols-2 gap-x-10 gap-y-3 border-t border-[var(--quote-table-header)] pt-4 text-xs text-[var(--quote-text)]">
                       {headerDetails.vatId && (
                         <div>
                           <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-55">
@@ -1057,7 +1057,9 @@ export const QuoteContentStudio = forwardRef<
                     <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-55">{strings.quoteStudioValidUntil}</dt>
                     <dd className="mt-1.5 font-semibold">
                       {formatDocumentDate(quote?.validUntil, locale) ??
-                        `${quote?.validDays ?? 30} days after issue`}
+                        strings.quoteStudioDaysAfterIssue(
+                          new Intl.NumberFormat(locale).format(quote?.validDays ?? 30),
+                        )}
                     </dd>
                   </div>
                 </dl>

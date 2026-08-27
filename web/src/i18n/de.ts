@@ -7184,6 +7184,7 @@ export const de: Partial<Catalog> = {
   quoteStudioCustomerEmailPlaceholder: "kontakt@kunde.de",
   quoteStudioCustomerVatPlaceholder: "USt-IdNr. des Kunden",
   quoteStudioOnFinalization: "Bei Finalisierung",
+  quoteStudioDaysAfterIssue: (days: string) => `${days} Tage nach Ausstellung`,
   quoteStudioSupportingText: "Begleittext",
   quoteStudioHeading: "Überschrift",
   quoteStudioHeadingHelp: "Wählen Sie H1, H2 oder H3",
