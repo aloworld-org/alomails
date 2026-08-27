@@ -798,6 +798,23 @@ export const QuoteContentStudio = forwardRef<
       return { ...current, blocks };
     });
 
+  const contactQrNode = design.showContactQr && headerDetails.companyName ? (
+    <div className="shrink-0 text-center">
+      <div className="rounded-xl bg-white p-1.5 ring-1 ring-[var(--quote-table-header)]">
+        <QRCodeSVG
+          value={contactVCard(headerDetails)}
+          size={design.contactQrSize === "small" ? 48 : design.contactQrSize === "large" ? 80 : 64}
+          fgColor={design.contactQrColor}
+          bgColor="#ffffff"
+          level="M"
+          marginSize={0}
+          title={`Save ${headerDetails.companyName} contact details`}
+        />
+      </div>
+      <p className="mt-1.5 text-[9px] font-medium leading-tight opacity-60">Scan to save</p>
+    </div>
+  ) : null;
+
   return (
     <>
       <section
@@ -882,7 +899,15 @@ export const QuoteContentStudio = forwardRef<
                   )}
                 </div>
                 <div className="mt-7 min-w-0 flex-1 text-[var(--quote-text)]">
-                  <div className="grid gap-x-12 gap-y-5 text-sm leading-6 sm:grid-cols-2">
+                  <div
+                    className={cx(
+                      "grid items-start gap-x-8 gap-y-5 text-sm leading-6",
+                      contactQrNode === null
+                        ? "sm:grid-cols-2"
+                        : "sm:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)]",
+                    )}
+                  >
+                    {design.contactQrAlignment === "left" && contactQrNode}
                     {headerDetails.address && (
                       <div>
                         <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] opacity-55">
@@ -896,28 +921,29 @@ export const QuoteContentStudio = forwardRef<
                         <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] opacity-55">
                           Contact
                         </p>
-                        <div className="flex flex-col gap-1.5 opacity-80">
-                          {headerDetails.email && (
-                            <span className="flex items-center gap-2.5">
-                              <Mail className="size-4 shrink-0 text-[var(--quote-contact-icons)]" aria-hidden="true" />
-                              {headerDetails.email}
-                            </span>
-                          )}
-                          {headerDetails.phone && (
-                            <span className="flex items-center gap-2.5">
-                              <Phone className="size-4 shrink-0 text-[var(--quote-contact-icons)]" aria-hidden="true" />
-                              {headerDetails.phone}
-                            </span>
-                          )}
-                          {headerDetails.website && (
-                            <span className="flex items-center gap-2.5 break-all">
-                              <Globe2 className="size-4 shrink-0 text-[var(--quote-contact-icons)]" aria-hidden="true" />
-                              {headerDetails.website.replace(/^https?:\/\//, "")}
-                            </span>
-                          )}
+                        <div className="flex min-w-0 flex-col gap-1.5 opacity-80">
+                            {headerDetails.email && (
+                              <span className="flex items-center gap-2.5">
+                                <Mail className="size-4 shrink-0 text-[var(--quote-contact-icons)]" aria-hidden="true" />
+                                {headerDetails.email}
+                              </span>
+                            )}
+                            {headerDetails.phone && (
+                              <span className="flex items-center gap-2.5">
+                                <Phone className="size-4 shrink-0 text-[var(--quote-contact-icons)]" aria-hidden="true" />
+                                {headerDetails.phone}
+                              </span>
+                            )}
+                            {headerDetails.website && (
+                              <span className="flex items-center gap-2.5 break-all">
+                                <Globe2 className="size-4 shrink-0 text-[var(--quote-contact-icons)]" aria-hidden="true" />
+                                {headerDetails.website.replace(/^https?:\/\//, "")}
+                              </span>
+                            )}
                         </div>
                       </div>
                     )}
+                    {design.contactQrAlignment === "right" && contactQrNode}
                   </div>
                   {(headerDetails.vatId || headerDetails.registrationNo) && (
                     <dl className="mt-6 grid grid-cols-2 gap-x-10 gap-y-3 border-t border-[var(--quote-table-header)] pt-4 text-xs text-[var(--quote-text)]">
@@ -938,29 +964,6 @@ export const QuoteContentStudio = forwardRef<
                         </div>
                       )}
                     </dl>
-                  )}
-                  {design.showContactQr && headerDetails.companyName && (
-                    <div
-                      className={cx(
-                        "mt-6 flex items-end gap-3",
-                        design.contactQrAlignment === "right" ? "justify-end text-right" : "justify-start",
-                      )}
-                    >
-                      <div className="rounded-xl bg-white p-2 ring-1 ring-[var(--quote-table-header)]">
-                        <QRCodeSVG
-                          value={contactVCard(headerDetails)}
-                          size={design.contactQrSize === "small" ? 64 : design.contactQrSize === "large" ? 104 : 84}
-                          fgColor={design.contactQrColor}
-                          bgColor="#ffffff"
-                          level="M"
-                          marginSize={0}
-                          title={`Save ${headerDetails.companyName} contact details`}
-                        />
-                      </div>
-                      <p className="max-w-28 pb-1 text-[10px] font-medium leading-relaxed opacity-65">
-                        Scan to save our contact details
-                      </p>
-                    </div>
                   )}
                 </div>
               </div>

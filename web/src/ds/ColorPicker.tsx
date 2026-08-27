@@ -215,19 +215,21 @@ export function ColorPicker({
               ))}
             </div>
           </div>
-          <div className="flex items-center gap-3 border-t border-subtle px-5 py-4">
-            <span className="text-xs font-semibold text-secondary">HEX</span>
-            <input
-              value={hex}
-              aria-label="Hex colour"
-              className="h-10 min-w-0 flex-1 rounded-xl border border-default bg-surface px-3 font-mono text-sm font-medium uppercase text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/10"
-              onChange={(event) => {
-                const next = event.target.value.startsWith("#") ? event.target.value : `#${event.target.value}`;
-                if (/^#[0-9a-f]{6}$/i.test(next)) onChange(next.toUpperCase());
-              }}
-            />
-            <IconButton label="Copy hex colour" icon={<Copy />} onClick={() => void navigator.clipboard?.writeText(hex)} />
-            <div className="ml-auto flex items-center gap-2">
+          <div className="space-y-3 border-t border-subtle px-5 py-4">
+            <div className="grid grid-cols-[auto_minmax(9rem,1fr)_auto] items-center gap-3">
+              <span className="text-xs font-semibold text-secondary">HEX</span>
+              <input
+                value={hex}
+                aria-label="Hex colour"
+                className="h-10 min-w-0 rounded-xl border border-default bg-surface px-3 font-mono text-sm font-medium uppercase text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/10"
+                onChange={(event) => {
+                  const next = event.target.value.startsWith("#") ? event.target.value : `#${event.target.value}`;
+                  if (/^#[0-9a-f]{6}$/i.test(next)) onChange(next.toUpperCase());
+                }}
+              />
+              <IconButton label="Copy hex colour" icon={<Copy />} onClick={() => void navigator.clipboard?.writeText(hex)} />
+            </div>
+            <div className="flex items-center justify-end gap-2">
               {presets.slice(0, 4).map((preset) => (
                 <button
                   key={preset}
