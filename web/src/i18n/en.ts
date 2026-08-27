@@ -2841,9 +2841,9 @@ export const en = {
   quoteStudioTemplateRetainerSupport: "Priority support and planning",
   billingQuoteIncludedItems: (count: number) =>
     `${count} item${count === 1 ? "" : "s"}`,
-  billingQuoteIncludedTitle: "Included in this template",
+  billingQuoteIncludedTitle: "Items ready to add",
   billingQuoteIncludedHelp:
-    "These price-list items will be added to the draft. You can change their quantities, prices and descriptions in the editor.",
+    "Review what this template will add. You can adjust quantities, prices and descriptions in the editor.",
   billingQuoteRemoveIncludedItem: (name: string) => `Remove ${name}`,
   billingQuoteAddFromPriceList: "Add items",
   billingQuoteSearchPriceList: "Search the price list",

@@ -2716,9 +2716,9 @@ export const de: Partial<Catalog> = {
   quoteStudioTemplateRetainerSupport: "Bevorzugte Unterstützung und Planung",
   billingQuoteIncludedItems: (count: number) =>
     count === 1 ? "1 Artikel" : `${count} Artikel`,
-  billingQuoteIncludedTitle: "In dieser Vorlage enthalten",
+  billingQuoteIncludedTitle: "Artikel zum Hinzufügen bereit",
   billingQuoteIncludedHelp:
-    "Diese Preislisten-Artikel werden dem Entwurf hinzugefügt. Mengen, Preise und Beschreibungen können Sie im Editor ändern.",
+    "Prüfen Sie, was diese Vorlage hinzufügt. Mengen, Preise und Beschreibungen können Sie im Editor anpassen.",
   billingQuoteRemoveIncludedItem: (name: string) => `${name} entfernen`,
   billingQuoteAddFromPriceList: "Artikel hinzufügen",
   billingQuoteSearchPriceList: "Preisliste durchsuchen",

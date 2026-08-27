@@ -1899,9 +1899,9 @@ export const fr: Partial<Catalog> = {
   quoteStudioTemplateRetainerSupport: "Assistance et planification prioritaires",
   billingQuoteIncludedItems: (count: number) =>
     `${count} élément${count === 1 ? "" : "s"}`,
-  billingQuoteIncludedTitle: "Inclus dans ce modèle",
+  billingQuoteIncludedTitle: "Éléments prêts à ajouter",
   billingQuoteIncludedHelp:
-    "Ces éléments du catalogue seront ajoutés au brouillon. Vous pourrez modifier leurs quantités, prix et descriptions dans l’éditeur.",
+    "Vérifiez les éléments que ce modèle ajoutera. Vous pourrez ajuster leurs quantités, prix et descriptions dans l’éditeur.",
   billingQuoteRemoveIncludedItem: (name: string) => `Retirer ${name}`,
   billingQuoteAddFromPriceList: "Ajouter des éléments",
   billingQuoteSearchPriceList: "Rechercher dans le catalogue",

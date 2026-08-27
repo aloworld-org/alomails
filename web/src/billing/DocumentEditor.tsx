@@ -34,7 +34,7 @@ import type { QuoteColumns } from "./QuoteContentStudio";
 import type { DocumentDraft, StoredDocument } from "./documentDraft";
 import { blankRow, isBlankRow, rowFromProduct } from "./lineRows";
 import type { LineRow } from "./lineRows";
-import { formatAmount, formatRate } from "./money";
+import { formatAmount, formatRate, parseHundredths } from "./money";
 import { DialogFrame, ErrorBanner, Field } from "./parts";
 import type { Pickers } from "./pickers";
 import { printSheet } from "./printSheet";
@@ -116,7 +116,10 @@ function CreationTemplatePreview({
             </span>
             <span className="mt-auto grid gap-1">
               {[0, 1].map((row) => (
-                <span key={row} className="grid grid-cols-[1fr_0.3fr] gap-2 border-t border-[#E7E1D8] pt-1">
+                <span
+                  key={row}
+                  className="grid grid-cols-[1fr_0.3fr] gap-2 border-t border-[#E7E1D8] pt-1"
+                >
                   <span className={`${line} w-full`} />
                   <span className={`${strongLine} w-full`} />
                 </span>
@@ -172,7 +175,10 @@ function CreationTemplatePreview({
       </span>
       <span className="mt-auto rounded-lg bg-[#F3F0EA] px-2 py-1.5">
         {["w-full", "w-3/4"].map((width) => (
-          <span key={width} className="grid grid-cols-[1fr_0.3fr] items-center gap-2 border-t border-[#E7E1D8] py-1">
+          <span
+            key={width}
+            className="grid grid-cols-[1fr_0.3fr] items-center gap-2 border-t border-[#E7E1D8] py-1"
+          >
             <span className={`${line} ${width}`} />
             <span className={`${strongLine} w-full`} />
           </span>
@@ -367,33 +373,33 @@ export function DocumentEditor<T extends StoredDocument, A>({
     });
     return (
       <DocumentLines
-          rows={tableRows}
-          products={pickers.products}
-          savedLines={tableSavedLines}
-          saved={saved}
-          currency={currency}
-          readOnly={readOnly}
-          columns={lineColumns}
-          title={
-            typeof documentBody === "function"
-              ? title ?? strings.quoteStudioPricingTable
-              : undefined
-          }
-          onChange={(next) => {
-            const merged = rows.filter((row) => !owned.has(row.key)).concat(next);
-            draft.edit({ rows: merged });
-            onRowKeysChange(next.map((row) => row.key));
-          }}
-          nextKey={draft.nextKey}
-        />
+        rows={tableRows}
+        products={pickers.products}
+        savedLines={tableSavedLines}
+        saved={saved}
+        currency={currency}
+        readOnly={readOnly}
+        columns={lineColumns}
+        title={
+          typeof documentBody === "function"
+            ? (title ?? strings.quoteStudioPricingTable)
+            : undefined
+        }
+        onChange={(next) => {
+          const merged = rows.filter((row) => !owned.has(row.key)).concat(next);
+          draft.edit({ rows: merged });
+          onRowKeysChange(next.map((row) => row.key));
+        }}
+        nextKey={draft.nextKey}
+      />
     );
   };
   const totalsPanel =
     document === null ? null : (
       <TotalsPanel
-          totals={document.totals}
-          currency={currency}
-          stale={!saved}
+        totals={document.totals}
+        currency={currency}
+        stale={!saved}
       />
     );
   const renderTableSubtotal = (
@@ -420,7 +426,10 @@ export function DocumentEditor<T extends StoredDocument, A>({
       ? document.totals.netCents
       : ownedLines.reduce((sum, line) => sum + line.netCents, 0);
     const netByRate = ownedLines.reduce<Map<number, number>>((rates, line) => {
-      rates.set(line.vatRateBp, (rates.get(line.vatRateBp) ?? 0) + line.netCents);
+      rates.set(
+        line.vatRateBp,
+        (rates.get(line.vatRateBp) ?? 0) + line.netCents,
+      );
       return rates;
     }, new Map());
     const vatCents = ownsEveryLine
@@ -439,7 +448,13 @@ export function DocumentEditor<T extends StoredDocument, A>({
     }`;
     const rowsToShow: Array<{ label: string; value: string; total?: boolean }> =
       presentation.detail === "total"
-        ? [{ label: strings.billingTotalsGross, value: totalAmount, total: true }]
+        ? [
+            {
+              label: strings.billingTotalsGross,
+              value: totalAmount,
+              total: true,
+            },
+          ]
         : [
             { label: strings.billingTotalsNet, value: amount(netCents) },
             ...(presentation.detail === "breakdown"
@@ -450,7 +465,11 @@ export function DocumentEditor<T extends StoredDocument, A>({
                     value: amount(Math.round((net * rate) / 10_000)),
                   }))
               : [{ label: strings.billingVat, value: amount(vatCents) }]),
-            { label: strings.billingTotalsGross, value: totalAmount, total: true },
+            {
+              label: strings.billingTotalsGross,
+              value: totalAmount,
+              total: true,
+            },
           ];
     return (
       <div
@@ -631,12 +650,25 @@ export function DocumentEditor<T extends StoredDocument, A>({
                 <div className={styles.templateItemsList}>
                   {rows.map((row) => (
                     <div key={row.key} className={styles.templateItem}>
-                      <Check
-                        className="size-4 shrink-0 text-accent"
+                      <span
+                        className={styles.templateItemCheck}
                         aria-hidden="true"
-                      />
-                      <span className="min-w-0 flex-1 truncate">
-                        {row.description}
+                      >
+                        <Check className="size-3.5" strokeWidth={2.5} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-semibold text-primary">
+                          {row.description}
+                        </span>
+                        <span className={styles.templateItemMeta}>
+                          {row.unit || strings.billingQuotePerItem}
+                          <span aria-hidden="true">·</span>
+                          {formatAmount(
+                            parseHundredths(row.price) ?? 0,
+                            locale,
+                            currency,
+                          )}
+                        </span>
                       </span>
                       <button
                         type="button"
@@ -699,6 +731,14 @@ export function DocumentEditor<T extends StoredDocument, A>({
                           </span>
                           <span className="shrink-0 text-xs text-tertiary">
                             {product.unit || strings.billingQuotePerItem}
+                            <span className="mx-1" aria-hidden="true">
+                              ·
+                            </span>
+                            {formatAmount(
+                              product.unitPriceCents,
+                              locale,
+                              currency,
+                            )}
                           </span>
                           <Plus
                             className="size-4 shrink-0 text-accent"

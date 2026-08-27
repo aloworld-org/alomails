@@ -1857,9 +1857,9 @@ export const nl: Partial<Catalog> = {
   quoteStudioTemplateRetainerSupport: "Ondersteuning en planning met voorrang",
   billingQuoteIncludedItems: (count: number) =>
     `${count} item${count === 1 ? "" : "s"}`,
-  billingQuoteIncludedTitle: "Inbegrepen in dit sjabloon",
+  billingQuoteIncludedTitle: "Items klaar om toe te voegen",
   billingQuoteIncludedHelp:
-    "Deze prijslijstitems worden aan het concept toegevoegd. In de editor kun je aantallen, prijzen en beschrijvingen aanpassen.",
+    "Controleer wat dit sjabloon toevoegt. In de editor kun je aantallen, prijzen en beschrijvingen aanpassen.",
   billingQuoteRemoveIncludedItem: (name: string) => `${name} verwijderen`,
   billingQuoteAddFromPriceList: "Items toevoegen",
   billingQuoteSearchPriceList: "Prijslijst doorzoeken",

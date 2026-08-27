@@ -85,25 +85,28 @@ const styles = {
     "template-name block min-w-0 text-sm font-semibold leading-snug text-primary",
   templateCardCheck:
     "inline-flex size-6 shrink-0 items-center justify-center rounded-full border border-default bg-surface text-transparent",
-  templateCardCheckActive:
-    "border-accent bg-accent text-on-accent",
+  templateCardCheckActive: "border-accent bg-accent text-on-accent",
   templateCardDescription: "sr-only",
   templateItems:
-    "rounded-xl border border-accent/25 bg-accent-soft p-4 text-sm text-secondary shadow-sm",
+    "rounded-2xl border border-default bg-surface p-5 text-sm text-secondary shadow-sm max-[34rem]:p-4",
   templateItemsHead:
     "flex items-start justify-between gap-4 max-[34rem]:flex-col",
   templateItemsTitle: "m-0 text-sm font-semibold text-primary",
-  templateItemsHint: "mb-0 mt-1 max-w-2xl text-xs leading-relaxed text-secondary",
+  templateItemsHint:
+    "mb-0 mt-1 max-w-2xl text-xs leading-relaxed text-secondary",
   templateItemsCount:
-    "inline-flex min-h-8 shrink-0 items-center rounded-full bg-surface px-3 text-xs font-semibold text-accent shadow-sm ring-1 ring-accent/20",
+    "inline-flex min-h-8 shrink-0 items-center rounded-full bg-accent-soft px-3 text-xs font-semibold text-accent ring-1 ring-accent/15",
   templateAddItems:
-    "inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg border border-accent/25 bg-surface !px-4 !py-2 text-sm font-semibold text-accent shadow-sm transition-colors hover:border-accent hover:bg-accent hover:text-on-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
-  templateItemsList:
-    "mt-3 grid grid-cols-2 gap-2 max-[38rem]:grid-cols-1",
+    "inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-accent !px-4 text-sm font-medium text-on-accent shadow-sm transition-colors duration-150 hover:bg-[#D96247] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
+  templateItemsList: "mt-3 grid grid-cols-2 gap-2 max-[38rem]:grid-cols-1",
   templateItem:
-    "flex min-h-11 items-center gap-3 rounded-lg border border-accent/15 bg-surface px-3 py-2 text-sm font-medium text-primary shadow-sm",
+    "flex min-h-16 items-center gap-3 rounded-xl border border-subtle bg-raised px-4 py-3 text-sm text-primary",
+  templateItemCheck:
+    "inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent",
+  templateItemMeta:
+    "mt-0.5 flex items-center gap-1.5 text-xs font-normal text-secondary",
   templateItemRemove:
-    "inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-tertiary transition-colors hover:bg-[var(--danger-tint)] hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/30",
+    "inline-flex size-9 shrink-0 items-center justify-center rounded-xl text-tertiary transition-colors hover:bg-[var(--danger-tint)] hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/30",
   templateProductPicker:
     "mt-4 rounded-xl border border-accent/20 bg-surface p-3 shadow-sm",
   templateProductSearch:
@@ -137,7 +140,8 @@ const styles = {
     "mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--quote-accent,var(--accent))]",
   quoteCustomer:
     "m-0 truncate text-2xl font-semibold tracking-tight text-[var(--quote-text,var(--text-primary))] max-[52rem]:text-xl",
-  quotePreparedFor: "mb-0 mt-1 text-sm text-[var(--quote-text,var(--text-secondary))] opacity-75",
+  quotePreparedFor:
+    "mb-0 mt-1 text-sm text-[var(--quote-text,var(--text-secondary))] opacity-75",
   quoteHeroMetrics:
     "relative grid min-w-[390px] grid-cols-2 divide-x divide-default overflow-hidden rounded-xl border border-default bg-surface/90 shadow-sm max-[52rem]:min-w-0 max-[36rem]:grid-cols-1 max-[36rem]:divide-x-0 max-[36rem]:divide-y",
   quoteMetric:
