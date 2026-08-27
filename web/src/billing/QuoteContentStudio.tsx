@@ -3246,33 +3246,72 @@ function CustomizeQuote({
               <span className="sr-only">Show contact QR code</span>
             </button>
           </div>
-          <div className={cx("mt-7 grid gap-6 lg:grid-cols-[1fr_1fr_1.2fr]", !design.showContactQr && "pointer-events-none opacity-45")}>
-            <div>
-              <p className="text-sm font-semibold text-primary">Placement</p>
-              <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className={cx("mt-7 grid gap-7 xl:grid-cols-2", !design.showContactQr && "pointer-events-none opacity-45")}>
+            <fieldset>
+              <legend className="text-sm font-semibold text-primary">Placement</legend>
+              <p className="mt-1 text-xs text-secondary">Choose where the code sits beneath your company details.</p>
+              <div className="mt-4 grid grid-cols-2 gap-3">
                 {(["left", "right"] as const).map((alignment) => (
-                  <button key={alignment} type="button" className={cx("min-h-10 rounded-xl border px-4 text-sm font-medium capitalize transition-colors", design.contactQrAlignment === alignment ? "border-accent bg-accent-soft text-accent" : "border-default bg-surface text-primary hover:border-accent hover:text-accent")} onClick={() => onChange((current) => ({ ...current, contactQrAlignment: alignment }))}>
-                    {alignment}
+                  <button
+                    key={alignment}
+                    type="button"
+                    aria-pressed={design.contactQrAlignment === alignment}
+                    aria-label={`Place QR code on the ${alignment}`}
+                    className={cx(
+                      "relative min-h-24 rounded-xl border p-3 transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
+                      design.contactQrAlignment === alignment
+                        ? "border-accent bg-accent-soft/30"
+                        : "border-default bg-surface hover:border-accent",
+                    )}
+                    onClick={() => onChange((current) => ({ ...current, contactQrAlignment: alignment }))}
+                  >
+                    <span className={cx("flex h-16 items-end gap-3 rounded-lg bg-raised p-3", alignment === "right" && "flex-row-reverse")} aria-hidden="true">
+                      <span className="grid size-9 shrink-0 place-items-center rounded-md bg-surface text-accent ring-1 ring-default">
+                        <QrCode className="size-6" />
+                      </span>
+                      <span className="mb-1 flex-1 space-y-2">
+                        <span className="block h-1.5 w-full rounded-full bg-primary/15" />
+                        <span className="block h-1.5 w-2/3 rounded-full bg-primary/10" />
+                      </span>
+                    </span>
+                    <span className="mt-2 block text-center text-xs font-semibold capitalize text-primary">{alignment}</span>
                   </button>
                 ))}
               </div>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-primary">Size</p>
-              <div className="mt-3 grid grid-cols-3 gap-2">
+            </fieldset>
+            <fieldset>
+              <legend className="text-sm font-semibold text-primary">Size</legend>
+              <p className="mt-1 text-xs text-secondary">Preview the QR footprint in the quotation header.</p>
+              <div className="mt-4 grid grid-cols-3 gap-3">
                 {(["small", "medium", "large"] as const).map((size) => (
-                  <button key={size} type="button" className={cx("min-h-10 rounded-xl border px-3 text-sm font-medium capitalize transition-colors", design.contactQrSize === size ? "border-accent bg-accent-soft text-accent" : "border-default bg-surface text-primary hover:border-accent hover:text-accent")} onClick={() => onChange((current) => ({ ...current, contactQrSize: size }))}>
-                    {size}
+                  <button
+                    key={size}
+                    type="button"
+                    aria-pressed={design.contactQrSize === size}
+                    className={cx(
+                      "min-h-24 rounded-xl border p-3 transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
+                      design.contactQrSize === size
+                        ? "border-accent bg-accent-soft/30"
+                        : "border-default bg-surface hover:border-accent",
+                    )}
+                    onClick={() => onChange((current) => ({ ...current, contactQrSize: size }))}
+                  >
+                    <span className="flex h-12 items-center justify-center" aria-hidden="true">
+                      <QrCode className={cx("text-accent", size === "small" ? "size-6" : size === "large" ? "size-11" : "size-8")} />
+                    </span>
+                    <span className="mt-2 block text-center text-xs font-semibold capitalize text-primary">{size}</span>
                   </button>
                 ))}
               </div>
+            </fieldset>
+            <div className="xl:col-span-2">
+              <ColorField
+                label="QR code colour"
+                help="Choose a dark colour for reliable scanning"
+                value={design.contactQrColor}
+                onChange={(contactQrColor) => onChange((current) => ({ ...current, contactQrColor }))}
+              />
             </div>
-            <ColorField
-              label="QR code colour"
-              help="Choose a dark colour for reliable scanning"
-              value={design.contactQrColor}
-              onChange={(contactQrColor) => onChange((current) => ({ ...current, contactQrColor }))}
-            />
           </div>
         </section>
         <section className="rounded-2xl border border-subtle bg-surface p-6 shadow-sm sm:p-8">
