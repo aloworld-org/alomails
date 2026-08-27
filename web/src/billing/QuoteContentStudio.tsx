@@ -980,7 +980,7 @@ export const QuoteContentStudio = forwardRef<
                     </div>
                   )}
                 </div>
-                <dl className="mt-auto grid max-w-lg grid-cols-2 gap-x-10 gap-y-3 pt-7 text-xs text-[var(--quote-text)]">
+                <dl className="mt-auto grid max-w-lg grid-cols-2 gap-x-10 gap-y-3 border-t border-[var(--quote-table-header)] pt-4 text-xs text-[var(--quote-text)]">
                   <div>
                     <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-55">Issued</dt>
                     <dd className="mt-1.5 font-semibold">
