@@ -408,7 +408,7 @@ export const QuoteContentStudio = forwardRef<
   const [design, setDesign] = useState<Design>(EMPTY);
   const [ready, setReady] = useState(false);
   const [saveError, setSaveError] = useState("");
-  const [customize, setCustomize] = useState(false);
+  const [customizeMode, setCustomizeMode] = useState<"header" | "document" | null>(null);
   const [tableSettings, setTableSettings] = useState(false);
   const [editingImageId, setEditingImageId] = useState<string | null>(null);
   const root = useRef<HTMLElement>(null);
@@ -422,7 +422,7 @@ export const QuoteContentStudio = forwardRef<
   useImperativeHandle(
     ref,
     () => ({
-      customize: () => setCustomize(true),
+      customize: () => setCustomizeMode("document"),
       edit: () => {
         const target = root.current?.querySelector<HTMLElement>(
           'input:not([disabled]), textarea:not([disabled]), [contenteditable="true"], button[aria-label="Edit quotation header"]',
@@ -815,7 +815,7 @@ export const QuoteContentStudio = forwardRef<
                 <button
                   type="button"
                   className="absolute right-4 top-4 inline-flex min-h-10 items-center gap-2 rounded-xl border border-default bg-surface px-3.5 py-2 text-sm font-semibold text-primary shadow-sm transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
-                  onClick={() => setCustomize(true)}
+                  onClick={() => setCustomizeMode("header")}
                   aria-label="Edit quotation header"
                 >
                   <Pencil className="size-4" aria-hidden="true" />
@@ -1252,13 +1252,14 @@ export const QuoteContentStudio = forwardRef<
           }}
         />
       </section>
-      {customize && (
+      {customizeMode && (
         <CustomizeQuote
+          mode={customizeMode}
           design={design}
           issuerDetails={issuerHeaderDetails}
           saveError={saveError}
           onChange={setDesign}
-          onClose={() => setCustomize(false)}
+          onClose={() => setCustomizeMode(null)}
         />
       )}
       {tableSettings && (
@@ -2841,12 +2842,14 @@ function BlockCommand({
 }
 
 function CustomizeQuote({
+  mode,
   design,
   issuerDetails,
   saveError,
   onChange,
   onClose,
 }: {
+  mode: "header" | "document";
   design: Design;
   issuerDetails: HeaderDetails;
   saveError: string;
@@ -2870,8 +2873,8 @@ function CustomizeQuote({
     }));
   return (
     <Modal
-      title="Customize quotation"
-      icon={<Palette className="size-5" />}
+      title={mode === "header" ? "Edit quotation header" : "Customize quotation"}
+      icon={mode === "header" ? <Building2 className="size-5" /> : <Palette className="size-5" />}
       onClose={onClose}
       wide="extra"
       actions={
@@ -2899,6 +2902,8 @@ function CustomizeQuote({
       }
     >
       <div className="space-y-7 p-2">
+        {mode === "header" && (
+          <>
         <section className="flex flex-wrap items-center gap-5 rounded-2xl border border-default bg-raised/35 p-5">
           <div className="min-w-52 flex-1">
             <h3 className="text-base font-semibold text-primary">Brand mark</h3>
@@ -3048,7 +3053,11 @@ function CustomizeQuote({
             />
           </div>
         </section>
+          </>
+        )}
         <div className="min-w-0 space-y-7">
+          {mode === "header" && (
+            <>
           <section>
             <h3 className="text-base font-semibold text-primary">Header style</h3>
             <p className="mt-1 text-sm text-secondary">
@@ -3187,6 +3196,10 @@ function CustomizeQuote({
               ))}
             </div>
           </section>
+            </>
+          )}
+          {mode === "document" && (
+            <>
           <section className="rounded-2xl border border-subtle bg-surface p-6 shadow-sm sm:p-8">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -3366,6 +3379,8 @@ function CustomizeQuote({
               ))}
             </div>
           </section>
+            </>
+          )}
         </div>
       </div>
     </Modal>
