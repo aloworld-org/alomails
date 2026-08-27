@@ -604,6 +604,11 @@ describe("the offer's transitions", () => {
 
     fireEvent.click(edit);
     expect(
+      screen.queryByRole("heading", {
+        name: strings.billingQuoteCreateRevisionTitle,
+      }),
+    ).toBeNull();
+    expect(
       actions.getByRole("button", { name: strings.billingQuotationPreview }),
     ).toBeTruthy();
     expect(
@@ -622,7 +627,7 @@ describe("the offer's transitions", () => {
     await screen.findByText(strings.billingQuoteSentNotice);
 
     const edit = screen.getByRole("button", {
-      name: strings.billingQuoteEdit,
+      name: strings.billingQuoteCreateRevisionAction,
     }) as HTMLButtonElement;
     expect(edit.disabled).toBe(false);
     fireEvent.click(edit);

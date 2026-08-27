@@ -370,10 +370,13 @@ export function QuoteEditor() {
                   ? strings.billingQuoteExitPreviewToEdit
                   : quote.status === "draft"
                     ? strings.billingQuoteEditContent
-                    : strings.billingQuoteClosedNotice
+                    : strings.billingQuoteCreateRevision
               }
             >
-              <Pencil size={15} aria-hidden="true" /> {strings.billingQuoteEdit}
+              <Pencil size={15} aria-hidden="true" />
+              {quote.status === "draft"
+                ? strings.billingQuoteEdit
+                : strings.billingQuoteCreateRevisionAction}
             </button>
             <button
               type="button"
