@@ -17,7 +17,16 @@
 // (overview, domains + DKIM, audit log, security checks, groups & lists,
 // users & invitations, app switches, AI providers), the control plane,
 // the invitation page, the record-history panel, and the compose
-// recipient strays tranche 1's prefix list missed.
+// recipient strays tranche 1's prefix list missed — and (tranche 5) the
+// first business cluster: Billing entire (customers, price list,
+// invoices, lifecycle, payments, VAT report, quotes, printing identity,
+// multi-currency, reminders, recurring), CRM entire (board, deals,
+// win/loss, the billing handoff, report, log, linked conversations) and
+// Insights entire (boards, the gallery, ask-to-chart, chart labels),
+// plus the agent cards those three surfaces render. Vocabulary held
+// from tranche 4: a document is "ausgestellt" (matching
+// auditActionIssue), a declined quote is "abgelehnt" (matching
+// auditActionDecline), and the module names stay the rail's.
 import type { Catalog } from "./en";
 
 export const de: Partial<Catalog> = {
@@ -2358,4 +2367,778 @@ export const de: Partial<Catalog> = {
   auditActionThreadCreate: "Unterhaltung verknüpft",
   auditActionThreadDelete: "Unterhaltung getrennt",
   auditActionLeadCreate: "Leads importiert",
+
+  // The agent's proposal frame, and the billing/CRM tool cards (tranche 5).
+  // Every note keeps the English promise word for word: a draft, never an
+  // issued document, and nothing is ever sent by approving.
+  agentProposedAction: "alo möchte Folgendes tun — genehmigen Sie es, um fortzufahren.",
+  agentDone: "Erledigt.",
+  agentFailed: "Diese Aktion konnte nicht abgeschlossen werden.",
+  agentActInvoiceDraft: "Rechnung entwerfen",
+  agentActQuoteToInvoice: "Angebot annehmen",
+  agentActPaymentReminder: "Zahlungserinnerung",
+  agentFieldCustomer: "Kunde",
+  agentFieldLines: "Positionen",
+  agentFieldQuote: "Angebot",
+  agentFieldInvoice: "Rechnung",
+  agentLineCount: (n: number): string =>
+    n === 1 ? "1 Position" : `${n} Positionen`,
+  agentInvoiceDraftNote:
+    "Erstellt einen Entwurf — nichts wird ausgestellt, nummeriert oder gesendet.",
+  agentQuoteToInvoiceNote:
+    "Schließt das Angebot als angenommen ab und erstellt einen Rechnungsentwurf.",
+  agentReminderNote:
+    "Schreibt eine Erinnerung in Entwürfe — nichts wird gesendet.",
+  agentActCreateDeal: "Neuer Deal",
+  agentActMoveDeal: "Deal verschieben",
+  agentActFollowup: "Nachfass-E-Mail",
+  agentFieldDeal: "Deal",
+  agentFieldCompany: "Unternehmen",
+  agentFieldValue: "Wert",
+  agentFieldStage: "Phase",
+  agentFieldLostReason: "Verloren, weil",
+  agentDealFromEmailNote: "Verknüpft diese Unterhaltung mit dem neuen Deal.",
+  agentFollowupNote:
+    "Schreibt die E-Mail in Entwürfe — nichts wird gesendet.",
+
+  // alo Billing (tranche 5). The module speaks about documents, never rows,
+  // and a German invoice speaks its trade's own words: ausstellen spends the
+  // number, stornieren voids, a Gutschrift corrects, das Zahlungsziel is the
+  // terms. MwSt. on amounts, USt-IdNr. for the identifier — the split German
+  // paperwork itself makes. (billingWorkspacePurpose shipped with the app
+  // launcher in tranche 1 and lives beside the module labels above.)
+  billingCustomers: "Kunden",
+  billingProducts: "Preisliste",
+  billingSearchCustomers: "Kunden durchsuchen…",
+  billingSearchProducts: "Preisliste durchsuchen…",
+  billingShowArchived: "Archivierte anzeigen",
+  billingArchived: "Archiviert",
+  billingArchive: "Archivieren",
+  billingRestore: "Wiederherstellen",
+  billingNewCustomer: "Neuer Kunde",
+  billingNewProduct: "Neuer Artikel",
+  billingEditCustomer: "Kunde bearbeiten",
+  billingEditProduct: "Artikel bearbeiten",
+  billingCustomerSubtitle: "Auf wen Ihre Rechnungen ausgestellt werden.",
+  billingProductSubtitle:
+    "Ein Artikel, den Sie auswählen können, wenn Sie ein Dokument erstellen.",
+  billingArchiveCustomerConfirm: (name: string) =>
+    `${name} archivieren? Der Kunde verschwindet aus der Auswahl; jedes bereits erstellte Dokument nennt ihn weiterhin.`,
+  billingArchiveProductConfirm: (name: string) =>
+    `${name} archivieren? Der Artikel verschwindet aus der Auswahl; bereits erstellte Dokumente behalten den Preis, zu dem sie erstellt wurden.`,
+  billingCreate: "Erstellen",
+  billingSave: "Speichern",
+  billingCancel: "Abbrechen",
+  billingLoadFailed:
+    "Diese Liste konnte nicht geladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+  billingLoading: "Rechnungsdaten werden geladen…",
+  billingSaveFailed:
+    "Speichern nicht möglich. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+  billingNoMatches: "Nichts entspricht dieser Suche.",
+  billingNoCustomersTitle: "Noch keine Kunden",
+  billingNoCustomersBody:
+    "Ein Kunde trägt die Adresse, die USt-IdNr. und das Zahlungsziel, mit denen jede Rechnung für ihn beginnt.",
+  billingGetStarted: "In 3 einfachen Schritten loslegen",
+  billingStepCustomerTitle: "Legen Sie Ihren ersten Kunden an",
+  billingStepCustomerBody:
+    "Erstellen Sie ein Kundenprofil mit den Rechnungsangaben.",
+  billingStepInvoiceTitle: "Erstellen Sie Ihre erste Rechnung",
+  billingStepInvoiceBody:
+    "Positionen hinzufügen, Zahlungsziel festlegen, ausstellen.",
+  billingStepPaidTitle: "Schneller bezahlt werden",
+  billingStepPaidBody:
+    "Zahlungen erfassen und die Liquidität im Blick behalten.",
+  billingNoProductsTitle: "Ihre Preisliste ist leer",
+  billingNoProductsBody:
+    "Erfassen Sie einmal, was Sie verkaufen, und wählen Sie es dann aus, wenn Sie ein Angebot oder eine Rechnung erstellen.",
+  billingColName: "Name",
+  billingColLocation: "Ort",
+  billingColVatId: "USt-IdNr.",
+  billingColEmail: "E-Mail",
+  billingColTerms: "Zahlungsziel",
+  billingColCurrency: "Währung",
+  billingColUnit: "Einheit",
+  billingColUnitPrice: "Einzelpreis",
+  billingColVatRate: "MwSt.-Satz",
+  billingColActions: "Aktionen",
+  billingTermsDays: (days: number) =>
+    days === 1 ? "1 Tag" : `${days} Tage`,
+  billingFieldName: "Name",
+  billingFieldEmail: "Rechnungs-E-Mail",
+  billingFieldAddress: "Adresse",
+  billingFieldAddress2: "Adresse, zweite Zeile",
+  billingFieldPostalCode: "Postleitzahl",
+  billingFieldCity: "Ort",
+  billingFieldCountry: "Land",
+  billingFieldVatId: "USt-IdNr.",
+  billingFieldTerms: "Zahlungsziel (Tage)",
+  billingFieldCurrency: "Währung",
+  billingFieldUnit: "Einheit",
+  billingFieldUnitPrice: "Einzelpreis",
+  billingFieldVatRate: "MwSt.-Satz (%)",
+  billingEmailPlaceholder: "rechnung@beispiel.de",
+  billingAddressPlaceholder: "Straße und Hausnummer",
+  billingCountryPlaceholder: "BE",
+  billingCountryHint: "Zweibuchstabiger Ländercode.",
+  billingCurrencyPlaceholder: "EUR",
+  billingVatIdPlaceholder: "BE0123456789",
+  billingVatIdHint: "Für Privatkunden leer lassen.",
+  billingTermsPlaceholder: "30",
+  billingTermsHint: "Tage von der Ausstellung bis zur Fälligkeit.",
+  billingUnitPlaceholder: "Stunde",
+  billingUnitHint:
+    "Wie eine Einheit davon heißt. Für einen Pauschalartikel leer lassen.",
+  billingAmountPlaceholder: "0,00",
+  billingPriceHint: "Ohne MwSt.",
+  billingRatePlaceholder: "21",
+  billingRateHint: "0 für einen steuerbefreiten Artikel.",
+  billingNotAnAmount: "Geben Sie einen Betrag wie 1250,00 ein.",
+  billingNotARate: "Geben Sie einen Satz wie 21 ein.",
+  billingInvoices: "Rechnungen",
+  billingNewInvoice: "Neue Rechnung",
+  billingSearchInvoices: "Nach Nummer, Kunde oder Referenz suchen…",
+  billingFilterStatus: "Anzeigen",
+  billingFilterAll: "Alle Dokumente",
+  billingStatusDraft: "Entwurf",
+  billingStatusIssued: "Ausgestellt",
+  billingStatusPaid: "Bezahlt",
+  billingStatusVoid: "Storniert",
+  billingStatusOverdue: "Überfällig",
+  billingCreditNote: "Gutschrift",
+  billingCreditNotes: "Gutschriften",
+  billingNoInvoicesTitle: "Noch keine Rechnungen",
+  billingNoInvoicesBody:
+    "Erstellen Sie einen Entwurf für einen Kunden, fügen Sie hinzu, was Sie berechnen, und stellen Sie ihn aus, wenn er stimmt.",
+  billingColNumber: "Nummer",
+  billingColCustomer: "Kunde",
+  billingColIssueDate: "Ausstellungsdatum",
+  billingColDueDate: "Fälligkeitsdatum",
+  billingColStatus: "Status",
+  billingColTotal: "Gesamt",
+  billingColDescription: "Beschreibung",
+  billingColQty: "Menge",
+  billingColNet: "Netto",
+  billingNotNumbered: "—",
+  billingNoDate: "—",
+  billingUnknownCustomer: "Unbekannter Kunde",
+  billingDraftInvoice: "Rechnungsentwurf",
+  billingBackToInvoices: "Alle Rechnungen",
+  billingBackToProject: (name: string) => `Zurück zu ${name}`,
+  billingInvoiceGone: "Dieses Dokument existiert nicht mehr.",
+  billingFieldCustomer: "Kunde",
+  billingChooseCustomer: "Kunde wählen…",
+  billingCustomerFixedHint:
+    "Währung und Zahlungsziel des Kunden werden auf das Dokument übernommen.",
+  billingFieldReference: "Referenz des Kunden",
+  billingReferencePlaceholder: "PO-1234",
+  billingReferenceHint:
+    "Die Bestellnummer des Kunden, auf das Dokument gedruckt.",
+  billingFieldNote: "Anmerkung",
+  billingNotePlaceholder:
+    "Alles, was der Kunde auf dem Dokument lesen soll.",
+  billingNoteHint: "Wird unter den Positionen gedruckt.",
+  billingFieldIssueDate: "Ausstellungsdatum",
+  billingFieldDueDate: "Fälligkeitsdatum",
+  billingCreateDraft: "Entwurf erstellen",
+  billingCreateDraftHint:
+    "Zuerst wird der Entwurf erstellt; dann fügen Sie hinzu, was Sie berechnen.",
+  billingLines: "Positionen",
+  billingAddLine: "Position hinzufügen",
+  billingRemoveLine: "Diese Position entfernen",
+  billingNoLines: "Noch nichts auf diesem Dokument.",
+  billingPickProduct: "Aus der Preisliste…",
+  billingDescriptionPlaceholder: "Was Sie berechnen",
+  billingQtyPlaceholder: "1",
+  billingLineNeedsDescription:
+    "Eine Position braucht eine Beschreibung, bevor der Entwurf gespeichert werden kann.",
+  billingNotAQuantity: "Geben Sie eine Menge wie 1,5 ein.",
+  billingTotalsNet: "Netto",
+  billingTotalsGross: "Gesamt",
+  billingVatAtRate: (rate: string) => `MwSt. ${rate}`,
+  billingTotalsStale:
+    "Dies sind die zuletzt vom Server gesendeten Beträge; sie aktualisieren sich, sobald der Entwurf gespeichert ist.",
+  billingSaving: "Wird gespeichert…",
+  billingSaved: "Gespeichert",
+  billingUnsaved: "Noch nicht gespeichert",
+  billingSaveNotDone: "Speichern nicht möglich",
+  billingSaveNow: "Erneut versuchen",
+  billingDeleteDraft: "Entwurf löschen",
+  billingDeleteDraftConfirm:
+    "Diesen Entwurf löschen? Er trägt keine Nummer, es bleibt also nichts zurück — und nichts lässt sich wiederherstellen.",
+  billingFrozenNotice:
+    "Dieses Dokument trägt eine Nummer und kann nicht mehr geändert werden. Korrigieren Sie es mit einer Gutschrift.",
+  billingActionFailed:
+    "Das hat nicht geklappt. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+  billingActionsWaitForSave:
+    "Diese warten, bis Ihre letzte Änderung gespeichert ist.",
+  billingIssue: "Ausstellen",
+  billingIssueTitle: "Diese Rechnung ausstellen?",
+  billingIssueConfirm:
+    "Das Ausstellen verbraucht die nächste Nummer Ihrer Serie, datiert das Dokument und friert es ein. Es kann nie wieder geändert werden — ein Fehler danach wird mit einer Gutschrift korrigiert. Dem Kunden wird nichts gemailt.",
+  billingVoid: "Stornieren",
+  billingVoidTitle: "Diese Rechnung stornieren?",
+  billingVoidConfirm:
+    "Eine stornierte Rechnung behält ihre Nummer und bleibt lesbar, ist aber nichts mehr wert. Stornieren Sie eine, die niemand gesehen hat; hält der Kunde das Dokument bereits, erstellen Sie stattdessen eine Gutschrift.",
+  billingVoidNotice:
+    "Diese Rechnung wurde storniert. Sie behält ihre Nummer und ist nichts mehr wert.",
+  billingCreditNoteAction: "Gutschrift",
+  billingCreditNoteTitle: "Gutschrift erstellen?",
+  billingCreditNoteConfirm:
+    "Dies erstellt einen Gutschriftsentwurf, der jede Position dieser Rechnung spiegelt. Kürzen Sie ihn für eine Teilgutschrift und stellen Sie ihn dann wie jedes andere Dokument aus.",
+  billingCreditsInvoice: "Die Rechnung, die hiermit gutgeschrieben wird",
+  billingFromQuote: "Das Angebot, aus dem dies entstand",
+  billingPayments: "Zahlungen",
+  billingRecordPayment: "Zahlung erfassen",
+  billingRecordPaymentHint:
+    "Geld, das eingegangen ist. Es wird nirgendwohin überwiesen — hier wird nur festgehalten, was Ihre Bank bereits zeigt.",
+  billingRemovePayment: "Entfernen",
+  billingNoPayments: "Auf diese Rechnung ist noch nichts eingegangen.",
+  billingPaidToDate: "Eingegangen",
+  billingOutstanding: "Noch offen",
+  billingOverpaidNote:
+    "Es ist mehr eingegangen, als diese Rechnung wert ist. Die Differenz können Sie erstatten oder mit der nächsten verrechnen.",
+  billingPaymentUnpaid: "Unbezahlt",
+  billingPaymentPartiallyPaid: "Teilweise bezahlt",
+  billingPaymentPaid: "Beglichen",
+  billingColPaidOn: "Eingegangen am",
+  billingColMethod: "Wie",
+  billingColPaymentReference: "Bankreferenz",
+  billingColAmount: "Betrag",
+  billingFieldAmount: (currency: string) => `Betrag (${currency})`,
+  billingFieldAmountHint:
+    "Was tatsächlich eingegangen ist — das kann weniger als die Rechnung sein.",
+  billingFieldPaidOn: "Eingegangen am",
+  billingFieldPaidOnHint:
+    "Der Tag, den Ihre Bank zeigt. Leer lassen für heute.",
+  billingFieldMethod: "Wie es eingegangen ist",
+  billingFieldMethodHint:
+    "Freitext — wie auch immer Ihre Buchhaltung es nennt.",
+  billingMethodPlaceholder: "Überweisung",
+  billingFieldPaymentReference: "Bankreferenz",
+  billingFieldPaymentRefHint:
+    "Die Referenz auf der Umsatzzeile, damit sie sich später zuordnen lässt.",
+  billingFilterOverdue: "Überfällig",
+  billingColOutstanding: "Noch offen",
+  billingReports: "MwSt.-Bericht",
+  billingReportFrom: "Von",
+  billingReportTo: "Bis",
+  billingReportShow: "Anzeigen",
+  billingReportThisQuarter: "Dieses Quartal",
+  billingReportLastQuarter: "Letztes Quartal",
+  billingReportDownloadCsv: "CSV herunterladen",
+  billingReportDownloadFailed:
+    "Die Datei konnte nicht erstellt werden. Versuchen Sie es erneut.",
+  billingReportBasis: (from: string, to: string) =>
+    `Ausgestellte und bezahlte Dokumente vom ${from} bis ${to}. Gutschriften werden abgezogen; Entwürfe und stornierte Dokumente zählen nicht.`,
+  billingReportColVat: "MwSt.",
+  billingReportTotal: "Gesamt",
+  billingReportGross: "Inklusive MwSt.",
+  billingReportCaption: (currency: string) => `MwSt.-Übersicht in ${currency}`,
+  billingReportCounts: (invoices: number, creditNotes: number) =>
+    `Aus ${invoices === 1 ? "1 Rechnung" : `${invoices} Rechnungen`} und ${creditNotes === 1 ? "1 Gutschrift" : `${creditNotes} Gutschriften`}.`,
+  billingReportEmptyTitle: "In diesem Zeitraum wurde nichts ausgestellt",
+  billingReportEmptyBody:
+    "Ein Dokument zählt ab dem Tag seiner Ausstellung. Wählen Sie einen anderen Zeitraum, oder stellen Sie die Entwürfe aus, die in diesen gehören.",
+  billingQuotes: "Angebote",
+  billingQuotation: "Angebot",
+  billingPreparedFor: "Exklusiv für diesen Kunden erstellt",
+  billingIncludingVat: "Inklusive MwSt.",
+  billingQuoteTemplate: "Angebotsvorlage",
+  billingQuoteStartFrom: "Mit einer Vorlage beginnen",
+  billingQuoteTemplateHint:
+    "Nutzen Sie Ihre Preisliste für einen brauchbaren Ausgangspunkt.",
+  billingQuoteTemplateBlank: "Leeres Angebot",
+  billingQuoteTemplateBlankDescription:
+    "Beginnen Sie mit einer leeren Preistabelle.",
+  billingQuoteTemplateServices: "Dienstleistungen",
+  billingQuoteTemplateServicesDescription:
+    "Ein fokussiertes Angebot mit zwei Kernleistungen.",
+  billingQuoteTemplateProject: "Projektvorschlag",
+  billingQuoteTemplateProjectDescription:
+    "Ein größerer Umfang mit drei Lieferpositionen.",
+  billingQuoteTemplateRetainer: "Monatspauschale",
+  billingQuoteTemplateRetainerDescription:
+    "Beginnen Sie mit einer wiederkehrenden monatlichen Leistung.",
+  billingQuoteIncludedItems: (count: number) =>
+    count === 1 ? "1 Artikel" : `${count} Artikel`,
+  billingQuoteIncludedTitle: "In dieser Vorlage enthalten",
+  billingQuoteIncludedHelp:
+    "Diese Preislisten-Artikel werden dem Entwurf hinzugefügt. Mengen, Preise und Beschreibungen können Sie im Editor ändern.",
+  billingQuoteRemoveIncludedItem: (name: string) => `${name} entfernen`,
+  billingQuoteAddFromPriceList: "Artikel hinzufügen",
+  billingQuoteSearchPriceList: "Preisliste durchsuchen",
+  billingQuoteAllItemsIncluded:
+    "Jeder aktive Preislisten-Artikel ist bereits enthalten.",
+  billingQuoteNoMatchingItems:
+    "Kein Preislisten-Artikel entspricht dieser Suche.",
+  billingQuotePerItem: "je",
+  billingQuoteContinueToEditor: "Weiter zum Editor",
+  billingNewQuote: "Neues Angebot",
+  billingSearchQuotes: "Nach Nummer, Kunde oder Referenz suchen…",
+  billingNoQuotesTitle: "Noch keine Angebote",
+  billingNoQuotesBody:
+    "Bieten Sie einem Kunden einen Preis an. Nimmt er an, wird das Angebot zu einem Rechnungsentwurf mit denselben Positionen.",
+  billingQuoteStatusSent: "Finalisiert",
+  billingQuoteStatusAccepted: "Angenommen",
+  billingQuoteStatusDeclined: "Abgelehnt",
+  billingQuoteStatusExpired: "Abgelaufen",
+  billingQuoteLapsed: "Datum überschritten",
+  billingColSentDate: "Finalisiert am",
+  billingColValidUntil: "Gültig bis",
+  billingColCreated: "Erstellt",
+  billingColLastEdited: "Zuletzt bearbeitet",
+  billingDraftQuote: "Angebotsentwurf",
+  billingBackToQuotes: "Alle Angebote",
+  billingQuoteGone: "Dieses Angebot existiert nicht mehr.",
+  billingQuoteCustomerHint:
+    "Die Währung des Kunden wird auf das Angebot übernommen.",
+  billingCreateQuoteHint:
+    "Zuerst wird der Entwurf erstellt; dann fügen Sie hinzu, was Sie anbieten.",
+  billingFieldSentDate: "Finalisiert am",
+  billingFieldValidUntil: "Gültig bis",
+  billingValidForDays: (days: number) =>
+    days === 1
+      ? "Gültig für 1 Tag ab Finalisierung."
+      : `Gültig für ${days} Tage ab Finalisierung.`,
+  billingDeleteQuoteDraft: "Entwurf löschen",
+  billingDeleteQuoteDraftConfirm:
+    "Diesen Entwurf löschen? Er trägt keine Nummer und wurde niemandem unterbreitet — und nichts lässt sich wiederherstellen.",
+  billingQuoteSentNotice: "In alo finalisiert. Es wurde keine E-Mail gesendet.",
+  billingQuoteClosedNotice:
+    "Dieses Angebot ist abgeschlossen und kann nicht mehr geändert werden.",
+  billingSendQuote: "Angebot finalisieren",
+  billingSendQuoteTitle: "Dieses Angebot finalisieren?",
+  billingSendQuoteConfirm:
+    "Dies vergibt die nächste Angebotsnummer, hält das Finalisierungsdatum fest und friert die Preise ein. Dem Kunden wird nichts gemailt.",
+  billingAcceptQuote: "Angebot annehmen",
+  billingAcceptQuoteTitle: "Der Kunde hat angenommen?",
+  billingAcceptQuoteConfirm:
+    "Dies schließt das Angebot ab und erstellt einen Rechnungsentwurf mit denselben Positionen zu denselben Preisen. Noch wird nichts ausgestellt — Sie landen auf dem Entwurf.",
+  billingDeclineQuote: "Angebot ablehnen",
+  billingDeclineQuoteTitle: "Der Kunde hat abgelehnt?",
+  billingDeclineQuoteConfirm:
+    "Das Angebot schließt endgültig und bleibt lesbar. Ein Sinneswandel ist ein neues Angebot, kein wiedereröffnetes.",
+  billingExpireQuote: "Als abgelaufen markieren",
+  billingExpireQuoteTitle: "Dieses Angebot nicht weiter verfolgen?",
+  billingExpireQuoteConfirm:
+    "Das Angebot schließt als abgelaufen, mit heute als dem Tag, an dem Sie es aufgegeben haben. Es kann danach nicht mehr beantwortet werden.",
+  billingQuoteInvoice: "Die Rechnung, die daraus wurde",
+  billingPrint: "Drucken",
+  billingPrintUnsaved:
+    "Gedruckt wird das gespeicherte Dokument, daher wartet dies auf Ihre letzte Änderung.",
+  billingPrintFailed:
+    "Das Dokument konnte nicht zum Drucken vorbereitet werden. Versuchen Sie es erneut.",
+  billingSettings: "Ihre Angaben",
+  billingSettingsIntro:
+    "Von wem Ihre Rechnungen, Gutschriften und Angebote stammen: der Name und die Nummern oben, und das Konto, auf das das Geld geht.",
+  billingSettingsFirstRun:
+    "Füllen Sie dies aus, bevor Sie etwas ausstellen. Es steht oben auf jedem Dokument, das Sie drucken, und dorthin werden Ihre Kunden um Zahlung gebeten.",
+  billingSettingsIdentity: "Als wer Sie abrechnen",
+  billingSettingsContact: "Wie Kunden Sie erreichen",
+  billingSettingsBank: "Wohin das Geld geht",
+  billingSettingsFooter: "Die Zeile unter den Summen",
+  billingSettingsSaved:
+    "Gespeichert. Jedes Dokument, das Sie ab jetzt drucken, trägt diese Angaben.",
+  billingSettingsLoadFailed:
+    "Ihre Rechnungsangaben konnten nicht geladen werden.",
+  billingFieldLegalName: "Firmenname",
+  billingLegalNameHint:
+    "Der Name, unter dem Sie firmieren und Rechnungen stellen, wie eingetragen.",
+  billingIssuerVatIdHint:
+    "Leer lassen, wenn Sie keine USt-IdNr. haben. Der Ländercode steht voran.",
+  billingFieldRegistrationNo: "Registernummer",
+  billingRegistrationHint:
+    "So, wie Ihr Register sie schreibt — HRB, KVK, SIREN, Companies House.",
+  billingFieldPhone: "Telefon",
+  billingFieldWebsite: "Website",
+  billingFieldIban: "IBAN",
+  billingIbanHint:
+    "Wird vor dem Speichern gegen Länge und Prüfziffern Ihres Landes geprüft.",
+  billingIbanPlaceholder: "BE68 5390 0754 7034",
+  billingFieldBic: "BIC",
+  billingBicPlaceholder: "KREDBEBB",
+  billingBicHint: "Der internationale BIC- oder SWIFT-Code Ihrer Bank.",
+  billingFieldBankName: "Bank",
+  billingFieldAccountHolder: "Kontoinhaber",
+  billingAccountHolderHint:
+    "Nur wenn das Konto nicht auf Ihren Firmennamen läuft.",
+  billingFieldFooterNote: "Fußzeile",
+  billingFooterNoteHint:
+    "Wird unter den Summen jedes Dokuments gedruckt — Eigentumsvorbehalt, Verzugsbedingungen, ein Dankeschön.",
+  billingSettingsAccounting: "Die Währung Ihrer Buchführung",
+  billingFieldBaseCurrency: "Buchungswährung",
+  billingBaseCurrencyHint:
+    "Sie können in jeder Währung fakturieren. Dies ist die Währung, in der Ihre MwSt.-Erklärung abgegeben wird — und in der die MwSt. einer Fremdwährungsrechnung zusätzlich gedruckt wird.",
+  billingFxRates: "Wechselkurse",
+  billingFxIntro:
+    "Wer in einer anderen Währung fakturiert, braucht den veröffentlichten Kurs des Ausstellungstags. Die Kurse gehören Ihnen: Nichts wird für Sie abgerufen — womit Ihre Bücher umgerechnet werden, ist eine Datei, die Sie gewählt haben.",
+  billingFxColDate: "Veröffentlicht",
+  billingFxColRate: "Kurs je Euro",
+  billingFxColSource: "Quelle",
+  billingFxSourceEcb: "Referenzdatei",
+  billingFxSourceManual: "Von Hand eingetragen",
+  billingFxAdd: "Kurs hinzufügen",
+  billingFxAddSaved: (currency: string, date: string) =>
+    `${currency}-Kurs für ${date} gespeichert.`,
+  billingFxRateHint:
+    "Wie veröffentlicht: Einheiten dieser Währung je Euro, geschrieben 1,1626.",
+  billingFxImport: "Kursdatei importieren",
+  billingFxImportHint:
+    "Fügen Sie die eurofxref-CSV der Europäischen Zentralbank ein, oder eine Datei in dieser Form. Eine Datei mit einem fehlerhaften Wert ändert nichts.",
+  billingFxImportRun: "Importieren",
+  billingFxImported: (rates: number, days: number) =>
+    `${rates === 1 ? "1 Kurs" : `${rates} Kurse`} über ${days === 1 ? "1 Tag" : `${days} Tage`} importiert.`,
+  billingFxEmpty:
+    "Noch keine Kurse. Sie brauchen sie nur, wenn Sie in einer anderen Währung fakturieren.",
+  billingFxLoadFailed: "Die Wechselkurse konnten nicht geladen werden.",
+  billingDocumentFx: (rate: string, day: string) =>
+    `Umgerechnet zu ${rate}, dem am ${day} veröffentlichten Referenzkurs.`,
+  billingVatIn: (currency: string) => `MwSt. in ${currency}`,
+  billingReportBaseCaption: (currency: string) =>
+    `Der Zeitraum in ${currency}`,
+  billingReportBaseIntro: (currency: string) =>
+    `Jedes Dokument oben, umgerechnet zu dem Kurs, der bei der Ausstellung darauf festgehalten wurde. Hieraus wird eine Erklärung in ${currency} erstellt.`,
+  billingReportUnconverted: (count: number) =>
+    count === 1
+      ? "1 Dokument fehlt in diesen Zahlen: Für dieses wurde kein Wechselkurs gespeichert. Prüfen Sie es vor der Abgabe."
+      : `${count} Dokumente fehlen in diesen Zahlen: Für sie wurde kein Wechselkurs gespeichert. Prüfen Sie sie vor der Abgabe.`,
+  billingRemind: "Erinnern",
+  billingRemindHint:
+    "Schreiben Sie diesem Kunden eine Zahlungserinnerung und legen Sie sie in Entwürfe.",
+  billingReminderDrafted: (invoice: string, outstanding: string, days: number) =>
+    days === 1
+      ? `Eine Erinnerung zu ${invoice} — ${outstanding} noch offen, 1 Tag überfällig — wartet in Entwürfe. Nichts wurde gesendet: Lesen Sie sie, ändern Sie, was Sie möchten, und senden Sie sie selbst.`
+      : `Eine Erinnerung zu ${invoice} — ${outstanding} noch offen, ${days} Tage überfällig — wartet in Entwürfe. Nichts wurde gesendet: Lesen Sie sie, ändern Sie, was Sie möchten, und senden Sie sie selbst.`,
+  billingReminderFailed:
+    "Die Erinnerung konnte nicht geschrieben werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+  billingNothingOverdue:
+    "Nichts ist überfällig. Jede ausgestellte Rechnung ist entweder beglichen oder noch nicht fällig.",
+  billingRecurring: "Wiederkehrend",
+  billingRecurringTitle: "Wiederkehrende Rechnungen",
+  billingRecurringChip: "Wiederkehrend",
+  billingRecurringChipHint:
+    "Eine wiederkehrende Rechnung hat diesen Entwurf erstellt.",
+  billingNoSchedulesTitle: "Noch keine wiederkehrenden Rechnungen",
+  billingNoSchedulesBody:
+    "Richten Sie eine für alles ein, was Sie im Rhythmus abrechnen — eine Pauschale, ein Abo, eine Hosting-Gebühr. Jedes Mal, wenn sie fällig wird, erstellt alo einen Entwurf, den Sie prüfen und ausstellen.",
+  billingNewSchedule: "Neue wiederkehrende Rechnung",
+  billingScheduleFrom: "Diese Rechnung wiederholen",
+  billingScheduleFromHint:
+    "Richten Sie eine wiederkehrende Rechnung ein, die diese Positionen im Rhythmus erneut abrechnet. Jedes Auftreten erscheint als Entwurf — nie wird etwas für Sie ausgestellt.",
+  billingScheduleName: "Name",
+  billingScheduleNameHint:
+    "Wie Sie diese Vereinbarung nennen. Wird nie auf die Rechnung gedruckt.",
+  billingScheduleCadence: "Rechnet ab",
+  billingCadenceWeekly: "Jede Woche",
+  billingCadenceMonthly: "Jeden Monat",
+  billingCadenceQuarterly: "Jedes Quartal",
+  billingCadenceYearly: "Jedes Jahr",
+  billingScheduleStart: "Erstmals am",
+  billingScheduleEnd: "Bis",
+  billingScheduleEndNever: "Kein Enddatum",
+  billingScheduleNext: "Nächste",
+  billingScheduleLast: "Zuletzt erstellt",
+  billingScheduleRaised: "Erstellt",
+  billingScheduleEach: "Jedes Mal",
+  billingScheduleStatusActive: "Läuft",
+  billingScheduleStatusPaused: "Pausiert",
+  billingScheduleStatusEnded: "Beendet",
+  billingScheduleStatusDue: "Fällig",
+  billingSchedulePause: "Pausieren",
+  billingScheduleResume: "Fortsetzen",
+  billingScheduleDelete: "Löschen",
+  billingScheduleDeleteTitle: "Diese wiederkehrende Rechnung löschen?",
+  billingScheduleDeleteMessage:
+    "Sie hört auf abzurechnen und verschwindet aus dieser Liste. Nur eine Vereinbarung, die nie einen Entwurf erstellt hat, lässt sich löschen — pausieren Sie eine, die es getan hat.",
+  billingScheduleRunDue: "Fälliges erstellen",
+  billingScheduleRunHint:
+    "alo tut das jede Stunde von selbst. Dies ist nur für den Fall, dass Sie nicht warten möchten.",
+  billingScheduleRunNone:
+    "Nichts war fällig. Jede wiederkehrende Rechnung ist auf dem Stand.",
+  billingScheduleRunDrafted: (count: number) =>
+    count === 1
+      ? "1 Entwurf wurde erstellt und wartet bei Ihren Rechnungen. Nichts wurde ausgestellt: Lesen Sie ihn, ändern Sie, was Sie möchten, und stellen Sie ihn selbst aus."
+      : `${count} Entwürfe wurden erstellt und warten bei Ihren Rechnungen. Nichts wurde ausgestellt: Lesen Sie sie, ändern Sie, was Sie möchten, und stellen Sie sie selbst aus.`,
+  billingScheduleSaved: (name: string) =>
+    `„${name}“ ist eingerichtet. Jedes Mal, wenn sie fällig wird, erstellt alo einen Entwurf zur Prüfung.`,
+  billingScheduleAnchorHint: (day: number) =>
+    day > 28
+      ? `Verankert am Tag ${day}: In einem kürzeren Monat wird am letzten Tag abgerechnet, im nächsten langen wieder am Tag ${day}.`
+      : `Verankert am Tag ${day} des Monats.`,
+
+  // CRM (tranche 5). German sales speech keeps the trade's loanwords — der
+  // Deal, die Pipeline, das Board — and names a stage a Phase, as the German
+  // CRM tools a salesperson has already used do. crmDocumentDraft returns a
+  // capitalized noun, so both sentences that interpolate it ("Ihr … ist
+  // bereit", "… erstellen") stay orthographically correct.
+  crmBoard: "Board",
+  crmList: "Liste",
+  crmPipeline: "Pipeline",
+  crmDeal: "Deal",
+  crmStage: "Phase",
+  crmStageArchived: "Archivierte Spalte",
+  crmLoadFailed: "Ihre Deals konnten nicht geladen werden.",
+  crmSaveFailed: "Die Änderung konnte nicht gespeichert werden.",
+  crmDeleteFailed: "Das konnte nicht entfernt werden.",
+  crmSuggestFailed:
+    "Gerade konnten keine Unterhaltungen vorgeschlagen werden.",
+  crmNoBoardTitle: "Noch keine Pipeline",
+  crmNoBoardBody:
+    "Jedes Board, das Sie hatten, wurde archiviert. Stellen Sie eines wieder her, um wieder an Deals zu arbeiten.",
+  crmNoDealsTitle: "Noch keine Deals",
+  crmNoDealsBody:
+    "Legen Sie die erste Verkaufschance an und ziehen Sie sie über das Board, während sie vorankommt.",
+  crmNoMatches: "Kein Deal entspricht Ihrer Eingabe.",
+  crmNewDeal: "Neuer Deal",
+  crmEditDeal: "Deal bearbeiten",
+  crmEdit: "Bearbeiten",
+  crmCreate: "Erstellen",
+  crmSave: "Speichern",
+  crmCancel: "Abbrechen",
+  crmClose: "Schließen",
+  crmDealSubtitle: "Worum es geht, mit wem, und was es wert ist.",
+  crmFieldTitle: "Deal",
+  crmFieldCompany: "Unternehmen",
+  crmCompanyHint: "Das Unternehmen, wie Ihr ganzes Team es sehen soll.",
+  crmFieldContactName: "Kontakt",
+  crmFieldContactEmail: "Kontakt-E-Mail",
+  crmContactEmailHint:
+    "Wird genutzt, um die Unterhaltungen zu diesem Deal vorzuschlagen.",
+  crmFieldValue: "Wert",
+  crmValueHint: "Was der Deal wert ist, vor MwSt.",
+  crmFieldCurrency: "Währung",
+  crmCurrencyHint: "Drei Buchstaben, z. B. EUR.",
+  crmFieldExpectedClose: "Erwarteter Abschluss",
+  crmFieldSource: "Quelle",
+  crmSourceHint:
+    "Woher die Chance kam — eine Empfehlung, eine Kampagne, ein Anruf.",
+  crmNotAnAmount: "Das ist kein Betrag.",
+  crmDeleteDeal: "Löschen",
+  crmDeleteDealConfirm:
+    "Dies entfernt den Deal und alles, was darauf protokolliert wurde. Daraus erstellte Aufgaben bleiben in den Listen ihrer Besitzer. Es kann nicht rückgängig gemacht werden.",
+  crmDealsTable: "Deals",
+  crmDealFilters: "Deal-Filter",
+  crmSearchDeals: "Deals durchsuchen",
+  crmFilterStage: "Nach Phase filtern",
+  crmFilterAnyStage: "Jede Phase",
+  crmFilterState: "Nach Status filtern",
+  crmFilterAnyState: "Jeder Status",
+  crmFilterMine: "Nur meine",
+  crmColDeal: "Deal",
+  crmColCompany: "Unternehmen",
+  crmColStage: "Phase",
+  crmColValue: "Wert",
+  crmColExpectedClose: "Erwarteter Abschluss",
+  crmColState: "Status",
+  crmStateOpen: "Offen",
+  crmStateWon: "Gewonnen",
+  crmStateLost: "Verloren",
+  crmExpectedClose: (day: string) => `Erwartet ${day}`,
+  crmLostBecause: (reason: string) => `Verloren: ${reason}`,
+  crmLostTitle: "Warum ging er verloren?",
+  crmLostMessage: (stage: string) =>
+    `Wenn Sie diesen Deal nach „${stage}“ verschieben, wird er als verloren geschlossen. Sagen Sie warum, damit der Grund in Ihrem Gewonnen-verloren-Bericht erscheint.`,
+  crmLostPlaceholder: "Preis, Timing, an einen Wettbewerber gegangen…",
+  crmLostConfirm: "Als verloren markieren",
+  crmLostReasonLabel: "Grund",
+  crmLostReasonPrice: "Preis",
+  crmLostReasonTiming: "Timing",
+  crmLostReasonCompetitor: "Wettbewerber gewählt",
+  crmLostReasonBudget: "Kein Budget",
+  crmLostReasonNoDecision: "Keine Entscheidung",
+  crmLostReasonNotAFit: "Passt nicht",
+  crmRaiseQuote: "Angebot",
+  crmRaiseInvoice: "Rechnung",
+  crmDocumentDraft: (kind: string): string =>
+    kind === "invoice" ? "Rechnungsentwurf" : "Angebotsentwurf",
+  crmRaiseTitle: (document: string) => `${document} erstellen`,
+  crmRaiseSubtitle:
+    "Er landet als Entwurf unter Rechnungen, damit Sie ihn prüfen und vervollständigen. Nichts wird ausgestellt, nichts wird gesendet.",
+  crmRaiseFrom: (deal: string, value: string) =>
+    `Aus „${deal}“, im Wert von ${value}.`,
+  crmRaiseConfirm: "Erstellen",
+  crmRaiseFailed: "Das Dokument konnte nicht erstellt werden.",
+  crmFieldVatRate: "MwSt.-Satz",
+  crmVatRateHint:
+    "Der Satz, zu dem diese Position berechnet wird, in Prozent — z. B. 21.",
+  crmFieldCountry: "Land des Kunden",
+  crmCountryHint:
+    "Zwei Buchstaben. Dieser Deal ist noch ein Lead, daher wird daraus ein Kunde angelegt — und das Land entscheidet über die MwSt.-Behandlung.",
+  crmRaisedTitle: (document: string) => `Ihr ${document} ist bereit`,
+  crmRaisedSubtitle:
+    "Öffnen Sie ihn unter Rechnungen und prüfen Sie Positionen, Adresse und MwSt.",
+  crmRaisedWorth: (gross: string) => `${gross} inklusive MwSt.`,
+  crmOpenInBilling: "In Rechnungen öffnen",
+  crmReport: "Bericht",
+  crmReportPeriod: "Berichtszeitraum",
+  crmReportFrom: "Von",
+  crmReportTo: "Bis",
+  crmReportShow: "Anzeigen",
+  crmReportThisQuarter: "Dieses Quartal",
+  crmReportLastQuarter: "Letztes Quartal",
+  crmReportDownloadCsv: "CSV herunterladen",
+  crmReportDownloadFailed: "Der Bericht konnte nicht heruntergeladen werden.",
+  crmReportBasis: (from: string, to: string) =>
+    `Gewonnen und verloren zwischen ${from} und ${to}.`,
+  crmReportOpenAsOf: (at: string) =>
+    `Die offene Pipeline zeigt den Stand vom ${at}.`,
+  crmReportOpenCaption: (currency: string) =>
+    `Offene Pipeline nach Phase (${currency})`,
+  crmReportClosedCaption: (currency: string) =>
+    `Im Zeitraum geschlossen (${currency})`,
+  crmReportColDeals: "Deals",
+  crmReportOpenTotal: "Offen gesamt",
+  crmReportWinRate: (rate: string, won: number, closed: number) =>
+    `Erfolgsquote ${rate} — ${won} von ${closed} geschlossenen Deals.`,
+  crmReportNoWinRate:
+    "In diesem Zeitraum wurde kein Deal geschlossen, daher gibt es keine Erfolgsquote.",
+  crmReportEmptyTitle: "Noch nichts zu berichten",
+  crmReportEmptyBody:
+    "Dieses Board hält keine Deals. Legen Sie einen an, und er erscheint hier — nach Phase und nach Währung.",
+  crmActivityTitle: "Protokoll",
+  crmActivityKind: "Art des Eintrags",
+  crmActivityPlaceholder: "Was besprochen oder vereinbart wurde…",
+  crmActivityAdd: "Protokollieren",
+  crmActivityDelete: "Eintrag löschen",
+  crmActivityEmpty: "Noch nichts protokolliert.",
+  crmKindNote: "Notiz",
+  crmKindCall: "Anruf",
+  crmKindMeeting: "Meeting",
+  crmNextStepsTitle: "Nächste Schritte",
+  crmNextStepPlaceholder: "Was als Nächstes passiert…",
+  crmNextStepDue: "Fällig",
+  crmNextStepAdd: "Hinzufügen",
+  crmNextStepsEmpty: "Noch kein nächster Schritt vereinbart.",
+  crmOpenInTasks: "In Aufgaben öffnen",
+  crmThreadsTitle: "Unterhaltungen",
+  crmThreadsEmpty: "Noch keine Unterhaltung verknüpft.",
+  crmThreadSuggest: "Unterhaltungen vorschlagen",
+  crmThreadLink: "Verknüpfen",
+  crmThreadUnlink: "Trennen",
+  crmThreadOpenInMail: "In E-Mail öffnen",
+  crmThreadNotYours:
+    "Diese Unterhaltung liegt nicht in Ihrem Postfach — fragen Sie die Person, die sie verknüpft hat.",
+  crmThreadLinkedBy: (who: string, when: string) =>
+    `Verknüpft von ${who} · ${when}`,
+  crmSuggestionsEmpty:
+    "Nichts in Ihren letzten E-Mails passt zu den Adressen dieses Deals.",
+  crmSuggestionAddress: (address: string) => `Passt zu ${address}`,
+  crmSuggestionDomain: (address: string) =>
+    `Gleiches Unternehmen wie ${address}`,
+
+  // Insights (tranche 5). Chart titles here must say the same words the
+  // server seeds a tenant's overview with (`insights_gallery.rs`, DE table)
+  // — if the two drift, a pinned chart looks like a different chart. The
+  // German calendar week is "KW", and quarters keep "Q".
+  insightsBoards: "Boards",
+  insightsLoadFailed: "Ihre Boards konnten nicht geladen werden.",
+  insightsBoardLoadFailed: "Dieses Board konnte nicht geladen werden.",
+  insightsFiguresFailed: "Diese Zahlen konnten nicht gelesen werden.",
+  insightsSaveFailed: "Die Änderung konnte nicht gespeichert werden.",
+  insightsDeleteFailed: "Das konnte nicht entfernt werden.",
+  insightsNewBoard: "Neues Board",
+  insightsBoardNamePrompt: "Wie soll dieses Board heißen?",
+  insightsBoardNamePlaceholder: "Liquidität",
+  insightsRenameBoard: "Umbenennen",
+  insightsDeleteBoard: "Board löschen",
+  insightsDeleteBoardConfirm: (name: string) =>
+    `Das Board „${name}“ löschen? Seine Diagramme gehen mit — die Rechnungen und Deals dahinter bleiben.`,
+  insightsRefresh: "Zahlen aktualisieren",
+  insightsNoBoardsTitle: "Noch keine Boards",
+  insightsNoBoardsBody:
+    "Ein Board hält die Zahlen, die Sie auf einen Blick sehen wollen — was Sie berechnet haben, was man Ihnen schuldet, was in der Pipeline ist.",
+  insightsNoTilesTitle: "Nichts an dieses Board geheftet",
+  insightsNoTilesBody:
+    "Diagramme, die an dieses Board geheftet werden, erscheinen hier.",
+  insightsAddChart: "Diagramm hinzufügen",
+  insightsGalleryTitle: "Fertige Diagramme",
+  insightsGallerySubtitle:
+    "Wählen Sie eines, um es an dieses Board zu heften. Umbenennen oder entfernen können Sie es danach.",
+  insightsGalleryClose: "Schließen",
+  insightsGalleryLoadFailed:
+    "Die fertigen Diagramme konnten nicht geladen werden.",
+  insightsGalleryRevenueByMonth: "Umsatz nach Monat",
+  insightsGalleryRevenueByMonthBody:
+    "Was Sie fakturiert haben, Monat für Monat über das letzte Jahr — ohne MwSt.",
+  insightsGalleryOutstanding: "Offene Forderungen",
+  insightsGalleryOutstandingBody:
+    "Alles, was man Ihnen auf ausgestellte Rechnungen noch schuldet, als eine Zahl.",
+  insightsGalleryOverdueAging: "Überfällig nach Alter",
+  insightsGalleryOverdueAgingBody:
+    "Was geschuldet wird, gruppiert nach Verzug: 0–30, 31–60, 61–90 und über 90 Tage.",
+  insightsGalleryVatByQuarter: "MwSt. nach Quartal",
+  insightsGalleryVatByQuarterBody:
+    "Berechnete MwSt. je Quartal — die Form, in der eine Erklärung abgegeben wird.",
+  insightsGalleryTopCustomers: "Top-Kunden",
+  insightsGalleryTopCustomersBody:
+    "Von wem der Umsatz dieses Jahres kam, die größten zehn zuerst.",
+  insightsGalleryPaymentsByMonth: "Zahlungseingänge",
+  insightsGalleryPaymentsByMonthBody:
+    "Geld, das tatsächlich angekommen ist, Monat für Monat, in der Währung, in der es ankam.",
+  insightsGalleryPipelineByStage: "Pipeline nach Phase",
+  insightsGalleryPipelineByStageBody:
+    "Der Wert offener Deals in jeder Spalte Ihres Trichters.",
+  insightsGalleryWonThisMonth: "Diesen Monat gewonnen",
+  insightsGalleryWonThisMonthBody:
+    "Der Wert der in diesem Monat als gewonnen geschlossenen Deals.",
+  insightsGalleryWinRateByQuarter: "Erfolgsquote nach Quartal",
+  insightsGalleryWinRateByQuarterBody:
+    "Wie oft ein entschiedener Deal gewonnen wurde, Quartal für Quartal.",
+  insightsGalleryWonByMonth: "Gewonnen nach Monat",
+  insightsGalleryWonByMonthBody:
+    "Gewonnener Deal-Wert, Monat für Monat über das letzte Jahr.",
+  insightsAsk: "Diagramm erfragen",
+  insightsAskSubtitle:
+    "Beschreiben Sie, was Sie sehen möchten. Sie bekommen das Diagramm zuerst zum Ansehen — dem Board wird nichts hinzugefügt, bis Sie es anheften.",
+  insightsAskLabel: "Ihre Frage",
+  insightsAskPlaceholder: "Wie viel haben wir dieses Jahr pro Monat fakturiert?",
+  insightsAskSubmit: "Fragen",
+  insightsAskClose: "Schließen",
+  insightsAskPreview: "Das vorgeschlagene Diagramm",
+  insightsAskPin: "An dieses Board heften",
+  insightsAskDiscard: "Verwerfen",
+  insightsAskRepaired:
+    "Der erste Versuch passte nicht zu den Daten und wurde vor dem Zeichnen korrigiert.",
+  insightsAskFailed: "Aus dieser Frage ließ sich kein Diagramm bauen.",
+  insightsAskUnavailable:
+    "Der Assistent ist für diesen Arbeitsbereich nicht eingeschaltet.",
+  insightsTileActions: (title: string) => `Optionen für ${title}`,
+  insightsRenameTile: "Diagramm umbenennen",
+  insightsRenameTilePrompt: "Wie soll dieses Diagramm heißen?",
+  insightsRemoveTile: "Diagramm entfernen",
+  insightsRemoveTileConfirm: (title: string) =>
+    `„${title}“ von diesem Board entfernen? Die gezählten Datensätze bleiben unberührt.`,
+  insightsWiden: "Breiter machen",
+  insightsNarrow: "Schmaler machen",
+  insightsMoveLeft: "Nach vorn verschieben",
+  insightsMoveRight: "Nach hinten verschieben",
+  insightsUnreadableTitle: "Mit einer neueren Version von alo erstellt",
+  insightsUnreadableBody:
+    "Die Frage dieses Diagramms kann hier nicht gelesen werden, daher werden seine Zahlen nicht angezeigt.",
+  insightsNoFigures: "Für diesen Zeitraum gibt es nichts zu zeigen.",
+  insightsTruncated:
+    "Nur die größten Kategorien werden gezeigt; der Rest ist als „Sonstige“ zusammengefasst.",
+  insightsNoteUnconverted: (count: number) =>
+    count === 1
+      ? "1 Dokument konnte nicht in Ihre Buchungswährung umgerechnet werden und wird nicht mitgezählt."
+      : `${count} Dokumente konnten nicht in Ihre Buchungswährung umgerechnet werden und werden nicht mitgezählt.`,
+  insightsColBucket: "Gruppe",
+  insightsColValue: "Wert",
+  insightsBucketTotal: "Gesamt",
+  insightsBucketOther: "Sonstige",
+  insightsGroupAll: "Alle",
+  insightsValueNone: "Keine",
+  insightsValueUnknown: "Unbekannt",
+  insightsStatusIssued: "Ausgestellt",
+  insightsStatusPaid: "Bezahlt",
+  insightsOutcomeWon: "Gewonnen",
+  insightsOutcomeLost: "Verloren",
+  insightsOutcomeOpen: "Offen",
+  insightsAgeNotDue: "Noch nicht fällig",
+  insightsAge0To30: "0–30 Tage",
+  insightsAge31To60: "31–60 Tage",
+  insightsAge61To90: "61–90 Tage",
+  insightsAge90Plus: "Über 90 Tage",
+  insightsQuarter: (quarter: number, year: number) => `Q${quarter} ${year}`,
+  insightsWeek: (week: number, year: number) => `KW ${week} ${year}`,
 };

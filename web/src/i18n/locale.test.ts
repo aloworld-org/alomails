@@ -48,12 +48,12 @@ describe("catalog fallback", () => {
       expect(en).toHaveProperty(key);
     }
     // German is deliberately partial while M4.1 ships it module by module:
-    // an untranslated surface (here: billing) must read as English, not blank.
-    expect(catalog.billingInvoices).toBe(en.billingInvoices);
+    // an untranslated surface (here: finance) must read as English, not blank.
+    expect(catalog.financeReportPl).toBe(en.financeReportPl);
   });
 });
 
-describe("German ships complete modules (M4.1, tranches 1–4: mail + Docs/Drive + Chat/Meet + admin/control)", () => {
+describe("German ships complete modules (M4.1, tranches 1–5: mail + Docs/Drive + Chat/Meet + admin/control + Billing/CRM/Insights)", () => {
   /** The sections `de.ts` claims to cover, by key prefix. The catalog is
    *  allowed to be partial across *modules* — the fallback shows English —
    *  but never inside one: a reading pane that mixes German buttons with
@@ -67,16 +67,18 @@ describe("German ships complete modules (M4.1, tranches 1–4: mail + Docs/Drive
    *  not a family); tranche 4 adds the admin console, the control plane,
    *  the invitation page, AI providers (whose kind/desc singletons are
    *  anchored), the record-history panel, and the compose recipient
-   *  strays. */
+   *  strays; tranche 5 adds Billing, CRM and Insights entire (their agent
+   *  cards are enforced by those modules' own fully-translated describes
+   *  below, which German joined in the same tranche). */
   const SHIPPED_PREFIXES =
-    /^(agenda|task|mail|compose|flag|folder|filter|spam|snooze|unsubscribe|appPassword|delegate|sharing|shared|categor|transfer|contact|import|signup|reset|settings|brand|home|module|rsvp|error|twoFactor|recovery|doc|drive|sheet|office|picker|search|ai|eq|spec|tb|ref|block|heading|para|table|chart|code|insert|font|size|align|text|style|highlight|strikethrough|bullet|numbered|horizontal|clear|close|cancel|chat|meet|admin|audit|control|domain|group|invite|overview|provider|security|tenant|user|dkim|kind|access|add$|save$|deleteLabel$|agentApprove$|agentDiscard$|aloDesc$|anthropicDesc$|openaiDesc$|mistralDesc$|ollamaDesc$|customDesc$|builtInTag$|connectTitle$|configureTitle$|removeRecipient$|recipientCount$|archiveUnavailable$)/;
+    /^(agenda|task|mail|compose|flag|folder|filter|spam|snooze|unsubscribe|appPassword|delegate|sharing|shared|categor|transfer|contact|import|signup|reset|settings|brand|home|module|rsvp|error|twoFactor|recovery|doc|drive|sheet|office|picker|search|ai|eq|spec|tb|ref|block|heading|para|table|chart|code|insert|font|size|align|text|style|highlight|strikethrough|bullet|numbered|horizontal|clear|close|cancel|chat|meet|admin|audit|control|domain|group|invite|overview|provider|security|tenant|user|dkim|kind|access|billing|crm|insights|add$|save$|deleteLabel$|agentApprove$|agentDiscard$|aloDesc$|anthropicDesc$|openaiDesc$|mistralDesc$|ollamaDesc$|customDesc$|builtInTag$|connectTitle$|configureTitle$|removeRecipient$|recipientCount$|archiveUnavailable$)/;
   const shippedKeys = Object.keys(en).filter((key) =>
     SHIPPED_PREFIXES.test(key),
   );
 
   test("the key list is the real shipped surface, not an empty filter", () => {
-    expect(shippedKeys.length).toBeGreaterThan(1750);
-    expect(Object.keys(de).length).toBeGreaterThan(1900);
+    expect(shippedKeys.length).toBeGreaterThan(2300);
+    expect(Object.keys(de).length).toBeGreaterThan(2450);
   });
 
   test("every shipped-module string exists in German", () => {
@@ -170,6 +172,40 @@ describe("German ships complete modules (M4.1, tranches 1–4: mail + Docs/Drive
     expect(catalog.tenantDeleteConfirm("Acme")).toContain(
       "lässt sich nicht rückgängig machen",
     );
+    // Tranche 5: Billing/CRM/Insights. The one-word rules tranche 4 set up:
+    // a document's status chip and the history's verb are the same word, and
+    // a declined quote takes the decline word, never the reject word.
+    expect(catalog.billingStatusIssued).toBe(catalog.auditActionIssue);
+    expect(catalog.billingStatusIssued).toBe("Ausgestellt");
+    expect(catalog.billingQuoteStatusDeclined).toBe(catalog.auditActionDecline);
+    expect(catalog.billingQuoteStatusAccepted).toBe(catalog.auditActionAccept);
+    expect(catalog.billingCreditNote).toBe("Gutschrift");
+    expect(catalog.billingTermsDays(1)).toBe("1 Tag");
+    expect(catalog.billingTermsDays(30)).toBe("30 Tage");
+    expect(catalog.billingVatAtRate("21 %")).toBe("MwSt. 21 %");
+    // The CRM handoff noun is capitalized, so both sentences that
+    // interpolate it stay orthographically correct German.
+    expect(catalog.crmDocumentDraft("invoice")).toBe("Rechnungsentwurf");
+    expect(catalog.crmRaiseTitle(catalog.crmDocumentDraft("quote"))).toBe(
+      "Angebotsentwurf erstellen",
+    );
+    expect(catalog.crmRaisedTitle(catalog.crmDocumentDraft("invoice"))).toBe(
+      "Ihr Rechnungsentwurf ist bereit",
+    );
+    expect(catalog.crmStateWon).toBe("Gewonnen");
+    // Insights: the German calendar week is KW, quarters keep Q, and the
+    // truncation note names the same bucket the table shows.
+    expect(catalog.insightsQuarter(1, 2026)).toBe("Q1 2026");
+    expect(catalog.insightsWeek(3, 2026)).toBe("KW 3 2026");
+    expect(catalog.insightsTruncated).toContain(
+      `„${catalog.insightsBucketOther}“`,
+    );
+    expect(catalog.insightsNoteUnconverted(1)).toContain(
+      "1 Dokument konnte nicht",
+    );
+    expect(catalog.insightsNoteUnconverted(3)).toContain(
+      "3 Dokumente konnten nicht",
+    );
   });
 
   test("the spam-banner fallback declines correctly in both sentences", () => {
@@ -219,6 +255,7 @@ describe("alo Billing is fully translated (B1.27)", () => {
   test.each([
     ["fr", fr],
     ["nl", nl],
+    ["de", de],
   ])("%s translates every billing string", (_locale, catalog) => {
     const missing = billingKeys.filter((key) => !(key in catalog));
     expect(missing).toEqual([]);
@@ -227,6 +264,7 @@ describe("alo Billing is fully translated (B1.27)", () => {
   test.each([
     ["fr", fr],
     ["nl", nl],
+    ["de", de],
   ])(
     "%s keeps every interpolation a function of the same shape",
     (locale, catalog) => {
@@ -242,7 +280,7 @@ describe("alo Billing is fully translated (B1.27)", () => {
           expect(String(translated).trim()).not.toBe("");
         }
       }
-      expect(locale).toMatch(/^(fr|nl)$/);
+      expect(locale).toMatch(/^(fr|nl|de)$/);
     },
   );
 
@@ -251,12 +289,16 @@ describe("alo Billing is fully translated (B1.27)", () => {
     // reads first must actually change language.
     expect(buildCatalog("fr").billingInvoices).toBe("Factures");
     expect(buildCatalog("nl").billingInvoices).toBe("Facturen");
+    expect(buildCatalog("de").billingInvoices).toBe("Rechnungen");
     expect(buildCatalog("fr").billingCreditNote).toBe("Avoir");
     expect(buildCatalog("nl").billingCreditNote).toBe("Creditnota");
+    expect(buildCatalog("de").billingCreditNote).toBe("Gutschrift");
     // …including the ones built by a function.
     expect(buildCatalog("fr").billingVatAtRate("21 %")).toBe("TVA à 21 %");
     expect(buildCatalog("nl").billingTermsDays(1)).toBe("1 dag");
     expect(buildCatalog("nl").billingTermsDays(30)).toBe("30 dagen");
+    expect(buildCatalog("de").billingTermsDays(1)).toBe("1 Tag");
+    expect(buildCatalog("de").billingTermsDays(30)).toBe("30 Tage");
   });
 });
 
@@ -301,6 +343,7 @@ describe("alo CRM and the record history are fully translated (B2.14)", () => {
   test.each([
     ["fr", fr],
     ["nl", nl],
+    ["de", de],
   ])("%s translates every B2 string", (_locale, catalog) => {
     const missing = waveKeys.filter((key) => !(key in catalog));
     expect(missing).toEqual([]);
@@ -309,6 +352,7 @@ describe("alo CRM and the record history are fully translated (B2.14)", () => {
   test.each([
     ["fr", fr],
     ["nl", nl],
+    ["de", de],
   ])(
     "%s keeps every interpolation a function of the same shape",
     (locale, catalog) => {
@@ -322,17 +366,20 @@ describe("alo CRM and the record history are fully translated (B2.14)", () => {
           expect(String(translated).trim()).not.toBe("");
         }
       }
-      expect(locale).toMatch(/^(fr|nl)$/);
+      expect(locale).toMatch(/^(fr|nl|de)$/);
     },
   );
 
   test("the translated strings really are different words", () => {
     expect(buildCatalog("fr").moduleCrm).toBe("Ventes");
     expect(buildCatalog("nl").moduleCrm).toBe("Verkoop");
+    expect(buildCatalog("de").moduleCrm).toBe("Vertrieb");
     expect(buildCatalog("fr").crmStateWon).toBe("Gagnée");
     expect(buildCatalog("nl").crmStateWon).toBe("Gewonnen");
+    expect(buildCatalog("de").crmStateWon).toBe("Gewonnen");
     expect(buildCatalog("fr").auditHistoryTitle).toBe("Historique");
     expect(buildCatalog("nl").auditHistoryTitle).toBe("Geschiedenis");
+    expect(buildCatalog("de").auditHistoryTitle).toBe("Verlauf");
     // …including the ones built by a function. The French draft-document
     // noun is masculine in both branches on purpose: the sentences that
     // interpolate it ("Votre … est prêt") stay grammatical either way.
@@ -351,6 +398,9 @@ describe("alo CRM and the record history are fully translated (B2.14)", () => {
     );
     expect(buildCatalog("nl").billingScheduleRunDrafted(2)).toContain(
       "2 concepten",
+    );
+    expect(buildCatalog("de").billingScheduleRunDrafted(2)).toContain(
+      "2 Entwürfe",
     );
   });
 });
@@ -373,6 +423,7 @@ describe("alo Insights is fully translated (BI1.08)", () => {
   test.each([
     ["fr", fr],
     ["nl", nl],
+    ["de", de],
   ])("%s translates every Insights string", (_locale, catalog) => {
     const missing = insightsKeys.filter((key) => !(key in catalog));
     expect(missing).toEqual([]);
@@ -381,6 +432,7 @@ describe("alo Insights is fully translated (BI1.08)", () => {
   test.each([
     ["fr", fr],
     ["nl", nl],
+    ["de", de],
   ])(
     "%s keeps every interpolation a function of the same shape",
     (locale, catalog) => {
@@ -394,7 +446,7 @@ describe("alo Insights is fully translated (BI1.08)", () => {
           expect(String(translated).trim()).not.toBe("");
         }
       }
-      expect(locale).toMatch(/^(fr|nl)$/);
+      expect(locale).toMatch(/^(fr|nl|de)$/);
     },
   );
 
@@ -403,11 +455,13 @@ describe("alo Insights is fully translated (BI1.08)", () => {
     expect(buildCatalog("nl").moduleInsights).toBe("Inzichten");
     expect(buildCatalog("fr").insightsAddChart).toBe("Ajouter un graphique");
     expect(buildCatalog("nl").insightsAddChart).toBe("Grafiek toevoegen");
+    expect(buildCatalog("de").insightsAddChart).toBe("Diagramm hinzufügen");
     // A period abbreviation is a translation too: an axis reading "Q1" in
     // French, or "W03" in Dutch, is English leaking onto a chart.
     expect(buildCatalog("fr").insightsQuarter(1, 2026)).toBe("T1 2026");
     expect(buildCatalog("nl").insightsQuarter(1, 2026)).toBe("K1 2026");
     expect(buildCatalog("fr").insightsWeek(3, 2026)).toBe("S3 2026");
+    expect(buildCatalog("de").insightsWeek(3, 2026)).toBe("KW 3 2026");
     // …and the plural branch of the unconverted-documents note, which the
     // English catalog builds from two separate sentences.
     expect(buildCatalog("fr").insightsNoteUnconverted(1)).toContain(
@@ -468,6 +522,27 @@ describe("alo Insights is fully translated (BI1.08)", () => {
     );
     expect(buildCatalog("nl").insightsGalleryWinRateByQuarter).toBe(
       "Winstpercentage per kwartaal",
+    );
+    expect(buildCatalog("de").insightsGalleryOutstanding).toBe(
+      "Offene Forderungen",
+    );
+    expect(buildCatalog("de").insightsGalleryWonThisMonth).toBe(
+      "Diesen Monat gewonnen",
+    );
+    expect(buildCatalog("de").insightsGalleryRevenueByMonth).toBe(
+      "Umsatz nach Monat",
+    );
+    expect(buildCatalog("de").insightsGalleryOverdueAging).toBe(
+      "Überfällig nach Alter",
+    );
+    expect(buildCatalog("de").insightsGalleryPipelineByStage).toBe(
+      "Pipeline nach Phase",
+    );
+    expect(buildCatalog("de").insightsGalleryVatByQuarter).toBe(
+      "MwSt. nach Quartal",
+    );
+    expect(buildCatalog("de").insightsGalleryWinRateByQuarter).toBe(
+      "Erfolgsquote nach Quartal",
     );
   });
 });

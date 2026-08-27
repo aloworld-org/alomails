@@ -87,6 +87,24 @@ static NL: SeedWords = SeedWords {
     ],
 };
 
+/// The German board. These captions must say the same words as the web
+/// catalog's `insightsGallery*` titles (`web/src/i18n/de.ts`) — the gallery
+/// offers the same charts, and a seeded tile that disagrees with the gallery
+/// caption looks like a different chart.
+static DE: SeedWords = SeedWords {
+    lang: "de",
+    board: "Geschäftsübersicht",
+    captions: &[
+        ("outstanding", "Offene Forderungen"),
+        ("won_this_month", "Diesen Monat gewonnen"),
+        ("revenue_by_month", "Umsatz nach Monat"),
+        ("overdue_aging", "Überfällig nach Alter"),
+        ("pipeline_by_stage", "Pipeline nach Phase"),
+        ("vat_by_quarter", "MwSt. nach Quartal"),
+        ("win_rate_by_quarter", "Erfolgsquote nach Quartal"),
+    ],
+};
+
 /// The seed words for a language tag, falling back to the default table. The
 /// primary subtag decides, so `fr-BE` and `fr` get the same board.
 #[must_use]
@@ -95,6 +113,7 @@ pub fn seed_words_for(tag: &str) -> &'static SeedWords {
     match primary.to_ascii_lowercase().as_str() {
         "fr" => &FR,
         "nl" => &NL,
+        "de" => &DE,
         _ => &EN,
     }
 }
@@ -165,7 +184,7 @@ mod tests {
 
     #[test]
     fn every_language_writes_the_whole_overview() {
-        for words in [&EN, &FR, &NL] {
+        for words in [&EN, &FR, &NL, &DE] {
             assert!(!words.board.trim().is_empty(), "{}", words.lang);
             assert_eq!(
                 words.captions.len(),
@@ -196,7 +215,10 @@ mod tests {
         for tag in ["nl", "nl-BE", "NL"] {
             assert_eq!(seed_words_for(tag).lang, "nl", "{tag}");
         }
-        for tag in ["", "en", "en-GB", "de", "klingon", "-"] {
+        for tag in ["de", "de-AT", "DE_ch"] {
+            assert_eq!(seed_words_for(tag).lang, "de", "{tag}");
+        }
+        for tag in ["", "en", "en-GB", "klingon", "-"] {
             assert_eq!(seed_words_for(tag).lang, "en", "{tag}");
         }
     }
