@@ -245,7 +245,7 @@ export function FilesView({ projectId, onOpen, onCreate }: Props) {
       )}
       {files.length > 0 && <div className="grid gap-3 p-5 md:grid-cols-2 xl:grid-cols-3">
       {files.map((f) => (
-        <article key={f.id} className="group flex min-w-0 items-center gap-3 rounded-xl border border-subtle bg-surface p-4 shadow-sm transition-colors hover:border-default hover:bg-raised/40">
+        <article key={f.id} className="group flex min-w-0 items-center gap-3 rounded-2xl border border-subtle bg-surface p-4 shadow-sm transition-[border-color,box-shadow] hover:border-default hover:shadow-md">
           <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-accent-tint text-accent">
             <FileIcon filename={f.filename} />
           </span>

@@ -11,7 +11,7 @@
 // of this happened.
 //
 // Styled with Tailwind utilities generated from `ds/tokens.css` (ADR 0046), so
-// `--radius-lg` and `rounded-lg` are one definition with two spellings. The
+// the radius and spacing utilities resolve through the shared token layer. The
 // build that replaced this file's stylesheet changed no rule.
 import type { HTMLAttributes } from "react";
 
@@ -20,23 +20,23 @@ import type { HTMLAttributes } from "react";
  *  layering over them — two utilities setting one property have no defined
  *  winner, since Tailwind emits them in its own order rather than in the order
  *  they appear in `class`. */
-const BASE = "rounded-lg border border-subtle bg-surface";
+const BASE = "rounded-2xl border border-subtle bg-surface";
 
 /** The differences that were decisions. `sm` for a card in a dense list or a
  *  grid of many; `lg` for a card that is the only thing on the screen — a
  *  sign-in panel, an empty state — where the content should not sit against
  *  the edge. `none` emits no padding utility at all rather than a `p-0` that
  *  would have to out-rank one: see the prop. */
-const PAD = { none: "", sm: "p-3", md: "p-5", lg: "p-8" } as const;
+const PAD = { none: "", sm: "p-4", md: "p-6", lg: "p-8" } as const;
 
 /** Only when the whole card is a link or a button. A hover state on something
  *  that does not respond to a click is a promise the screen does not keep.
- *  The focus ring is the accent rather than the neutral one: this card *is*
- *  the control. Its hover feedback stays spatially stable. */
+ *  The focus ring is the accent rather than `global.css`'s neutral one: this
+ *  card *is* the control, and it is the only thing on the row that moves. */
 const INTERACTIVE =
-  "cursor-pointer transition-colors " +
+  "cursor-pointer transition-[border-color,box-shadow] " +
   "duration-[var(--duration-fast)] ease-standard " +
-  "hover:border-default hover:bg-raised " +
+  "hover:border-default hover:shadow-md " +
   "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2";
 
 export interface CardProps extends HTMLAttributes<HTMLElement> {
@@ -86,8 +86,9 @@ export function Card({
   const classes = [
     BASE,
     PAD[pad],
-    // Elevation is chosen once and never changes on hover. Moving a card
-    // toward the pointer makes the surrounding layout feel unstable.
+    // Elevation is chosen once. `hover:shadow-md` still wins over either, which
+    // is the order the stylesheet resolved to: a flat card that is clickable
+    // lifts under the pointer.
     flat === true ? "shadow-none" : "shadow-sm",
     interactive === true ? INTERACTIVE : "",
     className ?? "",

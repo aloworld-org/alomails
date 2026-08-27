@@ -25,7 +25,7 @@ const styles = {
     "mr-1 inline-flex min-h-8 items-center rounded-full bg-surface px-3 text-xs font-semibold text-secondary",
   presetGrid: "grid gap-3 sm:grid-cols-2 lg:grid-cols-3",
   presetCard:
-    "flex min-h-28 flex-col justify-between rounded-2xl border-2 p-5 text-left transition-colors hover:border-accent hover:bg-accent-soft/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
+    "flex min-h-28 flex-col justify-between rounded-2xl border-2 p-5 text-left transition-[border-color,box-shadow] hover:border-accent hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
   presetCardActive: "ring-2 ring-accent ring-offset-2",
   presetName: "text-lg",
   presetSwatches: "mt-5 flex gap-2",

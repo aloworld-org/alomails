@@ -158,7 +158,7 @@ function ConnectionCard({
 }) {
   const status = HEALTH[connection.health];
   return (
-    <article className="group flex items-center gap-4 rounded-xl border border-default bg-surface px-5 py-4 shadow-sm transition-colors hover:border-accent/30 hover:bg-accent-soft/20 max-md:flex-wrap">
+    <article className="group flex items-center gap-4 rounded-2xl border border-default bg-surface px-5 py-4 shadow-sm transition-[border-color,box-shadow] hover:border-accent/30 hover:shadow-md max-md:flex-wrap">
         <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">
           {connection.direction === "received" ? (
             <ArrowDownToLine className="size-5" aria-hidden="true" />

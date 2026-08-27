@@ -76,7 +76,7 @@ export function BoardView({ tasks, onOpen, onMove, onAdd }: Props) {
               return (
                 <div
                   key={t.id}
-                  className={`flex cursor-pointer flex-col gap-2 rounded-lg border border-subtle bg-surface px-4 py-3 shadow-sm transition-[border-color,background-color,opacity] hover:border-default hover:bg-raised/40 ${
+                  className={`flex cursor-pointer flex-col gap-3 rounded-2xl border border-subtle bg-surface p-4 shadow-sm transition-[border-color,box-shadow,opacity] hover:border-default hover:shadow-md ${
                     dragId === t.id ? "opacity-40" : ""
                   }`}
                   draggable
