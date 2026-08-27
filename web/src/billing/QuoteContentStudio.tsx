@@ -689,8 +689,8 @@ export const QuoteContentStudio = forwardRef<
                   ? "border-y border-[var(--quote-table-header)]"
                   : "rounded-2xl border border-[var(--quote-table-header)]",
                 design.headerStyle === "editorial"
-                  ? "md:grid-cols-[1.15fr_0.85fr]"
-                  : "md:grid-cols-[1.05fr_0.95fr]",
+                  ? "md:grid-cols-[1.2fr_0.8fr]"
+                  : "md:grid-cols-[1.1fr_0.9fr]",
                 design.headerStyle === "band" &&
                   "border-l-[6px] border-l-[var(--quote-accent)]",
               )}
@@ -709,13 +709,13 @@ export const QuoteContentStudio = forwardRef<
                     className="h-20 w-24 shrink-0 object-contain"
                   />
                 )}
-                <div className="min-w-0 text-[var(--quote-text)]">
+                <div className="min-w-0 flex-1 text-[var(--quote-text)]">
                   {headerDetails.companyName && (
                     <p className="text-lg font-semibold leading-tight tracking-tight">
                       {headerDetails.companyName}
                     </p>
                   )}
-                  <div className="mt-3 grid gap-x-8 gap-y-3 text-xs leading-5 opacity-70 sm:grid-cols-2">
+                  <div className="mt-4 grid gap-x-10 gap-y-3 text-xs leading-5 opacity-70 sm:grid-cols-2">
                     {headerDetails.address && (
                       <div>
                         <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide opacity-70">
@@ -756,31 +756,33 @@ export const QuoteContentStudio = forwardRef<
               </div>
               <div
                 className={cx(
-                  "min-w-0 border-[var(--quote-table-header)] px-8 py-8 max-sm:border-t max-sm:px-5 max-sm:py-6 md:border-l",
+                  "flex min-w-0 flex-col border-[var(--quote-table-header)] px-8 py-8 max-sm:border-t max-sm:px-5 max-sm:py-6 md:border-l",
                   design.headerAlignment === "right" &&
                     "md:order-1 md:border-l-0 md:border-r",
                 )}
               >
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--quote-accent)]">
-                  Quotation
-                </p>
-                <p
-                  className={cx(
-                    "mt-2 font-semibold leading-none tracking-tight text-[var(--quote-text)]",
-                    design.headerStyle === "editorial" ? "text-3xl" : "text-2xl",
+                <div className="max-w-lg">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--quote-accent)]">
+                    Quotation
+                  </p>
+                  <p
+                    className={cx(
+                      "mt-2 font-semibold leading-none tracking-tight text-[var(--quote-text)]",
+                      design.headerStyle === "editorial" ? "text-3xl" : "text-2xl",
+                    )}
+                  >
+                    {quote?.number ?? "Draft quotation"}
+                  </p>
+                  {customerName && (
+                    <div className="mt-5 text-[var(--quote-text)]">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide opacity-55">
+                        Prepared for
+                      </p>
+                      <p className="mt-1 text-sm font-semibold">{customerName}</p>
+                    </div>
                   )}
-                >
-                  {quote?.number ?? "Draft quotation"}
-                </p>
-                {customerName && (
-                  <div className="mt-5 text-[var(--quote-text)]">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide opacity-55">
-                      Prepared for
-                    </p>
-                    <p className="mt-1 text-sm font-semibold">{customerName}</p>
-                  </div>
-                )}
-                <dl className="mt-6 grid grid-cols-2 gap-x-8 gap-y-3 text-xs text-[var(--quote-text)]">
+                </div>
+                <dl className="mt-auto grid max-w-lg grid-cols-2 gap-x-10 gap-y-3 pt-7 text-xs text-[var(--quote-text)]">
                   <div>
                     <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-55">Issued</dt>
                     <dd className="mt-1.5 font-semibold">
