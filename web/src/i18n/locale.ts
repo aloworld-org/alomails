@@ -5,18 +5,20 @@
 // import a locale directly.
 import { useSyncExternalStore } from "react";
 
+import { de } from "./de";
 import { en, type Catalog } from "./en";
 import { fr } from "./fr";
 import { nl } from "./nl";
 
 /** The languages alo ships. `en` is the source and always complete. */
-export type Locale = "en" | "fr" | "nl";
+export type Locale = "en" | "fr" | "nl" | "de";
 
 /** Display metadata for the language switcher, in menu order. */
 export const LOCALES: ReadonlyArray<{ code: Locale; label: string }> = [
   { code: "en", label: "English" },
   { code: "nl", label: "Nederlands" },
   { code: "fr", label: "Français" },
+  { code: "de", label: "Deutsch" },
 ];
 
 /** Partial catalogs per locale; missing keys fall back to English. */
@@ -24,12 +26,13 @@ const CATALOGS: Record<Locale, Partial<Catalog>> = {
   en: {},
   nl,
   fr,
+  de,
 };
 
 const STORAGE_KEY = "alo.locale";
 
 function isLocale(value: string | null): value is Locale {
-  return value === "en" || value === "fr" || value === "nl";
+  return value === "en" || value === "fr" || value === "nl" || value === "de";
 }
 
 /**
@@ -48,6 +51,7 @@ function detectLocale(): Locale {
   const prefix = nav.slice(0, 2).toLowerCase();
   if (prefix === "nl") return "nl";
   if (prefix === "fr") return "fr";
+  if (prefix === "de") return "de";
   return "en";
 }
 

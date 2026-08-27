@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+import { de } from "./de";
 import { en } from "./en";
 import { fr } from "./fr";
 import { nl } from "./nl";
@@ -38,6 +39,89 @@ describe("catalog fallback", () => {
     for (const key of Object.keys(nl)) {
       expect(en).toHaveProperty(key);
     }
+  });
+
+  test("German keys override English, and every de key is a real English key", () => {
+    const catalog = buildCatalog("de");
+    expect(catalog.moduleMail).toBe("E-Mail");
+    for (const key of Object.keys(de)) {
+      expect(en).toHaveProperty(key);
+    }
+    // German is deliberately partial while M4.1 ships it module by module:
+    // an untranslated surface (here: billing) must read as English, not blank.
+    expect(catalog.billingInvoices).toBe(en.billingInvoices);
+  });
+});
+
+describe("German ships complete modules (M4.1, tranche 1: the mail surface)", () => {
+  /** The sections `de.ts` claims to cover, by key prefix. The catalog is
+   *  allowed to be partial across *modules* — the fallback shows English —
+   *  but never inside one: a reading pane that mixes German buttons with
+   *  English menus reads as broken, not as untranslated. A new English key
+   *  in any of these families must land with German in the same change. */
+  const SHIPPED_PREFIXES =
+    /^(agenda|task|mail|compose|flag|folder|filter|spam|snooze|unsubscribe|appPassword|delegate|sharing|shared|categor|transfer|contact|import|signup|reset|settings|brand|home|module|rsvp|error|twoFactor|recovery)/;
+  const shippedKeys = Object.keys(en).filter((key) =>
+    SHIPPED_PREFIXES.test(key),
+  );
+
+  test("the key list is the real mail surface, not an empty filter", () => {
+    expect(shippedKeys.length).toBeGreaterThan(500);
+    expect(Object.keys(de).length).toBeGreaterThan(600);
+  });
+
+  test("every shipped-module string exists in German", () => {
+    const missing = shippedKeys.filter((key) => !(key in de));
+    expect(
+      missing,
+      `These keys belong to a module de.ts ships and need German:\n  ${missing.join("\n  ")}`,
+    ).toEqual([]);
+  });
+
+  test("German keeps every interpolation a function of the same shape", () => {
+    for (const key of Object.keys(de)) {
+      const source = (en as Record<string, unknown>)[key];
+      const translated = (de as Record<string, unknown>)[key];
+      expect(typeof translated).toBe(typeof source);
+      if (typeof source === "function" && typeof translated === "function") {
+        // A translation that dropped an argument would silently print a
+        // sentence with the number or the date missing.
+        expect(translated.length).toBe(source.length);
+      } else {
+        expect(String(translated).trim()).not.toBe("");
+      }
+    }
+  });
+
+  test("the translated strings really are different words", () => {
+    const catalog = buildCatalog("de");
+    expect(catalog.compose).toBe("Schreiben");
+    expect(catalog.reply).toBe("Antworten");
+    expect(catalog.replyAll).toBe("Allen antworten");
+    expect(catalog.forward).toBe("Weiterleiten");
+    expect(catalog.moduleAgenda).toBe("Kalender");
+    expect(catalog.settingsAppPasswords).toBe("App-Passwörter");
+    // …including the ones built by a function, in both plural branches.
+    expect(catalog.selectedCount(1)).toBe("1 ausgewählt");
+    expect(catalog.selectedCount(3)).toBe("3 ausgewählt");
+    expect(catalog.agendaEventCount(1)).toBe("1 Termin");
+    expect(catalog.agendaEventCount(4)).toBe("4 Termine");
+    expect(catalog.contactsImported(1, 0)).toBe("1 Kontakt importiert.");
+    expect(catalog.contactsImported(2, 1)).toBe(
+      "2 Kontakte importiert (1 übersprungen).",
+    );
+  });
+
+  test("the spam-banner fallback declines correctly in both sentences", () => {
+    // `spamSenderFallback` is interpolated into two different sentences, so
+    // its case must fit both — the reason both are phrased with dative "von".
+    const catalog = buildCatalog("de");
+    expect(catalog.spamReasonDmarc(catalog.spamSenderFallback)).toContain(
+      "von der Absenderdomain stammt",
+    );
+    expect(catalog.spamReasonSpf(catalog.spamSenderFallback)).toContain(
+      "von der Absenderdomain nicht zum E-Mail-Versand",
+    );
   });
 });
 

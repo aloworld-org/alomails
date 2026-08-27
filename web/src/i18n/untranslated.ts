@@ -24,5 +24,10 @@
 // them. Both languages address people formally — "u", "vous" — throughout.
 // And the product's own type names are not translated: Space, Base, Sheet and
 // Doc are called that in every language, while the words around them move.
+//
+// German (`de.ts`) is newer and deliberately partial: it ships complete
+// modules per iteration (M4.1) and is ratcheted per shipped module in
+// `locale.test.ts`, not through this list. Same conventions: "Sie"
+// throughout, type names untranslated.
 export const UNTRANSLATED: readonly string[] = [
 ] as const;
