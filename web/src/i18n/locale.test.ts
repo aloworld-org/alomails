@@ -48,12 +48,13 @@ describe("catalog fallback", () => {
       expect(en).toHaveProperty(key);
     }
     // German is deliberately partial while M4.1 ships it module by module:
-    // an untranslated surface (here: finance) must read as English, not blank.
-    expect(catalog.financeReportPl).toBe(en.financeReportPl);
+    // an untranslated surface (here: inventory) must read as English, not
+    // blank.
+    expect(catalog.inventoryTabCatalog).toBe(en.inventoryTabCatalog);
   });
 });
 
-describe("German ships complete modules (M4.1, tranches 1–5: mail + Docs/Drive + Chat/Meet + admin/control + Billing/CRM/Insights)", () => {
+describe("German ships complete modules (M4.1, tranches 1–6: mail + Docs/Drive + Chat/Meet + admin/control + Billing/CRM/Insights + Projects/Finance)", () => {
   /** The sections `de.ts` claims to cover, by key prefix. The catalog is
    *  allowed to be partial across *modules* — the fallback shows English —
    *  but never inside one: a reading pane that mixes German buttons with
@@ -69,16 +70,18 @@ describe("German ships complete modules (M4.1, tranches 1–5: mail + Docs/Drive
    *  anchored), the record-history panel, and the compose recipient
    *  strays; tranche 5 adds Billing, CRM and Insights entire (their agent
    *  cards are enforced by those modules' own fully-translated describes
-   *  below, which German joined in the same tranche). */
+   *  below, which German joined in the same tranche); tranche 6 adds
+   *  Projects and Finance entire, their agent cards enforced the same way
+   *  (B3.11 and B4.15 below). */
   const SHIPPED_PREFIXES =
-    /^(agenda|task|mail|compose|flag|folder|filter|spam|snooze|unsubscribe|appPassword|delegate|sharing|shared|categor|transfer|contact|import|signup|reset|settings|brand|home|module|rsvp|error|twoFactor|recovery|doc|drive|sheet|office|picker|search|ai|eq|spec|tb|ref|block|heading|para|table|chart|code|insert|font|size|align|text|style|highlight|strikethrough|bullet|numbered|horizontal|clear|close|cancel|chat|meet|admin|audit|control|domain|group|invite|overview|provider|security|tenant|user|dkim|kind|access|billing|crm|insights|add$|save$|deleteLabel$|agentApprove$|agentDiscard$|aloDesc$|anthropicDesc$|openaiDesc$|mistralDesc$|ollamaDesc$|customDesc$|builtInTag$|connectTitle$|configureTitle$|removeRecipient$|recipientCount$|archiveUnavailable$)/;
+    /^(agenda|task|mail|compose|flag|folder|filter|spam|snooze|unsubscribe|appPassword|delegate|sharing|shared|categor|transfer|contact|import|signup|reset|settings|brand|home|module|rsvp|error|twoFactor|recovery|doc|drive|sheet|office|picker|search|ai|eq|spec|tb|ref|block|heading|para|table|chart|code|insert|font|size|align|text|style|highlight|strikethrough|bullet|numbered|horizontal|clear|close|cancel|chat|meet|admin|audit|control|domain|group|invite|overview|provider|security|tenant|user|dkim|kind|access|billing|crm|insights|projects|finance|add$|save$|deleteLabel$|agentApprove$|agentDiscard$|aloDesc$|anthropicDesc$|openaiDesc$|mistralDesc$|ollamaDesc$|customDesc$|builtInTag$|connectTitle$|configureTitle$|removeRecipient$|recipientCount$|archiveUnavailable$)/;
   const shippedKeys = Object.keys(en).filter((key) =>
     SHIPPED_PREFIXES.test(key),
   );
 
   test("the key list is the real shipped surface, not an empty filter", () => {
-    expect(shippedKeys.length).toBeGreaterThan(2300);
-    expect(Object.keys(de).length).toBeGreaterThan(2450);
+    expect(shippedKeys.length).toBeGreaterThan(2900);
+    expect(Object.keys(de).length).toBeGreaterThan(3100);
   });
 
   test("every shipped-module string exists in German", () => {
@@ -206,6 +209,37 @@ describe("German ships complete modules (M4.1, tranches 1–5: mail + Docs/Drive
     expect(catalog.insightsNoteUnconverted(3)).toContain(
       "3 Dokumente konnten nicht",
     );
+    // Tranche 6: Projects/Finance. A week's status chip carries the history
+    // verb (sent back = zurückgewiesen, approved = genehmigt), and German
+    // durations are written the way a German timesheet writes them.
+    expect(catalog.projectsWeekRejected).toBe(catalog.auditActionReject);
+    expect(catalog.projectsWeekApproved).toBe(catalog.auditActionApprove);
+    expect(catalog.projectsHoursShort(7)).toBe("7 Std.");
+    expect(catalog.projectsMinutesShort(30)).toBe("30 Min.");
+    expect(catalog.projectsPercent(60)).toBe("60 %");
+    expect(catalog.projectsSuggestionsWaiting(1)).toContain(
+      "1 Vorschlag wartet",
+    );
+    expect(catalog.projectsSuggestionsWaiting(3)).toContain(
+      "3 Vorschläge warten",
+    );
+    // Finance: the four reports carry the names a German accountant looks
+    // for, and no sentence makes a verb agree with an interpolated amount.
+    expect(catalog.financeReportPl).toBe("Gewinn- und Verlustrechnung");
+    expect(catalog.financeReportBalance).toBe("Bilanz");
+    expect(catalog.financeChartLoadFailed).toContain("Kontenplan");
+    expect(catalog.financeBankStillOwedIs("1,00 €")).toBe("1,00 € noch offen");
+    expect(catalog.financeBankPickSubtitle("1,00 €")).toContain(
+      "Eingegangen: 1,00 €",
+    );
+    expect(catalog.financeReportUnbalanced("1,00 €")).toContain(
+      "ein Betrag von 1,00 € ist unerklärt",
+    );
+    expect(catalog.financeMarkPaidBackSubtitle("Marie", "1,00 €")).toBe(
+      "1,00 € zurück an Marie.",
+    );
+    expect(catalog.financeReportOpenDocuments(1)).toBe("1 offenes Dokument");
+    expect(catalog.financeReportOpenDocuments(3)).toBe("3 offene Dokumente");
   });
 
   test("the spam-banner fallback declines correctly in both sentences", () => {
@@ -606,6 +640,7 @@ describe("alo Projects is fully translated (B3.11)", () => {
   test.each([
     ["fr", fr],
     ["nl", nl],
+    ["de", de],
   ])("%s translates every Projects string", (_locale, catalog) => {
     const missing = projectsKeys.filter((key) => !(key in catalog));
     expect(missing).toEqual([]);
@@ -614,6 +649,7 @@ describe("alo Projects is fully translated (B3.11)", () => {
   test.each([
     ["fr", fr],
     ["nl", nl],
+    ["de", de],
   ])(
     "%s keeps every interpolation a function of the same shape",
     (locale, catalog) => {
@@ -627,17 +663,20 @@ describe("alo Projects is fully translated (B3.11)", () => {
           expect(String(translated).trim()).not.toBe("");
         }
       }
-      expect(locale).toMatch(/^(fr|nl)$/);
+      expect(locale).toMatch(/^(fr|nl|de)$/);
     },
   );
 
   test("the translated strings really are different words", () => {
     expect(buildCatalog("fr").moduleProjects).toBe("Projets");
     expect(buildCatalog("nl").moduleProjects).toBe("Projecten");
+    expect(buildCatalog("de").moduleProjects).toBe("Projekte");
     expect(buildCatalog("fr").projectsMilestoneReached).toBe("Atteint");
     expect(buildCatalog("nl").projectsMilestoneReached).toBe("Bereikt");
+    expect(buildCatalog("de").projectsMilestoneReached).toBe("Erreicht");
     expect(buildCatalog("fr").projectsWeekRejected).toBe("Renvoyée");
     expect(buildCatalog("nl").projectsWeekRejected).toBe("Teruggestuurd");
+    expect(buildCatalog("de").projectsWeekRejected).toBe("Zurückgewiesen");
     // …including the ones built by a function, and both branches of a plural.
     expect(buildCatalog("fr").projectsSuggestionsWaiting(1)).toContain(
       "1 proposition",
@@ -651,6 +690,12 @@ describe("alo Projects is fully translated (B3.11)", () => {
     expect(buildCatalog("nl").projectsSuggestionsWaiting(3)).toContain(
       "3 voorstellen wachten",
     );
+    expect(buildCatalog("de").projectsSuggestionsWaiting(1)).toContain(
+      "1 Vorschlag wartet",
+    );
+    expect(buildCatalog("de").projectsSuggestionsWaiting(3)).toContain(
+      "3 Vorschläge warten",
+    );
   });
 
   test("a duration is written in the reader's own units", () => {
@@ -661,9 +706,13 @@ describe("alo Projects is fully translated (B3.11)", () => {
     expect(buildCatalog("fr").projectsMinutesShort(30)).toBe("30 min");
     expect(buildCatalog("nl").projectsHoursShort(7)).toBe("7 u");
     expect(buildCatalog("nl").projectsMinutesShort(30)).toBe("30 min");
-    // French puts a space before the percent sign; Dutch does not.
+    expect(buildCatalog("de").projectsHoursShort(7)).toBe("7 Std.");
+    expect(buildCatalog("de").projectsMinutesShort(30)).toBe("30 Min.");
+    // French puts a space before the percent sign (as does German, per
+    // DIN 5008); Dutch does not.
     expect(buildCatalog("fr").projectsPercent(60)).toBe("60 %");
     expect(buildCatalog("nl").projectsPercent(60)).toBe("60%");
+    expect(buildCatalog("de").projectsPercent(60)).toBe("60 %");
   });
 
   test("every reason a meeting was left out has words in each language", () => {
@@ -680,7 +729,7 @@ describe("alo Projects is fully translated (B3.11)", () => {
       "outsideRange",
       "somethingNewerServersKnow",
     ];
-    for (const locale of ["fr", "nl"] as const) {
+    for (const locale of ["fr", "nl", "de"] as const) {
       const say = buildCatalog(locale).agentDraftedReason;
       for (const code of codes) {
         expect(say(code)).not.toBe(en.agentDraftedReason(code));
@@ -692,6 +741,9 @@ describe("alo Projects is fully translated (B3.11)", () => {
     );
     expect(buildCatalog("nl").agentDraftedReason("weekLocked")).toBe(
       "die week is ingediend",
+    );
+    expect(buildCatalog("de").agentDraftedReason("weekLocked")).toBe(
+      "diese Woche ist eingereicht",
     );
   });
 });
@@ -729,6 +781,7 @@ describe("alo Finance is fully translated (B4.15)", () => {
   test.each([
     ["fr", fr],
     ["nl", nl],
+    ["de", de],
   ])("%s translates every Finance string", (_locale, catalog) => {
     const missing = financeKeys.filter((key) => !(key in catalog));
     expect(missing).toEqual([]);
@@ -737,6 +790,7 @@ describe("alo Finance is fully translated (B4.15)", () => {
   test.each([
     ["fr", fr],
     ["nl", nl],
+    ["de", de],
   ])(
     "%s keeps every interpolation a function of the same shape",
     (locale, catalog) => {
@@ -750,24 +804,30 @@ describe("alo Finance is fully translated (B4.15)", () => {
           expect(String(translated).trim()).not.toBe("");
         }
       }
-      expect(locale).toMatch(/^(fr|nl)$/);
+      expect(locale).toMatch(/^(fr|nl|de)$/);
     },
   );
 
   test("the translated strings really are different words", () => {
     expect(buildCatalog("fr").moduleFinance).toBe("Finance");
     expect(buildCatalog("nl").moduleFinance).toBe("Financiën");
+    expect(buildCatalog("de").moduleFinance).toBe("Finanzen");
     // The four report titles are the words an accountant looks for.
     expect(buildCatalog("fr").financeReportPl).toBe("Compte de résultat");
     expect(buildCatalog("nl").financeReportPl).toBe("Winst-en-verliesrekening");
+    expect(buildCatalog("de").financeReportPl).toBe(
+      "Gewinn- und Verlustrechnung",
+    );
     expect(buildCatalog("fr").financeReportVat).toBe("Déclaration de TVA");
     expect(buildCatalog("nl").financeReportVat).toBe("Btw-aangifte");
+    expect(buildCatalog("de").financeReportVat).toBe("MwSt.-Erklärung");
     expect(buildCatalog("fr").financeChartLoadFailed).toContain(
       "plan comptable",
     );
     expect(buildCatalog("nl").financeChartLoadFailed).toContain(
       "rekeningschema",
     );
+    expect(buildCatalog("de").financeChartLoadFailed).toContain("Kontenplan");
     // …including the ones built by a function, and both branches of a plural.
     expect(buildCatalog("fr").financeReportOpenDocuments(1)).toBe(
       "1 document ouvert",
@@ -780,6 +840,12 @@ describe("alo Finance is fully translated (B4.15)", () => {
     );
     expect(buildCatalog("nl").financeReportOpenDocuments(3)).toBe(
       "3 openstaande documenten",
+    );
+    expect(buildCatalog("de").financeReportOpenDocuments(1)).toBe(
+      "1 offenes Dokument",
+    );
+    expect(buildCatalog("de").financeReportOpenDocuments(3)).toBe(
+      "3 offene Dokumente",
     );
   });
 
@@ -816,6 +882,13 @@ describe("alo Finance is fully translated (B4.15)", () => {
     expect(buildCatalog("nl").financeReportAgedEmptyBody).toContain(
       "uitgegeven document",
     );
+    expect(buildCatalog("de").billingStatusIssued).toBe("Ausgestellt");
+    expect(buildCatalog("de").financeBankNoOpenInvoices).toContain(
+      "ausgestellte Rechnung",
+    );
+    expect(buildCatalog("de").financeReportAgedEmptyBody).toContain(
+      "ausgestellte Dokument",
+    );
   });
 
   test("every reason and kind the agent cards render has words in each language", () => {
@@ -835,7 +908,7 @@ describe("alo Finance is fully translated (B4.15)", () => {
       "missingRecurring",
       "somethingNewerServersKnow",
     ];
-    for (const locale of ["fr", "nl"] as const) {
+    for (const locale of ["fr", "nl", "de"] as const) {
       const say = buildCatalog(locale);
       for (const reason of reasons) {
         expect(say.agentCategoriseReason(reason)).not.toBe(
@@ -853,6 +926,9 @@ describe("alo Finance is fully translated (B4.15)", () => {
     );
     expect(buildCatalog("nl").agentAnomalyKind("duplicate")).toBe(
       "Twee keer geboekt in één week",
+    );
+    expect(buildCatalog("de").agentAnomalyKind("duplicate")).toBe(
+      "Zweimal in einer Woche gebucht",
     );
   });
 });

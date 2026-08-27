@@ -23,10 +23,16 @@
 // multi-currency, reminders, recurring), CRM entire (board, deals,
 // win/loss, the billing handoff, report, log, linked conversations) and
 // Insights entire (boards, the gallery, ask-to-chart, chart labels),
-// plus the agent cards those three surfaces render. Vocabulary held
-// from tranche 4: a document is "ausgestellt" (matching
-// auditActionIssue), a declined quote is "abgelehnt" (matching
-// auditActionDecline), and the module names stay the rail's.
+// plus the agent cards those three surfaces render — and (tranche 6)
+// Projects entire (the engagement list, the week grid, milestones and
+// templates, the approvals inbox, the profitability report, the timer)
+// and Finance entire (expense claims, the bank and reconciliation, the
+// chart of accounts, the four reports), plus the agent cards both
+// render. Vocabulary held from tranche 4: a document is "ausgestellt"
+// (matching auditActionIssue), a declined quote is "abgelehnt"
+// (matching auditActionDecline), a sent-back timesheet is
+// "zurückgewiesen" (matching auditActionReject), and the module names
+// stay the rail's.
 import type { Catalog } from "./en";
 
 export const de: Partial<Catalog> = {
@@ -3141,4 +3147,1010 @@ export const de: Partial<Catalog> = {
   insightsAge90Plus: "Über 90 Tage",
   insightsQuarter: (quarter: number, year: number) => `Q${quarter} ${year}`,
   insightsWeek: (week: number, year: number) => `KW ${week} ${year}`,
+
+  // Projekte (tranche 6). Die Wörter der Kundenarbeit: das Engagement, die
+  // Stunden darauf, die Woche, als die sie eingereicht werden, und die
+  // Entscheidung über diese Woche. Dauern schreibt der Katalog, wie man sie
+  // sagt („7 Std. 30 Min.“), nie als Dezimalstunden; „abrechenbar“ ist das
+  // eine Wort für billable, und die zurückgewiesene Woche trägt das Wort des
+  // Verlaufs (auditActionReject), wie es die Statuschip-Regel verlangt.
+  projectsTabList: "Alle Projekte",
+  projectsTabMyWork: "Meine Arbeit",
+  projectsWorkspaceTasks: "Aufgaben",
+  projectsTabWeek: "Stundenzettel",
+  projectsTabApprovals: "Genehmigungen",
+  projectsTabReports: "Berichte",
+  projectsTabPlan: "Zeitleiste",
+  projectsLoadFailed: "Ihre Projekte konnten nicht geladen werden.",
+  projectsWorkspaceLoadFailed: "Dieses Projekt konnte nicht geöffnet werden.",
+  projectsWorkspaceUnavailable: "Projekt nicht verfügbar",
+  projectsRetry: "Erneut versuchen",
+  projectsSaveFailed: "Die Änderung konnte nicht gespeichert werden.",
+  projectsStartFailed: "Der Timer konnte nicht gestartet werden.",
+  projectsStopFailed: "Der Timer konnte nicht angehalten werden.",
+  projectsCancel: "Abbrechen",
+  projectsSave: "Speichern",
+  projectsEdit: "Bearbeiten",
+  projectsOpenProject: (name: string) => `${name} öffnen`,
+  projectsDetailsTitle: "Projektdetails",
+  projectsDetailsSubtitle:
+    "Halten Sie Ergebnis, Zeitplan und aktuellen Stand für alle nachvollziehbar fest.",
+  projectsDescription: "Beschreibung",
+  projectsStatus: "Status",
+  projectsStatusPlanned: "Geplant",
+  projectsStatusActive: "Aktiv",
+  projectsStatusOnHold: "Pausiert",
+  projectsStatusCompleted: "Abgeschlossen",
+  projectsStatusCancelled: "Abgebrochen",
+  projectsTargetOn: "Zieldatum",
+  projectsDatesInvalid: "Das Zieldatum kann nicht vor dem Startdatum liegen.",
+  projectsActions: "Aktionen",
+  projectsNew: "Neues Projekt",
+  projectsNewTitle: "Projekt erstellen",
+  projectsNewSubtitle:
+    "Benennen Sie die Arbeit und entscheiden Sie, für wen sie ist.",
+  projectsName: "Projektname",
+  projectsNamePlaceholder: "Zum Beispiel Website-Relaunch",
+  projectsWorkType: "Diese Arbeit ist für",
+  projectsClientWork: "Einen Kunden",
+  projectsInternalWork: "Unser Unternehmen",
+  projectsClientWorkHint: "Diese Arbeit einem Kunden berechnen",
+  projectsInternalWorkHint: "Diese Arbeit intern behalten",
+  projectsNewCustomerHint:
+    "Sätze und Budgets können Sie nach dem Erstellen des Projekts hinzufügen.",
+  projectsCreate: "Projekt erstellen",
+  projectsCreateFailed: "Das Projekt konnte nicht erstellt werden.",
+
+  // Dauern und Sätze. `projectsNoTime` ist der Strich einer leeren Zelle.
+  projectsNoTime: "—",
+  projectsHoursShort: (hours: number) => `${hours} Std.`,
+  projectsMinutesShort: (minutes: number) => `${minutes} Min.`,
+  projectsPerHour: (amount: string) => `${amount}/Std.`,
+  projectsPercent: (percent: number) => `${percent} %`,
+  projectsUnpriced: "Nicht bewertet",
+
+  // Die Projektliste.
+  projectsProject: "Projekt",
+  projectsAllProjects: "Alle Projekte",
+  projectsCustomer: "Kunde",
+  projectsCustomerHint:
+    "Der Kunde, dem die Stunden dieses Projekts in Rechnung gestellt werden.",
+  projectsCustomerPick: "Kunden wählen…",
+  projectsNoCustomersAvailable:
+    "Es gibt noch keine Kunden. Legen Sie zuerst unter Rechnungen einen an.",
+  projectsCustomerUnknown: "Unbekannter Kunde",
+  projectsInternal: "Intern",
+  projectsRate: "Stundensatz",
+  projectsRateHint:
+    "Bleibt er leer, werden die Stunden gezählt, aber nicht bewertet.",
+  projectsRateInvalid:
+    "Schreiben Sie den Satz als Betrag, zum Beispiel 95,00.",
+  projectsHoursLogged: "Stunden",
+  projectsBillableHours: "Abrechenbar",
+  projectsOfWhichBillable: (duration: string) => `${duration} abrechenbar`,
+  projectsBudget: "Budget",
+  projectsHealth: "Projektlage",
+  projectsHealthOnTrack: "Auf Kurs",
+  projectsHealthAtRisk: "Braucht Aufmerksamkeit",
+  projectsHealthNeedsTarget:
+    "Setzen Sie ein Zieldatum, damit das Lieferrisiko sichtbar wird.",
+  projectsUpdates: "Projekt-Updates",
+  projectsUpdatesSubtitle:
+    "Teilen Sie Fortschritt, Entscheidungen und Risiken mit allen, die diesem Projekt folgen.",
+  projectsUpdateHealth: "Lage aktualisieren",
+  projectsUpdateOffTrack: "Nicht auf Kurs",
+  projectsUpdatePlaceholder:
+    "Was hat sich geändert? Ergebnis, Entscheidung, Risiko oder nächster Schritt.",
+  projectsUpdateHint:
+    "Kurz und nützlich für jemanden, der später aufholen muss.",
+  projectsPublishUpdate: "Update veröffentlichen",
+  projectsUpdatesEmpty: "Noch keine Updates",
+  projectsUpdatesEmptyBody:
+    "Veröffentlichen Sie das erste Update und geben Sie diesem Projekt eine nachlesbare Geschichte.",
+  projectsUpdatesLoadFailed:
+    "Die Projekt-Updates konnten nicht geladen werden.",
+  projectsUpdateSaveFailed: "Das Update konnte nicht veröffentlicht werden.",
+  projectsRemoveAttachment: "Anhang entfernen",
+  projectsSomeone: "Jemand",
+  projectsBlockedTasks: (count: number) =>
+    count === 1 ? "1 blockierte Aufgabe" : `${count} blockierte Aufgaben`,
+  projectsOverdueTasks: (count: number) =>
+    count === 1 ? "1 überfällige Aufgabe" : `${count} überfällige Aufgaben`,
+  projectsWorkload: "Auslastung",
+  projectsWorkloadEmpty: "Noch keine offene Arbeit zugewiesen.",
+  projectsOpenTasks: (count: number) =>
+    count === 1 ? "1 offene Aufgabe" : `${count} offene Aufgaben`,
+  projectsBudgetUsed: "Budget verbraucht",
+  projectsBudgetHours: "Budget (Stunden)",
+  projectsBudgetAmount: "Budget (Betrag)",
+  projectsBudgetHint:
+    "Nur zur Orientierung. Nichts verhindert eine Stunde darüber hinaus.",
+  projectsBudgetHoursInvalid:
+    "Schreiben Sie das Budget als ganze Stundenzahl.",
+  projectsBudgetAmountInvalid:
+    "Schreiben Sie das Budget als Betrag, zum Beispiel 7600,00.",
+  projectsLastWorked: "Zuletzt gearbeitet",
+  projectsNeverWorked: "Nie",
+  projectsStartsOn: "Beginnt am",
+  projectsMakeClientWork: "Zu Kundenarbeit machen",
+  projectsStartTimerOn: (project: string) => `Timer auf ${project} starten`,
+  projectsStartTimer: "Timer starten",
+  projectsEmptyTitle: "Noch keine Projekte",
+  projectsEmptyBody:
+    "Legen Sie ein Projekt für Kundenarbeit oder für das eigene Unternehmen an und erfassen Sie dann Zeit darauf.",
+
+  // Das Engagement-Formular.
+  projectsClientSubtitle:
+    "Für wen dieses Projekt gearbeitet wird und was eine Stunde darauf wert ist.",
+  projectsPersonalBoard:
+    "Das ist ein persönliches Board. Nur ein Teamprojekt kann Kundenarbeit sein — seine Stunden genehmigt jemand anderes, und sie werden einem Kunden in Rechnung gestellt.",
+  projectsDetach: "Intern machen",
+  projectsDetachTitle: "Diese Arbeit intern machen?",
+  projectsDetachBody:
+    "Die Stunden bleiben genau, wie sie sind. Was wegfällt, ist der Anspruch, sie einem Kunden zu berechnen — und Stunden, die schon auf einer Rechnung stehen, behalten diese Rechnung.",
+
+  // Das Wochenraster.
+  projectsPreviousWeek: "Vorherige",
+  projectsNextWeek: "Nächste",
+  projectsThisWeek: "Diese Woche",
+  projectsWeekOf: (from: string, to: string) => `${from} – ${to}`,
+  projectsBillableOf: (hours: string) => `${hours} abrechenbar`,
+  projectsWeek: "Woche",
+  projectsDay: "Tag",
+  projectsTask: "Aufgabe",
+  projectsDuration: "Dauer",
+  projectsDurationHint:
+    "90, 1:30 und 1,5 bedeuten alle anderthalb Stunden. 2h bedeutet zwei Stunden.",
+  projectsDurationInvalid:
+    "Schreiben Sie eine Dauer wie 90, 1:30, 1,5 oder 2h — höchstens einen Tag.",
+  projectsTotal: "Gesamt",
+  projectsAddRow: "Projektzeile hinzufügen…",
+  projectsBillable: "Für den Kunden abrechenbar",
+  projectsNotBillable: "nicht abrechenbar",
+  projectsNote: "Notiz",
+  projectsNoNote: "Keine Notiz",
+  projectsNoteHint:
+    "Woran Sie gearbeitet haben. Niemand außerhalb dieses Arbeitsbereichs liest das.",
+  projectsProposedEntry: "vorgeschlagen",
+  projectsBilledEntry: "auf einer Rechnung",
+  projectsReadyToInvoice: "Bereit zur Abrechnung",
+  projectsReadyToInvoiceBody: (duration: string) =>
+    `${duration} genehmigte Zeit ist noch nicht abgerechnet.`,
+  projectsWorkflowEyebrow: "Nächster Schritt",
+  projectsWorkflowLabel: "Projektablauf",
+  projectsWorkflowTasks: "Aufgaben",
+  projectsWorkflowTime: "Zeit",
+  projectsWorkflowApproval: "Genehmigung",
+  projectsWorkflowInvoice: "Rechnung",
+  projectsWorkflowTasksTitle: "Die Arbeit festlegen",
+  projectsWorkflowTasksBody:
+    "Legen Sie die erste Aufgabe an, damit das Team weiß, was als Nächstes ansteht.",
+  projectsWorkflowTimeTitle: "Die Arbeit erfassen",
+  projectsWorkflowTimeBody:
+    "Erfassen Sie Zeit auf dieses Projekt oder seine Aufgaben, solange die Arbeit frisch ist.",
+  projectsWorkflowApprovalTitle: "Die Zeit zur Genehmigung einreichen",
+  projectsWorkflowApprovalBody:
+    "Prüfen Sie die Woche und reichen Sie sie ein, damit genehmigte Kundenarbeit abgerechnet werden kann.",
+  projectsWorkflowAwaitingApprovalTitle: "Zeit wartet auf Genehmigung",
+  projectsWorkflowAwaitingApprovalBody:
+    "Diese Zeit ist bereits eingereicht. Prüfen Sie den Stundenzettel oder warten Sie vor der Abrechnung auf die Genehmigung.",
+  projectsWorkflowInvoiceTitle: "Aus genehmigter Arbeit eine Rechnung machen",
+  projectsWorkflowContinueTitle: "Das Projekt in Bewegung halten",
+  projectsWorkflowContinueBody:
+    "Erfassen Sie den nächsten Zeiteintrag, während die Arbeit weitergeht.",
+  projectsReviewTimesheet: "Stundenzettel prüfen",
+  projectsCreateInvoice: "Rechnung erstellen",
+  projectsCreateInvoiceSubtitle:
+    "Wählen Sie die genehmigte Zeit, die in einen neuen Rechnungsentwurf übernommen wird.",
+  projectsInvoiceThrough: "Abrechnen bis",
+  projectsInvoiceCutoffHint:
+    "Nur genehmigte, noch nicht abgerechnete Zeit bis zu diesem Tag wird aufgenommen.",
+  projectsNothingToInvoice: "Nichts bereit zur Abrechnung",
+  projectsNothingToInvoiceBody:
+    "Genehmigte Zeit erscheint hier, sobald die Woche genehmigt ist.",
+  projectsUnratedTime: "Für diese Zeit ist kein Stundensatz festgelegt",
+  projectsInvoiceRate: (rate: string) => `${rate} pro Stunde`,
+  projectsBelgianVat:
+    "Auf diesen Entwurf wird der belgische Regelsatz der MwSt. angewendet.",
+  projectsCreateDraftInvoice: "Rechnungsentwurf erstellen",
+  projectsInvoiceLoadFailed: "Die genehmigte Zeit konnte nicht geladen werden.",
+  projectsInvoiceCreateFailed:
+    "Der Rechnungsentwurf konnte nicht erstellt werden.",
+  projectsCellLabel: (project: string, day: string, duration: string) =>
+    `${project}, ${day}: ${duration}`,
+  projectsDeleteEntry: "Löschen",
+  projectsDeleteEntryTitle: "Diese Stunden löschen?",
+  projectsDeleteEntryBody:
+    "Der Eintrag ist dann endgültig weg. Dafür muss seine Woche offen sein.",
+  projectsWeekEmptyTitle: "Diese Woche ist nichts erfasst",
+  projectsWeekEmptyBody:
+    "Erfassen Sie Ihren ersten Zeiteintrag. Wählen Sie ein Projekt, geben Sie Dauer und Notiz ein, und er erscheint in dieser Wochenübersicht.",
+  projectsWeekTitle: "Wöchentlicher Stundenzettel",
+  projectsWeekPurpose:
+    "Erfassen Sie Ihre Arbeit, prüfen Sie die Woche und reichen Sie sie dann zur Genehmigung ein.",
+  projectsWeekAllScope: "Ihre ganze Woche über alle Projekte.",
+  projectsWeekProjectScope: (project: string) =>
+    `Zeit für ${project}. Eingereicht wird trotzdem Ihre ganze Woche.`,
+  projectsAddTime: "Zeit erfassen",
+  projectsChooseTimeProject: "Woran haben Sie gearbeitet?",
+  projectsChooseTimeProjectHint:
+    "Wählen Sie ein Projekt, um für diese Woche einen Zeiteintrag zu erfassen.",
+  projectsBillableOfWeek: (duration: string) => `${duration} abrechenbar`,
+  projectsCompleteWeek: "Ganze Woche",
+  projectsCompleteWeekSubmission: "Ganze Woche zur Genehmigung eingereicht",
+  projectsProposedInWeek: (duration: string) =>
+    `${duration} vorgeschlagen, noch nicht angenommen`,
+  // Über einen Vorschlag entscheiden: erst das Annehmen macht ihn zur Stunde.
+  projectsAcceptEntry: "Annehmen",
+  projectsRejectEntry: "Verwerfen",
+  projectsAcceptEntryLabel: (project: string, duration: string) =>
+    `Vorschlag über ${duration} auf ${project} annehmen`,
+  projectsRejectEntryLabel: (project: string, duration: string) =>
+    `Vorschlag über ${duration} auf ${project} verwerfen`,
+  projectsSuggestionsWaiting: (count: number) =>
+    count === 1
+      ? "1 Vorschlag wartet diese Woche auf Sie."
+      : `${count} Vorschläge warten diese Woche auf Sie.`,
+  projectsSubmitWeek: "Woche einreichen",
+  projectsWithdrawWeek: "Zurücknehmen",
+  projectsRejectedBecause: (note: string) => `Zurückgewiesen: ${note}`,
+
+  // Der Plan — Meilensteine auf einer Zeitachse. „Erreicht“ ist bewusst das
+  // Wort eines Menschen, nie „abgeschlossen“: ein Meilenstein ist erreicht,
+  // wenn jemand sagt, das Ergebnis wurde angenommen.
+  projectsPlanLoadFailed: "Der Plan konnte nicht geladen werden.",
+  projectsMilestoneAdd: "Meilenstein hinzufügen",
+  projectsMilestoneNew: "Neuer Meilenstein",
+  projectsMilestoneName: "Meilenstein",
+  projectsMilestoneNameHint:
+    "Wofür der Termin steht — „Design abgenommen“, „Beta beim Pilotkunden“.",
+  projectsMilestoneDue: "Datum",
+  projectsMilestoneDueHint:
+    "Der Tag, an dem er fällig ist. Ihn zu verschieben ist normal; nichts wird dadurch angehalten.",
+  projectsMilestoneReach: "Als erreicht markieren",
+  projectsMilestoneReopen: "Doch noch nicht erreicht",
+  projectsMilestoneReached: "Erreicht",
+  projectsMilestoneLate: "Überfällig",
+  projectsMilestoneNoTasks: "Noch keine Aufgaben darunter",
+  projectsMilestoneTasksClosed: (done: number, total: number) =>
+    `${done} von ${total} Aufgaben geschlossen`,
+  projectsMilestoneDelete: "Löschen",
+  projectsMilestoneDeleteTitle: "Diesen Meilenstein löschen?",
+  projectsMilestoneDeleteBody:
+    "Der Termin fällt weg; die Aufgaben darunter bleiben genau, wo sie auf dem Board sind.",
+  projectsPlanUnplaced: "Nicht im Plan",
+  projectsPlanPlace: "Einordnen unter…",
+  projectsPlanPlaceTask: (task: string) =>
+    `${task} unter einen Meilenstein stellen`,
+  projectsPlanRemove: "Herausnehmen",
+  projectsPlanEmptyTitle: "Noch kein Plan",
+  projectsPlanEmptyBody:
+    "Ein Meilenstein ist ein benannter Termin in diesem Projekt — die Termine, nach denen ein Kunde fragt. Legen Sie den ersten an und stellen Sie dann die Aufgaben des Boards darunter.",
+  projectsTimelineAllEmptyTitle: "Keine Meilensteine in Ihren Projekten",
+  projectsTimelineAllEmptyBody:
+    "Wählen Sie oben ein Projekt, um seinen ersten Meilenstein anzulegen, oder lassen Sie diese Ansicht auf Alle Projekte für die Zeitleiste des Portfolios.",
+
+  // Vorlagen: ein wiederverwendbares Board und die Kopie, die davon startet.
+  projectsTemplateNew: "Neu aus Vorlage",
+  projectsTemplateNewTitle: "Aus einer Vorlage starten",
+  projectsTemplateNewSubtitle: "Die Form der Arbeit, auf neuen Terminen",
+  projectsTemplateCreate: "Projekt erstellen",
+  projectsTemplateWhich: "Vorlage",
+  projectsTemplateWhichHint:
+    "Karten, Spalten, Checklisten und Labels kommen mit — nicht Zuständige, Kommentare, Stunden oder erledigte Karten.",
+  projectsTemplateOption: (name: string, tasks: number, milestones: number) =>
+    `${name} — ${tasks} ${tasks === 1 ? "Karte" : "Karten"}, ${milestones} ${
+      milestones === 1 ? "Meilenstein" : "Meilensteine"
+    }`,
+  projectsTemplateName: "Name des neuen Projekts",
+  projectsTemplateNameHint: "So heißt es auf dem Board.",
+  projectsTemplateStarts: "Beginnt am",
+  projectsTemplateStartsHint:
+    "Der erste Meilenstein der Vorlage landet hier; alle anderen Termine behalten ihren Abstand.",
+  projectsTemplateCustomerHint:
+    "Eine Vorlage ist eine Form, kein Kunde. Für interne Arbeit leer lassen; Satz und Budget kommen so oder so mit.",
+  projectsTemplateNoCustomer: "Interne Arbeit",
+  projectsTemplateNoPlan:
+    "Diese Vorlage hat keine Meilensteine, ihre Termine werden also genau so übernommen, wie sie sind.",
+  projectsTemplateMarkOn: (project: string) => `${project} zur Vorlage machen`,
+  projectsTemplateUnmarkOn: (project: string) =>
+    `${project} ist eine Vorlage — Markierung entfernen`,
+  projectsTemplateEmptyTitle: "Noch keine Vorlagen",
+  projectsTemplateChooseProject: "Projekt wählen",
+  projectsTemplateEmptyBody:
+    "Öffnen Sie ein Projekt, das Sie genauso wieder durchführen würden, und drücken Sie den Stern daneben. Es bleibt ein gewöhnliches Board — es kann nur zusätzlich kopiert werden.",
+  projectsTemplateFailed: "Das hat nicht geklappt.",
+  projectsTemplatesLoadFailed: "Die Vorlagen konnten nicht geladen werden.",
+
+  // Wo eine Woche steht. Das Wort des Servers, nie im Browser neu hergeleitet.
+  projectsWeekOpen: "Offen",
+  projectsWeekSubmitted: "Eingereicht",
+  projectsWeekApproved: "Genehmigt",
+  projectsWeekRejected: "Zurückgewiesen",
+
+  // Der Genehmigungs-Eingang — der eine Bildschirm hier, der Personen nennt.
+  projectsPerson: "Person",
+  projectsSubmittedAt: "Eingereicht",
+  projectsApprove: "Genehmigen",
+  projectsApprovalComplete: "Woche genehmigt",
+  projectsApprovalCompleteBody:
+    "Sehen Sie sich die betroffenen Projekte an und rechnen Sie Kundenarbeit ab, die bereit ist.",
+  projectsReject: "Zurückweisen",
+  projectsRejectTitle: "Diese Woche zurückweisen?",
+  projectsRejectBody: (person: string) =>
+    `${person} wird lesen, was Sie hier schreiben.`,
+  projectsRejectPlaceholder: "Was zu korrigieren ist",
+  projectsApprovalsEmptyTitle: "Nichts zu genehmigen",
+  projectsApprovalsEmptyBody:
+    "Wochen, die eingereicht werden, landen hier — die älteste zuerst.",
+
+  // Der Rentabilitätsbericht — Stunden × Sätze gegen ein Budget. Die Texte
+  // sagen „Wert“ und nie „Marge“: das hier ist die Erlösseite.
+  projectsReportTitle: "Rentabilität",
+  projectsReportPortfolioTitle: "Portfoliobericht",
+  projectsReportAllScope: "Alle Kundenprojekte, auf die Sie Zugriff haben.",
+  projectsReportFrom: "Von",
+  projectsReportTo: "Bis",
+  projectsReportShow: "Anzeigen",
+  projectsReportThisQuarter: "Dieses Quartal",
+  projectsReportLastQuarter: "Letztes Quartal",
+  projectsReportDownloadCsv: "CSV herunterladen",
+  projectsReportDownloadFailed:
+    "Der Bericht konnte nicht heruntergeladen werden.",
+  projectsReportBasis: (from: string, to: string) =>
+    `Gearbeitete Stunden zwischen ${from} und ${to}.`,
+  projectsReportBudgetBasis: (to: string) =>
+    `Budgets zählen alles bis ${to}, nicht nur diesen Zeitraum.`,
+  projectsReportColValue: "Wert",
+  projectsReportColInvoiced: "Abgerechnet",
+  projectsReportColToInvoice: "Abzurechnen",
+  projectsReportColToDate: "Stunden bisher",
+  projectsReportColBudget: "Budget verbraucht",
+  projectsReportTotals: "Alle Projekte zusammen",
+  projectsReportUnrated: (duration: string) => `${duration} nicht bewertet`,
+  projectsReportUnratedHint:
+    "Abrechenbare Stunden ohne Satz. Sie werden hier gezählt und nirgends bewertet — hinterlegen Sie einen Stundensatz und erfassen Sie sie dann.",
+  projectsReportNoValue: "Noch kein Wert",
+  projectsReportBudgetLeft: (amount: string) => `${amount} übrig`,
+  projectsReportBudgetOver: (amount: string) => `${amount} darüber`,
+  projectsReportNoBudget: "Kein Budget festgelegt",
+  projectsReportEmptyTitle: "Noch keine Kundenprojekte",
+  projectsReportEmptyBody:
+    "Rentabilität sind Stunden gegen einen Satz und ein Budget — sie beginnt also mit einem Kundenprojekt. Geben Sie einem Projekt einen Kunden und einen Satz, und diese Seite füllt sich.",
+
+  // Das laufende Timer-Widget in der Leiste.
+  projectsTimerRunning: "Timer läuft",
+  projectsStopTimer: "Timer anhalten",
+  projectsStop: "Stopp",
+
+  // Die Projektwerkzeuge des Agenten (tranche 6). Erfasste Zeit ist ein
+  // Vorschlag, bis die Person, deren Stundenzettel es ist, ihn annimmt; die
+  // Statuszusammenfassung liest nur.
+  agentActLogTime: "Zeit erfassen",
+  agentActProjectStatus: "Projektstatus",
+  agentFieldProject: "Projekt",
+  agentFieldDay: "Tag",
+  agentFieldDuration: "Dauer",
+  agentLogTimeNote:
+    "Schlägt einen Eintrag in Ihrem Stundenzettel vor — er zählt erst, wenn Sie ihn dort annehmen.",
+  agentProjectStatusNote: "Liest das Projekt nur — nichts wird geändert.",
+  agentTimeLogged: (project: string): string =>
+    `In Ihrem Stundenzettel für ${project} vorgeschlagen — er zählt erst, wenn Sie ihn unter Projekte annehmen.`,
+  agentStatusHours: "Erfasste Stunden",
+  agentStatusBillable: (formatted: string): string =>
+    `${formatted} abrechenbar`,
+  agentStatusBudget: "Budget",
+  agentStatusBudgetUsed: (percent: string): string => `${percent} verbraucht`,
+  agentStatusNoBudget: "Kein Stundenbudget festgelegt",
+  agentStatusInternal: "Internes Projekt — kein Kunde, kein Budget.",
+  agentStatusCustomer: "Kunde",
+  agentStatusMilestones: "Meilensteine",
+  agentStatusMilestonesDone: (done: number, total: number): string =>
+    `${done} von ${total} erreicht`,
+  agentStatusMilestonesLate: (late: number): string =>
+    late === 1 ? "1 überfällig" : `${late} überfällig`,
+  agentStatusNoMilestones: "Keine geplant",
+  agentStatusNext: "Als Nächstes",
+  agentStatusTasks: "Aufgaben",
+  agentStatusTasksOpen: (open: number): string =>
+    open === 1 ? "1 offen" : `${open} offen`,
+  agentStatusTasksOverdue: (overdue: number): string =>
+    `${overdue} überfällig`,
+  agentStatusLastWorked: "Zuletzt gearbeitet",
+  agentStatusNeverWorked: "Noch keine Stunden",
+  // Der Kalender-Entwurf: ein Stapel Vorschläge, plus das, was er ausließ —
+  // der Server schickt Gründe als Codes, jedes Wort dafür steht hier.
+  agentActDraftTimesheet: "Stundenzettel aus Ihrem Kalender",
+  agentDraftTimesheetNote:
+    "Schlägt je Termin in Ihrem Kalender an diesen Tagen einen Eintrag vor — jeder zählt erst, wenn Sie ihn unter Projekte annehmen.",
+  agentDraftedCount: (count: number): string =>
+    count === 1 ? "1 Eintrag vorgeschlagen" : `${count} Einträge vorgeschlagen`,
+  agentDraftedNone: "Nichts vorzuschlagen",
+  agentDraftedRange: (from: string, to: string): string =>
+    from === to ? from : `${from} – ${to}`,
+  agentDraftedTotal: "Gesamt",
+  agentDraftedOverlap: "überschneidet sich mit dem vorherigen",
+  agentDraftedOverlaps: (count: number): string =>
+    count === 1
+      ? "1 davon überschneidet sich mit einem anderen Termin — prüfen Sie, welcher die Arbeit war."
+      : `${count} davon überschneiden sich mit anderen Terminen — prüfen Sie, welche die Arbeit waren.`,
+  agentDraftedNote: (project: string): string =>
+    `In Ihrem Stundenzettel für ${project} vorgeschlagen — nehmen Sie jeden unter Projekte an, damit er zählt.`,
+  agentDraftedLeftOut: "Ausgelassen",
+  agentDraftedReason: (reason: string): string => {
+    switch (reason) {
+      case "allDay":
+        return "ganztägig — keine Arbeitsstunden";
+      case "alreadyDrafted":
+        return "steht schon in Ihrem Stundenzettel";
+      case "noDuration":
+        return "keine Dauer";
+      case "tooLong":
+        return "länger als ein Tag";
+      case "weekLocked":
+        return "diese Woche ist eingereicht";
+      case "limitReached":
+        return "über dem Stapellimit — fragen Sie für die übrigen Tage erneut";
+      case "outsideRange":
+        return "beginnt außerhalb dieser Tage";
+      default:
+        // Ein Grund, den ein neuerer Server kennt: lieber „ausgelassen“
+        // sagen, als so zu tun, als wäre etwas entworfen worden.
+        return "ausgelassen";
+    }
+  },
+  // Das Kategorisieren-Werkzeug des Finanz-Agenten. Ein Vorschlag ist keine
+  // Zuordnung, und jedes Wort auf der Karte sagt das.
+  agentActCategorise: "Kategorien vorschlagen",
+  agentCategoriseNote:
+    "Sieht Ihre eigenen Ausgaben ohne Kategorie durch und schlägt für jede eine vor — aus den Kategorien, die Sie für diesen Händler schon verwendet haben. Zugeordnet wird erst, wenn Sie annehmen.",
+  agentCategoriseFieldPeriod: "Ausgaben aus",
+  agentCategoriseSuggested: (count: number): string =>
+    count === 1 ? "1 Vorschlag" : `${count} Vorschläge`,
+  agentCategoriseNone: "Nichts vorzuschlagen",
+  agentCategoriseConsidered: (count: number): string =>
+    count === 1 ? "1 Ausgabe angesehen" : `${count} Ausgaben angesehen`,
+  agentCategoriseEvidence: (times: number): string =>
+    times === 1
+      ? "schon einmal hier gebucht"
+      : `schon ${times}-mal hier gebucht`,
+  agentCategoriseAccept: "Annehmen",
+  agentCategoriseDecline: "Nein",
+  agentCategoriseAccepted: "Angenommen",
+  agentCategoriseDeclined: "Abgelehnt",
+  agentCategoriseLeftOut: "Ausgelassen",
+  agentCategoriseNoMerchant: "Kein Händler",
+  agentCategoriseFooter:
+    "Jeder Vorschlag wartet auf Sie — gebucht, berichtet oder gemeldet wird erst, wenn Sie ihn annehmen.",
+  agentCategoriseFailed:
+    "Das konnte nicht beantwortet werden — versuchen Sie es unter Finanzen erneut.",
+  agentCategoriseReason: (reason: string): string => {
+    switch (reason) {
+      case "noMerchant":
+        return "kein Händler, an dem sie zu erkennen wäre";
+      case "noHistory":
+        return "Sie haben diesem Händler noch nie eine Kategorie gegeben";
+      case "alreadyProposed":
+        return "hat schon einen Vorschlag";
+      case "declined":
+        return "Sie haben hier einen Vorschlag abgelehnt";
+      default:
+        // Ein Grund, den ein neuerer Server kennt: lieber „ausgelassen“
+        // sagen, als so zu tun, als wäre etwas vorgeschlagen worden.
+        return "ausgelassen";
+    }
+  },
+  // Die zwei Antworten des Finanz-Agenten. Beide lesen nur — und die Karte
+  // sagt mehr als einmal, dass nichts abgegeben wurde.
+  agentActVatSummary: "MwSt.-Zahlen",
+  agentVatSummaryNote:
+    "Liest die MwSt., die Ihre Bücher für diese Tage enthalten — berechnete Steuer, gezahlte Steuer und die Differenz. Nichts wird abgegeben und nichts wird geändert.",
+  agentVatFieldPeriod: "Zeitraum",
+  agentVatCharged: "Auf Verkäufe berechnet",
+  agentVatPaid: "Auf Einkäufe gezahlt",
+  agentVatOwed: "Sie schulden",
+  agentVatRefund: "Sie bekommen zurück",
+  agentVatBaseSales: "Umsatz",
+  agentVatBaseCosts: "Kosten",
+  agentVatUnrated: "Ohne Satz",
+  agentVatRateRow: (rate: string, base: string): string =>
+    `${rate} von ${base}`,
+  agentVatNothing: "Nichts in diesen Tagen",
+  agentVatFooter:
+    "Zahlen für eine Erklärung, keine Erklärung — abgegeben wird weiterhin im Portal Ihres Landes.",
+  // Die Bücher-Prüfung. Jedes Wort hier ist eine Frage, nie ein Urteil.
+  agentActFlagAnomalies: "Bücher prüfen",
+  agentAnomalyNote:
+    "Liest Ihr Journal für diese Tage und nennt, was einen zweiten Blick wert ist — mit den Buchungen dahinter. Es schreibt nichts und markiert nichts als geprüft.",
+  agentAnomalyFieldPeriod: "Bücher aus",
+  agentAnomalyFound: (count: number): string =>
+    count === 1 ? "1 einen Blick wert" : `${count} einen Blick wert`,
+  agentAnomalyNone: "Nichts ist aufgefallen",
+  agentAnomalyScanned: (count: number): string =>
+    count === 1 ? "1 Buchung gelesen" : `${count} Buchungen gelesen`,
+  agentAnomalyShown: (shown: number, found: number): string =>
+    `${shown} von ${found} gezeigt`,
+  agentAnomalyTruncated:
+    "Diese Tage enthalten mehr Buchungen, als eine Prüfung liest — fragen Sie für einen kürzeren Zeitraum erneut, um den Rest zu sehen.",
+  agentAnomalyNotComparable: (count: number): string =>
+    count === 1
+      ? "1 Buchung nennt weder Kunde noch Lieferant und konnte deshalb nicht verglichen werden"
+      : `${count} Buchungen nennen weder Kunde noch Lieferant und konnten deshalb nicht verglichen werden`,
+  agentAnomalyKind: (kind: string): string => {
+    switch (kind) {
+      case "duplicate":
+        return "Zweimal in einer Woche gebucht";
+      case "unusualAmount":
+        return "Anders als der Rest dieses Kontos";
+      case "missingRecurring":
+        return "Ein Monat ohne Buchung";
+      default:
+        // Eine Art, die ein neuerer Server kennt: immer noch eine Frage,
+        // nie nichts.
+        return "Einen Blick wert";
+    }
+  },
+  agentAnomalyTypical: (amount: string): string => `sonst ${amount}`,
+  agentAnomalyMissingMonth: (month: string): string => `nichts im ${month}`,
+  agentAnomalyEvidence: "Die Buchungen dahinter",
+  agentAnomalyFooter:
+    "Nichts wurde geändert und nichts als geprüft markiert — jedes davon ist eine Frage zu Buchungen, und die Antwort auf eine ist eine Korrekturbuchung.",
+
+  // alo Finanzen (tranche 6). Die Ausgaben-Wörter sind die einer Person über
+  // ihr eigenes Geld — „zurückgezahlt“, nicht „Erstattung verarbeitet“; die
+  // Bank-Wörter sind die einer Buchhaltung — eine Datei ist ein
+  // „Kontoauszug“, die Zahlungsreferenz heißt „Verwendungszweck“, wie auf
+  // jeder deutschen Banking-Oberfläche. Kein Text nennt eine Regel, die der
+  // Server besitzt: seine Ablehnung erscheint in seinen eigenen Worten.
+  financeTabExpenses: "Ausgaben",
+  financeTabApprovals: "Genehmigungen",
+  financeClaimsTable: "Ihre Ausgaben",
+  financeClaimFilters: "Ausgabenfilter",
+  financeChartFilters: "Diagrammzeitraum",
+  financeStatementsTable: "Importierte Kontoauszüge",
+  financeChartTableOf: (kind: string) => `Konten — ${kind}`,
+  financePendingClaimsTable: "Zu entscheidende Ausgaben",
+  financeOwedClaimsTable: "Zurückzuzahlende Ausgaben",
+  financeBankSampleTable: "Beispieltransaktionen",
+  financeBankSettledTable: "Zugeordnete Bankzeilen",
+  financeBankSetAsideTable: "Beiseitegelegte Bankzeilen",
+  financeBankFilters: "Auszugsfilter",
+  financeReportPeriod: "Berichtszeitraum",
+  financeLoadFailed: "Ihre Ausgaben konnten nicht geladen werden.",
+  financeSaveFailed: "Die Änderung konnte nicht gespeichert werden.",
+  financeCancel: "Abbrechen",
+  financeSave: "Speichern",
+  financeEdit: "Bearbeiten",
+  financeDelete: "Löschen",
+  financeActions: "Aktionen",
+  financeShow: "Anzeigen",
+  financeFrom: "Von",
+  financeTo: "Bis",
+
+  // Die Ausgabe selbst.
+  financeNewClaim: "Neue Ausgabe",
+  financeEditClaim: "Ausgabe bearbeiten",
+  financeClaimSubtitle:
+    "Was Sie ausgegeben haben und wessen Geld bezahlt hat.",
+  financeSpentOn: "Datum",
+  financeSpentOnHint:
+    "Der Tag, an dem das Geld abging — in Ihrer eigenen Zeitzone.",
+  financeMerchant: "Händler",
+  financeMerchantHint: "Wer bezahlt wurde — der Name auf dem Beleg.",
+  financeNoMerchant: "Kein Händler",
+  financeClaimOf: (merchant: string, day: string) => `${merchant}, ${day}`,
+  financeDescription: "Wofür es war",
+  financeGross: "Gesamtbetrag",
+  financeVat: "MwSt.",
+  financeVatHint:
+    "Die auf dem Beleg ausgewiesene MwSt. Leer lassen, wenn keine ausgewiesen ist.",
+  financeNoVat: "—",
+  financeVatRate: "MwSt.-Satz %",
+  financeVatRateHint: "Wie aufgedruckt: 19, 21, 5,5.",
+  financeCurrency: "Währung",
+  financeCurrencyHint:
+    "Leer lassen für die Währung Ihres Arbeitsbereichs.",
+  financeProject: "Projekt",
+  financeProjectHint:
+    "Ordnen Sie die Ausgabe Kundenarbeit zu, damit sie in den Kosten dieses Projekts erscheint.",
+  financeNoProject: "Kein Projekt",
+  financeMethod: "Bezahlt mit",
+  financeMethodHint:
+    "Nur eigenes Geld wird am Ende zurückgezahlt.",
+  financeMethodPersonal: "Eigenes Geld",
+  financeMethodCard: "Firmenkarte",
+  financeMethodCash: "Handkasse",
+  financeMethodPersonalOption: "Mein eigenes Geld",
+  financeMethodCardOption: "Die Firmenkarte",
+  financeMethodCashOption: "Die Handkasse",
+  financeAmountInvalid: "Das ist kein Betrag.",
+  financeRateInvalid: "Das ist kein Prozentsatz.",
+
+  // Wo eine Ausgabe steht. Das Wort des Servers, in der Sprache der Person.
+  financeStatus: "Status",
+  financeAnyStatus: "Jeder Status",
+  financeStatusDraft: "Entwurf",
+  financeStatusSubmitted: "Wartet",
+  financeStatusApproved: "Genehmigt",
+  financeStatusRejected: "Abgelehnt",
+  financeStatusReimbursed: "Zurückgezahlt",
+  financePaidBackOn: (day: string) => `Zurückgezahlt am ${day}`,
+
+  // Die Verben.
+  financeSubmit: "Einreichen",
+  financeWithdraw: "Zurücknehmen",
+  financeApprove: "Genehmigen",
+  financeReject: "Ablehnen",
+  financeMarkPaidBack: "Als zurückgezahlt markieren",
+  financeMarkPaidBackSubtitle: (person: string, amount: string) =>
+    `${amount} zurück an ${person}.`,
+  financeReimbursedOn: "Zurückgezahlt am",
+  financeReimbursedOnHint:
+    "Der Tag, an dem das Geld tatsächlich floss — auf diesen Tag wird gebucht.",
+  financeDeleteTitle: "Diese Ausgabe löschen?",
+  financeDeleteBody:
+    "Die Ausgabe und alles, was Sie eingetragen haben, werden entfernt. Das lässt sich nicht rückgängig machen.",
+  financeRejectTitle: "Diese Ausgabe ablehnen",
+  financeRejectBody: (person: string) =>
+    `${person} wird das lesen und kann die Ausgabe korrigieren und erneut einreichen.`,
+  financeRejectPlaceholder: "Warum sie zurückkommt…",
+
+  // Der Bildschirm der genehmigenden Person.
+  financePerson: "Person",
+  financeCategory: "Kategorie",
+  financeUncategorised: "Ohne Kategorie",
+  financeSubmittedAt: "Eingereicht",
+  financeApprovedAt: "Genehmigt",
+  financeOfWhichVat: (amount: string) => `inkl. ${amount} MwSt.`,
+  financeWaitingTitle: "Wartet auf eine Entscheidung",
+  financeWaitingEmptyTitle: "Nichts wartet",
+  financeWaitingEmptyBody:
+    "Ausgaben, die Ihre Kolleginnen und Kollegen einreichen, erscheinen hier — der älteste Kauf zuerst.",
+  financeOwedTitle: "Zurückzuzahlen",
+  financeOwedNote:
+    "Genehmigte Ausgaben, die Ihre Kolleginnen und Kollegen aus eigener Tasche bezahlt haben. Eine Ausgabe, die die Firmenkarte bezahlt hat, ist genehmigt und schuldet niemandem etwas — deshalb steht sie nicht hier.",
+  financeOwedEmptyTitle: "Niemandem wird etwas geschuldet",
+  financeOwedEmptyBody:
+    "Sobald Sie eine Ausgabe genehmigen, die jemand selbst bezahlt hat, wartet sie hier, bis das Geld zurückgeht.",
+
+  // Das Erste, was Mitarbeitende vom Modul sehen.
+  financeExpensesEmptyTitle: "Keine Ausgaben in diesem Zeitraum",
+  financeExpensesEmptyBody:
+    "Erfassen Sie, was Sie für die Arbeit ausgegeben haben — das Datum, den Gesamtbetrag auf dem Beleg und wessen Geld bezahlt hat. Sie bleibt bei Ihnen, bis Sie sie einreichen.",
+
+  // Die Bank und der Stapel, den sie hinterlässt.
+  financeTabBank: "Bank",
+  financeTabReconcile: "Abgleich",
+  financeBankLoadFailed: "Die Kontoauszüge konnten nicht geladen werden.",
+
+  // Einen Auszug importieren.
+  financeBankImportStatement: "Kontoauszug importieren",
+  financeBankImportTitle: "Einen Kontoauszug importieren",
+  financeBankImportSubtitle:
+    "Wir lesen die Datei zuerst und zeigen Ihnen, was wir daraus gemacht haben. Gespeichert wird erst, wenn Sie es sagen.",
+  financeBankFile: "Auszugsdatei",
+  financeBankFileHint:
+    "Ein CAMT.053- oder MT940-Download Ihrer Bank oder ein CSV-Export.",
+  financeBankAccount: "Konto",
+  financeBankAccountHint:
+    "Die IBAN, zu der dieser Auszug gehört. Eine CAMT.053- oder MT940-Datei nennt sie selbst; eine CSV nicht.",
+  financeBankCurrencyHint:
+    "Für eine CSV, die es nicht sagt. Leer lassen für die Währung Ihres Arbeitsbereichs.",
+  financeBankCheckFile: "Datei prüfen",
+  financeBankCheckAgain: "Erneut prüfen",
+  financeBankImport: "Importieren",
+  financeBankReadFailed: "Diese Datei konnte nicht gelesen werden.",
+  financeBankImportFailed: "Es wurde nichts importiert.",
+  financeBankStale:
+    "Sie haben geändert, wie die Datei gelesen wird. Prüfen Sie sie erneut, um das Ergebnis zu sehen.",
+  financeBankStaged: (staged: number, duplicates: number) =>
+    duplicates === 0
+      ? `${staged} Transaktionen importiert.`
+      : `${staged} Transaktionen importiert; ${duplicates} waren schon da und wurden nicht angetastet.`,
+
+  // Was der Server aus der Datei gemacht hat.
+  financeBankFormat: "Gelesen als",
+  financeBankSourceCamt: "CAMT.053",
+  financeBankSourceMt940: "MT940",
+  financeBankSourceCsv: "CSV",
+  financeBankRows: "Transaktionen",
+  financeBankRowsRead: (lines: number, rows: number) =>
+    `${lines} von ${rows} Zeilen`,
+  financeBankSkipped: "Zeilen, die keine Transaktionen sind",
+  financeBankUnbooked: "Von der Bank noch nicht gebucht",
+  financeBankPeriod: "Zeitraum",
+  financeBankEncoding: "Zeichenkodierung",
+  financeBankSampleTitle: "Die ersten Transaktionen, so wie wir sie gelesen haben",
+  financeBankSampleTruncated:
+    "Hier werden nur die ersten Transaktionen gezeigt. Importiert werden alle.",
+  financeBankRowsRefused: (count: number) =>
+    count === 1
+      ? "Eine Zeile kann nicht gelesen werden, deshalb wurde nichts importiert."
+      : `${count} Zeilen können nicht gelesen werden, deshalb wurde nichts importiert.`,
+  financeBankRowAt: (line: number) => `Zeile ${line}:`,
+  financeBankRowUnknown: "Eine Zeile:",
+
+  // Uns sagen, welche Spalte was ist.
+  financeBankMappingTitle: "Welche Spalte was ist",
+  financeBankMappingNote:
+    "Wir haben es aus der Kopfzeile der Datei geraten. Korrigieren Sie, was wir falsch haben, und prüfen Sie die Datei dann erneut.",
+  financeBankColumnNone: "Nicht in dieser Datei",
+  financeBankColDate: "Buchungsdatum",
+  financeBankColValueDate: "Wertstellung",
+  financeBankColAmount: "Betrag (eine Spalte mit Vorzeichen)",
+  financeBankColDebit: "Geldausgang",
+  financeBankColCredit: "Geldeingang",
+  financeBankColSign: "In welche Richtung es geht",
+  financeBankColCurrency: "Währung je Zeile",
+  financeBankColCounterparty: "Wer bezahlt wurde oder wer bezahlt hat",
+  financeBankColIban: "Das Konto der Gegenseite",
+  financeBankColRemittance: "Verwendungszweck",
+  financeBankColReference: "Die eigene Referenz der Bank",
+  financeBankDates: "Datumsangaben gelesen als",
+  financeBankDecimal: "Cent getrennt durch",
+  financeBankConventionAuto: "Aus der Datei ableiten",
+  financeBankConventionDmy: "Tag/Monat/Jahr",
+  financeBankConventionMdy: "Monat/Tag/Jahr",
+  financeBankConventionYmd: "Jahr-Monat-Tag",
+  financeBankConventionComma: "Ein Komma",
+  financeBankConventionDot: "Ein Punkt",
+
+  // Was importiert wurde.
+  financeBankLines: "Transaktionen",
+  financeBankClosingBalance: "Endsaldo",
+  financeBankImportedAt: "Importiert",
+  financeBankEmptyTitle: "Noch keine Kontoauszüge",
+  financeBankEmptyBody:
+    "Importieren Sie einen Monat von Ihrer Bank, und jede Transaktion darin landet auf einem Stapel und wartet darauf, den Rechnungen zugeordnet zu werden, die sie bezahlt hat.",
+
+  // Der Abgleich-Bildschirm.
+  financeBankStatement: "Kontoauszug",
+  financeBankAllStatements: "Alles noch nicht Zugeordnete",
+  financeBankToMatchTitle: (count: number) =>
+    count === 1
+      ? "1 Transaktion zuzuordnen"
+      : `${count} Transaktionen zuzuordnen`,
+  financeBankAllMatchedTitle: "Nichts mehr zuzuordnen",
+  financeBankAllMatchedBody:
+    "Jede Transaktion in den importierten Auszügen ist entweder einer Rechnung zugeordnet oder beiseitegelegt. Importieren Sie einen weiteren Monat, um weiterzumachen.",
+  financeBankCapped:
+    "Diese Liste ist ein erster Stapel, nicht alles — arbeiten Sie sie durch und laden Sie neu, um den Rest zu sehen.",
+  financeBankBookedOn: "Gebucht",
+  financeBankCounterparty: "Wer",
+  financeBankNoCounterparty: "Kein Name auf der Zahlung",
+  financeBankRemittance: "Verwendungszweck",
+  financeBankCertain: "Sicher",
+  financeBankThisOne: "Diese hier",
+  financeBankNoGuess:
+    "Wir haben keine Ahnung, was das hier ist. Wählen Sie die Rechnung, oder legen Sie es beiseite.",
+  financeBankNotOurs: "Nicht unsere",
+  financeBankPickInvoice: "Rechnung auswählen",
+  financeBankStillOwed: "noch offen",
+  financeBankStillOwedIs: (amount: string) => `${amount} noch offen`,
+  financeBankMatchFailed: "Diese Transaktion wurde nicht zugeordnet.",
+  financeBankUnmatchFailed: "Diese Zuordnung wurde nicht zurückgenommen.",
+  financeBankIgnoreFailed: "Diese Transaktion wurde nicht beiseitegelegt.",
+
+  // Warum wir glauben, dass eine Transaktion ein Dokument beglichen hat.
+  financeBankWhyNumberQuoted:
+    "unsere Rechnungsnummer steht im Verwendungszweck",
+  financeBankWhyRuleSaved: "dieser Zahler wurde schon einmal so zugeordnet",
+  financeBankWhyCustomerNamed: (percent: number) =>
+    `der Name auf der Zahlung ähnelt dem des Kunden (${percent} %)`,
+  financeBankWhyWholeAmount:
+    "der Betrag entspricht genau dem, was offen ist",
+  financeBankWhyOnlyDocument:
+    "es ist die einzige offene Rechnung über diesen Betrag",
+  financeBankWhyBeforeDue: (days: number) =>
+    days === 1
+      ? "sie kam einen Tag vor Fälligkeit an"
+      : `sie kam ${days} Tage vor Fälligkeit an`,
+  financeBankWhyAfterDue: (days: number) =>
+    days === 1
+      ? "sie kam einen Tag nach Fälligkeit an"
+      : `sie kam ${days} Tage nach Fälligkeit an`,
+  financeBankWhyPartPayment: (amount: string) =>
+    `sie ist eine Teilzahlung der Rechnung — ${amount} wären noch offen`,
+
+  // Eine Transaktion beiseitelegen.
+  financeBankIgnoreTitle: "Nicht von uns zu buchen",
+  financeBankIgnoreBody:
+    "Sagen Sie warum, damit die nächste Person, die diesen Auszug liest, es nicht noch einmal herausfinden muss. Bankgebühren, eine private Überweisung, ein Duplikat.",
+  financeBankIgnore: "Beiseitelegen",
+  financeBankIgnorePlaceholder: "Warum sie nicht unsere ist…",
+
+  // Die Rechnung von Hand auswählen.
+  financeBankPickTitle: "Welche Rechnung hat das beglichen?",
+  financeBankPickSubtitle: (amount: string) =>
+    `Eingegangen: ${amount}. Sagen Sie, was damit bezahlt wurde.`,
+  financeBankFindInvoice: "Rechnung suchen",
+  financeBankFindInvoiceHint:
+    "Nach Nummer oder nach der Referenz, die Ihr Kunde ihr gegeben hat.",
+  financeBankNoOpenInvoices:
+    "Keine ausgestellte Rechnung wartet noch auf Geld.",
+  financeBankNoNumber: "Ohne Nummer",
+  financeBankOverdue: "Überfällig",
+  financeBankConfirmMatch: "Diese hat sie beglichen",
+
+  // Was schon erledigt ist.
+  financeBankUnmatched: "Zuzuordnen",
+  financeBankMatched: "Zugeordnet",
+  financeBankIgnored: "Beiseitegelegt",
+  financeBankSettledTitle: "Schon zugeordnet",
+  financeBankSettledNote:
+    "Jede davon hat eine Zahlung erfasst und die Bücher bewegt. Eine Zurücknahme kehrt das mit einer eigenen Buchung um.",
+  financeBankUndoMatch: "Zurücknehmen",
+  financeBankSetAsideTitle: "Beiseitegelegt",
+  financeBankSetAsideNote:
+    "Transaktionen, von denen jemand entschieden hat, dass sie nicht von uns zu buchen sind.",
+  financeBankUndoIgnore: "Zurück auf den Stapel",
+
+  // Der Kontenplan. Eine Aufgabe wird als der Satz angeboten, den sie
+  // bedeutet („Was Kunden uns schulden“), nie als das Wort der Leitung; die
+  // Buchungsregeln folgen der Aufgabe, nie der Nummer, und ein Konto mit
+  // Verlauf wird stillgelegt, nie gelöscht.
+  financeTabAccounts: "Konten",
+  financeChartLoadFailed: "Der Kontenplan konnte nicht geladen werden.",
+  financeChartSeeded:
+    "Wir haben Ihnen einen neutralen Kontenplan angelegt. Jedes dieser Konten dürfen Sie umbenennen oder umnummerieren — die Nummerierung Ihrer Steuerberatung macht nichts kaputt, denn die Buchhaltung folgt der Aufgabe eines Kontos und nicht seiner Nummer.",
+  financeChartEmptyTitle: "Noch keine Konten",
+  financeChartEmptyBody:
+    "Der Kontenplan ist die Liste der Orte, an denen Geld sein kann: die Bank, was Kunden Ihnen schulden, was Sie verdienen, was Sie ausgeben. Gebucht werden kann erst, wenn es einen gibt.",
+
+  financeAccountAdd: "Konto hinzufügen",
+  financeAccountEdit: "Bearbeiten",
+  financeAccountDelete: "Löschen",
+  financeAccountCode: "Nummer",
+  financeAccountCodeHint:
+    "So nennt es Ihre Steuerberatung. Buchstaben und Ziffern, keine Leerzeichen.",
+  financeAccountName: "Name",
+  financeAccountRole: "Aufgabe",
+  financeAccountRoleHint:
+    "Wofür dieses Konto automatisch verwendet wird. Rechnungen, Zahlungen und Ausgaben finden ihr Konto über seine Aufgabe, nie über seine Nummer — Umnummerieren ist deshalb gefahrlos, und wird eine Aufgabe entzogen, buchen diese Belege nicht mehr, bis ein anderes Konto sie übernimmt.",
+  financeAccountType: "Art",
+  financeAccountTypeHint:
+    "Was das Konto enthält. Sie entscheidet, in welchem Bericht das Konto erscheint.",
+  financeAccountTypeUnset: "Bitte wählen…",
+  financeAccountActive: "In Gebrauch",
+  financeAccountActiveHint:
+    "Ein stillgelegtes Konto behält seinen Verlauf und seinen Saldo und wird auf neuen Belegen nicht mehr angeboten.",
+  financeAccountInUse: "In Gebrauch",
+  financeAccountRetired: "Stillgelegt",
+  financeAccountShowRetired: "Stillgelegte anzeigen",
+  financeAccountMovement: "Bewegung",
+  financeAccountPostings: "Buchungen",
+  financeAccountSystemNote:
+    "Dieses Konto haben wir angelegt, deshalb kann es nicht gelöscht werden — die Buchhaltung läuft darüber. Benennen Sie es um, nummerieren Sie es um, oder legen Sie es still.",
+  financeAccountNewTitle: "Konto hinzufügen",
+  financeAccountNewBody: "Ihre eigene Zeile in Ihrem eigenen Kontenplan.",
+  financeAccountEditTitle: "Konto bearbeiten",
+  financeAccountEditBody:
+    "Umbenennen und Umnummerieren sind jederzeit gefahrlos.",
+  financeAccountSaveFailed: "Das Konto wurde nicht gespeichert.",
+  financeAccountDeleteFailed: "Das Konto wurde nicht gelöscht.",
+
+  // Die fünf Arten, zweimal: das kurze Wort für die Tabelle und der Satz,
+  // den jemand beim Auswählen tatsächlich beantwortet.
+  financeAccountTypeAsset: "Was wir besitzen",
+  financeAccountTypeLiability: "Was wir schulden",
+  financeAccountTypeEquity: "Eigenkapital",
+  financeAccountTypeIncome: "Was wir verdienen",
+  financeAccountTypeExpense: "Was wir ausgeben",
+  financeAccountTypeAssetLong:
+    "Etwas, das wir besitzen oder das uns geschuldet wird — ein Bankkonto, Bargeld, Forderungen an Kunden",
+  financeAccountTypeLiabilityLong:
+    "Etwas, das wir schulden — Lieferanten, Steuern, Geld für Mitarbeitende",
+  financeAccountTypeEquityLong:
+    "Der Anteil der Eigentümer und die Salden, mit denen die Bücher eröffnet wurden",
+  financeAccountTypeIncomeLong: "Etwas, das wir verdienen",
+  financeAccountTypeExpenseLong: "Etwas, das wir ausgeben",
+
+  // Die Aufgaben, über die eine Buchungsregel aufgelöst wird.
+  financeRoleNone: "Keine besondere Aufgabe",
+  financeRoleAr: "Was Kunden uns schulden",
+  financeRoleAp: "Was wir Lieferanten schulden",
+  financeRoleBank: "Das Bankkonto, über das Geld läuft",
+  financeRoleCash: "Handkasse",
+  financeRoleVatOutput: "MwSt., die wir berechnet haben und schulden",
+  financeRoleVatInput:
+    "MwSt., die wir gezahlt haben und uns erstatten lassen können",
+  financeRoleRevenue: "Umsatzerlöse",
+  financeRoleExpenseDefault: "Kosten ohne eigene Kategorie",
+  financeRoleEmployeePayable: "Ausgaben, die wir Mitarbeitenden schulden",
+  financeRoleFxDiff: "Kursdifferenzen",
+  financeRoleRounding: "Rundungsdifferenzen",
+  financeRoleOpeningBalance:
+    "Die Salden, mit denen die Bücher eröffnet wurden",
+  financeRoleSuspense: "Geld, das wir noch nicht zuordnen können",
+
+  // Die vier Berichte. Jede Zahl ist die Faltung des Journals durch den
+  // Server, in ganzen Cent; die Wörter sind die einer Unternehmerin, wo sie
+  // es sein können („Was wir besitzen“), und die einer Buchhalterin, wo sie
+  // es sein müssen („Eigenkapital“).
+  financeTabReports: "Berichte",
+  financeReportPl: "Gewinn- und Verlustrechnung",
+  financeReportBalance: "Bilanz",
+  financeReportAged: "Wer was schuldet",
+  financeReportVat: "MwSt.-Erklärung",
+  financeReportFrom: "Von",
+  financeReportTo: "Bis",
+  financeReportOn: "Zum",
+  financeReportShow: "Anzeigen",
+  financeReportToday: "Heute",
+  financeReportThisYear: "Dieses Jahr",
+  financeReportThisQuarter: "Dieses Quartal",
+  financeReportLastQuarter: "Letztes Quartal",
+  financeReportLastYearEnd: "Ende letzten Jahres",
+  financeReportDownloadCsv: "CSV herunterladen",
+  financeReportDownloadFailed:
+    "Die Datei konnte nicht heruntergeladen werden.",
+  financeReportLoadFailed: "Der Bericht konnte nicht geladen werden.",
+  financeReportBasis: (from: string, to: string) =>
+    `Alles, was zwischen ${from} und ${to} gebucht wurde, beide Tage eingeschlossen.`,
+  financeReportBasisOn: (on: string) =>
+    `Alles, was bis einschließlich ${on} gebucht wurde.`,
+  financeReportEmptyTitle: "Noch nichts gebucht",
+  financeReportEmptyBody:
+    "Ausgestellte Rechnungen, Zahlungen und genehmigte Ausgaben buchen sich von selbst. Sobald eine das tut, erscheint sie hier.",
+  financeReportAmount: "Betrag",
+  financeReportTotal: "Gesamt",
+  financeReportPrevious: (from: string, to: string) => `${from} – ${to}`,
+
+  // Die Gewinn- und Verlustrechnung.
+  financeReportIncome: "Was wir verdient haben",
+  financeReportIncomeTotal: "Verdient insgesamt",
+  financeReportExpense: "Was wir ausgegeben haben",
+  financeReportExpenseTotal: "Ausgegeben insgesamt",
+  financeReportProfit: "Gewinn",
+  financeReportLoss: "Verlust",
+
+  // Die Bilanz.
+  financeReportAssets: "Was wir besitzen",
+  financeReportAssetsTotal: "Besitz insgesamt",
+  financeReportLiabilities: "Was wir schulden",
+  financeReportLiabilitiesTotal: "Geschuldet insgesamt",
+  financeReportEquity: "Eigenkapital",
+  financeReportEquityTotal: "Eigenkapital insgesamt",
+  financeReportResultToDate:
+    "Gewinn oder Verlust bisher, noch nicht ins Eigenkapital abgeschlossen",
+  financeReportLiabilitiesEquityTotal:
+    "Schulden, Eigenkapital und Ergebnis zusammen",
+  financeReportDifference: "Differenz",
+  financeReportUnbalanced: (amount: string) =>
+    `Diese Bücher gehen nicht auf: ein Betrag von ${amount} ist unerklärt. Reichen Sie nichts von diesem Blatt ein — schicken Sie es stattdessen an uns.`,
+
+  // Wer was schuldet.
+  financeReportSide: "Ansicht",
+  financeReportReceivable: "Was uns geschuldet wird",
+  financeReportPayable: "Was wir schulden",
+  financeReportParty: "Wer",
+  financeReportBandCurrent: "Noch nicht fällig",
+  financeReportBand1To30: "1–30 Tage",
+  financeReportBand31To60: "31–60 Tage",
+  financeReportBand61To90: "61–90 Tage",
+  financeReportBand90Plus: "Über 90 Tage",
+  financeReportOpenDocuments: (count: number) =>
+    count === 1 ? "1 offenes Dokument" : `${count} offene Dokumente`,
+  financeReportNothingOwedToUs: "Niemand schuldet Ihnen etwas",
+  financeReportNothingWeOwe: "Sie schulden niemandem etwas",
+  financeReportAgedEmptyBody:
+    "Jedes ausgestellte Dokument auf dieser Seite ist vollständig beglichen.",
+  financeReportUnconverted: (count: number) =>
+    count === 1
+      ? "1 Dokument steht in keiner dieser Spalten: Wir haben keinen Wechselkurs, um es in Ihrer eigenen Währung anzugeben."
+      : `${count} Dokumente stehen in keiner dieser Spalten: Wir haben keinen Wechselkurs, um sie in Ihrer eigenen Währung anzugeben.`,
+
+  // Die MwSt.-Erklärung.
+  financeReportVatRate: "Satz",
+  financeReportVatBase: "Betrag vor MwSt.",
+  financeReportVatTax: "MwSt.",
+  financeReportVatOutput: "MwSt., die wir berechnet haben",
+  financeReportVatOutputTotal: "Berechnet insgesamt",
+  financeReportVatInput: "MwSt., die wir gezahlt haben",
+  financeReportVatInputTotal: "Gezahlt insgesamt",
+  financeReportVatUnrated: "Ohne angegebenen Satz",
+  financeReportVatPayable: "Zu zahlen",
+  financeReportVatRefund: "Zu erstatten",
+  financeReportVatNote:
+    "Das sind die Zahlen Ihrer Bücher — Verkäufe und Einkäufe zusammen —, und aus ihnen wird eine Erklärung abgegeben. Die MwSt.-Übersicht unter Rechnungen zeigt, was Sie in Rechnung gestellt haben — eine andere Frage.",
 };
