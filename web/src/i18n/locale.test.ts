@@ -53,21 +53,24 @@ describe("catalog fallback", () => {
   });
 });
 
-describe("German ships complete modules (M4.1, tranche 1: the mail surface)", () => {
+describe("German ships complete modules (M4.1, tranches 1–2: mail + Docs/Drive)", () => {
   /** The sections `de.ts` claims to cover, by key prefix. The catalog is
    *  allowed to be partial across *modules* — the fallback shows English —
    *  but never inside one: a reading pane that mixes German buttons with
    *  English menus reads as broken, not as untranslated. A new English key
-   *  in any of these families must land with German in the same change. */
+   *  in any of these families must land with German in the same change.
+   *  Tranche 1 is the mail daily-driver surface; tranche 2 adds Docs (block
+   *  editor, technical authoring, formatting toolbar), Drive + Spaces,
+   *  Sheets, the Office embed, the search overlay and the Drive picker. */
   const SHIPPED_PREFIXES =
-    /^(agenda|task|mail|compose|flag|folder|filter|spam|snooze|unsubscribe|appPassword|delegate|sharing|shared|categor|transfer|contact|import|signup|reset|settings|brand|home|module|rsvp|error|twoFactor|recovery)/;
+    /^(agenda|task|mail|compose|flag|folder|filter|spam|snooze|unsubscribe|appPassword|delegate|sharing|shared|categor|transfer|contact|import|signup|reset|settings|brand|home|module|rsvp|error|twoFactor|recovery|doc|drive|sheet|office|picker|search|ai|eq|spec|tb|ref|block|heading|para|table|chart|code|insert|font|size|align|text|style|highlight|strikethrough|bullet|numbered|horizontal|clear|close|cancel)/;
   const shippedKeys = Object.keys(en).filter((key) =>
     SHIPPED_PREFIXES.test(key),
   );
 
-  test("the key list is the real mail surface, not an empty filter", () => {
-    expect(shippedKeys.length).toBeGreaterThan(500);
-    expect(Object.keys(de).length).toBeGreaterThan(600);
+  test("the key list is the real shipped surface, not an empty filter", () => {
+    expect(shippedKeys.length).toBeGreaterThan(1000);
+    expect(Object.keys(de).length).toBeGreaterThan(1100);
   });
 
   test("every shipped-module string exists in German", () => {
@@ -110,6 +113,15 @@ describe("German ships complete modules (M4.1, tranche 1: the mail surface)", ()
     expect(catalog.contactsImported(2, 1)).toBe(
       "2 Kontakte importiert (1 übersprungen).",
     );
+    // Tranche 2: Docs/Drive/Sheets, in both plural branches where there are
+    // branches, and the searchKind mapping in German words.
+    expect(catalog.driveTrash).toBe("Papierkorb");
+    expect(catalog.docsUntitled).toBe("Unbenanntes Dokument");
+    expect(catalog.sheetBold).toBe("Fett");
+    expect(catalog.driveSelected(1)).toBe("1 Element ausgewählt");
+    expect(catalog.driveSelected(5)).toBe("5 Elemente ausgewählt");
+    expect(catalog.searchKind("task")).toBe("Aufgabe");
+    expect(catalog.searchKind("doc")).toBe("Doc");
   });
 
   test("the spam-banner fallback declines correctly in both sentences", () => {
