@@ -389,7 +389,7 @@ export function DocumentLines({
                 <article
                   key={row.key}
                   className={cx(
-                    "relative rounded-xl border border-default bg-surface p-4 pl-14 shadow-sm transition-all",
+                    "relative rounded-xl border border-default bg-surface p-4 pl-14 shadow-sm transition-colors",
                     draggedKey === row.key &&
                       "scale-[0.995] border-accent bg-accent-soft/30 opacity-45 shadow-lg",
                     dropTargetKey === row.key &&

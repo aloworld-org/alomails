@@ -2021,7 +2021,7 @@ function ImageOptionGroup<T extends string | number>({
             aria-label={name}
             aria-pressed={value === id}
             className={cx(
-              "group relative whitespace-nowrap border text-center text-sm font-medium transition-all hover:border-accent hover:bg-accent-soft hover:text-accent",
+              "group relative whitespace-nowrap border text-center text-sm font-medium transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent",
               visual
                 ? "h-20 rounded-xl bg-transparent p-2"
                 : "min-h-11 rounded-lg px-3",
@@ -2794,7 +2794,7 @@ function CustomizeQuote({
           </div>
           <button
             type="button"
-            className="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-default bg-surface p-3 text-sm font-semibold text-secondary shadow-sm transition-all hover:border-accent hover:bg-accent-soft hover:text-accent hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
+            className="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-default bg-surface p-3 text-sm font-semibold text-secondary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
             onClick={() => logoInput.current?.click()}
           >
             {design.logo ? (
@@ -2933,10 +2933,10 @@ function CustomizeQuote({
                   type="button"
                   aria-pressed={design.headerAlignment === alignment}
                   className={cx(
-                    "group relative min-h-40 overflow-hidden rounded-2xl border !p-4 text-left transition-colors hover:border-accent hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
+                    "group relative min-h-40 overflow-hidden rounded-2xl border !p-5 text-left transition-colors hover:border-accent hover:bg-accent-soft/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
                     design.headerAlignment === alignment
-                      ? "border-accent bg-accent-soft/30 shadow-sm"
-                      : "border-default bg-surface shadow-sm",
+                      ? "border-accent bg-accent-soft/30"
+                      : "border-default bg-surface",
                   )}
                   onClick={() =>
                     onChange((current) => ({
@@ -2964,7 +2964,7 @@ function CustomizeQuote({
                       <span className="block h-1.5 w-14 rounded-full bg-accent/70" />
                     </span>
                   </span>
-                  <span className="flex items-start justify-between gap-4 px-1 pb-1 pt-4">
+                  <span className="flex items-start justify-between gap-5 pt-5">
                     <span>
                       <strong className="block text-sm font-semibold text-primary">
                         Logo {alignment}
@@ -3002,7 +3002,7 @@ function CustomizeQuote({
               </div>
               <button
                 type="button"
-                className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-default bg-surface px-3.5 text-sm font-semibold text-secondary shadow-sm transition-all hover:border-accent hover:bg-accent-soft hover:text-accent"
+                className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-default bg-surface px-3.5 text-sm font-semibold text-secondary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
                 onClick={() =>
                   onChange((current) => ({
                     ...current,
@@ -3097,7 +3097,7 @@ function CustomizeQuote({
                   type="button"
                   aria-pressed={design.theme === theme.id}
                   className={cx(
-                    "group relative min-h-52 overflow-hidden rounded-2xl border !p-3 text-left shadow-sm transition-colors hover:border-accent hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
+                    "group relative min-h-52 overflow-hidden rounded-2xl border !p-4 text-left transition-colors hover:border-accent hover:bg-accent-soft/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
                     design.theme === theme.id
                       ? "border-accent bg-accent-soft/30"
                       : "border-default bg-surface",
@@ -3224,7 +3224,7 @@ function CustomizeTable({
               key={layout}
               type="button"
               className={cx(
-                "group relative min-h-64 overflow-hidden rounded-2xl border bg-surface !p-5 text-left shadow-sm ring-1 transition-colors hover:border-accent hover:shadow-md",
+                "group relative min-h-64 overflow-hidden rounded-2xl border bg-surface !p-5 text-left ring-1 transition-colors hover:border-accent hover:bg-accent-soft/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
                 design.tableLayout === layout
                   ? "border-accent bg-accent-soft ring-accent/25"
                   : "border-default ring-default hover:bg-accent-soft/30",
@@ -3351,7 +3351,7 @@ function CustomizeTable({
               key={placement}
               type="button"
               className={cx(
-                "group min-h-40 rounded-2xl border !p-5 text-left shadow-sm transition-colors hover:border-accent hover:shadow-md",
+                "group min-h-40 rounded-2xl border !p-5 text-left transition-colors hover:border-accent hover:bg-accent-soft/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
                 design.totalsPlacement === placement
                   ? "border-accent bg-accent-soft ring-1 ring-accent/20"
                   : "border-default bg-surface",
@@ -3537,7 +3537,7 @@ function TableToggle({
       type="button"
       aria-pressed={checked}
       className={cx(
-        "flex min-h-20 items-center gap-5 rounded-xl border !px-6 !py-5 text-left shadow-sm transition-all hover:border-accent hover:bg-accent-soft hover:shadow-md",
+        "flex min-h-24 items-center gap-4 rounded-xl border !px-5 !py-4 text-left transition-colors hover:border-accent hover:bg-accent-soft/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
         checked ? "border-accent bg-accent-soft" : "border-default bg-surface",
       )}
       onClick={onClick}
@@ -3574,7 +3574,7 @@ function ColorField({
   const valid = /^#[0-9a-f]{6}$/i.test(value);
   const fieldId = `quote-colour-${label.replace(/\s+/g, "-").toLowerCase()}`;
   return (
-    <div className="flex min-h-16 items-center gap-3 rounded-xl border border-default bg-surface p-2.5 shadow-sm transition-all hover:border-accent hover:shadow-md focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/10">
+    <div className="flex min-h-16 items-center gap-3 rounded-xl border border-default bg-surface p-3 transition-colors hover:border-accent focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/10">
       <label
         className="relative grid size-11 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-lg border border-default bg-surface shadow-sm"
         htmlFor={`${fieldId}-picker`}
