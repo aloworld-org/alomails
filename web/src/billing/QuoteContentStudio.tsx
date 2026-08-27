@@ -1874,6 +1874,13 @@ const dividerWidthClasses: Record<DividerWidth, string> = {
   100: "w-full",
 };
 
+const dividerWidthPreviewHeightClasses: Record<DividerWidth, string> = {
+  25: "h-px",
+  50: "h-0.5",
+  75: "h-[3px]",
+  100: "h-1",
+};
+
 function DividerLine({
   block,
 }: {
@@ -2026,14 +2033,13 @@ function DividerBlockEditor({
                     compact
                     onClick={() => onChange({ width: choice })}
                   >
-                    <DividerLine
-                      block={{
-                        ...block,
-                        style: "solid",
-                        thickness: "bold",
-                        width: 100,
-                        color,
-                      }}
+                    <span
+                      aria-hidden="true"
+                      className={cx(
+                        "block w-full rounded-full",
+                        dividerWidthPreviewHeightClasses[choice],
+                      )}
+                      style={{ backgroundColor: color }}
                     />
                   </DividerVisualChoice>
                 ))}
