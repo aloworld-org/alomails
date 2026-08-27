@@ -11,6 +11,7 @@ import {
   ArrowDown,
   ArrowUp,
   Bold,
+  Building2,
   Check,
   Copy,
   FileText,
@@ -21,10 +22,13 @@ import {
   Italic,
   List,
   ListOrdered,
+  Link,
+  Mail,
   Minus,
   Palette,
   Pilcrow,
   Pencil,
+  Phone,
   Plus,
   Quote,
   RotateCcw,
@@ -34,6 +38,7 @@ import {
   Type,
   Trash2,
   Upload,
+  Globe2,
   X,
 } from "lucide-react";
 
@@ -2920,49 +2925,67 @@ function CustomizeQuote({
             }}
           />
         </section>
-        <section className="rounded-2xl border border-default bg-surface p-5 shadow-sm">
+        <section className="rounded-2xl border border-subtle bg-surface p-6 shadow-sm sm:p-8">
           <div>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h3 className="text-base font-semibold text-primary">Company information</h3>
+            <div className="flex flex-wrap items-center justify-between gap-5">
+              <div className="flex items-start gap-4">
+                <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+                  <Building2 className="size-5" aria-hidden="true" />
+                </span>
+                <div>
+                  <h3 className="text-xl font-semibold tracking-tight text-primary">
+                    Company information
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-secondary">
+                    These values come from Billing → Your details.
+                    <span className="block">
+                      Editing one creates an override for this quotation.
+                    </span>
+                  </p>
+                </div>
+              </div>
               {design.headerDetailsCustomized ? (
-                <button
-                  type="button"
-                  className="rounded-lg px-3 py-2 text-sm font-semibold text-accent hover:bg-accent-soft"
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={<RotateCcw aria-hidden="true" />}
                   onClick={() => onChange((current) => ({ ...current, headerDetailsCustomized: false }))}
                 >
                   Use Your details
-                </button>
+                </Button>
               ) : (
-                <span className="rounded-full bg-accent-soft px-3 py-1.5 text-xs font-semibold text-accent">
+                <span className="inline-flex min-h-10 items-center gap-2 rounded-full bg-accent-soft px-4 text-sm font-semibold text-accent">
+                  <Link className="size-4" aria-hidden="true" />
                   Linked to Your details
                 </span>
               )}
             </div>
-            <p className="mt-1 text-sm leading-relaxed text-secondary">
-              These values come from Billing → Your details. Editing one creates an override for this quotation.
-            </p>
           </div>
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <div className="mt-8 grid gap-x-8 gap-y-5 sm:grid-cols-2">
             <HeaderField
               label="Company name"
+              icon={<Building2 />}
               value={displayedHeaderDetails.companyName}
               placeholder="Your company name"
               onChange={(value) => setHeaderDetail("companyName", value)}
             />
             <HeaderField
               label="Website"
+              icon={<Globe2 />}
               value={displayedHeaderDetails.website}
               placeholder="www.company.com"
               onChange={(value) => setHeaderDetail("website", value)}
             />
             <HeaderField
               label="Email"
+              icon={<Mail />}
               value={displayedHeaderDetails.email}
               placeholder="sales@company.com"
               onChange={(value) => setHeaderDetail("email", value)}
             />
             <HeaderField
               label="Phone"
+              icon={<Phone />}
               value={displayedHeaderDetails.phone}
               placeholder="+49 30 123 456"
               onChange={(value) => setHeaderDetail("phone", value)}
@@ -2970,7 +2993,7 @@ function CustomizeQuote({
             <label className="grid gap-2 sm:col-span-2">
               <span className="text-sm font-semibold text-primary">Address</span>
               <textarea
-                className="min-h-24 resize-y rounded-xl border border-default bg-surface px-4 py-3 text-sm leading-relaxed text-primary placeholder:text-tertiary hover:border-accent focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10"
+                className="min-h-32 resize-y rounded-xl border border-default bg-surface px-4 py-4 text-base leading-relaxed text-primary placeholder:text-tertiary hover:border-accent focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10"
                 value={displayedHeaderDetails.address}
                 placeholder={"Street and number\nPostal code and city\nCountry"}
                 onChange={(event) => setHeaderDetail("address", event.target.value)}
@@ -3774,11 +3797,13 @@ function ColorField({
 
 function HeaderField({
   label,
+  icon,
   value,
   placeholder,
   onChange,
 }: {
   label: string;
+  icon?: ReactNode;
   value: string;
   placeholder: string;
   onChange: (value: string) => void;
@@ -3787,13 +3812,23 @@ function HeaderField({
   return (
     <label className="grid gap-2" htmlFor={fieldId}>
       <span className="text-sm font-semibold text-primary">{label}</span>
-      <input
-        id={fieldId}
-        className="min-h-11 rounded-xl border border-default bg-surface px-4 text-sm text-primary placeholder:text-tertiary hover:border-accent focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10"
-        value={value}
-        placeholder={placeholder}
-        onChange={(event) => onChange(event.target.value)}
-      />
+      <span className="relative block">
+        <input
+          id={fieldId}
+          className={cx(
+            "h-12 w-full rounded-xl border border-default bg-surface px-4 text-base text-primary placeholder:text-tertiary hover:border-accent focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10",
+            icon !== undefined && icon !== null && "pr-12",
+          )}
+          value={value}
+          placeholder={placeholder}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        {icon && (
+          <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-secondary [&_svg]:size-5">
+            {icon}
+          </span>
+        )}
+      </span>
     </label>
   );
 }
