@@ -28,6 +28,8 @@ import type { ComponentPropsWithRef } from "react";
 const BASE =
   "w-full rounded-md border font-[inherit] text-primary " +
   "placeholder:text-tertiary " +
+  "[&[type='search']]:appearance-none [&[type='search']::-webkit-search-cancel-button]:appearance-none " +
+  "[&[type='search']::-webkit-search-decoration]:appearance-none " +
   "transition-colors duration-[var(--duration-fast)] ease-standard " +
   "focus:outline-none focus-visible:outline-none " +
   "disabled:bg-raised disabled:text-tertiary disabled:cursor-not-allowed";

@@ -44,6 +44,7 @@
 // `ToolbarSpacer` is that, and it says so. Kept: `whitespace-nowrap` (billing
 // and inventory), so a two-word label breaks between controls now that
 // `Toolbar` wraps, and never down the middle of itself.
+import { Check } from "lucide-react";
 import { type ReactNode } from "react";
 
 /** The row. Its disabled treatment reads the control's own state
@@ -57,8 +58,13 @@ const ROW =
 
 /** The box. 16px is the size all four rows were built around. */
 const BOX =
-  "flex-none w-4 h-4 m-0 accent-accent cursor-pointer disabled:cursor-not-allowed " +
-  "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2";
+  "peer sr-only";
+
+const MARK =
+  "flex size-4 shrink-0 items-center justify-center rounded-sm border border-default bg-surface text-transparent " +
+  "transition-colors peer-checked:border-accent peer-checked:bg-accent peer-checked:text-on-accent " +
+  "peer-focus-visible:border-accent peer-focus-visible:shadow-[inset_0_0_0_1px_var(--accent)] " +
+  "peer-disabled:bg-raised peer-disabled:text-tertiary";
 
 export interface CheckboxProps {
   /** Controlled: this component holds no state of its own. */
@@ -97,6 +103,9 @@ export function Checkbox({
         {...(name === undefined ? {} : { name })}
         onChange={(e) => onChange(e.target.checked)}
       />
+      <span className={MARK} aria-hidden="true">
+        <Check className="size-3" strokeWidth={3} />
+      </span>
       {/* Read, not drawn — a checkbox in a table's select column, where the row
           is the label. The name still has to exist. */}
       <span className={hideLabel === true ? "sr-only" : undefined}>

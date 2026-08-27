@@ -916,7 +916,7 @@ export function DriveModule() {
                   ref={fileRef}
                   type="file"
                   multiple
-                  style={{ display: "none" }}
+                  hidden
                   onChange={(e) => {
                     const targetFolder = uploadTargetRef.current;
                     uploadTargetRef.current = null;
