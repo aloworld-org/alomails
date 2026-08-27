@@ -799,8 +799,8 @@ export const QuoteContentStudio = forwardRef<
     });
 
   const contactQrNode = design.showContactQr && headerDetails.companyName ? (
-    <div className="shrink-0 text-center">
-      <div className="rounded-xl bg-white p-1.5 ring-1 ring-[var(--quote-table-header)]">
+    <div className="w-fit shrink-0 self-start text-center">
+      <div className="inline-flex bg-white p-1">
         <QRCodeSVG
           value={contactVCard(headerDetails)}
           size={design.contactQrSize === "small" ? 48 : design.contactQrSize === "large" ? 80 : 64}
@@ -811,7 +811,7 @@ export const QuoteContentStudio = forwardRef<
           title={`Save ${headerDetails.companyName} contact details`}
         />
       </div>
-      <p className="mt-1.5 text-[9px] font-medium leading-tight opacity-60">Scan to save</p>
+      <p className="mt-1 text-[9px] font-medium leading-tight opacity-60">Scan to save</p>
     </div>
   ) : null;
 
@@ -901,10 +901,12 @@ export const QuoteContentStudio = forwardRef<
                 <div className="mt-7 min-w-0 flex-1 text-[var(--quote-text)]">
                   <div
                     className={cx(
-                      "grid items-start gap-x-8 gap-y-5 text-sm leading-6",
+                      "grid items-start gap-x-10 gap-y-6 text-sm leading-6",
                       contactQrNode === null
                         ? "sm:grid-cols-2"
-                        : "sm:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)]",
+                        : design.contactQrAlignment === "left"
+                          ? "sm:grid-cols-[auto_minmax(0,0.9fr)_minmax(0,1.1fr)]"
+                          : "sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)_auto]",
                     )}
                   >
                     {design.contactQrAlignment === "left" && contactQrNode}
