@@ -105,30 +105,11 @@ export function QuoteEditor() {
   });
   const quote = draft.document;
 
-  const editAsDraft = useCallback(async () => {
+  const editDraft = useCallback(() => {
     if (quote === null) return;
-    if (quote.status === "draft") {
-      quoteStudio.current?.edit();
-      return;
-    }
-    const revised = await api.createQuote({
-      customerId: quote.customerId,
-      currency: quote.currency,
-      validDays: quote.validDays,
-      reference: quote.reference,
-      note: quote.note,
-      lines: quote.lines.map((line) => ({
-        description: line.description,
-        unit: line.unit,
-        qtyMilli: line.qtyMilli,
-        unitPriceCents: line.unitPriceCents,
-        vatRateBp: line.vatRateBp,
-        ...(line.productId == null ? {} : { productId: line.productId }),
-      })),
-    });
-    await quoteStudio.current?.copyTo(revised.id).catch(() => undefined);
-    await navigate(`../${revised.id}`, { replace: false });
-  }, [api, navigate, quote]);
+    if (quote.status !== "draft") return;
+    quoteStudio.current?.edit();
+  }, [quote]);
 
   const actions: DocumentAction[] = [];
   if (quote !== null && id !== undefined) {
@@ -298,15 +279,15 @@ export function QuoteEditor() {
                   ? "inline-flex min-h-10 items-center gap-2 rounded-xl bg-accent-soft px-4 py-2 text-sm font-medium text-accent no-underline transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
                   : styles.linkAction
               }
-              onClick={() => void editAsDraft()}
-              disabled={preview}
+              onClick={editDraft}
+              disabled={preview || quote.status !== "draft"}
               aria-pressed={quote.status === "draft" && !preview}
               title={
                 preview
                   ? strings.billingQuoteExitPreviewToEdit
                   : quote.status === "draft"
-                  ? strings.billingQuoteEditContent
-                  : strings.billingQuoteCreateRevision
+                    ? strings.billingQuoteEditContent
+                    : strings.billingQuoteClosedNotice
               }
             >
               <Pencil size={15} aria-hidden="true" /> {strings.billingQuoteEdit}

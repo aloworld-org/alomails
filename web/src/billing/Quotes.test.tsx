@@ -308,6 +308,12 @@ describe("the quote list", () => {
     expect(
       calls.some((call) => call.url.includes(`/billing/quotes/${DRAFT.id}`)),
     ).toBe(true);
+    expect(
+      calls.some(
+        (call) =>
+          call.method === "POST" && call.url.endsWith("/billing/quotes"),
+      ),
+    ).toBe(false);
   });
 
   test("quotes show when they were created and last edited", async () => {
@@ -549,34 +555,17 @@ describe("the offer's transitions", () => {
     expect((edit as HTMLButtonElement).disabled).toBe(false);
   });
 
-  test("editing a finalized quote creates an editable revision with the same lines", async () => {
+  test("a finalized quote cannot silently create another draft", async () => {
     reply("/billing/quotes/quo-2", "GET", { quote: SENT, invoiceId: null });
     ui("/billing/quotes/quo-2");
     await screen.findByText(strings.billingQuoteSentNotice);
 
-    reply("/billing/quotes", "POST", {
-      quote: { ...DRAFT, id: "quo-revision", lines: SENT.lines },
-    });
-    reply("/billing/quotes/quo-revision", "GET", {
-      quote: { ...DRAFT, id: "quo-revision", lines: SENT.lines },
-      invoiceId: null,
-    });
-    fireEvent.click(
-      screen.getByRole("button", { name: strings.billingQuoteEdit }),
-    );
-
-    await waitFor(() => expect(lastWrite()?.url).toContain("/billing/quotes"));
-    expect(lastWrite()?.method).toBe("POST");
-    expect(lastWrite()?.body).toMatchObject({
-      customerId: SENT.customerId,
-      lines: SENT.lines.map((line) => ({
-        description: line.description,
-        unit: line.unit,
-        qtyMilli: line.qtyMilli,
-        unitPriceCents: line.unitPriceCents,
-        vatRateBp: line.vatRateBp,
-      })),
-    });
+    const edit = screen.getByRole("button", {
+      name: strings.billingQuoteEdit,
+    }) as HTMLButtonElement;
+    expect(edit.disabled).toBe(true);
+    fireEvent.click(edit);
+    expect(lastWrite()).toBeUndefined();
   });
 
   test("each state offers only its own, and a closed offer offers none", async () => {
