@@ -270,6 +270,11 @@ export function QuoteEditor() {
                 onColumnsChange={setQuoteColumns}
                 issuer={issuer}
                 quote={quote}
+                customer={
+                  pickers.customers.find(
+                    (customer) => customer.id === quote?.customerId,
+                  ) ?? null
+                }
                 customerName={
                   pickers.customers.find(
                     (customer) => customer.id === quote?.customerId,

@@ -14,6 +14,7 @@ import {
   Building2,
   Check,
   Copy,
+  ContactRound,
   FileText,
   Heading1,
   Heading2,
@@ -50,7 +51,7 @@ import {
   type QuoteTotalsDetail,
   type QuoteTotalsPlacement,
 } from "./quoteTableOptions";
-import type { BillingQuote, BillingSettings } from "./types";
+import type { BillingCustomer, BillingQuote, BillingSettings } from "./types";
 
 type Theme = "modern" | "editorial" | "minimal";
 type HeaderAlignment = "left" | "right";
@@ -112,6 +113,14 @@ interface HeaderDetails {
   vatId: string;
   registrationNo: string;
 }
+interface CustomerHeaderDetails {
+  companyName: string;
+  contactName: string;
+  address: string;
+  email: string;
+  phone: string;
+  vatId: string;
+}
 export interface QuoteColumns {
   unit: boolean;
   quantity: boolean;
@@ -132,6 +141,8 @@ interface Design {
   headerAlignment: HeaderAlignment;
   headerDetails: HeaderDetails;
   headerDetailsCustomized: boolean;
+  customerDetails: CustomerHeaderDetails;
+  customerDetailsCustomized: boolean;
   theme: Theme;
   colors: Colors;
   columns: QuoteColumns;
@@ -165,12 +176,22 @@ const DEFAULT_HEADER_DETAILS: HeaderDetails = {
   vatId: "",
   registrationNo: "",
 };
+const DEFAULT_CUSTOMER_DETAILS: CustomerHeaderDetails = {
+  companyName: "",
+  contactName: "",
+  address: "",
+  email: "",
+  phone: "",
+  vatId: "",
+};
 const EMPTY: Design = {
   logo: "",
   headerStyle: "signature",
   headerAlignment: "left",
   headerDetails: DEFAULT_HEADER_DETAILS,
   headerDetailsCustomized: false,
+  customerDetails: DEFAULT_CUSTOMER_DETAILS,
+  customerDetailsCustomized: false,
   theme: "modern",
   colors: DEFAULT_COLORS,
   columns: DEFAULT_QUOTE_COLUMNS,
@@ -223,6 +244,7 @@ function legacyDesign(key: string): Design | null {
 
 function savedDesign(saved: Partial<Design>): Design {
   const headerDetails = { ...DEFAULT_HEADER_DETAILS, ...saved.headerDetails };
+  const customerDetails = { ...DEFAULT_CUSTOMER_DETAILS, ...saved.customerDetails };
   return normalizeDesign({
     ...EMPTY,
     ...saved,
@@ -231,6 +253,10 @@ function savedDesign(saved: Partial<Design>): Design {
     headerDetailsCustomized:
       saved.headerDetailsCustomized ??
       Object.values(headerDetails).some((value) => value.trim().length > 0),
+    customerDetails,
+    customerDetailsCustomized:
+      saved.customerDetailsCustomized ??
+      Object.values(customerDetails).some((value) => value.trim().length > 0),
   });
 }
 
@@ -247,6 +273,24 @@ function headerDetailsFromSettings(settings?: BillingSettings | null): HeaderDet
     website: settings.website,
     vatId: settings.vatId ?? "",
     registrationNo: settings.registrationNo,
+  };
+}
+
+function customerDetailsFromCustomer(
+  customer?: BillingCustomer | null,
+  fallbackName = "",
+): CustomerHeaderDetails {
+  if (!customer) return { ...DEFAULT_CUSTOMER_DETAILS, companyName: fallbackName };
+  const locality = [customer.postalCode, customer.city].filter(Boolean).join(" ");
+  return {
+    companyName: customer.name,
+    contactName: "",
+    address: [customer.addressLine1, customer.addressLine2, locality, customer.country]
+      .filter(Boolean)
+      .join("\n"),
+    email: customer.email ?? "",
+    phone: "",
+    vatId: customer.vatId ?? "",
   };
 }
 
@@ -387,6 +431,7 @@ export const QuoteContentStudio = forwardRef<
     onColumnsChange?: (columns: QuoteColumns) => void;
     issuer?: BillingSettings | null;
     quote?: BillingQuote | null;
+    customer?: BillingCustomer | null;
     customerName?: string;
   }
 >(function QuoteContentStudio(
@@ -400,6 +445,7 @@ export const QuoteContentStudio = forwardRef<
     onColumnsChange,
     issuer,
     quote,
+    customer,
     customerName = "",
   },
   ref,
@@ -419,6 +465,10 @@ export const QuoteContentStudio = forwardRef<
   const headerDetails = design.headerDetailsCustomized
     ? design.headerDetails
     : issuerHeaderDetails;
+  const selectedCustomerDetails = customerDetailsFromCustomer(customer, customerName);
+  const customerDetails = design.customerDetailsCustomized
+    ? design.customerDetails
+    : selectedCustomerDetails;
   useImperativeHandle(
     ref,
     () => ({
@@ -786,12 +836,41 @@ export const QuoteContentStudio = forwardRef<
                   >
                     {quote?.number ?? "Draft quotation"}
                   </p>
-                  {customerName && (
+                  {Object.values(customerDetails).some(Boolean) && (
                     <div className="mt-5 text-[var(--quote-text)]">
                       <p className="text-[11px] font-semibold uppercase tracking-wide opacity-55">
                         Prepared for
                       </p>
-                      <p className="mt-1 text-sm font-semibold">{customerName}</p>
+                      {customerDetails.companyName && (
+                        <p className="mt-1 text-sm font-semibold">{customerDetails.companyName}</p>
+                      )}
+                      {customerDetails.contactName && (
+                        <p className="mt-1 text-xs opacity-75">{customerDetails.contactName}</p>
+                      )}
+                      {customerDetails.address && (
+                        <p className="mt-2 whitespace-pre-line text-xs leading-relaxed opacity-70">
+                          {customerDetails.address}
+                        </p>
+                      )}
+                      {(customerDetails.email || customerDetails.phone) && (
+                        <div className="mt-2 flex flex-col gap-1.5 text-xs opacity-75">
+                          {customerDetails.email && (
+                            <span className="flex items-center gap-2">
+                              <Mail className="size-3.5 shrink-0 text-[var(--quote-accent)]" aria-hidden="true" />
+                              {customerDetails.email}
+                            </span>
+                          )}
+                          {customerDetails.phone && (
+                            <span className="flex items-center gap-2">
+                              <Phone className="size-3.5 shrink-0 text-[var(--quote-accent)]" aria-hidden="true" />
+                              {customerDetails.phone}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {customerDetails.vatId && (
+                        <p className="mt-2 text-xs opacity-65">{`VAT ${customerDetails.vatId}`}</p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -814,7 +893,7 @@ export const QuoteContentStudio = forwardRef<
               {!readOnly && (
                 <button
                   type="button"
-                  className="absolute right-4 top-4 inline-flex min-h-10 items-center gap-2 rounded-xl border border-default bg-surface px-3.5 py-2 text-sm font-semibold text-primary shadow-sm transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
+                  className="absolute right-4 top-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-accent-soft px-4 py-2 text-sm font-medium text-accent transition-colors duration-150 hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15"
                   onClick={() => setCustomizeMode("header")}
                   aria-label="Edit quotation header"
                 >
@@ -1257,6 +1336,7 @@ export const QuoteContentStudio = forwardRef<
           mode={customizeMode}
           design={design}
           issuerDetails={issuerHeaderDetails}
+          customerDetails={selectedCustomerDetails}
           saveError={saveError}
           onChange={setDesign}
           onClose={() => setCustomizeMode(null)}
@@ -2845,6 +2925,7 @@ function CustomizeQuote({
   mode,
   design,
   issuerDetails,
+  customerDetails: sourceCustomerDetails,
   saveError,
   onChange,
   onClose,
@@ -2852,6 +2933,7 @@ function CustomizeQuote({
   mode: "header" | "document";
   design: Design;
   issuerDetails: HeaderDetails;
+  customerDetails: CustomerHeaderDetails;
   saveError: string;
   onChange: React.Dispatch<React.SetStateAction<Design>>;
   onClose: () => void;
@@ -2870,6 +2952,15 @@ function CustomizeQuote({
       ...current,
       headerDetails: { ...displayedHeaderDetails, [name]: value },
       headerDetailsCustomized: true,
+    }));
+  const displayedCustomerDetails = design.customerDetailsCustomized
+    ? design.customerDetails
+    : sourceCustomerDetails;
+  const setCustomerDetail = (name: keyof CustomerHeaderDetails, value: string) =>
+    onChange((current) => ({
+      ...current,
+      customerDetails: { ...displayedCustomerDetails, [name]: value },
+      customerDetailsCustomized: true,
     }));
   return (
     <Modal
@@ -3050,6 +3141,91 @@ function CustomizeQuote({
               value={displayedHeaderDetails.registrationNo}
               placeholder="Company registration number"
               onChange={(value) => setHeaderDetail("registrationNo", value)}
+            />
+          </div>
+        </section>
+        <section className="rounded-2xl border border-subtle bg-surface p-6 shadow-sm sm:p-8">
+          <div className="flex flex-wrap items-center justify-between gap-5">
+            <div className="flex items-start gap-4">
+              <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+                <ContactRound className="size-5" aria-hidden="true" />
+              </span>
+              <div>
+                <h3 className="text-xl font-semibold tracking-tight text-primary">
+                  Customer information
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-secondary">
+                  Shown beneath Prepared for in the quotation header.
+                  <span className="block">
+                    Editing a value creates an override for this quotation only.
+                  </span>
+                </p>
+              </div>
+            </div>
+            {design.customerDetailsCustomized ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<RotateCcw aria-hidden="true" />}
+                onClick={() =>
+                  onChange((current) => ({
+                    ...current,
+                    customerDetailsCustomized: false,
+                  }))
+                }
+              >
+                Use selected customer
+              </Button>
+            ) : (
+              <span className="inline-flex min-h-10 items-center gap-2 rounded-full bg-accent-soft px-4 text-sm font-semibold text-accent">
+                <Link className="size-4" aria-hidden="true" />
+                Linked to selected customer
+              </span>
+            )}
+          </div>
+          <div className="mt-8 grid gap-x-8 gap-y-5 sm:grid-cols-2">
+            <HeaderField
+              label="Company name"
+              icon={<Building2 />}
+              value={displayedCustomerDetails.companyName}
+              placeholder="Customer company name"
+              onChange={(value) => setCustomerDetail("companyName", value)}
+            />
+            <HeaderField
+              label="Contact person"
+              icon={<ContactRound />}
+              value={displayedCustomerDetails.contactName}
+              placeholder="Contact name"
+              onChange={(value) => setCustomerDetail("contactName", value)}
+            />
+            <HeaderField
+              label="Email"
+              icon={<Mail />}
+              value={displayedCustomerDetails.email}
+              placeholder="contact@customer.com"
+              onChange={(value) => setCustomerDetail("email", value)}
+            />
+            <HeaderField
+              label="Phone"
+              icon={<Phone />}
+              value={displayedCustomerDetails.phone}
+              placeholder="+49 30 123 456"
+              onChange={(value) => setCustomerDetail("phone", value)}
+            />
+            <label className="grid gap-2 sm:col-span-2">
+              <span className="text-sm font-semibold text-primary">Address</span>
+              <textarea
+                className="min-h-32 resize-y rounded-xl border border-default bg-surface px-4 py-4 text-base leading-relaxed text-primary placeholder:text-tertiary hover:border-accent focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10"
+                value={displayedCustomerDetails.address}
+                placeholder={"Street and number\nPostal code and city\nCountry"}
+                onChange={(event) => setCustomerDetail("address", event.target.value)}
+              />
+            </label>
+            <HeaderField
+              label="VAT ID"
+              value={displayedCustomerDetails.vatId}
+              placeholder="Customer VAT registration number"
+              onChange={(value) => setCustomerDetail("vatId", value)}
             />
           </div>
         </section>
