@@ -1980,8 +1980,8 @@ function DividerBlockEditor({
             </div>
           </fieldset>
 
-          <div className="mt-2 grid gap-8 border-b border-subtle pb-7 md:grid-cols-2">
-            <fieldset>
+          <div className="mt-2 grid border-b border-subtle pb-7 md:grid-cols-2 md:divide-x md:divide-default">
+            <fieldset className="pb-7 md:pb-0 md:pr-8">
               <legend className="text-sm font-semibold text-primary">
                 {strings.quoteStudioDividerThickness}
               </legend>
@@ -2010,7 +2010,7 @@ function DividerBlockEditor({
               </div>
             </fieldset>
 
-            <fieldset>
+            <fieldset className="border-t border-subtle pt-7 md:border-t-0 md:pl-8 md:pt-0">
               <legend className="text-sm font-semibold text-primary">
                 {strings.quoteStudioDividerWidth}
               </legend>
@@ -2083,31 +2083,35 @@ function DividerVisualChoice({
     <button
       type="button"
       aria-pressed={selected}
-      className={cx(
-        "relative flex flex-col rounded-xl border bg-surface p-4 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
-        compact ? "min-h-28" : "min-h-40",
-        selected
-          ? "border-accent bg-accent-soft/20 text-primary"
-          : "border-default text-primary hover:border-accent hover:bg-accent-soft/20",
-      )}
+      className="group block w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15"
       onClick={onClick}
     >
-      {selected && (
-        <span className="absolute right-3 top-3 inline-flex size-5 items-center justify-center rounded-full bg-accent text-white">
-          <Check className="size-3.5" aria-hidden="true" />
-        </span>
-      )}
       <span
         className={cx(
-          "flex w-full items-center px-3 pr-8",
-          compact ? "min-h-10" : "min-h-16",
+          "relative flex w-full flex-col rounded-xl border p-4 transition-colors duration-150",
+          compact ? "min-h-[7rem]" : "min-h-[10rem]",
+          selected
+            ? "border-accent bg-accent-soft/20"
+            : "border-default bg-surface group-hover:border-accent group-hover:bg-accent-soft/20",
         )}
-        aria-hidden="true"
       >
-        {children}
-      </span>
-      <span className="mt-auto pt-4 text-center text-sm font-medium text-primary">
-        {label}
+        {selected && (
+          <span className="absolute right-3 top-3 inline-flex size-5 items-center justify-center rounded-full bg-accent text-white">
+            <Check className="size-3.5" aria-hidden="true" />
+          </span>
+        )}
+        <span
+          className={cx(
+            "flex w-full items-center px-3 pr-8",
+            compact ? "min-h-10" : "min-h-16",
+          )}
+          aria-hidden="true"
+        >
+          {children}
+        </span>
+        <span className="mt-auto pt-4 text-center text-sm font-medium text-primary">
+          {label}
+        </span>
       </span>
     </button>
   );
