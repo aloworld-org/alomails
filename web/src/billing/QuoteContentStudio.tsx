@@ -3258,10 +3258,10 @@ function CustomizeQuote({
                     aria-pressed={design.contactQrAlignment === alignment}
                     aria-label={`Place QR code on the ${alignment}`}
                     className={cx(
-                      "relative min-h-24 rounded-xl border p-3 transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
+                      "group relative min-h-24 cursor-pointer rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
                       design.contactQrAlignment === alignment
-                        ? "border-accent bg-accent-soft/30"
-                        : "border-default bg-surface hover:border-accent",
+                        ? "border-accent bg-accent-soft/40"
+                        : "border-default bg-surface hover:border-accent hover:bg-accent-soft/20",
                     )}
                     onClick={() =>
                       onChange((current) => ({
@@ -3281,6 +3281,17 @@ function CustomizeQuote({
                       </span>
                     </span>
                     <span className="mt-2 block text-center text-xs font-semibold capitalize text-primary">{alignment}</span>
+                    <span
+                      className={cx(
+                        "absolute right-2 top-2 grid size-5 place-items-center rounded-full border transition-colors",
+                        design.contactQrAlignment === alignment
+                          ? "border-accent bg-accent text-white"
+                          : "border-default bg-surface group-hover:border-accent",
+                      )}
+                      aria-hidden="true"
+                    >
+                      {design.contactQrAlignment === alignment && <Check className="size-3" strokeWidth={3} />}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -3295,10 +3306,10 @@ function CustomizeQuote({
                     type="button"
                     aria-pressed={design.contactQrSize === size}
                     className={cx(
-                      "min-h-24 rounded-xl border p-3 transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
+                      "group relative min-h-24 cursor-pointer rounded-xl border p-3 transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
                       design.contactQrSize === size
-                        ? "border-accent bg-accent-soft/30"
-                        : "border-default bg-surface hover:border-accent",
+                        ? "border-accent bg-accent-soft/40"
+                        : "border-default bg-surface hover:border-accent hover:bg-accent-soft/20",
                     )}
                     onClick={() =>
                       onChange((current) => ({
@@ -3312,6 +3323,17 @@ function CustomizeQuote({
                       <QrCode className={cx("text-accent", size === "small" ? "size-6" : size === "large" ? "size-11" : "size-8")} />
                     </span>
                     <span className="mt-2 block text-center text-xs font-semibold capitalize text-primary">{size}</span>
+                    <span
+                      className={cx(
+                        "absolute right-2 top-2 grid size-5 place-items-center rounded-full border transition-colors",
+                        design.contactQrSize === size
+                          ? "border-accent bg-accent text-white"
+                          : "border-default bg-surface group-hover:border-accent",
+                      )}
+                      aria-hidden="true"
+                    >
+                      {design.contactQrSize === size && <Check className="size-3" strokeWidth={3} />}
+                    </span>
                   </button>
                 ))}
               </div>
