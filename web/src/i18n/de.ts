@@ -2691,13 +2691,13 @@ export const de: Partial<Catalog> = {
   billingQuoteTemplateBlank: "Leeres Angebot",
   billingQuoteTemplateBlankDescription:
     "Beginnen Sie mit einer leeren Preistabelle.",
-  billingQuoteTemplateServices: "Dienstleistungen",
+  billingQuoteTemplateServices: "Professionelle Leistungen",
   billingQuoteTemplateServicesDescription:
     "Ein fokussiertes Angebot mit zwei Kernleistungen.",
-  billingQuoteTemplateProject: "Projektvorschlag",
+  billingQuoteTemplateProject: "Projektumsetzung",
   billingQuoteTemplateProjectDescription:
     "Ein größerer Umfang mit drei Lieferpositionen.",
-  billingQuoteTemplateRetainer: "Monatspauschale",
+  billingQuoteTemplateRetainer: "Laufende Zusammenarbeit",
   billingQuoteTemplateRetainerDescription:
     "Beginnen Sie mit einer wiederkehrenden monatlichen Leistung.",
   quoteStudioTemplateServicesHeading: "Ausgewählte Leistungen für Sie",

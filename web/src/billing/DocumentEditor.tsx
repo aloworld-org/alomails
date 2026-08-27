@@ -85,20 +85,9 @@ function CreationTemplatePreview({
 
   if (kind === "blank") {
     return (
-      <span className="flex h-full flex-col rounded-xl bg-white p-3">
-        <span className="grid grid-cols-[1fr_0.8fr] gap-3 border-b border-[#E7E1D8] pb-2">
-          <span className="flex items-center gap-2">
-            <span className="size-5 rounded-md bg-[#FCE9E3]" />
-            <span className={`${strongLine} w-1/2`} />
-          </span>
-          <span className="flex justify-end">
-            <span className={`${accentLine} w-1/3`} />
-          </span>
-        </span>
-        <span className="flex flex-1 items-center justify-center">
-          <span className="flex size-8 items-center justify-center rounded-lg border border-dashed border-[#CBD5E1] bg-[#FFFEFC] text-lg font-medium text-[#E76F51]">
-            +
-          </span>
+      <span className="flex h-full items-center justify-center rounded-xl bg-white">
+        <span className="flex size-10 items-center justify-center rounded-xl bg-[#FCE9E3] text-xl font-medium text-[#E76F51]">
+          +
         </span>
       </span>
     );
@@ -166,7 +155,7 @@ function CreationTemplatePreview({
   }
 
   return (
-    <span className="flex h-full flex-col rounded-xl bg-white p-3">
+    <span className="flex h-full flex-col overflow-hidden rounded-xl bg-white p-3">
       <span className="mb-2 grid grid-cols-[1fr_0.8fr] gap-3 border-b border-[#E7E1D8] pb-2">
         <span className="flex items-center gap-2">
           <span className="size-5 rounded-md bg-[#FCE9E3]" />
@@ -177,13 +166,13 @@ function CreationTemplatePreview({
           <span className={`${line} w-1/2`} />
         </span>
       </span>
-      <span className="mb-2 grid gap-1">
+      <span className="mb-1.5 grid gap-1">
         <span className={`${strongLine} w-2/5`} />
         <span className={`${line} w-4/5`} />
       </span>
-      <span className="mt-auto rounded-lg bg-[#F3F0EA] p-2">
+      <span className="mt-auto rounded-lg bg-[#F3F0EA] px-2 py-1.5">
         {["w-full", "w-3/4"].map((width) => (
-          <span key={width} className="grid grid-cols-[1fr_0.3fr] gap-2 border-t border-[#E7E1D8] py-1">
+          <span key={width} className="grid grid-cols-[1fr_0.3fr] items-center gap-2 border-t border-[#E7E1D8] py-1">
             <span className={`${line} ${width}`} />
             <span className={`${strongLine} w-full`} />
           </span>
