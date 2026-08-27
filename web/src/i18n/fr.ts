@@ -1874,29 +1874,38 @@ export const fr: Partial<Catalog> = {
   billingIncludingVat: "TVA comprise",
   billingQuoteTemplate: "Modèle de devis",
   billingQuoteStartFrom: "Partir d’un modèle",
-  billingQuoteTemplateHint: "Utilisez votre catalogue de prix pour préparer une base utile.",
+  billingQuoteTemplateHint:
+    "Utilisez votre catalogue de prix pour préparer une base utile.",
   billingQuoteTemplateBlank: "Devis vierge",
-  billingQuoteTemplateBlankDescription: "Commencer avec un tableau de prix vide.",
+  billingQuoteTemplateBlankDescription:
+    "Commencer avec un tableau de prix vide.",
   billingQuoteTemplateServices: "Prestations professionnelles",
-  billingQuoteTemplateServicesDescription: "Une offre ciblée avec deux services principaux.",
+  billingQuoteTemplateServicesDescription:
+    "Une offre ciblée avec deux services principaux.",
   billingQuoteTemplateProject: "Livraison de projet",
-  billingQuoteTemplateProjectDescription: "Un périmètre plus large avec trois livrables.",
+  billingQuoteTemplateProjectDescription:
+    "Un périmètre plus large avec trois livrables.",
   billingQuoteTemplateRetainer: "Collaboration continue",
-  billingQuoteTemplateRetainerDescription: "Commencer avec un service mensuel récurrent.",
+  billingQuoteTemplateRetainerDescription:
+    "Commencer avec un service mensuel récurrent.",
   quoteStudioTemplateServicesHeading: "Des services choisis pour vous",
-  quoteStudioTemplateServicesIntroduction: "Une présentation claire des services, des livrables et de l’investissement proposés pour votre entreprise.",
+  quoteStudioTemplateServicesIntroduction:
+    "Une présentation claire des services, des livrables et de l’investissement proposés pour votre entreprise.",
   quoteStudioTemplateServicesTable: "Services et honoraires",
   quoteStudioTemplateProjectHeading: "Proposition de projet",
-  quoteStudioTemplateProjectIntroduction: "Cette proposition réunit le périmètre du projet, l’approche de réalisation et les conditions commerciales.",
+  quoteStudioTemplateProjectIntroduction:
+    "Cette proposition réunit le périmètre du projet, l’approche de réalisation et les conditions commerciales.",
   quoteStudioTemplateProjectDiscovery: "Cadrage et alignement",
   quoteStudioTemplateProjectDelivery: "Réalisation et validation",
   quoteStudioTemplateProjectHandover: "Lancement et transfert",
   quoteStudioTemplateProjectTable: "Investissement du projet",
   quoteStudioTemplateRetainerHeading: "Partenariat mensuel",
-  quoteStudioTemplateRetainerIntroduction: "Un accompagnement continu, avec un budget mensuel prévisible et un rythme de travail clair.",
+  quoteStudioTemplateRetainerIntroduction:
+    "Un accompagnement continu, avec un budget mensuel prévisible et un rythme de travail clair.",
   quoteStudioTemplateRetainerTable: "Services mensuels",
   quoteStudioTemplateRetainerReporting: "Suivi régulier de l’avancement",
-  quoteStudioTemplateRetainerSupport: "Assistance et planification prioritaires",
+  quoteStudioTemplateRetainerSupport:
+    "Assistance et planification prioritaires",
   billingQuoteIncludedItems: (count: number) =>
     `${count} élément${count === 1 ? "" : "s"}`,
   billingQuoteIncludedTitle: "Éléments prêts à ajouter",
@@ -1905,7 +1914,8 @@ export const fr: Partial<Catalog> = {
   billingQuoteRemoveIncludedItem: (name: string) => `Retirer ${name}`,
   billingQuoteAddFromPriceList: "Ajouter des éléments",
   billingQuoteSearchPriceList: "Rechercher dans le catalogue",
-  billingQuoteAllItemsIncluded: "Tous les éléments actifs du catalogue sont déjà inclus.",
+  billingQuoteAllItemsIncluded:
+    "Tous les éléments actifs du catalogue sont déjà inclus.",
   billingQuoteNoMatchingItems: "Aucun élément ne correspond à cette recherche.",
   billingQuotePerItem: "unité",
   billingQuoteContinueToEditor: "Continuer dans l’éditeur",
@@ -1938,8 +1948,7 @@ export const fr: Partial<Catalog> = {
   billingDeleteQuoteDraft: "Supprimer le brouillon",
   billingDeleteQuoteDraftConfirm:
     "Supprimer ce brouillon ? Il ne porte aucun numéro et n’a jamais été proposé à personne — et rien ne pourra être récupéré.",
-  billingQuoteSentNotice:
-    "Finalisé dans alo. Aucun e-mail n’a été envoyé.",
+  billingQuoteSentNotice: "Finalisé dans alo. Aucun e-mail n’a été envoyé.",
   billingQuoteClosedNotice:
     "Cette offre est close et ne peut plus être modifiée.",
   billingSendQuote: "Finaliser le devis",
@@ -6820,19 +6829,23 @@ export const fr: Partial<Catalog> = {
   billingImportMissingName: "Nom manquant",
   billingImportInvalidPrice: "Prix non valide",
   billingImportInvalidVat: "TVA non valide",
-  billingImportReadFailed: "Impossible de lire cette liste de prix. Essayez un fichier CSV, Excel, PNG, JPEG ou WebP.",
-  billingImportSaveFailed: "L’importation s’est arrêtée avant l’enregistrement de tous les articles.",
+  billingImportReadFailed:
+    "Impossible de lire cette liste de prix. Essayez un fichier CSV, Excel, PNG, JPEG ou WebP.",
+  billingImportSaveFailed:
+    "L’importation s’est arrêtée avant l’enregistrement de tous les articles.",
   billingImportNotInFile: "Absent de ce fichier",
   billingImportTitle: "Importer une liste de prix",
   billingImportItems: (count: number) => `Importer ${count} articles`,
   billingImportViewPriceList: "Voir la liste de prix",
   billingImportDropTitle: "Déposez une liste de prix ici",
-  billingImportDropHelp: "Les fichiers Excel et CSV sont lus immédiatement dans votre navigateur. Pour une photo ou une capture d’écran, alo AI extrait les lignes afin que vous puissiez les vérifier.",
+  billingImportDropHelp:
+    "Les fichiers Excel et CSV sont lus immédiatement dans votre navigateur. Pour une photo ou une capture d’écran, alo AI extrait les lignes afin que vous puissiez les vérifier.",
   billingImportSpreadsheetFormats: "CSV · XLSX",
   billingImportImageFormats: "PNG · JPEG · WebP",
   billingImportChooseFile: "Choisir un fichier",
   billingImportReading: (name: string) => `Lecture de ${name}…`,
-  billingImportRowsFound: (count: number) => `${count} lignes trouvées. Vérifiez la correspondance et excluez les éléments que vous ne souhaitez pas importer.`,
+  billingImportRowsFound: (count: number) =>
+    `${count} lignes trouvées. Vérifiez la correspondance et excluez les éléments que vous ne souhaitez pas importer.`,
   billingImportReplaceFile: "Remplacer le fichier",
   billingImportMatchColumns: "Associer vos colonnes",
   billingImportSku: "Référence article",
@@ -6843,8 +6856,10 @@ export const fr: Partial<Catalog> = {
   billingImportRow: (number: number) => `ligne ${number}`,
   billingImportAlreadyExists: "Existe déjà",
   billingImportReady: "Prêt",
-  billingImportComplete: (count: number) => `${count} articles importés dans la liste de prix`,
-  billingImportCompleteHelp: "Ils peuvent désormais être utilisés dans les devis, les factures et les connexions de prix partagées.",
+  billingImportComplete: (count: number) =>
+    `${count} articles importés dans la liste de prix`,
+  billingImportCompleteHelp:
+    "Ils peuvent désormais être utilisés dans les devis, les factures et les connexions de prix partagées.",
   colorPickerEyedropper: "Prélever une couleur à l’écran",
   colorPickerHue: "Teinte",
   colorPickerChannelValue: (channel: string) => `Valeur ${channel}`,
@@ -6859,7 +6874,8 @@ export const fr: Partial<Catalog> = {
   billingApplyImage: "Appliquer l’image",
   billingPdfPreview: "Aperçu PDF",
   billingQuotationPreview: "Aperçu du devis",
-  billingImagePdfHelp: "Voici la taille et le recadrage de l’image utilisés dans le PDF.",
+  billingImagePdfHelp:
+    "Voici la taille et le recadrage de l’image utilisés dans le PDF.",
   billingPdfPaperSizeA4: "A4",
   billingProductPdfPreview: "Image du produit dans l’aperçu PDF",
   billingCropStyle: "Style de recadrage",
@@ -6867,7 +6883,8 @@ export const fr: Partial<Catalog> = {
   billingShowFullImage: "Afficher l’image entière",
   billingZoom: "Zoom",
   billingCustomZoom: "Pourcentage de zoom personnalisé",
-  billingZoomHelp: "Utilisez 50 à 90 % pour afficher davantage de l’image, ou plus de 100 % pour un cadrage plus serré.",
+  billingZoomHelp:
+    "Utilisez 50 à 90 % pour afficher davantage de l’image, ou plus de 100 % pour un cadrage plus serré.",
   billingFocusArea: "Zone de mise au point",
   billingCentre: "Centre",
   billingTop: "Haut",
@@ -6875,45 +6892,55 @@ export const fr: Partial<Catalog> = {
   billingLeft: "Gauche",
   billingRight: "Droite",
   billingProductImage: "Image du produit",
-  billingProductImageHelp: "Affichée à côté de cet article dans le devis client.",
+  billingProductImageHelp:
+    "Affichée à côté de cet article dans le devis client.",
   billingReplaceImage: "Remplacer l’image",
   billingUploadImage: "Importer une image",
   billingRemoveImage: "Supprimer l’image",
   billingProductDescription: "Description du produit",
-  billingProductDescriptionPlaceholder: "Ajoutez les caractéristiques, matériaux, éléments du périmètre ou toute autre information utile…",
+  billingProductDescriptionPlaceholder:
+    "Ajoutez les caractéristiques, matériaux, éléments du périmètre ou toute autre information utile…",
   billingConnectionsSyncNow: "Synchroniser maintenant",
   billingConnectionsConnectSupplier: "Connecter les prix d’un fournisseur",
   billingConnectionsConnectPrices: "Connecter les prix",
   billingConnectionsEasyOption: "Commencez par l’option la plus simple",
-  billingConnectionsEasyOptionHelp: "Si votre fournisseur utilise alo, collez son lien d’invitation. Nous gérons automatiquement l’authentification et les champs produit.",
+  billingConnectionsEasyOptionHelp:
+    "Si votre fournisseur utilise alo, collez son lien d’invitation. Nous gérons automatiquement l’authentification et les champs produit.",
   billingConnectionsSupplier: "Fournisseur",
   billingConnectionsSupplierPlaceholder: "Nom de l’entreprise fournisseur",
   billingConnectionsType: "Type de connexion",
   billingConnectionsChooseConnection: "Choisissez une connexion",
   billingConnectionsInvitationLink: "Lien d’invitation",
-  billingConnectionsInvitationHelp: "Votre fournisseur crée ce lien depuis Partagés par moi dans son espace alo.",
+  billingConnectionsInvitationHelp:
+    "Votre fournisseur crée ce lien depuis Partagés par moi dans son espace alo.",
   billingConnectionsInvitationPlaceholder: "Collez le lien d’invitation alo",
   billingConnectionsAccessKey: "Clé d’accès",
-  billingConnectionsAccessKeyHelp: "Elle reste confidentielle et n’apparaît jamais dans vos documents clients.",
-  billingConnectionsAccessKeyPlaceholder: "Collez la clé fournie par votre fournisseur",
+  billingConnectionsAccessKeyHelp:
+    "Elle reste confidentielle et n’apparaît jamais dans vos documents clients.",
+  billingConnectionsAccessKeyPlaceholder:
+    "Collez la clé fournie par votre fournisseur",
   billingConnectionsReady: "Connexion prête",
   billingConnectionsTestPreview: "Tester et prévisualiser",
   billingConnectionsSyncApprovals: "Synchronisation et approbations",
-  billingConnectionsSyncApprovalsHelp: "Choisissez quand vérifier les prix et quelles modifications nécessitent une approbation.",
+  billingConnectionsSyncApprovalsHelp:
+    "Choisissez quand vérifier les prix et quelles modifications nécessitent une approbation.",
   billingConnectionsCheckUpdates: "Rechercher des mises à jour",
   billingConnectionsChooseSchedule: "Choisissez une fréquence",
   billingConnectionsApplyChanges: "Appliquer les modifications de prix",
   billingConnectionsChooseApproval: "Choisissez une règle d’approbation",
   billingConnectionsChangeLimit: "Limite de modification automatique",
-  billingConnectionsChangeLimitHelp: "Les modifications supérieures à ce pourcentage attendent une approbation.",
+  billingConnectionsChangeLimitHelp:
+    "Les modifications supérieures à ce pourcentage attendent une approbation.",
   billingConnectionsProductMatching: "Rapprochement des produits",
-  billingConnectionsProductMatchingHelp: "Définissez comment associer les produits du fournisseur aux articles de votre catalogue.",
+  billingConnectionsProductMatchingHelp:
+    "Définissez comment associer les produits du fournisseur aux articles de votre catalogue.",
   billingConnectionsMatchBy: "Rapprocher les produits selon",
   billingConnectionsChooseMatching: "Choisissez une méthode de rapprochement",
   billingConnectionsNewProducts: "Nouveaux produits fournisseur",
   billingConnectionsChooseAction: "Choisissez une action",
   billingConnectionsFieldMapping: "Correspondance des champs fournisseur",
-  billingConnectionsFieldMappingHelp: "Saisissez les noms de champs utilisés par ce fournisseur. alo vous fera des suggestions après le premier aperçu.",
+  billingConnectionsFieldMappingHelp:
+    "Saisissez les noms de champs utilisés par ce fournisseur. alo vous fera des suggestions après le premier aperçu.",
   billingConnectionsSkuField: "Champ UGS",
   billingConnectionsNameField: "Champ du nom",
   billingConnectionsNetPriceField: "Champ du prix net",
@@ -6924,8 +6951,10 @@ export const fr: Partial<Catalog> = {
   billingConnectionsHeaderValuePlaceholder: "Saisissez la valeur sécurisée",
   billingConnectionsSharePrices: "Partager mes prix",
   billingConnectionsCreateSecure: "Créer une connexion sécurisée",
-  billingConnectionsYouControl: "Vous contrôlez précisément ce que reçoit ce client",
-  billingConnectionsYouControlHelp: "Les coûts d’achat internes, noms de fournisseurs et marges ne sont jamais inclus.",
+  billingConnectionsYouControl:
+    "Vous contrôlez précisément ce que reçoit ce client",
+  billingConnectionsYouControlHelp:
+    "Les coûts d’achat internes, noms de fournisseurs et marges ne sont jamais inclus.",
   billingConnectionsClientPartner: "Client ou partenaire",
   billingConnectionsCompanyName: "Nom de l’entreprise",
   billingConnectionsDeliveryMethod: "Comment se connectera-t-il ?",
@@ -6934,64 +6963,86 @@ export const fr: Partial<Catalog> = {
   billingConnectionsChoosePrices: "Choisissez les prix",
   billingConnectionsChooseProducts: "Choisir des produits de la liste de prix",
   billingConnectionsSearchPriceList: "Rechercher dans votre liste de prix",
-  billingConnectionsNoProducts: "Aucun produit de la liste de prix ne correspond à cette recherche.",
+  billingConnectionsNoProducts:
+    "Aucun produit de la liste de prix ne correspond à cette recherche.",
   billingConnectionsLoadingPriceList: "Chargement de votre liste de prix…",
   billingConnectionsSecureCreated: "Connexion de prix sécurisée créée",
-  billingConnectionsSendTo: (company: string) => `Envoyez ces informations à ${company}. Vous pouvez suspendre ou révoquer l’accès à tout moment.`,
-  billingConnectionsKeyShownOnce: "La clé complète n’est affichée qu’au moment de sa création.",
+  billingConnectionsSendTo: (company: string) =>
+    `Envoyez ces informations à ${company}. Vous pouvez suspendre ou révoquer l’accès à tout moment.`,
+  billingConnectionsKeyShownOnce:
+    "La clé complète n’est affichée qu’au moment de sa création.",
   billingConnectionsCopy: "Copier",
   billingConnectionsConnected: "Connecté",
   billingConnectionsActionNeeded: "Action requise",
   billingConnectionsPaused: "Suspendu",
   billingConnectionsIndustrialComponentsEur: "Composants industriels · EUR",
-  billingConnectionsChangesReady: (count: number) => `${count} modifications de prix sont à vérifier`,
-  billingConnectionsUpdatedMinutesAgo: (count: number) => `Mis à jour il y a ${count} minutes`,
+  billingConnectionsChangesReady: (count: number) =>
+    `${count} modifications de prix sont à vérifier`,
+  billingConnectionsUpdatedMinutesAgo: (count: number) =>
+    `Mis à jour il y a ${count} minutes`,
   billingConnectionsDaily: "Quotidien",
   billingConnectionsMetalsSheetEur: "Métaux et tôles · EUR",
-  billingConnectionsSupplierRenew: "Le fournisseur doit renouveler cette connexion",
-  billingConnectionsUpdatedDaysAgo: (count: number) => `Dernière mise à jour il y a ${count} jours`,
-  billingConnectionsWholesaleContract: "Catalogue de gros · Tarifs contractuels",
-  billingConnectionsWorkspaceReceivesApproved: "Son espace alo reçoit les modifications de prix approuvées",
-  billingConnectionsUsedHoursAgo: (count: number) => `Utilisé il y a ${count} heure`,
+  billingConnectionsSupplierRenew:
+    "Le fournisseur doit renouveler cette connexion",
+  billingConnectionsUpdatedDaysAgo: (count: number) =>
+    `Dernière mise à jour il y a ${count} jours`,
+  billingConnectionsWholesaleContract:
+    "Catalogue de gros · Tarifs contractuels",
+  billingConnectionsWorkspaceReceivesApproved:
+    "Son espace alo reçoit les modifications de prix approuvées",
+  billingConnectionsUsedHoursAgo: (count: number) =>
+    `Utilisé il y a ${count} heure`,
   billingConnectionsOnApproval: "Après approbation",
   billingConnectionsProjectSupplyEur: "Tarifs de fournitures de projet · EUR",
-  billingConnectionsApiExpiryDemo: "L’accès à l’API externe expire le 30 septembre 2026",
+  billingConnectionsApiExpiryDemo:
+    "L’accès à l’API externe expire le 30 septembre 2026",
   billingConnectionsUsedYesterday: "Utilisé hier",
   billingConnectionsLive: "En direct",
   billingConnectionsSupplierCatalogueEur: "Catalogue fournisseur · EUR",
-  billingConnectionsNoChangesAttention: "Aucune modification de prix ne nécessite votre attention",
+  billingConnectionsNoChangesAttention:
+    "Aucune modification de prix ne nécessite votre attention",
   billingConnectionsConnectedNow: "Connecté à l’instant",
   billingConnectionsHourly: "Toutes les heures",
   billingConnectionsWeekly: "Hebdomadaire",
   billingConnectionsManual: "Manuel",
-  billingConnectionsLivePriceListAutomatic: "Tarif en direct · Mise à jour automatique",
+  billingConnectionsLivePriceListAutomatic:
+    "Tarif en direct · Mise à jour automatique",
   billingConnectionsSelectedPriceItems: "Articles tarifaires sélectionnés",
-  billingConnectionsWaitingClient: "En attente de l’acceptation du client dans alo",
-  billingConnectionsExternalReady: "L’accès à l’API externe est prêt à être partagé",
+  billingConnectionsWaitingClient:
+    "En attente de l’acceptation du client dans alo",
+  billingConnectionsExternalReady:
+    "L’accès à l’API externe est prêt à être partagé",
   billingConnectionsCreatedNow: "Créé à l’instant",
   billingConnectionsReceivedByMe: "Reçus par moi",
   billingConnectionsSharedByMe: "Partagés par moi",
   billingConnectionsUpdatedNow: "Mis à jour à l’instant",
   billingConnectionsUpToDate: (company: string) => `${company} est à jour.`,
-  billingConnectionsNowSupplying: (company: string) => `${company} fournit désormais ses prix à cet espace de travail.`,
-  billingConnectionsNowReceiving: (company: string) => `${company} reçoit désormais les prix de cet espace de travail.`,
+  billingConnectionsNowSupplying: (company: string) =>
+    `${company} fournit désormais ses prix à cet espace de travail.`,
+  billingConnectionsNowReceiving: (company: string) =>
+    `${company} reçoit désormais les prix de cet espace de travail.`,
   billingConnectionsDisconnectTitle: "Déconnecter les tarifs ?",
-  billingConnectionsDisconnectReceived: (company: string) => `${company} cessera d’envoyer ses prix fournisseur à cet espace de travail. Les prix existants seront conservés, mais ne seront plus mis à jour automatiquement.`,
-  billingConnectionsDisconnectShared: (company: string) => `${company} cessera de recevoir les prix de cet espace de travail. Les prix existants seront conservés, mais ne seront plus mis à jour automatiquement.`,
+  billingConnectionsDisconnectReceived: (company: string) =>
+    `${company} cessera d’envoyer ses prix fournisseur à cet espace de travail. Les prix existants seront conservés, mais ne seront plus mis à jour automatiquement.`,
+  billingConnectionsDisconnectShared: (company: string) =>
+    `${company} cessera de recevoir les prix de cet espace de travail. Les prix existants seront conservés, mais ne seront plus mis à jour automatiquement.`,
   billingConnectionsDisconnect: "Déconnecter",
   billingConnectionsKeepConnected: "Conserver la connexion",
   billingConnectionsTitle: "Connexions de prix",
   billingPriceConnections: "Connexions de prix",
   billingVat: "TVA",
-  billingConnectionsSubtitle: "Recevez les coûts de vos fournisseurs en direct et partagez en toute sécurité certains prix de vente avec vos clients.",
+  billingConnectionsSubtitle:
+    "Recevez les coûts de vos fournisseurs en direct et partagez en toute sécurité certains prix de vente avec vos clients.",
   billingConnectionsDirection: "Sens de la connexion de prix",
   billingConnectionsSearch: "Rechercher des connexions",
   billingConnectionsDismiss: "Fermer",
   billingConnectionsNoMatches: "Aucune connexion correspondante",
-  billingConnectionsNoMatchesHelp: "Essayez une autre recherche ou créez une connexion de prix.",
+  billingConnectionsNoMatchesHelp:
+    "Essayez une autre recherche ou créez une connexion de prix.",
   quoteStudioScanToSave: "Scanner pour enregistrer",
   quoteStudioBuildTitle: "Créez votre devis",
-  quoteStudioBuildHelp: "Ajoutez directement du contenu. Les modifications sont enregistrées automatiquement.",
+  quoteStudioBuildHelp:
+    "Ajoutez directement du contenu. Les modifications sont enregistrées automatiquement.",
   quoteStudioCompanyLogo: "Logo de l’entreprise",
   quoteStudioAddress: "Adresse",
   quoteStudioContact: "Coordonnées",
@@ -7017,13 +7068,16 @@ export const fr: Partial<Catalog> = {
   quoteStudioSectionHeading: "Titre de section",
   quoteStudioParagraph: "Paragraphe",
   quoteStudioWriteParagraph: "Rédigez un paragraphe…",
-  quoteStudioImportantStatement: "Ajoutez une citation client ou une information importante…",
+  quoteStudioImportantStatement:
+    "Ajoutez une citation client ou une information importante…",
   quoteStudioAttribution: "Attribution (facultative)",
   quoteStudioQuoteAttribution: "Attribution de la citation",
   quoteStudioSectionText: "Texte de la section",
-  quoteStudioSectionTextPlaceholder: "Rédigez les informations utiles à votre client…",
+  quoteStudioSectionTextPlaceholder:
+    "Rédigez les informations utiles à votre client…",
   quoteStudioListLayout: "Disposition de la liste",
-  quoteStudioListLayoutHelp: "Répartissez les longues listes en colonnes faciles à parcourir.",
+  quoteStudioListLayoutHelp:
+    "Répartissez les longues listes en colonnes faciles à parcourir.",
   quoteStudioColumns: "Colonnes",
   quoteStudioChooseColumns: "Choisir les colonnes",
   quoteStudioWriteItem: "Rédigez un élément",
@@ -7035,17 +7089,21 @@ export const fr: Partial<Catalog> = {
   quoteStudioBold: "Gras",
   quoteStudioItalic: "Italique",
   quoteStudioEditContentBlock: "Modifier le bloc de contenu",
-  quoteStudioChangesImmediate: "Les modifications apparaissent immédiatement dans le devis.",
+  quoteStudioChangesImmediate:
+    "Les modifications apparaissent immédiatement dans le devis.",
   quoteStudioDone: "Terminé",
   quoteStudioComposeImageText: "Composer l’image et le texte",
-  quoteStudioComposeImageTextHelp: "Organisez le bloc et voyez exactement son rendu dans le devis.",
+  quoteStudioComposeImageTextHelp:
+    "Organisez le bloc et voyez exactement son rendu dans le devis.",
   quoteStudioLayoutTools: "Outils de disposition",
-  quoteStudioLayoutToolsHelp: "Choisissez l’apparence de ce bloc dans le devis.",
+  quoteStudioLayoutToolsHelp:
+    "Choisissez l’apparence de ce bloc dans le devis.",
   quoteStudioComposition: "Composition",
   quoteStudioImageFrame: "Cadre de l’image",
   quoteStudioFit: "Ajustement",
   quoteStudioImage: "Image",
-  quoteStudioImageDescriptionPlaceholder: "Décrivez le produit, le projet ou le résultat présenté.",
+  quoteStudioImageDescriptionPlaceholder:
+    "Décrivez le produit, le projet ou le résultat présenté.",
   quoteStudioCaption: "Légende",
   quoteStudioCaptionPlaceholder: "Courte légende facultative",
   quoteStudioTextTools: "Outils de texte",
@@ -7059,11 +7117,13 @@ export const fr: Partial<Catalog> = {
   quoteStudioZoomOut: "Dézoomer",
   quoteStudioZoomIn: "Zoomer",
   quoteStudioInformationTable: "Tableau d’informations",
-  quoteStudioInformationTableHelp: "Renommez les colonnes, puis ajoutez autant de lignes ou de colonnes que nécessaire.",
+  quoteStudioInformationTableHelp:
+    "Renommez les colonnes, puis ajoutez autant de lignes ou de colonnes que nécessaire.",
   quoteStudioTableColumnCount: "Nombre de colonnes du tableau",
   quoteStudioRowActions: "Actions de la ligne",
   quoteStudioEnterValue: "Saisissez une valeur",
-  quoteStudioAddFirstRow: "Ajoutez la première ligne pour commencer ce tableau.",
+  quoteStudioAddFirstRow:
+    "Ajoutez la première ligne pour commencer ce tableau.",
   quoteStudioAddRowBelow: "Ajouter une ligne dessous",
   quoteStudioAddContentA11y: "Ajouter du contenu au devis",
   quoteStudioAddContentBelow: "Ajouter du contenu dessous",
@@ -7075,7 +7135,8 @@ export const fr: Partial<Catalog> = {
   quoteStudioSearchBlocksA11y: "Rechercher des blocs de devis",
   quoteStudioNoMatchingBlocks: "Aucun bloc correspondant",
   quoteStudioTryAnotherName: "Essayez un autre terme.",
-  quoteStudioFirstBlockHelp: "Ajoutez du texte, un titre ou une image comme premier bloc.",
+  quoteStudioFirstBlockHelp:
+    "Ajoutez du texte, un titre ou une image comme premier bloc.",
   quoteStudioClose: "Fermer",
   quoteStudioBrandMark: "Identité visuelle",
   quoteStudioBrandMarkHelp: "Affichée en haut du devis destiné au client.",
@@ -7083,16 +7144,21 @@ export const fr: Partial<Catalog> = {
   quoteStudioUploadLogo: "Importer votre logo",
   quoteStudioRemove: "Supprimer",
   quoteStudioQrTitle: "Code QR de contact",
-  quoteStudioQrHelp: "Permettez aux clients de scanner et d’enregistrer vos coordonnées.",
+  quoteStudioQrHelp:
+    "Permettez aux clients de scanner et d’enregistrer vos coordonnées.",
   quoteStudioShowQr: "Afficher le code QR de contact",
   quoteStudioPlacement: "Emplacement",
-  quoteStudioPlacementHelp: "Choisissez où placer le code à côté des coordonnées de votre entreprise.",
+  quoteStudioPlacementHelp:
+    "Choisissez où placer le code à côté des coordonnées de votre entreprise.",
   quoteStudioSize: "Taille",
-  quoteStudioSizeHelp: "Prévisualisez l’encombrement du code QR dans l’en-tête.",
+  quoteStudioSizeHelp:
+    "Prévisualisez l’encombrement du code QR dans l’en-tête.",
   quoteStudioQrColour: "Couleur du code QR",
   quoteStudioCompanyInformation: "Informations de l’entreprise",
-  quoteStudioCompanyLinkedHelp: "Ces valeurs proviennent de Facturation → Vos coordonnées.",
-  quoteStudioOverrideHelp: "La modification d’une valeur crée une exception pour ce devis.",
+  quoteStudioCompanyLinkedHelp:
+    "Ces valeurs proviennent de Facturation → Vos coordonnées.",
+  quoteStudioOverrideHelp:
+    "La modification d’une valeur crée une exception pour ce devis.",
   quoteStudioUseYourDetails: "Utiliser Vos coordonnées",
   quoteStudioLinkedYourDetails: "Lié à Vos coordonnées",
   quoteStudioCompanyName: "Nom de l’entreprise",
@@ -7103,10 +7169,13 @@ export const fr: Partial<Catalog> = {
   quoteStudioEmailPlaceholder: "ventes@entreprise.com",
   quoteStudioPhone: "Téléphone",
   quoteStudioVatPlaceholder: "Numéro d’identification TVA",
-  quoteStudioCompanyNumberPlaceholder: "Numéro d’immatriculation de l’entreprise",
+  quoteStudioCompanyNumberPlaceholder:
+    "Numéro d’immatriculation de l’entreprise",
   quoteStudioCustomerInformation: "Informations du client",
-  quoteStudioCustomerInformationHelp: "Affichées sous Préparé pour dans l’en-tête du devis.",
-  quoteStudioCustomerOverrideHelp: "La modification d’une valeur crée une exception uniquement pour ce devis.",
+  quoteStudioCustomerInformationHelp:
+    "Affichées sous Préparé pour dans l’en-tête du devis.",
+  quoteStudioCustomerOverrideHelp:
+    "La modification d’une valeur crée une exception uniquement pour ce devis.",
   quoteStudioUseSelectedCustomer: "Utiliser le client sélectionné",
   quoteStudioLinkedSelectedCustomer: "Lié au client sélectionné",
   quoteStudioCustomerCompanyPlaceholder: "Nom de l’entreprise cliente",
@@ -7130,10 +7199,26 @@ export const fr: Partial<Catalog> = {
   quoteStudioTableHelp: "Créez librement des lignes et des colonnes",
   quoteStudioDivider: "Séparateur",
   quoteStudioDividerHelp: "Séparez les sections du document",
+  quoteStudioDividerSettings: "Réglages du séparateur",
+  quoteStudioDividerAppearance: "Apparence du séparateur",
+  quoteStudioDividerAppearanceHelp:
+    "Choisissez l’apparence de ce séparateur dans le devis client.",
+  quoteStudioDividerStyle: "Style du trait",
+  quoteStudioDividerSolid: "Continu",
+  quoteStudioDividerDashed: "Tirets",
+  quoteStudioDividerDotted: "Pointillés",
+  quoteStudioDividerThickness: "Épaisseur du trait",
+  quoteStudioDividerFine: "Fine",
+  quoteStudioDividerMedium: "Moyenne",
+  quoteStudioDividerBold: "Épaisse",
+  quoteStudioDividerWidth: "Largeur du trait",
+  quoteStudioDividerColour: "Couleur du trait",
+  quoteStudioChooseDividerColour: "Choisir la couleur du séparateur",
   quoteStudioCategoryText: "Texte",
   quoteStudioEditQuotationHeader: "Modifier l’en-tête du devis",
   quoteStudioCustomizeQuotation: "Personnaliser le devis",
-  quoteStudioChangesSavedAutomatically: "Les modifications sont enregistrées automatiquement.",
+  quoteStudioChangesSavedAutomatically:
+    "Les modifications sont enregistrées automatiquement.",
   quoteStudioReplace: "Remplacer",
   quoteStudioChooseFile: "Choisir un fichier",
   quoteStudioLeft: "Gauche",
@@ -7141,24 +7226,34 @@ export const fr: Partial<Catalog> = {
   quoteStudioSmall: "Petit",
   quoteStudioMedium: "Moyen",
   quoteStudioLarge: "Grand",
-  quoteStudioQrPlacementA11y: (side: string) => `Placer le code QR à ${side.toLowerCase()}`,
-  quoteStudioQrColourHelp: "Choisissez une couleur foncée pour garantir la lisibilité",
+  quoteStudioQrPlacementA11y: (side: string) =>
+    `Placer le code QR à ${side.toLowerCase()}`,
+  quoteStudioQrColourHelp:
+    "Choisissez une couleur foncée pour garantir la lisibilité",
   quoteStudioPhonePlaceholder: "+33 1 23 45 67 89",
   quoteStudioAddressPlaceholder: "Rue et numéro\nCode postal et ville\nPays",
   quoteStudioHeaderStyle: "Style d’en-tête",
-  quoteStudioHeaderStyleHelp: "Choisissez une composition professionnelle. Les coordonnées enregistrées de votre entreprise sont ajoutées automatiquement.",
+  quoteStudioHeaderStyleHelp:
+    "Choisissez une composition professionnelle. Les coordonnées enregistrées de votre entreprise sont ajoutées automatiquement.",
   quoteStudioHeaderArrangement: "Disposition de l’en-tête",
-  quoteStudioHeaderArrangementHelp: "Choisissez le côté réservé à l’identité de votre entreprise.",
+  quoteStudioHeaderArrangementHelp:
+    "Choisissez le côté réservé à l’identité de votre entreprise.",
   quoteStudioLogoLeft: "Logo à gauche",
   quoteStudioLogoRight: "Logo à droite",
-  quoteStudioLogoLeftHelp: "Identité de l’entreprise à gauche, informations du devis en face.",
-  quoteStudioLogoRightHelp: "Identité de l’entreprise à droite, informations du devis en face.",
+  quoteStudioLogoLeftHelp:
+    "Identité de l’entreprise à gauche, informations du devis en face.",
+  quoteStudioLogoRightHelp:
+    "Identité de l’entreprise à droite, informations du devis en face.",
   quoteStudioColumnBalance: "Répartition des colonnes",
-  quoteStudioColumnBalanceHelp: "Choisissez l’espace réservé à l’entreprise et au client.",
-  quoteStudioColumnBalanceA11y: "Répartition des colonnes de l’en-tête du devis",
-  quoteStudioColumnRatioA11y: (company: string, customer: string) => `Entreprise ${company} %, client ${customer} %`,
+  quoteStudioColumnBalanceHelp:
+    "Choisissez l’espace réservé à l’entreprise et au client.",
+  quoteStudioColumnBalanceA11y:
+    "Répartition des colonnes de l’en-tête du devis",
+  quoteStudioColumnRatioA11y: (company: string, customer: string) =>
+    `Entreprise ${company} %, client ${customer} %`,
   quoteStudioDocumentPalette: "Palette du document",
-  quoteStudioDocumentPaletteHelp: "Définissez les couleurs de la page client et des tableaux tarifaires.",
+  quoteStudioDocumentPaletteHelp:
+    "Définissez les couleurs de la page client et des tableaux tarifaires.",
   quoteStudioResetDefaults: "Rétablir les valeurs par défaut",
   quoteStudioDocument: "Document",
   quoteStudioDocumentHelp: "Marque, page, en-tête et texte.",
@@ -7177,18 +7272,22 @@ export const fr: Partial<Catalog> = {
   quoteStudioNumberMarkers: "Numéros",
   quoteStudioNumberedSteps: "Étapes numérotées",
   quoteStudioPricingTables: "Tableaux tarifaires",
-  quoteStudioPricingTablesHelp: "Facilitez la lecture des en-têtes et des lignes.",
+  quoteStudioPricingTablesHelp:
+    "Facilitez la lecture des en-têtes et des lignes.",
   quoteStudioTableHeading: "En-tête du tableau",
   quoteStudioTableHeadingHelp: "Arrière-plan de l’en-tête du tableau",
   quoteStudioTableRows: "Lignes du tableau",
   quoteStudioTableRowsHelp: "Arrière-plan par défaut des lignes",
   quoteStudioTypography: "Typographie",
-  quoteStudioTypographyHelp: "Choisissez le style de lecture qui correspond le mieux à votre marque.",
+  quoteStudioTypographyHelp:
+    "Choisissez le style de lecture qui correspond le mieux à votre marque.",
   quoteStudioProposal: "Proposition",
   quoteStudioCloseTableSettings: "Fermer les paramètres du tableau",
-  quoteStudioTableChangesSavedAutomatically: "Les modifications du tableau sont enregistrées automatiquement.",
+  quoteStudioTableChangesSavedAutomatically:
+    "Les modifications du tableau sont enregistrées automatiquement.",
   quoteStudioChooseLayout: "Choisir une mise en page",
-  quoteStudioChooseLayoutHelp: "Choisissez un point de départ, puis ajustez le contenu et les colonnes visibles ci-dessous.",
+  quoteStudioChooseLayoutHelp:
+    "Choisissez un point de départ, puis ajustez le contenu et les colonnes visibles ci-dessous.",
   quoteStudioCompact: "Compact",
   quoteStudioCompactHelp: "Noms et prix uniquement",
   quoteStudioDetailed: "Détaillé",
@@ -7196,21 +7295,26 @@ export const fr: Partial<Catalog> = {
   quoteStudioCatalogue: "Catalogue",
   quoteStudioCatalogueHelp: "Images de produit plus grandes et détails",
   quoteStudioProductContent: "Contenu des produits",
-  quoteStudioProductContentHelp: "Informations facultatives affichées avec chaque produit ou service.",
+  quoteStudioProductContentHelp:
+    "Informations facultatives affichées avec chaque produit ou service.",
   quoteStudioProductImages: "Images des produits",
   quoteStudioProductImagesHelp: "Ajoutez une image à chaque ligne du tableau",
   quoteStudioProductDescriptions: "Descriptions des produits",
-  quoteStudioProductDescriptionsHelp: "Ajoutez des caractéristiques ou le périmètre sous chaque élément",
+  quoteStudioProductDescriptionsHelp:
+    "Ajoutez des caractéristiques ou le périmètre sous chaque élément",
   quoteStudioVisibleColumns: "Colonnes visibles",
-  quoteStudioVisibleColumnsHelp: "Le nom du produit et le total du devis restent toujours visibles.",
+  quoteStudioVisibleColumnsHelp:
+    "Le nom du produit et le total du devis restent toujours visibles.",
   quoteStudioUnit: "Unité",
   quoteStudioQuantity: "Quantité",
   quoteStudioUnitPrice: "Prix unitaire",
   quoteStudioVatRate: "Taux de TVA",
   quoteStudioLineTotal: "Total de la ligne",
-  quoteStudioShowColumn: (label: string) => `Afficher la colonne ${label.toLowerCase()}`,
+  quoteStudioShowColumn: (label: string) =>
+    `Afficher la colonne ${label.toLowerCase()}`,
   quoteStudioPricingTableTotals: "Totaux du tableau tarifaire",
-  quoteStudioPricingTableTotalsHelp: "Choisissez la présentation du récapitulatif sous chaque tableau tarifaire. Chaque tableau conserve son propre sous-total.",
+  quoteStudioPricingTableTotalsHelp:
+    "Choisissez la présentation du récapitulatif sous chaque tableau tarifaire. Chaque tableau conserve son propre sous-total.",
   quoteStudioSummaryCard: "Carte récapitulative",
   quoteStudioSummaryCardHelp: "Compacte et alignée à droite",
   quoteStudioFullWidth: "Pleine largeur",
@@ -7232,10 +7336,12 @@ export const fr: Partial<Catalog> = {
   quoteStudioVatNoteHelp: "Préciser que la TVA est affichée séparément",
   quoteStudioListItemFormatting: "Mise en forme de l’élément de liste",
   quoteStudioDraftQuotation: "Devis brouillon",
-  quoteStudioPricingTableNumber: (number: number) => `Tableau tarifaire ${number}`,
+  quoteStudioPricingTableNumber: (number: number) =>
+    `Tableau tarifaire ${number}`,
   quoteStudioNumberedListColumns: "Colonnes de la liste numérotée",
   quoteStudioBulletListColumns: "Colonnes de la liste à puces",
-  quoteStudioColumnCount: (count: number) => count === 1 ? "1 colonne" : `${count} colonnes`,
+  quoteStudioColumnCount: (count: number) =>
+    count === 1 ? "1 colonne" : `${count} colonnes`,
   quoteStudioNumberedItemA11y: (number: number) => `Élément numéroté ${number}`,
   quoteStudioBulletItemA11y: (number: number) => `Élément à puce ${number}`,
   quoteStudioBelowImage: "Sous l’image",
@@ -7248,15 +7354,20 @@ export const fr: Partial<Catalog> = {
   quoteStudioWholeImage: "Image entière",
   quoteStudioColumnNumber: (number: number) => `Colonne ${number}`,
   quoteStudioColumnNameA11y: (number: number) => `Nom de la colonne ${number}`,
-  quoteStudioTableCellA11y: (column: string, row: number) => `${column}, ligne ${row}`,
+  quoteStudioTableCellA11y: (column: string, row: number) =>
+    `${column}, ligne ${row}`,
   quoteStudioCategoryMedia: "Médias",
   quoteStudioCategoryTables: "Tableaux",
   quoteStudioCategoryLayout: "Mise en page",
   quoteStudioSearchResults: "Résultats de recherche",
-  quoteStudioDesignDatabaseError: "Impossible d’ouvrir la base de données de mise en page du devis.",
-  quoteStudioDesignSaveError: "Impossible d’enregistrer la mise en page du devis.",
-  quoteStudioDesignSaveCancelled: "L’enregistrement de la mise en page du devis a été annulé.",
-  quoteStudioDesignSaveRetry: "La mise en page du devis n’a pas pu être enregistrée. Essayez avec une image plus petite ou importez-la de nouveau.",
+  quoteStudioDesignDatabaseError:
+    "Impossible d’ouvrir la base de données de mise en page du devis.",
+  quoteStudioDesignSaveError:
+    "Impossible d’enregistrer la mise en page du devis.",
+  quoteStudioDesignSaveCancelled:
+    "L’enregistrement de la mise en page du devis a été annulé.",
+  quoteStudioDesignSaveRetry:
+    "La mise en page du devis n’a pas pu être enregistrée. Essayez avec une image plus petite ou importez-la de nouveau.",
   quoteStudioShowSubtotal: "Afficher le sous-total",
   quoteStudioHideSubtotal: "Masquer le sous-total",
   quoteStudioQuotationImageAlt: "Image du devis",
@@ -7278,31 +7389,43 @@ export const fr: Partial<Catalog> = {
   quoteStudioLogoStack: "Logo empilé",
   quoteStudioLogoStackHelp: "Nom de l’entreprise sous le logo",
   billingVatIncludedNote: "La TVA est incluse dans le total.",
-  billingVatSeparateNote: "La TVA est affichée séparément du montant hors taxes.",
-  billingPricingTableEditorHelp: "Ajoutez, modifiez, supprimez ou réorganisez les produits et services par glisser-déposer.",
-  billingPricingTableEmptyHelp: "Ajoutez un produit ou un service pour commencer ce tableau de prix.",
+  billingVatSeparateNote:
+    "La TVA est affichée séparément du montant hors taxes.",
+  billingPricingTableEditorHelp:
+    "Ajoutez, modifiez, supprimez ou réorganisez les produits et services par glisser-déposer.",
+  billingPricingTableEmptyHelp:
+    "Ajoutez un produit ou un service pour commencer ce tableau de prix.",
   billingImage: "Image",
   billingQuoteExitPreviewToEdit: "Quitter l’aperçu pour modifier ce devis",
   billingQuoteEditContent: "Modifier le contenu du devis",
-  billingQuoteCreateRevision: "Créer une révision pour modifier ce devis finalisé",
+  billingQuoteCreateRevision:
+    "Créer une révision pour modifier ce devis finalisé",
   billingQuoteEdit: "Modifier le devis",
-  billingQuoteExitPreviewToCustomize: "Quitter l’aperçu pour personnaliser ce devis",
-  billingQuoteCreateRevisionToCustomize: "Créer une révision pour personnaliser ce devis finalisé",
+  billingQuoteExitPreviewToCustomize:
+    "Quitter l’aperçu pour personnaliser ce devis",
+  billingQuoteCreateRevisionToCustomize:
+    "Créer une révision pour personnaliser ce devis finalisé",
   billingQuoteCreateRevisionTitle: "Créer une révision modifiable ?",
-  billingQuoteCreateRevisionConfirm: "Le devis finalisé restera inchangé. alo créera un nouveau brouillon avec le même client, le même contenu, les mêmes prix et la même mise en page.",
+  billingQuoteCreateRevisionConfirm:
+    "Le devis finalisé restera inchangé. alo créera un nouveau brouillon avec le même client, le même contenu, les mêmes prix et la même mise en page.",
   billingQuoteCreateRevisionAction: "Créer la révision",
-  billingConnectionsProductCount: (count: number) => count === 1 ? "1 produit" : `${count} produits`,
-  billingConnectionsUpdateCadence: (cadence: string) => `Mises à jour : ${cadence}`,
+  billingConnectionsProductCount: (count: number) =>
+    count === 1 ? "1 produit" : `${count} produits`,
+  billingConnectionsUpdateCadence: (cadence: string) =>
+    `Mises à jour : ${cadence}`,
   billingConnectionsViaAlo: "Connecté via alo",
   billingConnectionsExternalApi: "API externe",
-  billingConnectionsReviewChanges: (count: number) => `Vérifier ${count} modifications`,
+  billingConnectionsReviewChanges: (count: number) =>
+    `Vérifier ${count} modifications`,
   billingConnectionsResume: "Reprendre",
   billingConnectionsPause: "Suspendre",
-  billingConnectionsDisconnectCompany: (company: string) => `Déconnecter ${company}`,
+  billingConnectionsDisconnectCompany: (company: string) =>
+    `Déconnecter ${company}`,
   billingConnectionsSpreadsheetFeed: "Feuille de calcul ou flux",
   billingConnectionsPriceApiAddress: "Adresse de l’API tarifaire",
   billingConnectionsFeedAddress: "Adresse du flux",
-  billingConnectionsFormatDetection: "alo détecte automatiquement les flux JSON, CSV et les feuilles de calcul.",
+  billingConnectionsFormatDetection:
+    "alo détecte automatiquement les flux JSON, CSV et les feuilles de calcul.",
   billingConnectionsAddressPlaceholder: "https://fournisseur.exemple/prix",
   billingConnectionsAdvancedSettings: "Paramètres avancés",
   billingConnectionsEveryHour: "Toutes les heures",
@@ -7310,30 +7433,44 @@ export const fr: Partial<Catalog> = {
   billingConnectionsOnceWeek: "Une fois par semaine",
   billingConnectionsManualSync: "Uniquement lors d’une synchronisation",
   billingConnectionsReviewEveryChange: "Vérifier chaque modification",
-  billingConnectionsAutomaticLimited: "Appliquer automatiquement dans une limite définie",
-  billingConnectionsAutomaticAll: "Appliquer automatiquement toutes les modifications",
+  billingConnectionsAutomaticLimited:
+    "Appliquer automatiquement dans une limite définie",
+  billingConnectionsAutomaticAll:
+    "Appliquer automatiquement toutes les modifications",
   billingConnectionsMatchSku: "Référence, puis code-barres et nom",
   billingConnectionsMatchBarcode: "Code-barres, puis référence et nom",
   billingConnectionsMatchName: "Nom du produit",
   billingConnectionsMatchReview: "Vérifier chaque correspondance",
   billingConnectionsHoldReview: "Mettre en attente de vérification",
-  billingConnectionsCreateDraftItems: "Créer des articles tarifaires en brouillon",
+  billingConnectionsCreateDraftItems:
+    "Créer des articles tarifaires en brouillon",
   billingConnectionsDoNotImport: "Ne pas importer",
   billingConnectionsHeaderNamePlaceholder: "X-API-Key",
   billingConnectionsAloInvitationLink: "Lien d’invitation alo",
   billingConnectionsExternalPricingApi: "API tarifaire externe",
-  billingConnectionsTestSummary: (found: number, matched: number, review: number) => `${found} produits trouvés · ${matched} associés automatiquement · ${review} à vérifier après la connexion.`,
-  billingConnectionsCustomHeaderHelp: "Facultatif. Utilisez ceci uniquement si la documentation du fournisseur exige un en-tête différent de la clé d’accès ci-dessus.",
+  billingConnectionsTestSummary: (
+    found: number,
+    matched: number,
+    review: number,
+  ) =>
+    `${found} produits trouvés · ${matched} associés automatiquement · ${review} à vérifier après la connexion.`,
+  billingConnectionsCustomHeaderHelp:
+    "Facultatif. Utilisez ceci uniquement si la documentation du fournisseur exige un en-tête différent de la clé d’accès ci-dessus.",
   billingConnectionsInviteAloWorkspace: "Inviter son espace alo",
   billingConnectionsGiveExternalApi: "Fournir un accès API externe",
-  billingConnectionsLivePriceListActive: (count: number) => `Tarif en direct · ${count} produits actifs`,
-  billingConnectionsChooseProductsSelected: (count: number) => `Choisir les produits · ${count} sélectionnés`,
+  billingConnectionsLivePriceListActive: (count: number) =>
+    `Tarif en direct · ${count} produits actifs`,
+  billingConnectionsChooseProductsSelected: (count: number) =>
+    `Choisir les produits · ${count} sélectionnés`,
   billingConnectionsItemUnit: "article",
   billingConnectionsPrices: "Prix",
   billingConnectionsUpdates: "Mises à jour",
   billingConnectionsValidity: "Validité",
-  billingConnectionsLivePriceListCount: (count: number) => `Tarif en direct (${count})`,
-  billingConnectionsSelectedProductsCount: (count: number) => `${count} produits sélectionnés`,
-  billingConnectionsChangesFlow: "Les modifications tarifaires passent par cette connexion",
+  billingConnectionsLivePriceListCount: (count: number) =>
+    `Tarif en direct (${count})`,
+  billingConnectionsSelectedProductsCount: (count: number) =>
+    `${count} produits sélectionnés`,
+  billingConnectionsChangesFlow:
+    "Les modifications tarifaires passent par cette connexion",
   billingConnectionsNoExpiry: "Sans expiration",
 };

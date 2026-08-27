@@ -119,8 +119,7 @@ export const de: Partial<Catalog> = {
   homeUploadFile: "Datei hochladen",
   homeCreateDoc: "Dokument erstellen",
   homeToday: "Heute",
-  homeAgendaComingSoon:
-    "Ihr Kalender erscheint hier, sobald er verfügbar ist.",
+  homeAgendaComingSoon: "Ihr Kalender erscheint hier, sobald er verfügbar ist.",
   homeAskTitle: "Fragen Sie alo",
   homeAskBody: "Ihr KI-Assistent für alles im Arbeitsalltag.",
   homeAskCta: "alo fragen",
@@ -134,8 +133,7 @@ export const de: Partial<Catalog> = {
   // shell
   newButton: "Neu",
   appLauncher: "Apps",
-  appLauncherAutoHint:
-    "Ihre meistgenutzten Apps, automatisch aktuell gehalten",
+  appLauncherAutoHint: "Ihre meistgenutzten Apps, automatisch aktuell gehalten",
   appLauncherFavorites: "Ihre Favoriten",
   appLauncherAll: "Alle Apps",
   appLauncherEdit: "Favoriten bearbeiten",
@@ -265,7 +263,8 @@ export const de: Partial<Catalog> = {
   twoFactorTitle: "Zwei-Faktor-Authentifizierung",
   twoFactorSubtitle:
     "Geben Sie den 6-stelligen Code aus Ihrer Authenticator-App ein",
-  twoFactorRecoverySubtitle: "Geben Sie einen Ihrer Wiederherstellungscodes ein",
+  twoFactorRecoverySubtitle:
+    "Geben Sie einen Ihrer Wiederherstellungscodes ein",
   twoFactorCodeLabel: "Authentifizierungscode",
   recoveryCodeLabel: "Wiederherstellungscode",
   recoveryPlaceholder: "xxxx-xxxx",
@@ -546,8 +545,7 @@ export const de: Partial<Catalog> = {
     n === 1
       ? "1 Vorschlag zu Ihrem Aufgabeneingang hinzugefügt."
       : `${n} Vorschläge zu Ihrem Aufgabeneingang hinzugefügt.`,
-  taskAiOff:
-    "KI ist ausgeschaltet, daher konnte nichts vorgeschlagen werden.",
+  taskAiOff: "KI ist ausgeschaltet, daher konnte nichts vorgeschlagen werden.",
   taskClose: "Schließen",
   taskDelete: "Löschen",
   taskTimeTracking: "Zeiterfassung",
@@ -1633,8 +1631,7 @@ export const de: Partial<Catalog> = {
   aiSources: "Quellen",
   aiUnconfigured:
     "Die KI ist noch nicht eingerichtet — ein Administrator kann ein Modell hinzufügen. Das hier passt zu Ihrer Suche:",
-  aiUnreachable:
-    "Die KI war nicht erreichbar. Das hier passt zu Ihrer Suche:",
+  aiUnreachable: "Die KI war nicht erreichbar. Das hier passt zu Ihrer Suche:",
   aiComingSoon: "Der KI-Assistent kommt bald.",
 
   // The Drive file picker (first used by chat).
@@ -1659,8 +1656,7 @@ export const de: Partial<Catalog> = {
   settingsTabOrg: "Organisation",
   settingsOooToggle: "Automatische Antworten senden",
   settingsSignature: "Ihre Signatur",
-  settingsSignatureHint:
-    "Wird unter die Nachrichten gesetzt, die Sie senden…",
+  settingsSignatureHint: "Wird unter die Nachrichten gesetzt, die Sie senden…",
   settingsOrgFooter: "Organisationsfußzeile",
   settingsOrgFooterHint:
     "Wird an jede ausgehende E-Mail Ihrer Organisation angehängt, nach der persönlichen Signatur.",
@@ -1669,8 +1665,7 @@ export const de: Partial<Catalog> = {
   settingsOutOfOffice: "Abwesenheit",
   settingsOutOfOfficeHint:
     "Antwortet automatisch einmal jedem, der Ihnen während Ihrer Abwesenheit schreibt.",
-  settingsOooSubjectPlaceholder:
-    "Betreff (optional) — z. B. Abwesenheitsnotiz",
+  settingsOooSubjectPlaceholder: "Betreff (optional) — z. B. Abwesenheitsnotiz",
   settingsOooMessagePlaceholder:
     "z. B. Ich bin bis Montag abwesend und antworte nach meiner Rückkehr.",
   settingsOooNeedsMessage:
@@ -1705,8 +1700,7 @@ export const de: Partial<Catalog> = {
   chatReplyHere: "Hier antworten",
   chatReplyPrivately: "Privat antworten",
   chatReplyingHere: "Antwort hier",
-  chatReplyingPrivately: (who: string): string =>
-    `Private Antwort an ${who}`,
+  chatReplyingPrivately: (who: string): string => `Private Antwort an ${who}`,
   chatCancelReply: "Antwort abbrechen",
   chatAddReaction: "Reaktion hinzufügen",
   chatAgentTag: "Agent",
@@ -1720,8 +1714,7 @@ export const de: Partial<Catalog> = {
   chatDmFailed: "Die Unterhaltung konnte nicht gestartet werden.",
   chatJoin: "Beitreten",
   chatJoined: "Öffnen",
-  chatNothingToJoin:
-    "Noch keine öffentlichen Kanäle in diesem Arbeitsbereich.",
+  chatNothingToJoin: "Noch keine öffentlichen Kanäle in diesem Arbeitsbereich.",
   chatBrowseFailed: "Die Kanäle konnten nicht aufgelistet werden.",
   chatJoinFailed: "Dem Kanal konnte nicht beigetreten werden.",
   chatEditAction: "Bearbeiten",
@@ -1739,8 +1732,7 @@ export const de: Partial<Catalog> = {
   chatItalic: "Kursiv",
   chatInlineCode: "Code",
   chatCodeBlock: "Codeblock",
-  chatCodeBlockHint:
-    "Fügt einen formatierten Block für Code oder Befehle ein.",
+  chatCodeBlockHint: "Fügt einen formatierten Block für Code oder Befehle ein.",
   chatFormulaHint: "Fügt eine mathematische Formel ein.",
   chatFormatting: "Textformatierung",
   chatFormula: "Formel",
@@ -1910,8 +1902,7 @@ export const de: Partial<Catalog> = {
   meetStartRecording: "Aufzeichnung starten",
   meetStopRecording: "Aufzeichnung beenden",
   meetIConsent: "Ich stimme zu",
-  meetRecordingConsentTitle:
-    "Die Aufzeichnung braucht die Zustimmung aller",
+  meetRecordingConsentTitle: "Die Aufzeichnung braucht die Zustimmung aller",
   meetRecordingConsentBody:
     "Der Gastgeber kann starten, sobald alle, die gerade im Raum sind, zustimmen.",
   meetRecordingConsentGiven: "Zustimmung erteilt",
@@ -2123,8 +2114,7 @@ export const de: Partial<Catalog> = {
   controlTenants: "Organisationen",
   controlTenantsIntro: "Jede Organisation auf dieser Installation.",
   controlTenantsError: "Organisationen konnten nicht geladen werden.",
-  controlTenantsEmpty:
-    "Noch keine Organisationen. Legen Sie die erste an.",
+  controlTenantsEmpty: "Noch keine Organisationen. Legen Sie die erste an.",
   controlDomains: "Domains",
   controlDomainsIntro:
     "Die Domains, über die jede Organisation E-Mails senden und empfangen darf, und deren Verifizierung.",
@@ -2202,8 +2192,7 @@ export const de: Partial<Catalog> = {
   groupCreate: "Gruppe erstellen",
   groupListBadge: "Verteiler",
   groupMembers: "Mitglieder",
-  groupMemberCount: (n: number) =>
-    n === 1 ? "1 Mitglied" : `${n} Mitglieder`,
+  groupMemberCount: (n: number) => (n === 1 ? "1 Mitglied" : `${n} Mitglieder`),
   groupNoMembers: "Noch keine Mitglieder.",
   groupListAddress: "Verteileradresse",
   groupListAddressHint:
@@ -2218,8 +2207,7 @@ export const de: Partial<Catalog> = {
     "Die Gruppe konnte nicht erstellt werden — der Name ist womöglich schon vergeben.",
   groupAddressError:
     "Die Adresse konnte nicht gesetzt werden — sie wird womöglich schon verwendet.",
-  groupActionError:
-    "Das hat nicht geklappt — bitte versuchen Sie es erneut.",
+  groupActionError: "Das hat nicht geklappt — bitte versuchen Sie es erneut.",
   groupClose: "Schließen",
   adminUsers: "Benutzer & Postfächer",
   adminUsersIntro: "Die Personen in Ihrer Organisation und ihre Postfächer.",
@@ -2412,7 +2400,8 @@ export const de: Partial<Catalog> = {
   // The agent's proposal frame, and the billing/CRM tool cards (tranche 5).
   // Every note keeps the English promise word for word: a draft, never an
   // issued document, and nothing is ever sent by approving.
-  agentProposedAction: "alo möchte Folgendes tun — genehmigen Sie es, um fortzufahren.",
+  agentProposedAction:
+    "alo möchte Folgendes tun — genehmigen Sie es, um fortzufahren.",
   agentDone: "Erledigt.",
   agentFailed: "Diese Aktion konnte nicht abgeschlossen werden.",
   agentActInvoiceDraft: "Rechnung entwerfen",
@@ -2439,8 +2428,7 @@ export const de: Partial<Catalog> = {
   agentFieldStage: "Phase",
   agentFieldLostReason: "Verloren, weil",
   agentDealFromEmailNote: "Verknüpft diese Unterhaltung mit dem neuen Deal.",
-  agentFollowupNote:
-    "Schreibt die E-Mail in Entwürfe — nichts wird gesendet.",
+  agentFollowupNote: "Schreibt die E-Mail in Entwürfe — nichts wird gesendet.",
 
   // alo Billing (tranche 5). The module speaks about documents, never rows,
   // and a German invoice speaks its trade's own words: ausstellen spends the
@@ -2502,8 +2490,7 @@ export const de: Partial<Catalog> = {
   billingColUnitPrice: "Einzelpreis",
   billingColVatRate: "MwSt.-Satz",
   billingColActions: "Aktionen",
-  billingTermsDays: (days: number) =>
-    days === 1 ? "1 Tag" : `${days} Tage`,
+  billingTermsDays: (days: number) => (days === 1 ? "1 Tag" : `${days} Tage`),
   billingFieldName: "Name",
   billingFieldEmail: "Rechnungs-E-Mail",
   billingFieldAddress: "Adresse",
@@ -2575,8 +2562,7 @@ export const de: Partial<Catalog> = {
   billingReferenceHint:
     "Geben Sie eine Bestell- oder Angebotsanfragenummer des Kunden ein. Alo vergibt beim Finalisieren automatisch eine eigene eindeutige Nummer für dieses Dokument.",
   billingFieldNote: "Anmerkung",
-  billingNotePlaceholder:
-    "Alles, was der Kunde auf dem Dokument lesen soll.",
+  billingNotePlaceholder: "Alles, was der Kunde auf dem Dokument lesen soll.",
   billingNoteHint: "Wird unter den Positionen gedruckt.",
   billingFieldIssueDate: "Ausstellungsdatum",
   billingFieldDueDate: "Fälligkeitsdatum",
@@ -2701,16 +2687,19 @@ export const de: Partial<Catalog> = {
   billingQuoteTemplateRetainerDescription:
     "Beginnen Sie mit einer wiederkehrenden monatlichen Leistung.",
   quoteStudioTemplateServicesHeading: "Ausgewählte Leistungen für Sie",
-  quoteStudioTemplateServicesIntroduction: "Eine klare Übersicht über die Leistungen, Ergebnisse und Investition, die wir für Ihr Unternehmen vorschlagen.",
+  quoteStudioTemplateServicesIntroduction:
+    "Eine klare Übersicht über die Leistungen, Ergebnisse und Investition, die wir für Ihr Unternehmen vorschlagen.",
   quoteStudioTemplateServicesTable: "Leistungen und Honorare",
   quoteStudioTemplateProjectHeading: "Projektangebot",
-  quoteStudioTemplateProjectIntroduction: "Dieses Angebot fasst Projektumfang, Vorgehen und kaufmännische Bedingungen übersichtlich zusammen.",
+  quoteStudioTemplateProjectIntroduction:
+    "Dieses Angebot fasst Projektumfang, Vorgehen und kaufmännische Bedingungen übersichtlich zusammen.",
   quoteStudioTemplateProjectDiscovery: "Analyse und Abstimmung",
   quoteStudioTemplateProjectDelivery: "Umsetzung und Prüfung",
   quoteStudioTemplateProjectHandover: "Einführung und Übergabe",
   quoteStudioTemplateProjectTable: "Projektinvestition",
   quoteStudioTemplateRetainerHeading: "Monatliche Partnerschaft",
-  quoteStudioTemplateRetainerIntroduction: "Laufende Unterstützung mit planbarer monatlicher Investition und klarer Zusammenarbeit.",
+  quoteStudioTemplateRetainerIntroduction:
+    "Laufende Unterstützung mit planbarer monatlicher Investition und klarer Zusammenarbeit.",
   quoteStudioTemplateRetainerTable: "Monatliche Leistungen",
   quoteStudioTemplateRetainerReporting: "Regelmäßige Fortschrittsberichte",
   quoteStudioTemplateRetainerSupport: "Bevorzugte Unterstützung und Planung",
@@ -2849,8 +2838,7 @@ export const de: Partial<Catalog> = {
   billingDocumentFx: (rate: string, day: string) =>
     `Umgerechnet zu ${rate}, dem am ${day} veröffentlichten Referenzkurs.`,
   billingVatIn: (currency: string) => `MwSt. in ${currency}`,
-  billingReportBaseCaption: (currency: string) =>
-    `Der Zeitraum in ${currency}`,
+  billingReportBaseCaption: (currency: string) => `Der Zeitraum in ${currency}`,
   billingReportBaseIntro: (currency: string) =>
     `Jedes Dokument oben, umgerechnet zu dem Kurs, der bei der Ausstellung darauf festgehalten wurde. Hieraus wird eine Erklärung in ${currency} erstellt.`,
   billingReportUnconverted: (count: number) =>
@@ -2860,7 +2848,11 @@ export const de: Partial<Catalog> = {
   billingRemind: "Erinnern",
   billingRemindHint:
     "Schreiben Sie diesem Kunden eine Zahlungserinnerung und legen Sie sie in Entwürfe.",
-  billingReminderDrafted: (invoice: string, outstanding: string, days: number) =>
+  billingReminderDrafted: (
+    invoice: string,
+    outstanding: string,
+    days: number,
+  ) =>
     days === 1
       ? `Eine Erinnerung zu ${invoice} — ${outstanding} noch offen, 1 Tag überfällig — wartet in Entwürfe. Nichts wurde gesendet: Lesen Sie sie, ändern Sie, was Sie möchten, und senden Sie sie selbst.`
       : `Eine Erinnerung zu ${invoice} — ${outstanding} noch offen, ${days} Tage überfällig — wartet in Entwürfe. Nichts wurde gesendet: Lesen Sie sie, ändern Sie, was Sie möchten, und senden Sie sie selbst.`,
@@ -2935,8 +2927,7 @@ export const de: Partial<Catalog> = {
   crmLoadFailed: "Ihre Deals konnten nicht geladen werden.",
   crmSaveFailed: "Die Änderung konnte nicht gespeichert werden.",
   crmDeleteFailed: "Das konnte nicht entfernt werden.",
-  crmSuggestFailed:
-    "Gerade konnten keine Unterhaltungen vorgeschlagen werden.",
+  crmSuggestFailed: "Gerade konnten keine Unterhaltungen vorgeschlagen werden.",
   crmNoBoardTitle: "Noch keine Pipeline",
   crmNoBoardBody:
     "Jedes Board, das Sie hatten, wurde archiviert. Stellen Sie eines wieder her, um wieder an Deals zu arbeiten.",
@@ -3146,7 +3137,8 @@ export const de: Partial<Catalog> = {
   insightsAskSubtitle:
     "Beschreiben Sie, was Sie sehen möchten. Sie bekommen das Diagramm zuerst zum Ansehen — dem Board wird nichts hinzugefügt, bis Sie es anheften.",
   insightsAskLabel: "Ihre Frage",
-  insightsAskPlaceholder: "Wie viel haben wir dieses Jahr pro Monat fakturiert?",
+  insightsAskPlaceholder:
+    "Wie viel haben wir dieses Jahr pro Monat fakturiert?",
   insightsAskSubmit: "Fragen",
   insightsAskClose: "Schließen",
   insightsAskPreview: "Das vorgeschlagene Diagramm",
@@ -3272,8 +3264,7 @@ export const de: Partial<Catalog> = {
   projectsRate: "Stundensatz",
   projectsRateHint:
     "Bleibt er leer, werden die Stunden gezählt, aber nicht bewertet.",
-  projectsRateInvalid:
-    "Schreiben Sie den Satz als Betrag, zum Beispiel 95,00.",
+  projectsRateInvalid: "Schreiben Sie den Satz als Betrag, zum Beispiel 95,00.",
   projectsHoursLogged: "Stunden",
   projectsBillableHours: "Abrechenbar",
   projectsOfWhichBillable: (duration: string) => `${duration} abrechenbar`,
@@ -3314,8 +3305,7 @@ export const de: Partial<Catalog> = {
   projectsBudgetAmount: "Budget (Betrag)",
   projectsBudgetHint:
     "Nur zur Orientierung. Nichts verhindert eine Stunde darüber hinaus.",
-  projectsBudgetHoursInvalid:
-    "Schreiben Sie das Budget als ganze Stundenzahl.",
+  projectsBudgetHoursInvalid: "Schreiben Sie das Budget als ganze Stundenzahl.",
   projectsBudgetAmountInvalid:
     "Schreiben Sie das Budget als Betrag, zum Beispiel 7600,00.",
   projectsLastWorked: "Zuletzt gearbeitet",
@@ -3603,8 +3593,7 @@ export const de: Partial<Catalog> = {
   agentStatusTasks: "Aufgaben",
   agentStatusTasksOpen: (open: number): string =>
     open === 1 ? "1 offen" : `${open} offen`,
-  agentStatusTasksOverdue: (overdue: number): string =>
-    `${overdue} überfällig`,
+  agentStatusTasksOverdue: (overdue: number): string => `${overdue} überfällig`,
   agentStatusLastWorked: "Zuletzt gearbeitet",
   agentStatusNeverWorked: "Noch keine Stunden",
   // Der Kalender-Entwurf: ein Stapel Vorschläge, plus das, was er ausließ —
@@ -3779,8 +3768,7 @@ export const de: Partial<Catalog> = {
   // Die Ausgabe selbst.
   financeNewClaim: "Neue Ausgabe",
   financeEditClaim: "Ausgabe bearbeiten",
-  financeClaimSubtitle:
-    "Was Sie ausgegeben haben und wessen Geld bezahlt hat.",
+  financeClaimSubtitle: "Was Sie ausgegeben haben und wessen Geld bezahlt hat.",
   financeSpentOn: "Datum",
   financeSpentOnHint:
     "Der Tag, an dem das Geld abging — in Ihrer eigenen Zeitzone.",
@@ -3797,15 +3785,13 @@ export const de: Partial<Catalog> = {
   financeVatRate: "MwSt.-Satz %",
   financeVatRateHint: "Wie aufgedruckt: 19, 21, 5,5.",
   financeCurrency: "Währung",
-  financeCurrencyHint:
-    "Leer lassen für die Währung Ihres Arbeitsbereichs.",
+  financeCurrencyHint: "Leer lassen für die Währung Ihres Arbeitsbereichs.",
   financeProject: "Projekt",
   financeProjectHint:
     "Ordnen Sie die Ausgabe Kundenarbeit zu, damit sie in den Kosten dieses Projekts erscheint.",
   financeNoProject: "Kein Projekt",
   financeMethod: "Bezahlt mit",
-  financeMethodHint:
-    "Nur eigenes Geld wird am Ende zurückgezahlt.",
+  financeMethodHint: "Nur eigenes Geld wird am Ende zurückgezahlt.",
   financeMethodPersonal: "Eigenes Geld",
   financeMethodCard: "Firmenkarte",
   financeMethodCash: "Handkasse",
@@ -3909,7 +3895,8 @@ export const de: Partial<Catalog> = {
   financeBankUnbooked: "Von der Bank noch nicht gebucht",
   financeBankPeriod: "Zeitraum",
   financeBankEncoding: "Zeichenkodierung",
-  financeBankSampleTitle: "Die ersten Transaktionen, so wie wir sie gelesen haben",
+  financeBankSampleTitle:
+    "Die ersten Transaktionen, so wie wir sie gelesen haben",
   financeBankSampleTruncated:
     "Hier werden nur die ersten Transaktionen gezeigt. Importiert werden alle.",
   financeBankRowsRefused: (count: number) =>
@@ -3986,8 +3973,7 @@ export const de: Partial<Catalog> = {
   financeBankWhyRuleSaved: "dieser Zahler wurde schon einmal so zugeordnet",
   financeBankWhyCustomerNamed: (percent: number) =>
     `der Name auf der Zahlung ähnelt dem des Kunden (${percent} %)`,
-  financeBankWhyWholeAmount:
-    "der Betrag entspricht genau dem, was offen ist",
+  financeBankWhyWholeAmount: "der Betrag entspricht genau dem, was offen ist",
   financeBankWhyOnlyDocument:
     "es ist die einzige offene Rechnung über diesen Betrag",
   financeBankWhyBeforeDue: (days: number) =>
@@ -4108,8 +4094,7 @@ export const de: Partial<Catalog> = {
   financeRoleEmployeePayable: "Ausgaben, die wir Mitarbeitenden schulden",
   financeRoleFxDiff: "Kursdifferenzen",
   financeRoleRounding: "Rundungsdifferenzen",
-  financeRoleOpeningBalance:
-    "Die Salden, mit denen die Bücher eröffnet wurden",
+  financeRoleOpeningBalance: "Die Salden, mit denen die Bücher eröffnet wurden",
   financeRoleSuspense: "Geld, das wir noch nicht zuordnen können",
 
   // Die vier Berichte. Jede Zahl ist die Faltung des Journals durch den
@@ -4131,8 +4116,7 @@ export const de: Partial<Catalog> = {
   financeReportLastQuarter: "Letztes Quartal",
   financeReportLastYearEnd: "Ende letzten Jahres",
   financeReportDownloadCsv: "CSV herunterladen",
-  financeReportDownloadFailed:
-    "Die Datei konnte nicht heruntergeladen werden.",
+  financeReportDownloadFailed: "Die Datei konnte nicht heruntergeladen werden.",
   financeReportLoadFailed: "Der Bericht konnte nicht geladen werden.",
   financeReportBasis: (from: string, to: string) =>
     `Alles, was zwischen ${from} und ${to} gebucht wurde, beide Tage eingeschlossen.`,
@@ -4411,8 +4395,7 @@ export const de: Partial<Catalog> = {
   inventoryBarcodeHint:
     "Die GTIN auf der Verpackung. Ihre Prüfziffer wird geprüft — ein vertippter Code wird hier abgewiesen, statt erst aufzufallen, wenn das Falsche versendet wird.",
   inventoryFieldPurchasePrice: "Einkaufspreis",
-  inventoryPurchasePriceHint:
-    "Was Sie dafür zahlen, in Ihrer eigenen Währung.",
+  inventoryPurchasePriceHint: "Was Sie dafür zahlen, in Ihrer eigenen Währung.",
   inventoryFieldDefaultSupplier: "Üblicher Lieferant",
   inventoryDefaultSupplierHint:
     "Bei wem das normalerweise gekauft wird. Davon geht ein Nachbestellvorschlag aus.",
@@ -4632,8 +4615,7 @@ export const de: Partial<Catalog> = {
   inventoryConsignmentNo: (n: number) => `Sendung ${n}`,
   inventoryRaiseInvoice: "Berechnen, was gegangen ist",
   inventoryRaisedInvoices: "Rechnungen",
-  inventoryNoRaisedInvoices:
-    "Aus diesem Auftrag wurde noch nichts berechnet.",
+  inventoryNoRaisedInvoices: "Aus diesem Auftrag wurde noch nichts berechnet.",
   inventoryInvoiceDrafted:
     "Für das Rausgegangene wurde ein Rechnungsentwurf angelegt. Er trägt keine Nummer, bis ihn jemand in Rechnungen ausstellt.",
   inventoryScan: "Scannen",
@@ -5286,8 +5268,7 @@ export const de: Partial<Catalog> = {
   sitesInvitationPasswordMismatch: "Die Passwörter stimmen nicht überein.",
   sitesInvitationAccept: "Website beitreten",
   sitesInvitationAccepting: "Beitritt läuft…",
-  sitesInvitationAcceptFailed:
-    "Ihre Einladung konnte nicht angenommen werden.",
+  sitesInvitationAcceptFailed: "Ihre Einladung konnte nicht angenommen werden.",
   sitesInvitationDone: "Sie können jetzt bearbeiten",
   sitesInvitationDoneBody: (email: string) =>
     `Melden Sie sich als ${email} an. Sie sehen nur die Websites, die mit Ihnen geteilt wurden.`,
@@ -5431,8 +5412,7 @@ export const de: Partial<Catalog> = {
     `${section} hinzufügen — ${position}`,
   sitesPaletteDropHere: "Hier ablegen, um am Ende einzufügen",
   sitesPaletteOwnContent: "Gezeigt mit Ihren eigenen Inhalten.",
-  sitesPalettePreviewTitle: (section: string) =>
-    `${section} auf Ihrer Website`,
+  sitesPalettePreviewTitle: (section: string) => `${section} auf Ihrer Website`,
   sitesPaletteLoading:
     "Diese Bausteine füllen sich mit Ihren eigenen Inhalten…",
   sitesPaletteFailed:
@@ -5624,8 +5604,7 @@ export const de: Partial<Catalog> = {
   sitesAddressPreview: (address: string) =>
     `Ihre Website wird unter ${address} erreichbar sein.`,
   sitesPublishFailed: "Die Website konnte nicht veröffentlicht werden.",
-  sitesUnpublishFailed:
-    "Die Website konnte nicht vom Netz genommen werden.",
+  sitesUnpublishFailed: "Die Website konnte nicht vom Netz genommen werden.",
   sitesSubmissions: "Nachrichten",
   sitesSubmissionsLoadFailed:
     "Ihre Formularnachrichten konnten nicht geladen werden.",
@@ -5683,8 +5662,7 @@ export const de: Partial<Catalog> = {
   sitesAssistantWithdraw: (title: string) => `${title} zurückziehen`,
   sitesAssistantWithdrawFailed:
     "Das Dokument konnte nicht vom Assistenten zurückgezogen werden. Versuchen Sie es erneut.",
-  sitesAssistantInternetWarning:
-    "Jeder im Internet wird das lesen können.",
+  sitesAssistantInternetWarning: "Jeder im Internet wird das lesen können.",
   sitesAssistantPublishDocument:
     "Ein Dokument für den Assistenten veröffentlichen…",
   sitesAssistantPublishFailed:
@@ -5712,8 +5690,7 @@ export const de: Partial<Catalog> = {
     `Hat freie Zeiten für „${service}“ angeboten`,
   sitesAssistantDidBooked: (service: string, when: string) =>
     `Hat „${service}“ für ${when} gebucht — der Termin steht in Ihrem Kalender`,
-  sitesAssistantDidLeadOffered:
-    "Hat im Gespräch das Kontaktformular angeboten",
+  sitesAssistantDidLeadOffered: "Hat im Gespräch das Kontaktformular angeboten",
   sitesAssistantDidLeadSaved:
     "Hat einen neuen Lead auf Ihrem CRM-Board gespeichert",
   sitesAssistantDidLeadKnown:
@@ -5778,8 +5755,7 @@ export const de: Partial<Catalog> = {
   sitesAssistantPreviewHint:
     "Das echte Widget im Design Ihrer Website, geöffnet gezeigt. Besucher sehen es zuerst geschlossen in seiner Ecke.",
   sitesAssistantPreviewFrameTitle: "Vorschau des Assistenten-Widgets",
-  sitesAssistantPreviewFailed:
-    "Die Vorschau konnte nicht dargestellt werden.",
+  sitesAssistantPreviewFailed: "Die Vorschau konnte nicht dargestellt werden.",
   sitesAssistantA11yTitle: "Barrierefreiheit",
   sitesAssistantA11yContrast: (ratio: string) =>
     `Text auf der gewählten Farbe misst ${ratio}:1 — über der WCAG-AA-Marke von 4,5:1.`,
@@ -5818,8 +5794,7 @@ export const de: Partial<Catalog> = {
   sitesAnalyticsGroupPages: "Was angesehen wurde",
   sitesAnalyticsGroupReading: "Wie es gelesen wurde",
   sitesAnalyticsShowAll: (count: number) => `Alle ${count} zeigen`,
-  sitesAnalyticsShowTop: (count: number) =>
-    `Nur die ersten ${count} zeigen`,
+  sitesAnalyticsShowTop: (count: number) => `Nur die ersten ${count} zeigen`,
   sitesAnalyticsReferrersNote:
     "Die Website, von der aus ein Besucher einem Link folgte. Nur die Domain wird behalten, nie die Seite.",
   sitesAnalyticsReferrersEmpty:
@@ -5836,10 +5811,8 @@ export const de: Partial<Catalog> = {
   sitesAnalyticsCountriesEmpty:
     "Keine Länder gemeldet. Ihre Website wird ohne ein Netz ausgeliefert, das sie benennt — dieses Feld bleibt leer, und jede andere Zahl hier bleibt unberührt.",
   sitesAnalyticsNotReported: "Nicht gemeldet",
-  sitesAnalyticsTopPagesNote:
-    "Die Seiten, die am häufigsten geöffnet wurden.",
-  sitesAnalyticsPagesEmpty:
-    "In diesem Zeitraum noch keine Seiten gezählt.",
+  sitesAnalyticsTopPagesNote: "Die Seiten, die am häufigsten geöffnet wurden.",
+  sitesAnalyticsPagesEmpty: "In diesem Zeitraum noch keine Seiten gezählt.",
   sitesAnalyticsEntryPages: "Erste Seiten",
   sitesAnalyticsEntryPagesNote:
     "Die Seite, auf der der Tag eines Besuchers auf Ihrer Website begann.",
@@ -5866,8 +5839,7 @@ export const de: Partial<Catalog> = {
   sitesAnalyticsDevices: "Geräte",
   sitesAnalyticsDevicesNote:
     "Eine grobe Klasse aus dem, was der Browser über sich selbst sagt. Mehr davon wird nicht gespeichert.",
-  sitesAnalyticsDevicesEmpty:
-    "In diesem Zeitraum noch keine Geräte gezählt.",
+  sitesAnalyticsDevicesEmpty: "In diesem Zeitraum noch keine Geräte gezählt.",
   sitesAnalyticsDevicePhone: "Telefon",
   sitesAnalyticsDeviceTablet: "Tablet",
   sitesAnalyticsDeviceDesktop: "Computer",
@@ -5952,8 +5924,7 @@ export const de: Partial<Catalog> = {
   sitesFunnelMoney: "Das Geld dahinter",
   sitesFunnelInvoiceRule:
     "Rechnungen an den Kunden, der aus einer Anfrage wurde, gestellt nach der Übergabe.",
-  sitesFunnelMoneyEmpty:
-    "Aus dieser Website ist noch kein Deal entstanden.",
+  sitesFunnelMoneyEmpty: "Aus dieser Website ist noch kein Deal entstanden.",
   sitesFunnelOpen: "In Arbeit",
   sitesFunnelWon: "Gewonnen",
   sitesFunnelInvoiced: "In Rechnung gestellt",
@@ -6031,8 +6002,7 @@ export const de: Partial<Catalog> = {
   sitesHistoryUndone: (date: string) =>
     `Zurück zur Fassung vom ${date}. Nichts ging verloren — jede Fassung ist noch da.`,
   sitesHistoryPage: "Seite",
-  sitesHistoryPreviewLoadFailed:
-    "Diese Fassung konnte nicht angezeigt werden.",
+  sitesHistoryPreviewLoadFailed: "Diese Fassung konnte nicht angezeigt werden.",
   sitesHistoryPreviewLoading: "Diese Fassung wird geladen",
   sitesHistoryPreviewTitle: "Vorschau der veröffentlichten Fassung",
   sitesHistoryDraftSafe:
@@ -6115,8 +6085,7 @@ export const de: Partial<Catalog> = {
     "Gespeichert. Besucher brauchen ab jetzt dieses Passwort, und wer die Seite mit dem alten geöffnet hat, wird neu gefragt.",
   sitesPagePasswordRemove: "Das Passwort entfernen",
   sitesPagePasswordRemoveConfirm: "Ja, öffentlich machen",
-  sitesPagePasswordRemoveFailed:
-    "Das Passwort konnte nicht entfernt werden.",
+  sitesPagePasswordRemoveFailed: "Das Passwort konnte nicht entfernt werden.",
   sitesPagePasswordRemoved:
     "Das Passwort ist weg. Jeder im Internet kann diese Seite wieder öffnen.",
   sitesPagePasswordPreviewNote:
@@ -6229,12 +6198,10 @@ export const de: Partial<Catalog> = {
   sitesCatalogItemDelete: "Löschen",
   sitesCatalogItemDeleteConfirm: "Ja, löschen",
   sitesCatalogItemDeleteLabel: (name: string) => `${name} löschen`,
-  sitesCatalogItemDeleteConfirmLabel: (name: string) =>
-    `Ja, löschen: ${name}`,
+  sitesCatalogItemDeleteConfirmLabel: (name: string) => `Ja, löschen: ${name}`,
   sitesCatalogItemDeleteFailed: "Der Artikel konnte nicht gelöscht werden.",
   sitesSectionCatalog: "Katalog",
-  sitesSectionCatalogDesc:
-    "Was Sie anbieten, mit Preisen, aus Ihrem Katalog.",
+  sitesSectionCatalogDesc: "Was Sie anbieten, mit Preisen, aus Ihrem Katalog.",
   sitesCatalogSectionHeading: "Überschrift darüber",
   sitesCatalogSectionChoose: "Welcher Katalog",
   sitesCatalogSectionGroup: "Welche Gruppe",
@@ -6409,8 +6376,7 @@ export const de: Partial<Catalog> = {
   sitesTicketCapacityFailed: "Die Platzzahl konnte nicht geändert werden.",
   sitesTicketChangeCapacity: "Plätze…",
   sitesTicketDelete: "Löschen",
-  sitesTicketChangeCapacityFor: (event: string) =>
-    `Plätze für ${event} ändern`,
+  sitesTicketChangeCapacityFor: (event: string) => `Plätze für ${event} ändern`,
   sitesTicketDeleteFor: (event: string) => `${event} löschen`,
   sitesTicketDeleteConfirm: "Wirklich löschen?",
   sitesTicketDeleteHint:
@@ -6439,9 +6405,7 @@ export const de: Partial<Catalog> = {
   sitesShopSectionHint:
     "Der Block verweist auf Ihre Shop-Seite. Was im Verkauf ist, Preise und Bestand werden live gelesen — in der Seite selbst ist nichts gespeichert.",
   sitesShopSectionListed: (count: number) =>
-    count === 1
-      ? "1 Produkt ist im Shop."
-      : `${count} Produkte sind im Shop.`,
+    count === 1 ? "1 Produkt ist im Shop." : `${count} Produkte sind im Shop.`,
   sitesAssistantSuggestedShop: "Was verkaufen Sie?",
   sitesShop: "Shop",
   sitesShopLoadFailed:
@@ -6466,8 +6430,7 @@ export const de: Partial<Catalog> = {
   sitesShopUnits: (units: number) =>
     units === 1 ? "1 Stück" : `${units} Stück`,
   sitesShopRemove: "Entfernen",
-  sitesShopRemoveFor: (product: string) =>
-    `${product} aus dem Shop entfernen`,
+  sitesShopRemoveFor: (product: string) => `${product} aus dem Shop entfernen`,
   sitesShopRemoveConfirm: "Wirklich entfernen?",
   sitesShopRemoveHint:
     "Entfernen nimmt das Produkt nur aus dem Schaufenster. Bereits aufgegebene Bestellungen behalten es.",
@@ -6660,8 +6623,7 @@ export const de: Partial<Catalog> = {
   sitesCollectionPreviewLoading: "Die aktuellen Base-Zeilen werden geladen",
   sitesCollectionPreviewFailed:
     "Diese Zeilen ließen sich nicht anzeigen. Korrigieren Sie den Base-Wert, den der Server nennt, und versuchen Sie es erneut.",
-  sitesCollectionPreviewSaveTitle:
-    "Speichern Sie, um diese Zeilen zu sehen",
+  sitesCollectionPreviewSaveTitle: "Speichern Sie, um diese Zeilen zu sehen",
   sitesCollectionPreviewSaveBody:
     "Einmal verbunden, prüfen dieselben Veröffentlichungsregeln wie auf der Live-Website jede Zeile hier.",
   sitesCollectionPreviewEmptyTitle:
@@ -6818,8 +6780,7 @@ export const de: Partial<Catalog> = {
   sitesDomainRegistrantHint:
     "Die Registry verlangt eine echte Person oder Firma, die erreichbar ist. Das geht an die Registry — auf Ihrer Website erscheint es nie.",
   sitesDomainRegistrantName: "Vollständiger Name",
-  sitesDomainRegistrantOrganisation:
-    "Firma (leer lassen, wenn es keine gibt)",
+  sitesDomainRegistrantOrganisation: "Firma (leer lassen, wenn es keine gibt)",
   sitesDomainRegistrantEmail: "E-Mail",
   sitesDomainRegistrantEmailHint:
     "Hierhin schreibt die Registry zu Ablauf und Verifizierung. Eine Adresse, die niemand liest, kostet die Domain.",
@@ -6830,8 +6791,7 @@ export const de: Partial<Catalog> = {
   sitesDomainRegistrantCountryHint:
     "Der Zwei-Buchstaben-Ländercode, etwa de oder be.",
   sitesDomainRegistrantPhone: "Telefon",
-  sitesDomainRegistrantPhoneHint:
-    "In internationaler Form, etwa +49301234567.",
+  sitesDomainRegistrantPhoneHint: "In internationaler Form, etwa +49301234567.",
   sitesDomainRequirementEea:
     "Diese Endung wird nur an Inhaber im Europäischen Wirtschaftsraum verkauft.",
   sitesDomainRequirementCountry: (country: string) =>
@@ -6884,7 +6844,8 @@ export const de: Partial<Catalog> = {
     "Sie haben diesen Preis freigegeben. Als Nächstes kommt die Zahlung: Sobald sie eingegangen ist, registriert alo die Domain und verbindet sie von selbst mit dieser Website.",
   sitesDomainStepAwaitingPayment:
     "Wartet darauf, dass die Zahlung eingeht. Die Registrierung startet von selbst, sobald das geschieht.",
-  sitesDomainStepPaid: "Bezahlt. Die Registrierung startet innerhalb einer Minute.",
+  sitesDomainStepPaid:
+    "Bezahlt. Die Registrierung startet innerhalb einer Minute.",
   sitesDomainStepRegistering:
     "Der Registrar registriert den Namen gerade jetzt.",
   sitesDomainStepRegistered: (domain: string) =>
@@ -6903,19 +6864,23 @@ export const de: Partial<Catalog> = {
   billingImportMissingName: "Name fehlt",
   billingImportInvalidPrice: "Ungültiger Preis",
   billingImportInvalidVat: "Ungültiger Umsatzsteuersatz",
-  billingImportReadFailed: "Diese Preisliste konnte nicht gelesen werden. Versuchen Sie es mit einer CSV-, Excel-, PNG-, JPEG- oder WebP-Datei.",
-  billingImportSaveFailed: "Der Import wurde beendet, bevor alle Artikel gespeichert werden konnten.",
+  billingImportReadFailed:
+    "Diese Preisliste konnte nicht gelesen werden. Versuchen Sie es mit einer CSV-, Excel-, PNG-, JPEG- oder WebP-Datei.",
+  billingImportSaveFailed:
+    "Der Import wurde beendet, bevor alle Artikel gespeichert werden konnten.",
   billingImportNotInFile: "Nicht in dieser Datei",
   billingImportTitle: "Preisliste importieren",
   billingImportItems: (count: number) => `${count} Artikel importieren`,
   billingImportViewPriceList: "Preisliste anzeigen",
   billingImportDropTitle: "Preisliste hier ablegen",
-  billingImportDropHelp: "Excel- und CSV-Dateien werden direkt in Ihrem Browser gelesen. Bei einem Foto oder Screenshot extrahiert alo AI die Zeilen, damit Sie sie prüfen können.",
+  billingImportDropHelp:
+    "Excel- und CSV-Dateien werden direkt in Ihrem Browser gelesen. Bei einem Foto oder Screenshot extrahiert alo AI die Zeilen, damit Sie sie prüfen können.",
   billingImportSpreadsheetFormats: "CSV · XLSX",
   billingImportImageFormats: "PNG · JPEG · WebP",
   billingImportChooseFile: "Datei auswählen",
   billingImportReading: (name: string) => `${name} wird gelesen…`,
-  billingImportRowsFound: (count: number) => `${count} Zeilen gefunden. Prüfen Sie die Zuordnung und schließen Sie alles aus, was Sie nicht importieren möchten.`,
+  billingImportRowsFound: (count: number) =>
+    `${count} Zeilen gefunden. Prüfen Sie die Zuordnung und schließen Sie alles aus, was Sie nicht importieren möchten.`,
   billingImportReplaceFile: "Datei ersetzen",
   billingImportMatchColumns: "Spalten zuordnen",
   billingImportSku: "Artikelnummer",
@@ -6926,8 +6891,10 @@ export const de: Partial<Catalog> = {
   billingImportRow: (number: number) => `Zeile ${number}`,
   billingImportAlreadyExists: "Bereits vorhanden",
   billingImportReady: "Bereit",
-  billingImportComplete: (count: number) => `${count} Preislistenartikel importiert`,
-  billingImportCompleteHelp: "Sie können jetzt in Angeboten, Rechnungen und geteilten Preisverbindungen verwendet werden.",
+  billingImportComplete: (count: number) =>
+    `${count} Preislistenartikel importiert`,
+  billingImportCompleteHelp:
+    "Sie können jetzt in Angeboten, Rechnungen und geteilten Preisverbindungen verwendet werden.",
   colorPickerEyedropper: "Farbe vom Bildschirm aufnehmen",
   colorPickerHue: "Farbton",
   colorPickerChannelValue: (channel: string) => `${channel}-Wert`,
@@ -6942,7 +6909,8 @@ export const de: Partial<Catalog> = {
   billingApplyImage: "Bild übernehmen",
   billingPdfPreview: "PDF-Vorschau",
   billingQuotationPreview: "Angebotsvorschau",
-  billingImagePdfHelp: "Diese Bildgröße und dieser Ausschnitt werden im PDF verwendet.",
+  billingImagePdfHelp:
+    "Diese Bildgröße und dieser Ausschnitt werden im PDF verwendet.",
   billingPdfPaperSizeA4: "A4",
   billingProductPdfPreview: "Produktbild in der PDF-Vorschau",
   billingCropStyle: "Bildausschnitt",
@@ -6950,7 +6918,8 @@ export const de: Partial<Catalog> = {
   billingShowFullImage: "Ganzes Bild anzeigen",
   billingZoom: "Zoom",
   billingCustomZoom: "Benutzerdefinierter Zoom in Prozent",
-  billingZoomHelp: "Verwenden Sie 50–90 %, um mehr vom Bild zu zeigen, oder mehr als 100 % für einen engeren Ausschnitt.",
+  billingZoomHelp:
+    "Verwenden Sie 50–90 %, um mehr vom Bild zu zeigen, oder mehr als 100 % für einen engeren Ausschnitt.",
   billingFocusArea: "Fokusbereich",
   billingCentre: "Mitte",
   billingTop: "Oben",
@@ -6958,123 +6927,158 @@ export const de: Partial<Catalog> = {
   billingLeft: "Links",
   billingRight: "Rechts",
   billingProductImage: "Produktbild",
-  billingProductImageHelp: "Wird im Kundenangebot neben diesem Artikel angezeigt.",
+  billingProductImageHelp:
+    "Wird im Kundenangebot neben diesem Artikel angezeigt.",
   billingReplaceImage: "Bild ersetzen",
   billingUploadImage: "Bild hochladen",
   billingRemoveImage: "Bild entfernen",
   billingProductDescription: "Produktbeschreibung",
-  billingProductDescriptionPlaceholder: "Fügen Sie Spezifikationen, Materialien, Leistungsumfang oder andere hilfreiche Details hinzu…",
+  billingProductDescriptionPlaceholder:
+    "Fügen Sie Spezifikationen, Materialien, Leistungsumfang oder andere hilfreiche Details hinzu…",
   billingConnectionsSyncNow: "Jetzt synchronisieren",
   billingConnectionsConnectSupplier: "Lieferantenpreise verbinden",
   billingConnectionsConnectPrices: "Preise verbinden",
   billingConnectionsEasyOption: "Beginnen Sie mit der einfachsten Option",
-  billingConnectionsEasyOptionHelp: "Wenn Ihr Lieferant alo verwendet, fügen Sie dessen Einladungslink ein. Authentifizierung und Produktfelder übernehmen wir automatisch.",
+  billingConnectionsEasyOptionHelp:
+    "Wenn Ihr Lieferant alo verwendet, fügen Sie dessen Einladungslink ein. Authentifizierung und Produktfelder übernehmen wir automatisch.",
   billingConnectionsSupplier: "Lieferant",
   billingConnectionsSupplierPlaceholder: "Firmenname des Lieferanten",
   billingConnectionsType: "Verbindungstyp",
   billingConnectionsChooseConnection: "Verbindung auswählen",
   billingConnectionsInvitationLink: "Einladungslink",
-  billingConnectionsInvitationHelp: "Ihr Lieferant erstellt diesen Link unter Von mir geteilt in seinem alo-Arbeitsbereich.",
+  billingConnectionsInvitationHelp:
+    "Ihr Lieferant erstellt diesen Link unter Von mir geteilt in seinem alo-Arbeitsbereich.",
   billingConnectionsInvitationPlaceholder: "alo-Einladungslink einfügen",
   billingConnectionsAccessKey: "Zugriffsschlüssel",
-  billingConnectionsAccessKeyHelp: "Bleibt vertraulich und wird nie in Ihren Kundendokumenten angezeigt.",
-  billingConnectionsAccessKeyPlaceholder: "Schlüssel Ihres Lieferanten einfügen",
+  billingConnectionsAccessKeyHelp:
+    "Bleibt vertraulich und wird nie in Ihren Kundendokumenten angezeigt.",
+  billingConnectionsAccessKeyPlaceholder:
+    "Schlüssel Ihres Lieferanten einfügen",
   billingConnectionsReady: "Verbindung ist bereit",
   billingConnectionsTestPreview: "Testen und Vorschau anzeigen",
   billingConnectionsSyncApprovals: "Synchronisierung und Freigaben",
-  billingConnectionsSyncApprovalsHelp: "Wählen Sie, wann Preise geprüft werden und welche Änderungen freigegeben werden müssen.",
+  billingConnectionsSyncApprovalsHelp:
+    "Wählen Sie, wann Preise geprüft werden und welche Änderungen freigegeben werden müssen.",
   billingConnectionsCheckUpdates: "Auf Aktualisierungen prüfen",
   billingConnectionsChooseSchedule: "Zeitplan auswählen",
   billingConnectionsApplyChanges: "Preisänderungen übernehmen",
   billingConnectionsChooseApproval: "Freigaberegel auswählen",
   billingConnectionsChangeLimit: "Grenzwert für automatische Änderungen",
-  billingConnectionsChangeLimitHelp: "Änderungen über diesem Prozentsatz warten auf eine Freigabe.",
+  billingConnectionsChangeLimitHelp:
+    "Änderungen über diesem Prozentsatz warten auf eine Freigabe.",
   billingConnectionsProductMatching: "Produktzuordnung",
-  billingConnectionsProductMatchingHelp: "Legen Sie fest, wie Lieferantenprodukte vorhandenen Artikeln in Ihrem Katalog zugeordnet werden.",
+  billingConnectionsProductMatchingHelp:
+    "Legen Sie fest, wie Lieferantenprodukte vorhandenen Artikeln in Ihrem Katalog zugeordnet werden.",
   billingConnectionsMatchBy: "Produkte zuordnen nach",
   billingConnectionsChooseMatching: "Zuordnungsmethode auswählen",
   billingConnectionsNewProducts: "Neue Lieferantenprodukte",
   billingConnectionsChooseAction: "Aktion auswählen",
   billingConnectionsFieldMapping: "Zuordnung der Lieferantenfelder",
-  billingConnectionsFieldMappingHelp: "Geben Sie die Feldnamen dieses Lieferanten ein. alo schlägt sie nach der ersten Vorschau vor.",
+  billingConnectionsFieldMappingHelp:
+    "Geben Sie die Feldnamen dieses Lieferanten ein. alo schlägt sie nach der ersten Vorschau vor.",
   billingConnectionsSkuField: "SKU-Feld",
   billingConnectionsNameField: "Namensfeld",
   billingConnectionsNetPriceField: "Nettopreisfeld",
   billingConnectionsCurrencyField: "Währungsfeld",
-  billingConnectionsCustomHeader: "Benutzerdefinierter Authentifizierungs-Header",
+  billingConnectionsCustomHeader:
+    "Benutzerdefinierter Authentifizierungs-Header",
   billingConnectionsHeaderName: "Header-Name",
   billingConnectionsHeaderValue: "Header-Wert",
   billingConnectionsHeaderValuePlaceholder: "Sicheren Wert eingeben",
   billingConnectionsSharePrices: "Meine Preise teilen",
   billingConnectionsCreateSecure: "Sichere Verbindung erstellen",
   billingConnectionsYouControl: "Sie bestimmen genau, was dieser Kunde erhält",
-  billingConnectionsYouControlHelp: "Interne Einkaufskosten, Lieferantennamen und Margen werden niemals einbezogen.",
+  billingConnectionsYouControlHelp:
+    "Interne Einkaufskosten, Lieferantennamen und Margen werden niemals einbezogen.",
   billingConnectionsClientPartner: "Kunde oder Partner",
   billingConnectionsCompanyName: "Firmenname",
-  billingConnectionsDeliveryMethod: "Wie soll die Verbindung hergestellt werden?",
+  billingConnectionsDeliveryMethod:
+    "Wie soll die Verbindung hergestellt werden?",
   billingConnectionsChooseDelivery: "Übertragungsart auswählen",
   billingConnectionsPricesToShare: "Zu teilende Preise",
   billingConnectionsChoosePrices: "Preise auswählen",
   billingConnectionsChooseProducts: "Produkte aus der Preisliste auswählen",
   billingConnectionsSearchPriceList: "Ihre Preisliste durchsuchen",
-  billingConnectionsNoProducts: "Keine Produkte in der Preisliste entsprechen dieser Suche.",
+  billingConnectionsNoProducts:
+    "Keine Produkte in der Preisliste entsprechen dieser Suche.",
   billingConnectionsLoadingPriceList: "Ihre Preisliste wird geladen…",
   billingConnectionsSecureCreated: "Sichere Preisverbindung erstellt",
-  billingConnectionsSendTo: (company: string) => `Senden Sie diese Angaben an ${company}. Der Zugriff kann jederzeit pausiert oder widerrufen werden.`,
-  billingConnectionsKeyShownOnce: "Der vollständige Schlüssel wird nur bei der Erstellung angezeigt.",
+  billingConnectionsSendTo: (company: string) =>
+    `Senden Sie diese Angaben an ${company}. Der Zugriff kann jederzeit pausiert oder widerrufen werden.`,
+  billingConnectionsKeyShownOnce:
+    "Der vollständige Schlüssel wird nur bei der Erstellung angezeigt.",
   billingConnectionsCopy: "Kopieren",
   billingConnectionsConnected: "Verbunden",
   billingConnectionsActionNeeded: "Handlungsbedarf",
   billingConnectionsPaused: "Pausiert",
   billingConnectionsIndustrialComponentsEur: "Industriekomponenten · EUR",
-  billingConnectionsChangesReady: (count: number) => `${count} Preisänderungen stehen zur Prüfung bereit`,
-  billingConnectionsUpdatedMinutesAgo: (count: number) => `Vor ${count} Minuten aktualisiert`,
+  billingConnectionsChangesReady: (count: number) =>
+    `${count} Preisänderungen stehen zur Prüfung bereit`,
+  billingConnectionsUpdatedMinutesAgo: (count: number) =>
+    `Vor ${count} Minuten aktualisiert`,
   billingConnectionsDaily: "Täglich",
   billingConnectionsMetalsSheetEur: "Metalle und Bleche · EUR",
-  billingConnectionsSupplierRenew: "Der Lieferant muss diese Verbindung erneuern",
-  billingConnectionsUpdatedDaysAgo: (count: number) => `Zuletzt vor ${count} Tagen aktualisiert`,
+  billingConnectionsSupplierRenew:
+    "Der Lieferant muss diese Verbindung erneuern",
+  billingConnectionsUpdatedDaysAgo: (count: number) =>
+    `Zuletzt vor ${count} Tagen aktualisiert`,
   billingConnectionsWholesaleContract: "Großhandelskatalog · Vertragspreise",
-  billingConnectionsWorkspaceReceivesApproved: "Der alo-Arbeitsbereich erhält freigegebene Preisänderungen",
-  billingConnectionsUsedHoursAgo: (count: number) => `Vor ${count} Stunde verwendet`,
+  billingConnectionsWorkspaceReceivesApproved:
+    "Der alo-Arbeitsbereich erhält freigegebene Preisänderungen",
+  billingConnectionsUsedHoursAgo: (count: number) =>
+    `Vor ${count} Stunde verwendet`,
   billingConnectionsOnApproval: "Nach Freigabe",
   billingConnectionsProjectSupplyEur: "Projektlieferpreise · EUR",
-  billingConnectionsApiExpiryDemo: "Der externe API-Zugriff läuft am 30. September 2026 ab",
+  billingConnectionsApiExpiryDemo:
+    "Der externe API-Zugriff läuft am 30. September 2026 ab",
   billingConnectionsUsedYesterday: "Gestern verwendet",
   billingConnectionsLive: "Live",
   billingConnectionsSupplierCatalogueEur: "Lieferantenkatalog · EUR",
-  billingConnectionsNoChangesAttention: "Keine Preisänderungen erfordern Ihre Aufmerksamkeit",
+  billingConnectionsNoChangesAttention:
+    "Keine Preisänderungen erfordern Ihre Aufmerksamkeit",
   billingConnectionsConnectedNow: "Gerade verbunden",
   billingConnectionsHourly: "Stündlich",
   billingConnectionsWeekly: "Wöchentlich",
   billingConnectionsManual: "Manuell",
-  billingConnectionsLivePriceListAutomatic: "Live-Preisliste · Automatisch aktualisiert",
+  billingConnectionsLivePriceListAutomatic:
+    "Live-Preisliste · Automatisch aktualisiert",
   billingConnectionsSelectedPriceItems: "Ausgewählte Preislistenpositionen",
-  billingConnectionsWaitingClient: "Warten auf die Annahme durch den Kunden in alo",
-  billingConnectionsExternalReady: "Der externe API-Zugriff kann geteilt werden",
+  billingConnectionsWaitingClient:
+    "Warten auf die Annahme durch den Kunden in alo",
+  billingConnectionsExternalReady:
+    "Der externe API-Zugriff kann geteilt werden",
   billingConnectionsCreatedNow: "Gerade erstellt",
   billingConnectionsReceivedByMe: "Von mir empfangen",
   billingConnectionsSharedByMe: "Von mir geteilt",
   billingConnectionsUpdatedNow: "Gerade aktualisiert",
-  billingConnectionsUpToDate: (company: string) => `${company} ist auf dem neuesten Stand.`,
-  billingConnectionsNowSupplying: (company: string) => `${company} liefert jetzt Preise an diesen Arbeitsbereich.`,
-  billingConnectionsNowReceiving: (company: string) => `${company} erhält jetzt Preise aus diesem Arbeitsbereich.`,
+  billingConnectionsUpToDate: (company: string) =>
+    `${company} ist auf dem neuesten Stand.`,
+  billingConnectionsNowSupplying: (company: string) =>
+    `${company} liefert jetzt Preise an diesen Arbeitsbereich.`,
+  billingConnectionsNowReceiving: (company: string) =>
+    `${company} erhält jetzt Preise aus diesem Arbeitsbereich.`,
   billingConnectionsDisconnectTitle: "Preisverbindung trennen?",
-  billingConnectionsDisconnectReceived: (company: string) => `${company} sendet keine Lieferantenpreise mehr an diesen Arbeitsbereich. Bestehende Preise bleiben erhalten, werden aber nicht mehr automatisch aktualisiert.`,
-  billingConnectionsDisconnectShared: (company: string) => `${company} erhält keine Preise mehr aus diesem Arbeitsbereich. Bestehende Preise bleiben erhalten, werden aber nicht mehr automatisch aktualisiert.`,
+  billingConnectionsDisconnectReceived: (company: string) =>
+    `${company} sendet keine Lieferantenpreise mehr an diesen Arbeitsbereich. Bestehende Preise bleiben erhalten, werden aber nicht mehr automatisch aktualisiert.`,
+  billingConnectionsDisconnectShared: (company: string) =>
+    `${company} erhält keine Preise mehr aus diesem Arbeitsbereich. Bestehende Preise bleiben erhalten, werden aber nicht mehr automatisch aktualisiert.`,
   billingConnectionsDisconnect: "Trennen",
   billingConnectionsKeepConnected: "Verbunden lassen",
   billingConnectionsTitle: "Preisverbindungen",
   billingPriceConnections: "Preisverbindungen",
   billingVat: "MwSt.",
-  billingConnectionsSubtitle: "Empfangen Sie aktuelle Lieferantenkosten und teilen Sie ausgewählte Verkaufspreise sicher mit Ihren Kunden.",
+  billingConnectionsSubtitle:
+    "Empfangen Sie aktuelle Lieferantenkosten und teilen Sie ausgewählte Verkaufspreise sicher mit Ihren Kunden.",
   billingConnectionsDirection: "Richtung der Preisverbindung",
   billingConnectionsSearch: "Verbindungen durchsuchen",
   billingConnectionsDismiss: "Schließen",
   billingConnectionsNoMatches: "Keine passenden Verbindungen",
-  billingConnectionsNoMatchesHelp: "Versuchen Sie eine andere Suche oder erstellen Sie eine neue Preisverbindung.",
+  billingConnectionsNoMatchesHelp:
+    "Versuchen Sie eine andere Suche oder erstellen Sie eine neue Preisverbindung.",
   quoteStudioScanToSave: "Scannen und speichern",
   quoteStudioBuildTitle: "Erstellen Sie Ihr Angebot",
-  quoteStudioBuildHelp: "Fügen Sie Inhalte direkt hinzu. Änderungen werden automatisch gespeichert.",
+  quoteStudioBuildHelp:
+    "Fügen Sie Inhalte direkt hinzu. Änderungen werden automatisch gespeichert.",
   quoteStudioCompanyLogo: "Firmenlogo",
   quoteStudioAddress: "Adresse",
   quoteStudioContact: "Kontakt",
@@ -7100,13 +7104,16 @@ export const de: Partial<Catalog> = {
   quoteStudioSectionHeading: "Abschnittsüberschrift",
   quoteStudioParagraph: "Absatz",
   quoteStudioWriteParagraph: "Schreiben Sie einen Absatz…",
-  quoteStudioImportantStatement: "Fügen Sie ein Kundenzitat oder einen wichtigen Hinweis hinzu…",
+  quoteStudioImportantStatement:
+    "Fügen Sie ein Kundenzitat oder einen wichtigen Hinweis hinzu…",
   quoteStudioAttribution: "Quellenangabe (optional)",
   quoteStudioQuoteAttribution: "Quellenangabe zum Zitat",
   quoteStudioSectionText: "Abschnittstext",
-  quoteStudioSectionTextPlaceholder: "Schreiben Sie die Informationen, die Ihr Kunde benötigt…",
+  quoteStudioSectionTextPlaceholder:
+    "Schreiben Sie die Informationen, die Ihr Kunde benötigt…",
   quoteStudioListLayout: "Listenlayout",
-  quoteStudioListLayoutHelp: "Verteilen Sie längere Listen auf übersichtliche Spalten.",
+  quoteStudioListLayoutHelp:
+    "Verteilen Sie längere Listen auf übersichtliche Spalten.",
   quoteStudioColumns: "Spalten",
   quoteStudioChooseColumns: "Spalten auswählen",
   quoteStudioWriteItem: "Eintrag verfassen",
@@ -7121,14 +7128,17 @@ export const de: Partial<Catalog> = {
   quoteStudioChangesImmediate: "Änderungen werden sofort im Angebot angezeigt.",
   quoteStudioDone: "Fertig",
   quoteStudioComposeImageText: "Bild und Text zusammenstellen",
-  quoteStudioComposeImageTextHelp: "Ordnen Sie den Block an und sehen Sie genau, wie er im Angebot erscheint.",
+  quoteStudioComposeImageTextHelp:
+    "Ordnen Sie den Block an und sehen Sie genau, wie er im Angebot erscheint.",
   quoteStudioLayoutTools: "Layoutoptionen",
-  quoteStudioLayoutToolsHelp: "Wählen Sie, wie dieser Inhaltsblock im Angebot dargestellt wird.",
+  quoteStudioLayoutToolsHelp:
+    "Wählen Sie, wie dieser Inhaltsblock im Angebot dargestellt wird.",
   quoteStudioComposition: "Anordnung",
   quoteStudioImageFrame: "Bildrahmen",
   quoteStudioFit: "Einpassung",
   quoteStudioImage: "Bild",
-  quoteStudioImageDescriptionPlaceholder: "Beschreiben Sie das gezeigte Produkt, Projekt oder Ergebnis.",
+  quoteStudioImageDescriptionPlaceholder:
+    "Beschreiben Sie das gezeigte Produkt, Projekt oder Ergebnis.",
   quoteStudioCaption: "Bildunterschrift",
   quoteStudioCaptionPlaceholder: "Optionale kurze Bildunterschrift",
   quoteStudioTextTools: "Textwerkzeuge",
@@ -7142,23 +7152,27 @@ export const de: Partial<Catalog> = {
   quoteStudioZoomOut: "Verkleinern",
   quoteStudioZoomIn: "Vergrößern",
   quoteStudioInformationTable: "Informationstabelle",
-  quoteStudioInformationTableHelp: "Benennen Sie die Spalten um und fügen Sie so viele Zeilen oder Spalten wie nötig hinzu.",
+  quoteStudioInformationTableHelp:
+    "Benennen Sie die Spalten um und fügen Sie so viele Zeilen oder Spalten wie nötig hinzu.",
   quoteStudioTableColumnCount: "Anzahl der Tabellenspalten",
   quoteStudioRowActions: "Zeilenaktionen",
   quoteStudioEnterValue: "Wert eingeben",
-  quoteStudioAddFirstRow: "Fügen Sie die erste Zeile hinzu, um diese Tabelle zu beginnen.",
+  quoteStudioAddFirstRow:
+    "Fügen Sie die erste Zeile hinzu, um diese Tabelle zu beginnen.",
   quoteStudioAddRowBelow: "Zeile darunter hinzufügen",
   quoteStudioAddContentA11y: "Angebotsinhalt hinzufügen",
   quoteStudioAddContentBelow: "Inhalt darunter hinzufügen",
   quoteStudioAddContent: "Inhalt hinzufügen",
   quoteStudioAddToQuotation: "Zum Angebot hinzufügen",
-  quoteStudioAddToQuotationHelp: "Wählen Sie, was als Nächstes im Dokument erscheinen soll.",
+  quoteStudioAddToQuotationHelp:
+    "Wählen Sie, was als Nächstes im Dokument erscheinen soll.",
   quoteStudioCloseBlockPicker: "Blockauswahl schließen",
   quoteStudioSearchBlocks: "Blöcke suchen…",
   quoteStudioSearchBlocksA11y: "Angebotsblöcke suchen",
   quoteStudioNoMatchingBlocks: "Keine passenden Blöcke",
   quoteStudioTryAnotherName: "Versuchen Sie einen anderen Suchbegriff.",
-  quoteStudioFirstBlockHelp: "Fügen Sie als ersten Block Text, eine Überschrift oder ein Bild hinzu.",
+  quoteStudioFirstBlockHelp:
+    "Fügen Sie als ersten Block Text, eine Überschrift oder ein Bild hinzu.",
   quoteStudioClose: "Schließen",
   quoteStudioBrandMark: "Markenauftritt",
   quoteStudioBrandMarkHelp: "Wird oben im Kundenangebot angezeigt.",
@@ -7169,13 +7183,17 @@ export const de: Partial<Catalog> = {
   quoteStudioQrHelp: "Kunden können Ihre Kontaktdaten scannen und speichern.",
   quoteStudioShowQr: "Kontakt-QR-Code anzeigen",
   quoteStudioPlacement: "Position",
-  quoteStudioPlacementHelp: "Wählen Sie die Position des Codes neben Ihren Firmendaten.",
+  quoteStudioPlacementHelp:
+    "Wählen Sie die Position des Codes neben Ihren Firmendaten.",
   quoteStudioSize: "Größe",
-  quoteStudioSizeHelp: "Prüfen Sie den Platzbedarf des QR-Codes in der Kopfzeile.",
+  quoteStudioSizeHelp:
+    "Prüfen Sie den Platzbedarf des QR-Codes in der Kopfzeile.",
   quoteStudioQrColour: "Farbe des QR-Codes",
   quoteStudioCompanyInformation: "Unternehmensangaben",
-  quoteStudioCompanyLinkedHelp: "Diese Werte stammen aus Abrechnung → Ihre Angaben.",
-  quoteStudioOverrideHelp: "Eine Änderung erstellt eine abweichende Angabe für dieses Angebot.",
+  quoteStudioCompanyLinkedHelp:
+    "Diese Werte stammen aus Abrechnung → Ihre Angaben.",
+  quoteStudioOverrideHelp:
+    "Eine Änderung erstellt eine abweichende Angabe für dieses Angebot.",
   quoteStudioUseYourDetails: "Ihre Angaben verwenden",
   quoteStudioLinkedYourDetails: "Mit Ihren Angaben verknüpft",
   quoteStudioCompanyName: "Firmenname",
@@ -7188,8 +7206,10 @@ export const de: Partial<Catalog> = {
   quoteStudioVatPlaceholder: "Umsatzsteuer-Identifikationsnummer",
   quoteStudioCompanyNumberPlaceholder: "Handelsregisternummer",
   quoteStudioCustomerInformation: "Kundenangaben",
-  quoteStudioCustomerInformationHelp: "Wird in der Angebotskopfzeile unter Erstellt für angezeigt.",
-  quoteStudioCustomerOverrideHelp: "Eine Änderung erstellt nur für dieses Angebot eine abweichende Angabe.",
+  quoteStudioCustomerInformationHelp:
+    "Wird in der Angebotskopfzeile unter Erstellt für angezeigt.",
+  quoteStudioCustomerOverrideHelp:
+    "Eine Änderung erstellt nur für dieses Angebot eine abweichende Angabe.",
   quoteStudioUseSelectedCustomer: "Ausgewählten Kunden verwenden",
   quoteStudioLinkedSelectedCustomer: "Mit ausgewähltem Kunden verknüpft",
   quoteStudioCustomerCompanyPlaceholder: "Name des Kundenunternehmens",
@@ -7213,10 +7233,26 @@ export const de: Partial<Catalog> = {
   quoteStudioTableHelp: "Erstellen Sie flexible Zeilen und Spalten",
   quoteStudioDivider: "Trennlinie",
   quoteStudioDividerHelp: "Trennen Sie Dokumentabschnitte",
+  quoteStudioDividerSettings: "Trennlinie einstellen",
+  quoteStudioDividerAppearance: "Darstellung der Trennlinie",
+  quoteStudioDividerAppearanceHelp:
+    "Legen Sie fest, wie diese Trennlinie im Kundenangebot erscheint.",
+  quoteStudioDividerStyle: "Linienstil",
+  quoteStudioDividerSolid: "Durchgezogen",
+  quoteStudioDividerDashed: "Gestrichelt",
+  quoteStudioDividerDotted: "Gepunktet",
+  quoteStudioDividerThickness: "Linienstärke",
+  quoteStudioDividerFine: "Fein",
+  quoteStudioDividerMedium: "Mittel",
+  quoteStudioDividerBold: "Kräftig",
+  quoteStudioDividerWidth: "Linienbreite",
+  quoteStudioDividerColour: "Linienfarbe",
+  quoteStudioChooseDividerColour: "Farbe der Trennlinie auswählen",
   quoteStudioCategoryText: "Text",
   quoteStudioEditQuotationHeader: "Angebotskopf bearbeiten",
   quoteStudioCustomizeQuotation: "Angebot anpassen",
-  quoteStudioChangesSavedAutomatically: "Änderungen werden automatisch gespeichert.",
+  quoteStudioChangesSavedAutomatically:
+    "Änderungen werden automatisch gespeichert.",
   quoteStudioReplace: "Ersetzen",
   quoteStudioChooseFile: "Datei auswählen",
   quoteStudioLeft: "Links",
@@ -7224,24 +7260,34 @@ export const de: Partial<Catalog> = {
   quoteStudioSmall: "Klein",
   quoteStudioMedium: "Mittel",
   quoteStudioLarge: "Groß",
-  quoteStudioQrPlacementA11y: (side: string) => `QR-Code ${side.toLowerCase()} platzieren`,
-  quoteStudioQrColourHelp: "Wählen Sie für zuverlässiges Scannen eine dunkle Farbe",
+  quoteStudioQrPlacementA11y: (side: string) =>
+    `QR-Code ${side.toLowerCase()} platzieren`,
+  quoteStudioQrColourHelp:
+    "Wählen Sie für zuverlässiges Scannen eine dunkle Farbe",
   quoteStudioPhonePlaceholder: "+49 30 123 456",
-  quoteStudioAddressPlaceholder: "Straße und Hausnummer\nPostleitzahl und Ort\nLand",
+  quoteStudioAddressPlaceholder:
+    "Straße und Hausnummer\nPostleitzahl und Ort\nLand",
   quoteStudioHeaderStyle: "Kopfstil",
-  quoteStudioHeaderStyleHelp: "Wählen Sie eine professionelle Gestaltung. Ihre gespeicherten Unternehmensdaten werden automatisch eingefügt.",
+  quoteStudioHeaderStyleHelp:
+    "Wählen Sie eine professionelle Gestaltung. Ihre gespeicherten Unternehmensdaten werden automatisch eingefügt.",
   quoteStudioHeaderArrangement: "Anordnung des Kopfbereichs",
-  quoteStudioHeaderArrangementHelp: "Wählen Sie, auf welcher Seite Ihre Unternehmensidentität steht.",
+  quoteStudioHeaderArrangementHelp:
+    "Wählen Sie, auf welcher Seite Ihre Unternehmensidentität steht.",
   quoteStudioLogoLeft: "Logo links",
   quoteStudioLogoRight: "Logo rechts",
-  quoteStudioLogoLeftHelp: "Unternehmensidentität links, Angebotsdetails gegenüber.",
-  quoteStudioLogoRightHelp: "Unternehmensidentität rechts, Angebotsdetails gegenüber.",
+  quoteStudioLogoLeftHelp:
+    "Unternehmensidentität links, Angebotsdetails gegenüber.",
+  quoteStudioLogoRightHelp:
+    "Unternehmensidentität rechts, Angebotsdetails gegenüber.",
   quoteStudioColumnBalance: "Spaltenaufteilung",
-  quoteStudioColumnBalanceHelp: "Legen Sie fest, wie viel Platz Unternehmen und Kunde erhalten.",
+  quoteStudioColumnBalanceHelp:
+    "Legen Sie fest, wie viel Platz Unternehmen und Kunde erhalten.",
   quoteStudioColumnBalanceA11y: "Spaltenaufteilung des Angebotskopfs",
-  quoteStudioColumnRatioA11y: (company: string, customer: string) => `Unternehmen ${company} Prozent, Kunde ${customer} Prozent`,
+  quoteStudioColumnRatioA11y: (company: string, customer: string) =>
+    `Unternehmen ${company} Prozent, Kunde ${customer} Prozent`,
   quoteStudioDocumentPalette: "Dokumentpalette",
-  quoteStudioDocumentPaletteHelp: "Steuern Sie die Farben der Kundenseite und der Preistabellen.",
+  quoteStudioDocumentPaletteHelp:
+    "Steuern Sie die Farben der Kundenseite und der Preistabellen.",
   quoteStudioResetDefaults: "Standardwerte wiederherstellen",
   quoteStudioDocument: "Dokument",
   quoteStudioDocumentHelp: "Marke, Seite, Kopfbereich und Text.",
@@ -7260,18 +7306,22 @@ export const de: Partial<Catalog> = {
   quoteStudioNumberMarkers: "Nummernmarkierungen",
   quoteStudioNumberedSteps: "Nummerierte Schritte",
   quoteStudioPricingTables: "Preistabellen",
-  quoteStudioPricingTablesHelp: "Sorgen Sie für gut erfassbare Überschriften und Zeilen.",
+  quoteStudioPricingTablesHelp:
+    "Sorgen Sie für gut erfassbare Überschriften und Zeilen.",
   quoteStudioTableHeading: "Tabellenkopf",
   quoteStudioTableHeadingHelp: "Hintergrund des Tabellenkopfs",
   quoteStudioTableRows: "Tabellenzeilen",
   quoteStudioTableRowsHelp: "Standardhintergrund der Zeilen",
   quoteStudioTypography: "Typografie",
-  quoteStudioTypographyHelp: "Wählen Sie den Lesestil, der am besten zu Ihrer Marke passt.",
+  quoteStudioTypographyHelp:
+    "Wählen Sie den Lesestil, der am besten zu Ihrer Marke passt.",
   quoteStudioProposal: "Angebot",
   quoteStudioCloseTableSettings: "Tabelleneinstellungen schließen",
-  quoteStudioTableChangesSavedAutomatically: "Tabellenänderungen werden automatisch gespeichert.",
+  quoteStudioTableChangesSavedAutomatically:
+    "Tabellenänderungen werden automatisch gespeichert.",
   quoteStudioChooseLayout: "Layout auswählen",
-  quoteStudioChooseLayoutHelp: "Wählen Sie einen Ausgangspunkt und passen Sie anschließend die sichtbaren Inhalte und Spalten an.",
+  quoteStudioChooseLayoutHelp:
+    "Wählen Sie einen Ausgangspunkt und passen Sie anschließend die sichtbaren Inhalte und Spalten an.",
   quoteStudioCompact: "Kompakt",
   quoteStudioCompactHelp: "Nur Namen und Preise",
   quoteStudioDetailed: "Detailliert",
@@ -7279,21 +7329,26 @@ export const de: Partial<Catalog> = {
   quoteStudioCatalogue: "Katalog",
   quoteStudioCatalogueHelp: "Größere Produktbilder und Details",
   quoteStudioProductContent: "Produktinhalt",
-  quoteStudioProductContentHelp: "Optionale Informationen zu jedem Produkt oder jeder Dienstleistung.",
+  quoteStudioProductContentHelp:
+    "Optionale Informationen zu jedem Produkt oder jeder Dienstleistung.",
   quoteStudioProductImages: "Produktbilder",
   quoteStudioProductImagesHelp: "Fügen Sie jeder Tabellenzeile ein Bild hinzu",
   quoteStudioProductDescriptions: "Produktbeschreibungen",
-  quoteStudioProductDescriptionsHelp: "Fügen Sie unter jeder Position Spezifikationen oder den Leistungsumfang hinzu",
+  quoteStudioProductDescriptionsHelp:
+    "Fügen Sie unter jeder Position Spezifikationen oder den Leistungsumfang hinzu",
   quoteStudioVisibleColumns: "Sichtbare Spalten",
-  quoteStudioVisibleColumnsHelp: "Produktname und Angebotssumme bleiben immer sichtbar.",
+  quoteStudioVisibleColumnsHelp:
+    "Produktname und Angebotssumme bleiben immer sichtbar.",
   quoteStudioUnit: "Einheit",
   quoteStudioQuantity: "Menge",
   quoteStudioUnitPrice: "Einzelpreis",
   quoteStudioVatRate: "MwSt.-Satz",
   quoteStudioLineTotal: "Positionssumme",
-  quoteStudioShowColumn: (label: string) => `Spalte ${label.toLowerCase()} anzeigen`,
+  quoteStudioShowColumn: (label: string) =>
+    `Spalte ${label.toLowerCase()} anzeigen`,
   quoteStudioPricingTableTotals: "Summen der Preistabelle",
-  quoteStudioPricingTableTotalsHelp: "Wählen Sie, wie die Betragsübersicht unter jeder Preistabelle erscheint. Jede Tabelle behält ihre eigene Zwischensumme.",
+  quoteStudioPricingTableTotalsHelp:
+    "Wählen Sie, wie die Betragsübersicht unter jeder Preistabelle erscheint. Jede Tabelle behält ihre eigene Zwischensumme.",
   quoteStudioSummaryCard: "Übersichtskarte",
   quoteStudioSummaryCardHelp: "Kompakt und rechtsbündig",
   quoteStudioFullWidth: "Volle Breite",
@@ -7318,8 +7373,10 @@ export const de: Partial<Catalog> = {
   quoteStudioPricingTableNumber: (number: number) => `Preistabelle ${number}`,
   quoteStudioNumberedListColumns: "Spalten der nummerierten Liste",
   quoteStudioBulletListColumns: "Spalten der Aufzählung",
-  quoteStudioColumnCount: (count: number) => count === 1 ? "1 Spalte" : `${count} Spalten`,
-  quoteStudioNumberedItemA11y: (number: number) => `Nummerierter Eintrag ${number}`,
+  quoteStudioColumnCount: (count: number) =>
+    count === 1 ? "1 Spalte" : `${count} Spalten`,
+  quoteStudioNumberedItemA11y: (number: number) =>
+    `Nummerierter Eintrag ${number}`,
   quoteStudioBulletItemA11y: (number: number) => `Aufzählungseintrag ${number}`,
   quoteStudioBelowImage: "Unter dem Bild",
   quoteStudioImageLeft: "Bild links",
@@ -7331,15 +7388,20 @@ export const de: Partial<Catalog> = {
   quoteStudioWholeImage: "Ganzes Bild",
   quoteStudioColumnNumber: (number: number) => `Spalte ${number}`,
   quoteStudioColumnNameA11y: (number: number) => `Name der Spalte ${number}`,
-  quoteStudioTableCellA11y: (column: string, row: number) => `${column}, Zeile ${row}`,
+  quoteStudioTableCellA11y: (column: string, row: number) =>
+    `${column}, Zeile ${row}`,
   quoteStudioCategoryMedia: "Medien",
   quoteStudioCategoryTables: "Tabellen",
   quoteStudioCategoryLayout: "Layout",
   quoteStudioSearchResults: "Suchergebnisse",
-  quoteStudioDesignDatabaseError: "Die Datenbank für Angebotsgestaltungen konnte nicht geöffnet werden.",
-  quoteStudioDesignSaveError: "Die Angebotsgestaltung konnte nicht gespeichert werden.",
-  quoteStudioDesignSaveCancelled: "Das Speichern der Angebotsgestaltung wurde abgebrochen.",
-  quoteStudioDesignSaveRetry: "Die Angebotsgestaltung konnte nicht gespeichert werden. Versuchen Sie es mit einem kleineren Bild oder laden Sie es erneut hoch.",
+  quoteStudioDesignDatabaseError:
+    "Die Datenbank für Angebotsgestaltungen konnte nicht geöffnet werden.",
+  quoteStudioDesignSaveError:
+    "Die Angebotsgestaltung konnte nicht gespeichert werden.",
+  quoteStudioDesignSaveCancelled:
+    "Das Speichern der Angebotsgestaltung wurde abgebrochen.",
+  quoteStudioDesignSaveRetry:
+    "Die Angebotsgestaltung konnte nicht gespeichert werden. Versuchen Sie es mit einem kleineren Bild oder laden Sie es erneut hoch.",
   quoteStudioShowSubtotal: "Zwischensumme anzeigen",
   quoteStudioHideSubtotal: "Zwischensumme ausblenden",
   quoteStudioQuotationImageAlt: "Bild im Angebot",
@@ -7353,7 +7415,8 @@ export const de: Partial<Catalog> = {
   quoteStudioMinimal: "Minimal",
   quoteStudioMinimalHelp: "Ruhig und präzise",
   quoteStudioSignature: "Signatur",
-  quoteStudioSignatureHelp: "Ausgewogenes Verhältnis von Identität und Angebotsdaten",
+  quoteStudioSignatureHelp:
+    "Ausgewogenes Verhältnis von Identität und Angebotsdaten",
   quoteStudioHeaderEditorialHelp: "Ein selbstbewusster, titelbetonter Einstieg",
   quoteStudioBrandBand: "Markenband",
   quoteStudioBrandBandHelp: "Eine markantere Einführung in die Marke",
@@ -7361,31 +7424,44 @@ export const de: Partial<Catalog> = {
   quoteStudioLogoStack: "Logo über Name",
   quoteStudioLogoStackHelp: "Unternehmensname unter dem Logo",
   billingVatIncludedNote: "Die Umsatzsteuer ist im Gesamtbetrag enthalten.",
-  billingVatSeparateNote: "Die Umsatzsteuer wird getrennt vom Nettobetrag ausgewiesen.",
-  billingPricingTableEditorHelp: "Produkte und Leistungen hinzufügen, bearbeiten, entfernen oder in die richtige Reihenfolge ziehen.",
-  billingPricingTableEmptyHelp: "Fügen Sie ein Produkt oder eine Leistung hinzu, um diese Preistabelle zu beginnen.",
+  billingVatSeparateNote:
+    "Die Umsatzsteuer wird getrennt vom Nettobetrag ausgewiesen.",
+  billingPricingTableEditorHelp:
+    "Produkte und Leistungen hinzufügen, bearbeiten, entfernen oder in die richtige Reihenfolge ziehen.",
+  billingPricingTableEmptyHelp:
+    "Fügen Sie ein Produkt oder eine Leistung hinzu, um diese Preistabelle zu beginnen.",
   billingImage: "Bild",
-  billingQuoteExitPreviewToEdit: "Vorschau verlassen, um dieses Angebot zu bearbeiten",
+  billingQuoteExitPreviewToEdit:
+    "Vorschau verlassen, um dieses Angebot zu bearbeiten",
   billingQuoteEditContent: "Angebotsinhalt bearbeiten",
-  billingQuoteCreateRevision: "Revision erstellen, um dieses finalisierte Angebot zu bearbeiten",
+  billingQuoteCreateRevision:
+    "Revision erstellen, um dieses finalisierte Angebot zu bearbeiten",
   billingQuoteEdit: "Angebot bearbeiten",
-  billingQuoteExitPreviewToCustomize: "Vorschau verlassen, um dieses Angebot anzupassen",
-  billingQuoteCreateRevisionToCustomize: "Revision erstellen, um dieses finalisierte Angebot anzupassen",
+  billingQuoteExitPreviewToCustomize:
+    "Vorschau verlassen, um dieses Angebot anzupassen",
+  billingQuoteCreateRevisionToCustomize:
+    "Revision erstellen, um dieses finalisierte Angebot anzupassen",
   billingQuoteCreateRevisionTitle: "Eine bearbeitbare Revision erstellen?",
-  billingQuoteCreateRevisionConfirm: "Das finalisierte Angebot bleibt unverändert. alo erstellt einen neuen Entwurf mit demselben Kunden, Inhalt, Preisen und Design.",
+  billingQuoteCreateRevisionConfirm:
+    "Das finalisierte Angebot bleibt unverändert. alo erstellt einen neuen Entwurf mit demselben Kunden, Inhalt, Preisen und Design.",
   billingQuoteCreateRevisionAction: "Revision erstellen",
-  billingConnectionsProductCount: (count: number) => count === 1 ? "1 Produkt" : `${count} Produkte`,
-  billingConnectionsUpdateCadence: (cadence: string) => `Aktualisierung: ${cadence}`,
+  billingConnectionsProductCount: (count: number) =>
+    count === 1 ? "1 Produkt" : `${count} Produkte`,
+  billingConnectionsUpdateCadence: (cadence: string) =>
+    `Aktualisierung: ${cadence}`,
   billingConnectionsViaAlo: "Über alo verbunden",
   billingConnectionsExternalApi: "Externe API",
-  billingConnectionsReviewChanges: (count: number) => `${count} Änderungen prüfen`,
+  billingConnectionsReviewChanges: (count: number) =>
+    `${count} Änderungen prüfen`,
   billingConnectionsResume: "Fortsetzen",
   billingConnectionsPause: "Pausieren",
-  billingConnectionsDisconnectCompany: (company: string) => `${company} trennen`,
+  billingConnectionsDisconnectCompany: (company: string) =>
+    `${company} trennen`,
   billingConnectionsSpreadsheetFeed: "Tabelle oder Feed",
   billingConnectionsPriceApiAddress: "Adresse der Preis-API",
   billingConnectionsFeedAddress: "Feed-Adresse",
-  billingConnectionsFormatDetection: "alo erkennt JSON-, CSV- und Tabellen-Feeds automatisch.",
+  billingConnectionsFormatDetection:
+    "alo erkennt JSON-, CSV- und Tabellen-Feeds automatisch.",
   billingConnectionsAddressPlaceholder: "https://lieferant.beispiel/preise",
   billingConnectionsAdvancedSettings: "Erweiterte Einstellungen",
   billingConnectionsEveryHour: "Stündlich",
@@ -7393,30 +7469,43 @@ export const de: Partial<Catalog> = {
   billingConnectionsOnceWeek: "Einmal wöchentlich",
   billingConnectionsManualSync: "Nur bei manueller Synchronisierung",
   billingConnectionsReviewEveryChange: "Jede Änderung prüfen",
-  billingConnectionsAutomaticLimited: "Innerhalb eines Grenzwerts automatisch übernehmen",
+  billingConnectionsAutomaticLimited:
+    "Innerhalb eines Grenzwerts automatisch übernehmen",
   billingConnectionsAutomaticAll: "Alle Änderungen automatisch übernehmen",
   billingConnectionsMatchSku: "Artikelnummer, dann Barcode und Name",
   billingConnectionsMatchBarcode: "Barcode, dann Artikelnummer und Name",
   billingConnectionsMatchName: "Produktname",
   billingConnectionsMatchReview: "Jede Zuordnung prüfen",
   billingConnectionsHoldReview: "Zur Prüfung zurückhalten",
-  billingConnectionsCreateDraftItems: "Preislistenpositionen als Entwurf anlegen",
+  billingConnectionsCreateDraftItems:
+    "Preislistenpositionen als Entwurf anlegen",
   billingConnectionsDoNotImport: "Nicht importieren",
   billingConnectionsHeaderNamePlaceholder: "X-API-Key",
   billingConnectionsAloInvitationLink: "alo-Einladungslink",
   billingConnectionsExternalPricingApi: "Externe Preis-API",
-  billingConnectionsTestSummary: (found: number, matched: number, review: number) => `${found} Produkte gefunden · ${matched} automatisch zugeordnet · ${review} nach dem Verbinden zu prüfen.`,
-  billingConnectionsCustomHeaderHelp: "Optional. Nur verwenden, wenn die Dokumentation des Lieferanten einen anderen Header als den obigen Zugangsschlüssel verlangt.",
+  billingConnectionsTestSummary: (
+    found: number,
+    matched: number,
+    review: number,
+  ) =>
+    `${found} Produkte gefunden · ${matched} automatisch zugeordnet · ${review} nach dem Verbinden zu prüfen.`,
+  billingConnectionsCustomHeaderHelp:
+    "Optional. Nur verwenden, wenn die Dokumentation des Lieferanten einen anderen Header als den obigen Zugangsschlüssel verlangt.",
   billingConnectionsInviteAloWorkspace: "alo-Arbeitsbereich einladen",
   billingConnectionsGiveExternalApi: "Externen API-Zugriff gewähren",
-  billingConnectionsLivePriceListActive: (count: number) => `Live-Preisliste · ${count} aktive Produkte`,
-  billingConnectionsChooseProductsSelected: (count: number) => `Produkte auswählen · ${count} ausgewählt`,
+  billingConnectionsLivePriceListActive: (count: number) =>
+    `Live-Preisliste · ${count} aktive Produkte`,
+  billingConnectionsChooseProductsSelected: (count: number) =>
+    `Produkte auswählen · ${count} ausgewählt`,
   billingConnectionsItemUnit: "Stück",
   billingConnectionsPrices: "Preise",
   billingConnectionsUpdates: "Aktualisierungen",
   billingConnectionsValidity: "Gültigkeit",
-  billingConnectionsLivePriceListCount: (count: number) => `Live-Preisliste (${count})`,
-  billingConnectionsSelectedProductsCount: (count: number) => `${count} ausgewählte Produkte`,
-  billingConnectionsChangesFlow: "Preislistenänderungen laufen über diese Verbindung",
+  billingConnectionsLivePriceListCount: (count: number) =>
+    `Live-Preisliste (${count})`,
+  billingConnectionsSelectedProductsCount: (count: number) =>
+    `${count} ausgewählte Produkte`,
+  billingConnectionsChangesFlow:
+    "Preislistenänderungen laufen über diese Verbindung",
   billingConnectionsNoExpiry: "Unbefristet",
 };

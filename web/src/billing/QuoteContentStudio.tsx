@@ -37,6 +37,7 @@ import {
   RotateCcw,
   Rows3,
   Search,
+  Settings2,
   Table2,
   Type,
   Trash2,
@@ -45,7 +46,15 @@ import {
   X,
 } from "lucide-react";
 
-import { Button, ChoicePicker, ColorPicker, IconButton, Modal, Select, cx } from "../ds";
+import {
+  Button,
+  ChoicePicker,
+  ColorPicker,
+  IconButton,
+  Modal,
+  Select,
+  cx,
+} from "../ds";
 import { strings, useLocale } from "../i18n";
 import {
   QuoteTableOptionsProvider,
@@ -61,6 +70,9 @@ type HeaderAlignment = "left" | "right";
 type HeaderStyle = "signature" | "editorial" | "band" | "minimal" | "stacked";
 type HeaderRatio = "40-60" | "50-50" | "60-40";
 type ContactQrSize = "small" | "medium" | "large";
+type DividerThickness = "fine" | "medium" | "bold";
+type DividerStyle = "solid" | "dashed" | "dotted";
+type DividerWidth = 25 | 50 | 75 | 100;
 export type QuoteTemplatePreset = "blank" | "services" | "project" | "retainer";
 type Block =
   | { id: string; kind: "text"; heading: string; body: string }
@@ -74,7 +86,14 @@ type Block =
       items: string;
       columns?: 1 | 2 | 3;
     }
-  | { id: string; kind: "divider" }
+  | {
+      id: string;
+      kind: "divider";
+      thickness?: DividerThickness;
+      style?: DividerStyle;
+      width?: DividerWidth;
+      color?: string;
+    }
   | {
       id: string;
       kind: "image";
@@ -348,10 +367,22 @@ function templateDesign(preset: QuoteTemplatePreset): Design {
 }
 const DESIGN_STORE = "quote-designs";
 const DESIGN_DATABASE = "alo-quote-assets";
-const headerRatioChoices: Array<{ id: HeaderRatio; columns: string; reverseColumns: string }> = [
-  { id: "40-60", columns: "grid-cols-[2fr_3fr]", reverseColumns: "grid-cols-[3fr_2fr]" },
+const headerRatioChoices: Array<{
+  id: HeaderRatio;
+  columns: string;
+  reverseColumns: string;
+}> = [
+  {
+    id: "40-60",
+    columns: "grid-cols-[2fr_3fr]",
+    reverseColumns: "grid-cols-[3fr_2fr]",
+  },
   { id: "50-50", columns: "grid-cols-2", reverseColumns: "grid-cols-2" },
-  { id: "60-40", columns: "grid-cols-[3fr_2fr]", reverseColumns: "grid-cols-[2fr_3fr]" },
+  {
+    id: "60-40",
+    columns: "grid-cols-[3fr_2fr]",
+    reverseColumns: "grid-cols-[2fr_3fr]",
+  },
 ];
 
 const headerRatioClasses: Record<HeaderRatio, string> = {
@@ -360,8 +391,12 @@ const headerRatioClasses: Record<HeaderRatio, string> = {
   "60-40": "md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]",
 };
 
-function quotationHeaderRatioClass(ratio: HeaderRatio, alignment: HeaderAlignment) {
-  if (alignment === "left" || ratio === "50-50") return headerRatioClasses[ratio];
+function quotationHeaderRatioClass(
+  ratio: HeaderRatio,
+  alignment: HeaderAlignment,
+) {
+  if (alignment === "left" || ratio === "50-50")
+    return headerRatioClasses[ratio];
   return ratio === "40-60"
     ? headerRatioClasses["60-40"]
     : headerRatioClasses["40-60"];
@@ -370,7 +405,10 @@ function quotationHeaderRatioClass(ratio: HeaderRatio, alignment: HeaderAlignmen
 function HeaderStylePreview({ style }: { style: HeaderStyle }) {
   if (style === "editorial") {
     return (
-      <span className="flex h-20 items-end justify-between rounded-xl bg-raised p-3" aria-hidden="true">
+      <span
+        className="flex h-20 items-end justify-between rounded-xl bg-raised p-3"
+        aria-hidden="true"
+      >
         <span className="space-y-2">
           <span className="block h-2 w-20 rounded-full bg-primary/25" />
           <span className="block h-1.5 w-12 rounded-full bg-primary/10" />
@@ -381,7 +419,10 @@ function HeaderStylePreview({ style }: { style: HeaderStyle }) {
   }
   if (style === "band") {
     return (
-      <span className="flex h-20 overflow-hidden rounded-xl bg-raised" aria-hidden="true">
+      <span
+        className="flex h-20 overflow-hidden rounded-xl bg-raised"
+        aria-hidden="true"
+      >
         <span className="flex w-2/5 flex-col justify-center gap-2 bg-accent px-3">
           <span className="block size-6 rounded-md bg-white/80" />
           <span className="block h-1.5 w-12 rounded-full bg-white/70" />
@@ -395,7 +436,10 @@ function HeaderStylePreview({ style }: { style: HeaderStyle }) {
   }
   if (style === "minimal") {
     return (
-      <span className="flex h-20 items-center justify-between border-y border-default px-2" aria-hidden="true">
+      <span
+        className="flex h-20 items-center justify-between border-y border-default px-2"
+        aria-hidden="true"
+      >
         <span className="flex items-center gap-2">
           <span className="size-6 rounded-full border border-accent/40" />
           <span className="block h-1.5 w-12 rounded-full bg-primary/20" />
@@ -406,7 +450,10 @@ function HeaderStylePreview({ style }: { style: HeaderStyle }) {
   }
   if (style === "stacked") {
     return (
-      <span className="grid h-20 grid-cols-[0.8fr_1.2fr] overflow-hidden rounded-xl bg-raised" aria-hidden="true">
+      <span
+        className="grid h-20 grid-cols-[0.8fr_1.2fr] overflow-hidden rounded-xl bg-raised"
+        aria-hidden="true"
+      >
         <span className="flex flex-col items-center justify-center gap-1.5">
           <span className="size-7 rounded-lg bg-accent-soft" />
           <span className="block h-1.5 w-12 rounded-full bg-primary/20" />
@@ -419,7 +466,10 @@ function HeaderStylePreview({ style }: { style: HeaderStyle }) {
     );
   }
   return (
-    <span className="grid h-20 grid-cols-[1.1fr_0.9fr] overflow-hidden rounded-xl bg-raised" aria-hidden="true">
+    <span
+      className="grid h-20 grid-cols-[1.1fr_0.9fr] overflow-hidden rounded-xl bg-raised"
+      aria-hidden="true"
+    >
       <span className="flex items-center gap-2.5 px-3">
         <span className="size-7 rounded-lg bg-accent-soft" />
         <span className="space-y-1.5">
@@ -447,7 +497,11 @@ function formatDocumentDate(value: string | null | undefined, locale: string) {
 }
 
 function vCardValue(value: string) {
-  return value.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/;/g, "\\;").replace(/,/g, "\\,");
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/\n/g, "\\n")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,");
 }
 
 function contactVCard(details: HeaderDetails) {
@@ -459,9 +513,12 @@ function contactVCard(details: HeaderDetails) {
     details.phone && `TEL;TYPE=WORK,VOICE:${vCardValue(details.phone)}`,
     details.email && `EMAIL;TYPE=WORK:${vCardValue(details.email)}`,
     details.website && `URL:${vCardValue(details.website)}`,
-    details.address && `ADR;TYPE=WORK:;;${vCardValue(details.address).replace(/\\n/g, ";")};;;`,
+    details.address &&
+      `ADR;TYPE=WORK:;;${vCardValue(details.address).replace(/\\n/g, ";")};;;`,
     "END:VCARD",
-  ].filter(Boolean).join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 function legacyDesign(key: string): Design | null {
@@ -477,7 +534,10 @@ function legacyDesign(key: string): Design | null {
 
 function savedDesign(saved: Partial<Design>): Design {
   const headerDetails = { ...DEFAULT_HEADER_DETAILS, ...saved.headerDetails };
-  const customerDetails = { ...DEFAULT_CUSTOMER_DETAILS, ...saved.customerDetails };
+  const customerDetails = {
+    ...DEFAULT_CUSTOMER_DETAILS,
+    ...saved.customerDetails,
+  };
   return normalizeDesign({
     ...EMPTY,
     ...saved,
@@ -493,12 +553,21 @@ function savedDesign(saved: Partial<Design>): Design {
   });
 }
 
-function headerDetailsFromSettings(settings?: BillingSettings | null): HeaderDetails {
+function headerDetailsFromSettings(
+  settings?: BillingSettings | null,
+): HeaderDetails {
   if (!settings) return DEFAULT_HEADER_DETAILS;
-  const locality = [settings.postalCode, settings.city].filter(Boolean).join(" ");
+  const locality = [settings.postalCode, settings.city]
+    .filter(Boolean)
+    .join(" ");
   return {
     companyName: settings.legalName,
-    address: [settings.addressLine1, settings.addressLine2, locality, settings.country]
+    address: [
+      settings.addressLine1,
+      settings.addressLine2,
+      locality,
+      settings.country,
+    ]
       .filter(Boolean)
       .join("\n"),
     email: settings.email,
@@ -513,12 +582,20 @@ function customerDetailsFromCustomer(
   customer?: BillingCustomer | null,
   fallbackName = "",
 ): CustomerHeaderDetails {
-  if (!customer) return { ...DEFAULT_CUSTOMER_DETAILS, companyName: fallbackName };
-  const locality = [customer.postalCode, customer.city].filter(Boolean).join(" ");
+  if (!customer)
+    return { ...DEFAULT_CUSTOMER_DETAILS, companyName: fallbackName };
+  const locality = [customer.postalCode, customer.city]
+    .filter(Boolean)
+    .join(" ");
   return {
     companyName: customer.name,
     contactName: "",
-    address: [customer.addressLine1, customer.addressLine2, locality, customer.country]
+    address: [
+      customer.addressLine1,
+      customer.addressLine2,
+      locality,
+      customer.country,
+    ]
       .filter(Boolean)
       .join("\n"),
     email: customer.email ?? "",
@@ -577,8 +654,7 @@ function designDatabase(): Promise<IDBDatabase> {
     request.onsuccess = () => resolve(request.result);
     request.onerror = () =>
       reject(
-        request.error ??
-          new Error(strings.quoteStudioDesignDatabaseError),
+        request.error ?? new Error(strings.quoteStudioDesignDatabaseError),
       );
   });
 }
@@ -598,8 +674,7 @@ async function loadDesign(key: string): Promise<Design> {
       },
     );
     database.close();
-    if (saved !== undefined)
-      return savedDesign(saved);
+    if (saved !== undefined) return savedDesign(saved);
   } catch {
     /* Fall through to the small legacy record when IndexedDB is unavailable. */
   }
@@ -614,13 +689,11 @@ async function saveDesign(key: string, design: Design): Promise<void> {
     transaction.oncomplete = () => resolve();
     transaction.onerror = () =>
       reject(
-        transaction.error ??
-          new Error(strings.quoteStudioDesignSaveError),
+        transaction.error ?? new Error(strings.quoteStudioDesignSaveError),
       );
     transaction.onabort = () =>
       reject(
-        transaction.error ??
-          new Error(strings.quoteStudioDesignSaveCancelled),
+        transaction.error ?? new Error(strings.quoteStudioDesignSaveCancelled),
       );
   });
   database.close();
@@ -701,7 +774,9 @@ export const QuoteContentStudio = forwardRef<
   const [design, setDesign] = useState<Design>(EMPTY);
   const [ready, setReady] = useState(false);
   const [saveError, setSaveError] = useState("");
-  const [customizeMode, setCustomizeMode] = useState<"header" | "document" | null>(null);
+  const [customizeMode, setCustomizeMode] = useState<
+    "header" | "document" | null
+  >(null);
   const [tableSettings, setTableSettings] = useState(false);
   const [editingImageId, setEditingImageId] = useState<string | null>(null);
   const root = useRef<HTMLElement>(null);
@@ -712,7 +787,10 @@ export const QuoteContentStudio = forwardRef<
   const headerDetails = design.headerDetailsCustomized
     ? design.headerDetails
     : issuerHeaderDetails;
-  const selectedCustomerDetails = customerDetailsFromCustomer(customer, customerName);
+  const selectedCustomerDetails = customerDetailsFromCustomer(
+    customer,
+    customerName,
+  );
   const customerDetails = design.customerDetailsCustomized
     ? design.customerDetails
     : selectedCustomerDetails;
@@ -754,8 +832,7 @@ export const QuoteContentStudio = forwardRef<
           if (current) setSaveError("");
         })
         .catch(() => {
-          if (current)
-            setSaveError(strings.quoteStudioDesignSaveRetry);
+          if (current) setSaveError(strings.quoteStudioDesignSaveRetry);
         });
     }, 200);
     return () => {
@@ -815,7 +892,15 @@ export const QuoteContentStudio = forwardRef<
       insertBlock(index, { id, kind, text: "", attribution: "" });
     if (kind === "list")
       insertBlock(index, { id, kind, ordered, items: "", columns: 1 });
-    if (kind === "divider") insertBlock(index, { id, kind });
+    if (kind === "divider")
+      insertBlock(index, {
+        id,
+        kind,
+        thickness: "fine",
+        style: "solid",
+        width: 100,
+        color: design.colors.accent,
+      });
     if (kind === "pricing") {
       setDesign((current) => ({
         ...current,
@@ -833,7 +918,8 @@ export const QuoteContentStudio = forwardRef<
             rowKeys: [],
             showSubtotal: true,
             title: strings.quoteStudioPricingTableNumber(
-              current.blocks.filter((block) => block.kind === "pricing").length + 1,
+              current.blocks.filter((block) => block.kind === "pricing")
+                .length + 1,
             ),
           },
           ...current.blocks
@@ -851,9 +937,18 @@ export const QuoteContentStudio = forwardRef<
         id,
         kind,
         columns: [
-          { id: crypto.randomUUID(), label: strings.quoteStudioColumnNumber(1) },
-          { id: crypto.randomUUID(), label: strings.quoteStudioColumnNumber(2) },
-          { id: crypto.randomUUID(), label: strings.quoteStudioColumnNumber(3) },
+          {
+            id: crypto.randomUUID(),
+            label: strings.quoteStudioColumnNumber(1),
+          },
+          {
+            id: crypto.randomUUID(),
+            label: strings.quoteStudioColumnNumber(2),
+          },
+          {
+            id: crypto.randomUUID(),
+            label: strings.quoteStudioColumnNumber(3),
+          },
         ],
         rows: [
           {
@@ -942,22 +1037,31 @@ export const QuoteContentStudio = forwardRef<
       return { ...current, blocks };
     });
 
-  const contactQrNode = design.showContactQr && headerDetails.companyName ? (
-    <div className="w-fit shrink-0 self-start text-center">
-      <div className="inline-flex bg-white p-1">
-        <QRCodeSVG
-          value={contactVCard(headerDetails)}
-          size={design.contactQrSize === "small" ? 48 : design.contactQrSize === "large" ? 80 : 64}
-          fgColor={design.contactQrColor}
-          bgColor="#ffffff"
-          level="M"
-          marginSize={0}
-          title={strings.quoteStudioScanToSave}
-        />
+  const contactQrNode =
+    design.showContactQr && headerDetails.companyName ? (
+      <div className="w-fit shrink-0 self-start text-center">
+        <div className="inline-flex bg-white p-1">
+          <QRCodeSVG
+            value={contactVCard(headerDetails)}
+            size={
+              design.contactQrSize === "small"
+                ? 48
+                : design.contactQrSize === "large"
+                  ? 80
+                  : 64
+            }
+            fgColor={design.contactQrColor}
+            bgColor="#ffffff"
+            level="M"
+            marginSize={0}
+            title={strings.quoteStudioScanToSave}
+          />
+        </div>
+        <p className="mt-1 text-[9px] font-medium leading-tight opacity-60">
+          {strings.quoteStudioScanToSave}
+        </p>
       </div>
-      <p className="mt-1 text-[9px] font-medium leading-tight opacity-60">{strings.quoteStudioScanToSave}</p>
-    </div>
-  ) : null;
+    ) : null;
 
   return (
     <>
@@ -1000,7 +1104,10 @@ export const QuoteContentStudio = forwardRef<
                 design.headerStyle === "minimal"
                   ? "border-y border-[var(--quote-table-header)]"
                   : "rounded-2xl border border-[var(--quote-table-header)]",
-                quotationHeaderRatioClass(design.headerRatio, design.headerAlignment),
+                quotationHeaderRatioClass(
+                  design.headerRatio,
+                  design.headerAlignment,
+                ),
                 design.headerStyle === "band" &&
                   "border-t-8 border-t-[var(--quote-accent)]",
               )}
@@ -1055,33 +1162,49 @@ export const QuoteContentStudio = forwardRef<
                         <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] opacity-55">
                           {strings.quoteStudioAddress}
                         </p>
-                        <p className="whitespace-pre-line opacity-80">{headerDetails.address}</p>
+                        <p className="whitespace-pre-line opacity-80">
+                          {headerDetails.address}
+                        </p>
                       </div>
                     )}
-                    {(headerDetails.email || headerDetails.phone || headerDetails.website) && (
+                    {(headerDetails.email ||
+                      headerDetails.phone ||
+                      headerDetails.website) && (
                       <div>
                         <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] opacity-55">
                           {strings.quoteStudioContact}
                         </p>
                         <div className="flex min-w-0 flex-col gap-1.5 opacity-80">
-                            {headerDetails.email && (
-                              <span className="flex items-center gap-2.5">
-                                <Mail className="size-4 shrink-0 text-[var(--quote-contact-icons)]" aria-hidden="true" />
-                                {headerDetails.email}
-                              </span>
-                            )}
-                            {headerDetails.phone && (
-                              <span className="flex items-center gap-2.5">
-                                <Phone className="size-4 shrink-0 text-[var(--quote-contact-icons)]" aria-hidden="true" />
-                                {headerDetails.phone}
-                              </span>
-                            )}
-                            {headerDetails.website && (
-                              <span className="flex items-center gap-2.5 break-all">
-                                <Globe2 className="size-4 shrink-0 text-[var(--quote-contact-icons)]" aria-hidden="true" />
-                                {headerDetails.website.replace(/^https?:\/\//, "")}
-                              </span>
-                            )}
+                          {headerDetails.email && (
+                            <span className="flex items-center gap-2.5">
+                              <Mail
+                                className="size-4 shrink-0 text-[var(--quote-contact-icons)]"
+                                aria-hidden="true"
+                              />
+                              {headerDetails.email}
+                            </span>
+                          )}
+                          {headerDetails.phone && (
+                            <span className="flex items-center gap-2.5">
+                              <Phone
+                                className="size-4 shrink-0 text-[var(--quote-contact-icons)]"
+                                aria-hidden="true"
+                              />
+                              {headerDetails.phone}
+                            </span>
+                          )}
+                          {headerDetails.website && (
+                            <span className="flex items-center gap-2.5 break-all">
+                              <Globe2
+                                className="size-4 shrink-0 text-[var(--quote-contact-icons)]"
+                                aria-hidden="true"
+                              />
+                              {headerDetails.website.replace(
+                                /^https?:\/\//,
+                                "",
+                              )}
+                            </span>
+                          )}
                         </div>
                       </div>
                     )}
@@ -1094,7 +1217,9 @@ export const QuoteContentStudio = forwardRef<
                           <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-55">
                             {strings.quoteStudioVatId}
                           </dt>
-                          <dd className="mt-1.5 font-semibold">{headerDetails.vatId}</dd>
+                          <dd className="mt-1.5 font-semibold">
+                            {headerDetails.vatId}
+                          </dd>
                         </div>
                       )}
                       {headerDetails.registrationNo && (
@@ -1102,7 +1227,9 @@ export const QuoteContentStudio = forwardRef<
                           <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-55">
                             {strings.quoteStudioCompanyNumber}
                           </dt>
-                          <dd className="mt-1.5 font-semibold">{headerDetails.registrationNo}</dd>
+                          <dd className="mt-1.5 font-semibold">
+                            {headerDetails.registrationNo}
+                          </dd>
                         </div>
                       )}
                     </dl>
@@ -1125,7 +1252,9 @@ export const QuoteContentStudio = forwardRef<
                   <p
                     className={cx(
                       "mt-2 font-semibold leading-none tracking-tight text-[var(--quote-text)]",
-                      design.headerStyle === "editorial" ? "text-4xl" : "text-2xl",
+                      design.headerStyle === "editorial"
+                        ? "text-4xl"
+                        : "text-2xl",
                     )}
                   >
                     {quote?.number ?? strings.quoteStudioDraftQuotation}
@@ -1141,7 +1270,9 @@ export const QuoteContentStudio = forwardRef<
                         </p>
                       )}
                       {customerDetails.contactName && (
-                        <p className="mt-1 text-sm opacity-75">{customerDetails.contactName}</p>
+                        <p className="mt-1 text-sm opacity-75">
+                          {customerDetails.contactName}
+                        </p>
                       )}
                       <div className="mt-4 grid gap-x-12 gap-y-5 text-sm leading-6 sm:grid-cols-2">
                         {customerDetails.address && (
@@ -1149,7 +1280,9 @@ export const QuoteContentStudio = forwardRef<
                             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] opacity-55">
                               {strings.quoteStudioAddress}
                             </p>
-                            <p className="whitespace-pre-line opacity-80">{customerDetails.address}</p>
+                            <p className="whitespace-pre-line opacity-80">
+                              {customerDetails.address}
+                            </p>
                           </div>
                         )}
                         {(customerDetails.email || customerDetails.phone) && (
@@ -1160,13 +1293,19 @@ export const QuoteContentStudio = forwardRef<
                             <div className="flex flex-col gap-1.5 opacity-80">
                               {customerDetails.email && (
                                 <span className="flex items-center gap-2.5">
-                                  <Mail className="size-4 shrink-0 text-[var(--quote-contact-icons)]" aria-hidden="true" />
+                                  <Mail
+                                    className="size-4 shrink-0 text-[var(--quote-contact-icons)]"
+                                    aria-hidden="true"
+                                  />
                                   {customerDetails.email}
                                 </span>
                               )}
                               {customerDetails.phone && (
                                 <span className="flex items-center gap-2.5">
-                                  <Phone className="size-4 shrink-0 text-[var(--quote-contact-icons)]" aria-hidden="true" />
+                                  <Phone
+                                    className="size-4 shrink-0 text-[var(--quote-contact-icons)]"
+                                    aria-hidden="true"
+                                  />
                                   {customerDetails.phone}
                                 </span>
                               )}
@@ -1184,17 +1323,24 @@ export const QuoteContentStudio = forwardRef<
                 </div>
                 <dl className="mt-auto grid max-w-lg grid-cols-2 gap-x-10 gap-y-3 border-t border-[var(--quote-table-header)] pt-4 text-xs text-[var(--quote-text)]">
                   <div>
-                    <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-55">{strings.quoteStudioIssued}</dt>
+                    <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-55">
+                      {strings.quoteStudioIssued}
+                    </dt>
                     <dd className="mt-1.5 font-semibold">
-                      {formatDocumentDate(quote?.sentDate, locale) ?? strings.quoteStudioOnFinalization}
+                      {formatDocumentDate(quote?.sentDate, locale) ??
+                        strings.quoteStudioOnFinalization}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-55">{strings.quoteStudioValidUntil}</dt>
+                    <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-55">
+                      {strings.quoteStudioValidUntil}
+                    </dt>
                     <dd className="mt-1.5 font-semibold">
                       {formatDocumentDate(quote?.validUntil, locale) ??
                         strings.quoteStudioDaysAfterIssue(
-                          new Intl.NumberFormat(locale).format(quote?.validDays ?? 30),
+                          new Intl.NumberFormat(locale).format(
+                            quote?.validDays ?? 30,
+                          ),
                         )}
                     </dd>
                   </div>
@@ -1243,7 +1389,10 @@ export const QuoteContentStudio = forwardRef<
                                 />
                                 <input
                                   className="min-h-10 w-full min-w-52 rounded-lg border border-default bg-surface py-2 pl-9 pr-3 text-sm font-semibold text-primary placeholder:text-tertiary hover:border-accent focus:border-accent focus:outline-none"
-                                  value={block.title ?? strings.quoteStudioPricingTable}
+                                  value={
+                                    block.title ??
+                                    strings.quoteStudioPricingTable
+                                  }
                                   aria-label={strings.quoteStudioTableName}
                                   placeholder={strings.quoteStudioPricingTable}
                                   onChange={(event) =>
@@ -1366,7 +1515,8 @@ export const QuoteContentStudio = forwardRef<
                               ...(block.rowKeys === undefined
                                 ? {}
                                 : { rowKeys: block.rowKeys }),
-                              title: block.title ?? strings.quoteStudioPricingTable,
+                              title:
+                                block.title ?? strings.quoteStudioPricingTable,
                               onRowKeysChange: (rowKeys) =>
                                 update(block.id, { rowKeys }),
                             })}
@@ -1413,9 +1563,15 @@ export const QuoteContentStudio = forwardRef<
                                   })
                                 }
                               >
-                                <option value="1">{strings.quoteStudioHeading1}</option>
-                                <option value="2">{strings.quoteStudioHeading2}</option>
-                                <option value="3">{strings.quoteStudioHeading3}</option>
+                                <option value="1">
+                                  {strings.quoteStudioHeading1}
+                                </option>
+                                <option value="2">
+                                  {strings.quoteStudioHeading2}
+                                </option>
+                                <option value="3">
+                                  {strings.quoteStudioHeading3}
+                                </option>
                               </Select>
                               <InlineRichTextEditor
                                 value={block.text}
@@ -1453,7 +1609,9 @@ export const QuoteContentStudio = forwardRef<
                               <RichTextEditor
                                 value={block.text}
                                 label={strings.quoteStudioQuotation}
-                                placeholder={strings.quoteStudioImportantStatement}
+                                placeholder={
+                                  strings.quoteStudioImportantStatement
+                                }
                                 onChange={(text) => update(block.id, { text })}
                               />
                               <InlineRichTextEditor
@@ -1536,7 +1694,15 @@ export const QuoteContentStudio = forwardRef<
                             />
                           )
                         ) : block.kind === "divider" ? (
-                          <hr className="border-0 border-t border-[var(--quote-table-header)]" />
+                          readOnly ? (
+                            <DividerLine block={block} />
+                          ) : (
+                            <DividerBlockEditor
+                              block={block}
+                              fallbackColor={design.colors.accent}
+                              onChange={(patch) => update(block.id, patch)}
+                            />
+                          )
                         ) : block.kind === "text" ? (
                           readOnly ? (
                             <>
@@ -1561,7 +1727,9 @@ export const QuoteContentStudio = forwardRef<
                                 <RichTextEditor
                                   value={block.body}
                                   label={strings.quoteStudioSectionText}
-                                  placeholder={strings.quoteStudioSectionTextPlaceholder}
+                                  placeholder={
+                                    strings.quoteStudioSectionTextPlaceholder
+                                  }
                                   onChange={(body) =>
                                     update(block.id, { body })
                                   }
@@ -1678,6 +1846,237 @@ export const QuoteContentStudio = forwardRef<
   );
 });
 
+const dividerThicknessClasses: Record<DividerThickness, string> = {
+  fine: "border-t",
+  medium: "border-t-2",
+  bold: "border-t-4",
+};
+
+const dividerWidthClasses: Record<DividerWidth, string> = {
+  25: "w-1/4",
+  50: "w-1/2",
+  75: "w-3/4",
+  100: "w-full",
+};
+
+function DividerLine({
+  block,
+}: {
+  block: Extract<Block, { kind: "divider" }>;
+}) {
+  const thickness = block.thickness ?? "fine";
+  const width = block.width ?? 100;
+  return (
+    <div
+      className={cx(
+        "mx-auto border-0",
+        dividerThicknessClasses[thickness],
+        dividerWidthClasses[width],
+      )}
+      style={{
+        borderTopColor: block.color ?? "var(--quote-accent)",
+        borderTopStyle: block.style ?? "solid",
+      }}
+      aria-hidden="true"
+    />
+  );
+}
+
+function DividerBlockEditor({
+  block,
+  fallbackColor,
+  onChange,
+}: {
+  block: Extract<Block, { kind: "divider" }>;
+  fallbackColor: string;
+  onChange: (patch: Partial<Extract<Block, { kind: "divider" }>>) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const thickness = block.thickness ?? "fine";
+  const style = block.style ?? "solid";
+  const width = block.width ?? 100;
+  const color = block.color ?? fallbackColor;
+  const thicknessChoices: Array<{ value: DividerThickness; label: string }> = [
+    { value: "fine", label: strings.quoteStudioDividerFine },
+    { value: "medium", label: strings.quoteStudioDividerMedium },
+    { value: "bold", label: strings.quoteStudioDividerBold },
+  ];
+  const styleChoices: Array<{ value: DividerStyle; label: string }> = [
+    { value: "solid", label: strings.quoteStudioDividerSolid },
+    { value: "dashed", label: strings.quoteStudioDividerDashed },
+    { value: "dotted", label: strings.quoteStudioDividerDotted },
+  ];
+  const widthChoices: DividerWidth[] = [25, 50, 75, 100];
+
+  return (
+    <>
+      <div className="relative flex min-h-16 items-center px-4 py-6">
+        <DividerLine block={{ ...block, thickness, style, width, color }} />
+        <IconButton
+          className="absolute right-4 top-1/2 -translate-y-1/2 bg-surface shadow-sm"
+          label={strings.quoteStudioDividerSettings}
+          icon={<Settings2 className="size-4" />}
+          onClick={() => setOpen(true)}
+        />
+      </div>
+      {open && (
+        <Modal
+          title={strings.quoteStudioDividerSettings}
+          icon={<Minus className="size-5" />}
+          onClose={() => setOpen(false)}
+          wide
+          footer={
+            <>
+              <p className="mr-auto text-xs text-secondary">
+                {strings.quoteStudioChangesImmediate}
+              </p>
+              <Button onClick={() => setOpen(false)}>
+                {strings.quoteStudioDone}
+              </Button>
+            </>
+          }
+        >
+          <div>
+            <h3 className="text-base font-semibold text-primary">
+              {strings.quoteStudioDividerAppearance}
+            </h3>
+            <p className="mt-1 text-sm text-secondary">
+              {strings.quoteStudioDividerAppearanceHelp}
+            </p>
+          </div>
+
+          <fieldset className="mt-6">
+            <legend className="text-sm font-semibold text-primary">
+              {strings.quoteStudioDividerStyle}
+            </legend>
+            <div className="mt-3 grid grid-cols-3 gap-3">
+              {styleChoices.map((choice) => (
+                <DividerVisualChoice
+                  key={choice.value}
+                  label={choice.label}
+                  selected={choice.value === style}
+                  onClick={() => onChange({ style: choice.value })}
+                >
+                  <DividerLine
+                    block={{ ...block, style: choice.value, width: 100, color }}
+                  />
+                </DividerVisualChoice>
+              ))}
+            </div>
+          </fieldset>
+
+          <div className="mt-6 grid gap-6 md:grid-cols-2">
+            <fieldset>
+              <legend className="text-sm font-semibold text-primary">
+                {strings.quoteStudioDividerThickness}
+              </legend>
+              <div className="mt-3 grid grid-cols-3 gap-3">
+                {thicknessChoices.map((choice) => (
+                  <DividerVisualChoice
+                    key={choice.value}
+                    label={choice.label}
+                    selected={choice.value === thickness}
+                    compact
+                    onClick={() => onChange({ thickness: choice.value })}
+                  >
+                    <DividerLine
+                      block={{
+                        ...block,
+                        thickness: choice.value,
+                        width: 100,
+                        color,
+                      }}
+                    />
+                  </DividerVisualChoice>
+                ))}
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend className="text-sm font-semibold text-primary">
+                {strings.quoteStudioDividerWidth}
+              </legend>
+              <div className="mt-3 grid grid-cols-4 gap-3">
+                {widthChoices.map((choice) => (
+                  <DividerVisualChoice
+                    key={choice}
+                    label={`${choice}%`}
+                    selected={choice === width}
+                    compact
+                    onClick={() => onChange({ width: choice })}
+                  >
+                    <DividerLine block={{ ...block, width: choice, color }} />
+                  </DividerVisualChoice>
+                ))}
+              </div>
+            </fieldset>
+          </div>
+
+          <div className="mt-6 border-t border-subtle pt-6">
+            <p className="text-sm font-semibold text-primary">
+              {strings.quoteStudioDividerColour}
+            </p>
+            <div className="mt-3 flex w-full items-center gap-4 rounded-xl border border-default bg-surface px-4 py-3">
+              <ColorPicker
+                label={strings.quoteStudioChooseDividerColour}
+                value={color}
+                onChange={(next) => onChange({ color: next })}
+                triggerClassName="!size-12 !rounded-xl"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium text-primary">
+                  {strings.quoteStudioDividerColour}
+                </span>
+                <span className="mt-1 block font-mono text-xs uppercase text-secondary">
+                  {color}
+                </span>
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-6 rounded-xl bg-raised px-5 py-7">
+            <DividerLine block={{ ...block, thickness, style, width, color }} />
+          </div>
+        </Modal>
+      )}
+    </>
+  );
+}
+
+function DividerVisualChoice({
+  label,
+  selected,
+  compact = false,
+  onClick,
+  children,
+}: {
+  label: string;
+  selected: boolean;
+  compact?: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      className={cx(
+        "flex flex-col rounded-xl border px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
+        compact ? "min-h-20" : "min-h-24",
+        selected
+          ? "border-accent bg-accent-soft text-accent"
+          : "border-default bg-surface text-primary hover:border-accent hover:bg-accent-soft/30",
+      )}
+      onClick={onClick}
+    >
+      <span className="flex min-h-8 w-full items-center" aria-hidden="true">
+        {children}
+      </span>
+      <span className="mt-auto text-sm font-medium">{label}</span>
+    </button>
+  );
+}
+
 function ListBlockEditor({
   ordered,
   items,
@@ -1714,7 +2113,9 @@ function ListBlockEditor({
     <div>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-primary">{strings.quoteStudioListLayout}</p>
+          <p className="text-sm font-semibold text-primary">
+            {strings.quoteStudioListLayout}
+          </p>
           <p className="mt-0.5 text-xs text-secondary">
             {strings.quoteStudioListLayoutHelp}
           </p>
@@ -1724,7 +2125,11 @@ function ListBlockEditor({
           <div className="w-36">
             <ChoicePicker
               value={String(columns)}
-              label={ordered ? strings.quoteStudioNumberedListColumns : strings.quoteStudioBulletListColumns}
+              label={
+                ordered
+                  ? strings.quoteStudioNumberedListColumns
+                  : strings.quoteStudioBulletListColumns
+              }
               placeholder={strings.quoteStudioChooseColumns}
               options={[
                 { value: "1", label: strings.quoteStudioColumnCount(1) },
@@ -1755,7 +2160,11 @@ function ListBlockEditor({
             </span>
             <InlineRichTextEditor
               value={item}
-              aria-label={ordered ? strings.quoteStudioNumberedItemA11y(index + 1) : strings.quoteStudioBulletItemA11y(index + 1)}
+              aria-label={
+                ordered
+                  ? strings.quoteStudioNumberedItemA11y(index + 1)
+                  : strings.quoteStudioBulletItemA11y(index + 1)
+              }
               placeholder={strings.quoteStudioWriteItem}
               onChange={(value) => replace(index, value)}
             />
@@ -1790,7 +2199,8 @@ function ListBlockEditor({
         className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-default bg-surface px-4 text-sm font-semibold text-primary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
         onClick={() => onChange({ items: items === "" ? "\n" : `${items}\n` })}
       >
-        <Plus className="size-4" aria-hidden="true" /> {strings.quoteStudioAddItemBelow}
+        <Plus className="size-4" aria-hidden="true" />{" "}
+        {strings.quoteStudioAddItemBelow}
       </button>
     </div>
   );
@@ -1874,10 +2284,16 @@ function InlineRichTextEditor({
           aria-label={strings.quoteStudioListItemFormatting}
           onMouseDown={(event) => event.preventDefault()}
         >
-          <RichTextCommand label={strings.quoteStudioBold} onClick={() => command("bold")}>
+          <RichTextCommand
+            label={strings.quoteStudioBold}
+            onClick={() => command("bold")}
+          >
             <Bold className="size-4" />
           </RichTextCommand>
-          <RichTextCommand label={strings.quoteStudioItalic} onClick={() => command("italic")}>
+          <RichTextCommand
+            label={strings.quoteStudioItalic}
+            onClick={() => command("italic")}
+          >
             <Italic className="size-4" />
           </RichTextCommand>
         </div>
@@ -2070,7 +2486,9 @@ function ImageBlockEditor({
         </p>
       </div>
       <section className="border-y border-subtle py-5">
-        <h4 className="text-sm font-semibold text-primary">{strings.quoteStudioLayoutTools}</h4>
+        <h4 className="text-sm font-semibold text-primary">
+          {strings.quoteStudioLayoutTools}
+        </h4>
         <p className="mt-1 text-xs text-secondary">
           {strings.quoteStudioLayoutToolsHelp}
         </p>
@@ -2160,13 +2578,16 @@ function ImageBlockEditor({
       >
         <section className="min-w-0">
           <div className="mb-2 flex min-h-10 items-center justify-between gap-3">
-            <h4 className="text-sm font-semibold text-primary">{strings.quoteStudioImage}</h4>
+            <h4 className="text-sm font-semibold text-primary">
+              {strings.quoteStudioImage}
+            </h4>
             <button
               type="button"
               className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-default bg-surface px-3 text-xs font-semibold text-secondary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
               onClick={onReplace}
             >
-              <Upload className="size-4" aria-hidden="true" /> {strings.quoteStudioReplace}
+              <Upload className="size-4" aria-hidden="true" />{" "}
+              {strings.quoteStudioReplace}
             </button>
           </div>
           <div className="rounded-2xl border border-default bg-surface p-3 shadow-sm">
@@ -2295,7 +2716,8 @@ function RichTextEditor({
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => setShowTools((current) => !current)}
         >
-          <Type className="size-4" aria-hidden="true" /> {strings.quoteStudioTextTools}
+          <Type className="size-4" aria-hidden="true" />{" "}
+          {strings.quoteStudioTextTools}
         </button>
       </div>
       <div className="relative">
@@ -2306,10 +2728,16 @@ function RichTextEditor({
             aria-label={strings.quoteStudioTextFormatting}
             onMouseDown={(event) => event.preventDefault()}
           >
-            <RichTextCommand label={strings.quoteStudioBold} onClick={() => command("bold")}>
+            <RichTextCommand
+              label={strings.quoteStudioBold}
+              onClick={() => command("bold")}
+            >
               <Bold className="size-4" />
             </RichTextCommand>
-            <RichTextCommand label={strings.quoteStudioItalic} onClick={() => command("italic")}>
+            <RichTextCommand
+              label={strings.quoteStudioItalic}
+              onClick={() => command("italic")}
+            >
               <Italic className="size-4" />
             </RichTextCommand>
             <RichTextCommand
@@ -2437,7 +2865,9 @@ function ImageColumnRatioPicker({
           {strings.quoteStudioColumnWidth}
         </p>
         {disabled && (
-          <span className="text-[11px] text-tertiary">{strings.quoteStudioSideBySideOnly}</span>
+          <span className="text-[11px] text-tertiary">
+            {strings.quoteStudioSideBySideOnly}
+          </span>
         )}
       </div>
       <div className="grid grid-cols-5 gap-1.5">
@@ -2704,7 +3134,10 @@ function GeneralTableBlock({
     const columns = block.columns.slice(0, count);
     while (columns.length < count) {
       const number = columns.length + 1;
-      columns.push({ id: crypto.randomUUID(), label: strings.quoteStudioColumnNumber(number) });
+      columns.push({
+        id: crypto.randomUUID(),
+        label: strings.quoteStudioColumnNumber(number),
+      });
     }
     onChange({
       columns,
@@ -2810,8 +3243,12 @@ function GeneralTableBlock({
                   <div className="flex items-center gap-2">
                     <InlineRichTextEditor
                       value={column.label}
-                      aria-label={strings.quoteStudioColumnNameA11y(columnIndex + 1)}
-                      placeholder={strings.quoteStudioColumnNumber(columnIndex + 1)}
+                      aria-label={strings.quoteStudioColumnNameA11y(
+                        columnIndex + 1,
+                      )}
+                      placeholder={strings.quoteStudioColumnNumber(
+                        columnIndex + 1,
+                      )}
                       onChange={(label) =>
                         onChange({
                           columns: block.columns.map((item) =>
@@ -2848,7 +3285,11 @@ function GeneralTableBlock({
                   >
                     <InlineRichTextEditor
                       value={row.cells[column.id] ?? ""}
-                      aria-label={strings.quoteStudioTableCellA11y(column.label || strings.quoteStudioColumnNumber(columnIndex + 1), rowIndex + 1)}
+                      aria-label={strings.quoteStudioTableCellA11y(
+                        column.label ||
+                          strings.quoteStudioColumnNumber(columnIndex + 1),
+                        rowIndex + 1,
+                      )}
                       placeholder={strings.quoteStudioEnterValue}
                       onChange={(value) =>
                         onChange({
@@ -2897,7 +3338,8 @@ function GeneralTableBlock({
         className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-default bg-surface px-4 text-sm font-semibold text-primary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
         onClick={addRow}
       >
-        <Plus className="size-4" aria-hidden="true" /> {strings.quoteStudioAddRowBelow}
+        <Plus className="size-4" aria-hidden="true" />{" "}
+        {strings.quoteStudioAddRowBelow}
       </button>
     </div>
   );
@@ -2912,7 +3354,9 @@ function blockName(block: Block): string {
     case "quote":
       return strings.quoteStudioQuote;
     case "list":
-      return block.ordered ? strings.quoteStudioNumberedList : strings.quoteStudioBulletList;
+      return block.ordered
+        ? strings.quoteStudioNumberedList
+        : strings.quoteStudioBulletList;
     case "divider":
       return strings.quoteStudioDivider;
     case "image":
@@ -3066,7 +3510,9 @@ function BottomComposer({
           <div className="p-5 pb-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="font-semibold text-primary">{strings.quoteStudioAddToQuotation}</h3>
+                <h3 className="font-semibold text-primary">
+                  {strings.quoteStudioAddToQuotation}
+                </h3>
                 <p className="mt-0.5 text-sm text-secondary">
                   {strings.quoteStudioAddToQuotationHelp}
                 </p>
@@ -3096,53 +3542,54 @@ function BottomComposer({
             </label>
           </div>
           <div className="max-h-[min(65vh,40rem)] overflow-y-auto border-t border-default px-5">
-            {(normalizedQuery === ""
-              ? categories
-              : (["results"] as const)
-            ).map((section, sectionIndex) => {
-              const sectionOptions =
-                section === "results"
-                  ? visibleOptions
-                  : visibleOptions.filter(
-                      (option) => option.category === section,
-                    );
-              if (sectionOptions.length === 0) return null;
-              return (
-                <section
-                  key={section}
-                  className={cx(
-                    "py-4",
-                    sectionIndex > 0 && "border-t border-default",
-                  )}
-                  aria-labelledby={`quote-blocks-${section.toLowerCase().replace(" ", "-")}`}
-                >
-                  <h4
-                    id={`quote-blocks-${section.toLowerCase().replace(" ", "-")}`}
-                    className="mb-2 text-xs font-semibold uppercase tracking-wide text-tertiary"
+            {(normalizedQuery === "" ? categories : (["results"] as const)).map(
+              (section, sectionIndex) => {
+                const sectionOptions =
+                  section === "results"
+                    ? visibleOptions
+                    : visibleOptions.filter(
+                        (option) => option.category === section,
+                      );
+                if (sectionOptions.length === 0) return null;
+                return (
+                  <section
+                    key={section}
+                    className={cx(
+                      "py-4",
+                      sectionIndex > 0 && "border-t border-default",
+                    )}
+                    aria-labelledby={`quote-blocks-${section.toLowerCase().replace(" ", "-")}`}
                   >
-                    {categoryLabels[section]}
-                  </h4>
-                  <div className="grid gap-1 sm:grid-cols-2">
-                    {sectionOptions.map(({ label, help, Icon, action }) => (
-                      <AddButton
-                        key={label}
-                        label={label}
-                        help={help}
-                        Icon={Icon}
-                        onClick={action}
-                      />
-                    ))}
-                  </div>
-                </section>
-              );
-            })}
+                    <h4
+                      id={`quote-blocks-${section.toLowerCase().replace(" ", "-")}`}
+                      className="mb-2 text-xs font-semibold uppercase tracking-wide text-tertiary"
+                    >
+                      {categoryLabels[section]}
+                    </h4>
+                    <div className="grid gap-1 sm:grid-cols-2">
+                      {sectionOptions.map(({ label, help, Icon, action }) => (
+                        <AddButton
+                          key={label}
+                          label={label}
+                          help={help}
+                          Icon={Icon}
+                          onClick={action}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                );
+              },
+            )}
           </div>
           {visibleOptions.length === 0 && (
             <div className="border-t border-default px-5 py-8 text-center">
               <p className="text-sm font-semibold text-primary">
                 {strings.quoteStudioNoMatchingBlocks}
               </p>
-              <p className="mt-1 text-xs text-secondary">{strings.quoteStudioTryAnotherName}</p>
+              <p className="mt-1 text-xs text-secondary">
+                {strings.quoteStudioTryAnotherName}
+              </p>
             </div>
           )}
         </div>
@@ -3257,16 +3704,52 @@ function CustomizeQuote({
 }) {
   const logoInput = useRef<HTMLInputElement>(null);
   const themeChoices: Array<{ id: Theme; name: string; help: string }> = [
-    { id: "modern", name: strings.quoteStudioModern, help: strings.quoteStudioModernHelp },
-    { id: "editorial", name: strings.quoteStudioEditorial, help: strings.quoteStudioEditorialHelp },
-    { id: "minimal", name: strings.quoteStudioMinimal, help: strings.quoteStudioMinimalHelp },
+    {
+      id: "modern",
+      name: strings.quoteStudioModern,
+      help: strings.quoteStudioModernHelp,
+    },
+    {
+      id: "editorial",
+      name: strings.quoteStudioEditorial,
+      help: strings.quoteStudioEditorialHelp,
+    },
+    {
+      id: "minimal",
+      name: strings.quoteStudioMinimal,
+      help: strings.quoteStudioMinimalHelp,
+    },
   ];
-  const headerStyleChoices: Array<{ id: HeaderStyle; name: string; help: string }> = [
-    { id: "signature", name: strings.quoteStudioSignature, help: strings.quoteStudioSignatureHelp },
-    { id: "editorial", name: strings.quoteStudioEditorial, help: strings.quoteStudioHeaderEditorialHelp },
-    { id: "band", name: strings.quoteStudioBrandBand, help: strings.quoteStudioBrandBandHelp },
-    { id: "minimal", name: strings.quoteStudioMinimal, help: strings.quoteStudioHeaderMinimalHelp },
-    { id: "stacked", name: strings.quoteStudioLogoStack, help: strings.quoteStudioLogoStackHelp },
+  const headerStyleChoices: Array<{
+    id: HeaderStyle;
+    name: string;
+    help: string;
+  }> = [
+    {
+      id: "signature",
+      name: strings.quoteStudioSignature,
+      help: strings.quoteStudioSignatureHelp,
+    },
+    {
+      id: "editorial",
+      name: strings.quoteStudioEditorial,
+      help: strings.quoteStudioHeaderEditorialHelp,
+    },
+    {
+      id: "band",
+      name: strings.quoteStudioBrandBand,
+      help: strings.quoteStudioBrandBandHelp,
+    },
+    {
+      id: "minimal",
+      name: strings.quoteStudioMinimal,
+      help: strings.quoteStudioHeaderMinimalHelp,
+    },
+    {
+      id: "stacked",
+      name: strings.quoteStudioLogoStack,
+      help: strings.quoteStudioLogoStackHelp,
+    },
   ];
   const setColor = (name: keyof Colors, value: string) =>
     onChange((current) => ({
@@ -3285,7 +3768,10 @@ function CustomizeQuote({
   const displayedCustomerDetails = design.customerDetailsCustomized
     ? design.customerDetails
     : sourceCustomerDetails;
-  const setCustomerDetail = (name: keyof CustomerHeaderDetails, value: string) =>
+  const setCustomerDetail = (
+    name: keyof CustomerHeaderDetails,
+    value: string,
+  ) =>
     onChange((current) => ({
       ...current,
       customerDetails: { ...displayedCustomerDetails, [name]: value },
@@ -3293,8 +3779,18 @@ function CustomizeQuote({
     }));
   return (
     <Modal
-      title={mode === "header" ? strings.quoteStudioEditQuotationHeader : strings.quoteStudioCustomizeQuotation}
-      icon={mode === "header" ? <Building2 className="size-5" /> : <Palette className="size-5" />}
+      title={
+        mode === "header"
+          ? strings.quoteStudioEditQuotationHeader
+          : strings.quoteStudioCustomizeQuotation
+      }
+      icon={
+        mode === "header" ? (
+          <Building2 className="size-5" />
+        ) : (
+          <Palette className="size-5" />
+        )
+      }
       onClose={onClose}
       wide="extra"
       actions={
@@ -3324,724 +3820,875 @@ function CustomizeQuote({
       <div className="space-y-7 p-2">
         {mode === "header" && (
           <>
-        <section className="flex flex-wrap items-center gap-5 rounded-2xl border border-default bg-raised/35 p-5">
-          <div className="min-w-52 flex-1">
-            <h3 className="text-base font-semibold text-primary">{strings.quoteStudioBrandMark}</h3>
-            <p className="mt-1 text-sm leading-relaxed text-secondary">
-              {strings.quoteStudioBrandMarkHelp}
-            </p>
-          </div>
-          <button
-            type="button"
-            className="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-default bg-surface p-3 text-sm font-semibold text-secondary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
-            onClick={() => logoInput.current?.click()}
-          >
-            {design.logo ? (
-              <img
-                src={design.logo}
-                alt={strings.quoteStudioQuoteLogo}
-                className="max-h-20 max-w-full object-contain"
-              />
-            ) : (
-              <span className="flex flex-col items-center gap-3 text-center">
-                <span className="grid size-10 place-items-center rounded-xl bg-accent-soft text-accent">
-                  <Upload className="size-5" />
-                </span>
-                <span>
-                  <strong className="sr-only">{strings.quoteStudioUploadLogo}</strong>
-                </span>
-              </span>
-            )}
-          </button>
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              className="inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-accent transition-colors hover:bg-accent-soft hover:text-accent-hover disabled:cursor-not-allowed disabled:text-tertiary disabled:opacity-50"
-              onClick={() => logoInput.current?.click()}
-            >
-              <Upload className="size-4" />
-              {design.logo ? strings.quoteStudioReplace : strings.quoteStudioChooseFile}
-            </button>
-            <button
-              type="button"
-              disabled={!design.logo}
-              className="min-h-9 rounded-lg px-3 text-sm font-semibold text-secondary transition-colors hover:bg-danger-tint hover:text-danger disabled:cursor-not-allowed disabled:text-tertiary disabled:opacity-40"
-              onClick={() => onChange((current) => ({ ...current, logo: "" }))}
-            >
-              {strings.quoteStudioRemove}
-            </button>
-          </div>
-          <input
-            ref={logoInput}
-            type="file"
-            accept="image/png,image/jpeg,image/webp,image/svg+xml"
-            className="sr-only"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file)
-                imageData(file, (logo) =>
-                  onChange((current) => ({ ...current, logo })),
-                );
-            }}
-          />
-        </section>
-        <section className="rounded-2xl border border-subtle bg-surface p-6 shadow-sm sm:p-8">
-          <div className="flex flex-wrap items-center justify-between gap-5">
-            <div className="flex items-start gap-4">
-              <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
-                <QrCode className="size-5" aria-hidden="true" />
-              </span>
-              <div>
-                <h3 className="text-xl font-semibold tracking-tight text-primary">{strings.quoteStudioQrTitle}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-secondary">
-                  {strings.quoteStudioQrHelp}
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={design.showContactQr}
-              className={cx(
-                "relative h-7 w-12 shrink-0 rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
-                design.showContactQr ? "border-accent bg-accent" : "border-default bg-raised",
-              )}
-              onClick={() => onChange((current) => ({ ...current, showContactQr: !current.showContactQr }))}
-            >
-              <span className={cx("absolute top-1 size-5 rounded-full bg-white shadow-sm transition-[left]", design.showContactQr ? "left-6" : "left-1")} />
-              <span className="sr-only">{strings.quoteStudioShowQr}</span>
-            </button>
-          </div>
-          <div className="mt-7 grid gap-7 xl:grid-cols-2">
-            <fieldset>
-              <legend className="text-sm font-semibold text-primary">{strings.quoteStudioPlacement}</legend>
-              <p className="mt-1 text-xs text-secondary">{strings.quoteStudioPlacementHelp}</p>
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                {(["left", "right"] as const).map((alignment) => (
-                  <button
-                    key={alignment}
-                    type="button"
-                    aria-pressed={design.contactQrAlignment === alignment}
-                    aria-label={strings.quoteStudioQrPlacementA11y(alignment === "left" ? strings.quoteStudioLeft : strings.quoteStudioRight)}
-                    className={cx(
-                      "group relative min-h-24 cursor-pointer rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
-                      design.contactQrAlignment === alignment
-                        ? "border-accent bg-accent-soft/40"
-                        : "border-default bg-surface hover:border-accent hover:bg-accent-soft/20",
-                    )}
-                    onClick={() =>
-                      onChange((current) => ({
-                        ...current,
-                        showContactQr: true,
-                        contactQrAlignment: alignment,
-                      }))
-                    }
-                  >
-                    <span className={cx("flex h-16 items-end gap-3 rounded-lg bg-raised p-3", alignment === "right" && "flex-row-reverse")} aria-hidden="true">
-                      <span className="grid size-9 shrink-0 place-items-center rounded-md bg-surface text-accent ring-1 ring-default">
-                        <QrCode className="size-6" />
-                      </span>
-                      <span className="mb-1 flex-1 space-y-2">
-                        <span className="block h-1.5 w-full rounded-full bg-primary/15" />
-                        <span className="block h-1.5 w-2/3 rounded-full bg-primary/10" />
-                      </span>
-                    </span>
-                    <span className="mt-2 block text-center text-xs font-semibold text-primary">{alignment === "left" ? strings.quoteStudioLeft : strings.quoteStudioRight}</span>
-                    <span
-                      className={cx(
-                        "absolute right-2 top-2 grid size-5 place-items-center rounded-full border transition-colors",
-                        design.contactQrAlignment === alignment
-                          ? "border-accent bg-accent text-white"
-                          : "border-default bg-surface group-hover:border-accent",
-                      )}
-                      aria-hidden="true"
-                    >
-                      {design.contactQrAlignment === alignment && <Check className="size-3" strokeWidth={3} />}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-            <fieldset>
-              <legend className="text-sm font-semibold text-primary">{strings.quoteStudioSize}</legend>
-              <p className="mt-1 text-xs text-secondary">{strings.quoteStudioSizeHelp}</p>
-              <div className="mt-4 grid grid-cols-3 gap-3">
-                {(["small", "medium", "large"] as const).map((size) => (
-                  <button
-                    key={size}
-                    type="button"
-                    aria-pressed={design.contactQrSize === size}
-                    className={cx(
-                      "group relative min-h-24 cursor-pointer rounded-xl border p-3 transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
-                      design.contactQrSize === size
-                        ? "border-accent bg-accent-soft/40"
-                        : "border-default bg-surface hover:border-accent hover:bg-accent-soft/20",
-                    )}
-                    onClick={() =>
-                      onChange((current) => ({
-                        ...current,
-                        showContactQr: true,
-                        contactQrSize: size,
-                      }))
-                    }
-                  >
-                    <span className="flex h-12 items-center justify-center" aria-hidden="true">
-                      <QrCode className={cx("text-accent", size === "small" ? "size-6" : size === "large" ? "size-11" : "size-8")} />
-                    </span>
-                    <span className="mt-2 block text-center text-xs font-semibold text-primary">{size === "small" ? strings.quoteStudioSmall : size === "medium" ? strings.quoteStudioMedium : strings.quoteStudioLarge}</span>
-                    <span
-                      className={cx(
-                        "absolute right-2 top-2 grid size-5 place-items-center rounded-full border transition-colors",
-                        design.contactQrSize === size
-                          ? "border-accent bg-accent text-white"
-                          : "border-default bg-surface group-hover:border-accent",
-                      )}
-                      aria-hidden="true"
-                    >
-                      {design.contactQrSize === size && <Check className="size-3" strokeWidth={3} />}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-            <div className="xl:col-span-2">
-              <ColorField
-                label={strings.quoteStudioQrColour}
-                help={strings.quoteStudioQrColourHelp}
-                value={design.contactQrColor}
-                onChange={(contactQrColor) =>
-                  onChange((current) => ({ ...current, showContactQr: true, contactQrColor }))
-                }
-              />
-            </div>
-          </div>
-        </section>
-        <section className="rounded-2xl border border-subtle bg-surface p-6 shadow-sm sm:p-8">
-          <div>
-            <div className="flex flex-wrap items-center justify-between gap-5">
-              <div className="flex items-start gap-4">
-                <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
-                  <Building2 className="size-5" aria-hidden="true" />
-                </span>
-                <div>
-                  <h3 className="text-xl font-semibold tracking-tight text-primary">
-                    {strings.quoteStudioCompanyInformation}
-                  </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-secondary">
-                    {strings.quoteStudioCompanyLinkedHelp}
-                    <span className="block">
-                      {strings.quoteStudioOverrideHelp}
-                    </span>
-                  </p>
-                </div>
-              </div>
-              {design.headerDetailsCustomized ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  icon={<RotateCcw aria-hidden="true" />}
-                  onClick={() => onChange((current) => ({ ...current, headerDetailsCustomized: false }))}
-                >
-                  {strings.quoteStudioUseYourDetails}
-                </Button>
-              ) : (
-                <span className="inline-flex min-h-10 items-center gap-2 rounded-full bg-accent-soft px-4 text-sm font-semibold text-accent">
-                  <Link className="size-4" aria-hidden="true" />
-                  {strings.quoteStudioLinkedYourDetails}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="mt-8 grid gap-x-8 gap-y-5 sm:grid-cols-2">
-            <HeaderField
-              label={strings.quoteStudioCompanyName}
-              icon={<Building2 />}
-              value={displayedHeaderDetails.companyName}
-              placeholder={strings.quoteStudioCompanyNamePlaceholder}
-              onChange={(value) => setHeaderDetail("companyName", value)}
-            />
-            <HeaderField
-              label={strings.quoteStudioWebsite}
-              icon={<Globe2 />}
-              value={displayedHeaderDetails.website}
-              placeholder={strings.quoteStudioWebsitePlaceholder}
-              onChange={(value) => setHeaderDetail("website", value)}
-            />
-            <HeaderField
-              label={strings.quoteStudioEmail}
-              icon={<Mail />}
-              value={displayedHeaderDetails.email}
-              placeholder={strings.quoteStudioEmailPlaceholder}
-              onChange={(value) => setHeaderDetail("email", value)}
-            />
-            <HeaderField
-              label={strings.quoteStudioPhone}
-              icon={<Phone />}
-              value={displayedHeaderDetails.phone}
-              placeholder={strings.quoteStudioPhonePlaceholder}
-              onChange={(value) => setHeaderDetail("phone", value)}
-            />
-            <label className="grid gap-2 sm:col-span-2">
-              <span className="text-sm font-semibold text-primary">{strings.quoteStudioAddress}</span>
-              <textarea
-                className="min-h-32 resize-y rounded-xl border border-default bg-surface px-4 py-4 text-base leading-relaxed text-primary placeholder:text-tertiary hover:border-accent focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10"
-                value={displayedHeaderDetails.address}
-                placeholder={strings.quoteStudioAddressPlaceholder}
-                onChange={(event) => setHeaderDetail("address", event.target.value)}
-              />
-            </label>
-            <HeaderField
-              label={strings.quoteStudioVatId}
-              value={displayedHeaderDetails.vatId}
-              placeholder={strings.quoteStudioVatPlaceholder}
-              onChange={(value) => setHeaderDetail("vatId", value)}
-            />
-            <HeaderField
-              label={strings.quoteStudioCompanyNumber}
-              value={displayedHeaderDetails.registrationNo}
-              placeholder={strings.quoteStudioCompanyNumberPlaceholder}
-              onChange={(value) => setHeaderDetail("registrationNo", value)}
-            />
-          </div>
-        </section>
-        <section className="rounded-2xl border border-subtle bg-surface p-6 shadow-sm sm:p-8">
-          <div className="flex flex-wrap items-center justify-between gap-5">
-            <div className="flex items-start gap-4">
-              <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
-                <ContactRound className="size-5" aria-hidden="true" />
-              </span>
-              <div>
-                <h3 className="text-xl font-semibold tracking-tight text-primary">
-                  {strings.quoteStudioCustomerInformation}
+            <section className="flex flex-wrap items-center gap-5 rounded-2xl border border-default bg-raised/35 p-5">
+              <div className="min-w-52 flex-1">
+                <h3 className="text-base font-semibold text-primary">
+                  {strings.quoteStudioBrandMark}
                 </h3>
-                <p className="mt-2 text-sm leading-relaxed text-secondary">
-                  {strings.quoteStudioCustomerInformationHelp}
-                  <span className="block">
-                    {strings.quoteStudioCustomerOverrideHelp}
-                  </span>
+                <p className="mt-1 text-sm leading-relaxed text-secondary">
+                  {strings.quoteStudioBrandMarkHelp}
                 </p>
               </div>
-            </div>
-            {design.customerDetailsCustomized ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={<RotateCcw aria-hidden="true" />}
-                onClick={() =>
-                  onChange((current) => ({
-                    ...current,
-                    customerDetailsCustomized: false,
-                  }))
-                }
+              <button
+                type="button"
+                className="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-default bg-surface p-3 text-sm font-semibold text-secondary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
+                onClick={() => logoInput.current?.click()}
               >
-                {strings.quoteStudioUseSelectedCustomer}
-              </Button>
-            ) : (
-              <span className="inline-flex min-h-10 items-center gap-2 rounded-full bg-accent-soft px-4 text-sm font-semibold text-accent">
-                <Link className="size-4" aria-hidden="true" />
-                {strings.quoteStudioLinkedSelectedCustomer}
-              </span>
-            )}
-          </div>
-          <div className="mt-8 grid gap-x-8 gap-y-5 sm:grid-cols-2">
-            <HeaderField
-              label={strings.quoteStudioCompanyName}
-              icon={<Building2 />}
-              value={displayedCustomerDetails.companyName}
-              placeholder={strings.quoteStudioCustomerCompanyPlaceholder}
-              onChange={(value) => setCustomerDetail("companyName", value)}
-            />
-            <HeaderField
-              label={strings.quoteStudioContactPerson}
-              icon={<ContactRound />}
-              value={displayedCustomerDetails.contactName}
-              placeholder={strings.quoteStudioContactNamePlaceholder}
-              onChange={(value) => setCustomerDetail("contactName", value)}
-            />
-            <HeaderField
-              label={strings.quoteStudioEmail}
-              icon={<Mail />}
-              value={displayedCustomerDetails.email}
-              placeholder={strings.quoteStudioCustomerEmailPlaceholder}
-              onChange={(value) => setCustomerDetail("email", value)}
-            />
-            <HeaderField
-              label={strings.quoteStudioPhone}
-              icon={<Phone />}
-              value={displayedCustomerDetails.phone}
-              placeholder={strings.quoteStudioPhonePlaceholder}
-              onChange={(value) => setCustomerDetail("phone", value)}
-            />
-            <label className="grid gap-2 sm:col-span-2">
-              <span className="text-sm font-semibold text-primary">{strings.quoteStudioAddress}</span>
-              <textarea
-                className="min-h-32 resize-y rounded-xl border border-default bg-surface px-4 py-4 text-base leading-relaxed text-primary placeholder:text-tertiary hover:border-accent focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10"
-                value={displayedCustomerDetails.address}
-                placeholder={strings.quoteStudioAddressPlaceholder}
-                onChange={(event) => setCustomerDetail("address", event.target.value)}
-              />
-            </label>
-            <HeaderField
-              label={strings.quoteStudioVatId}
-              value={displayedCustomerDetails.vatId}
-              placeholder={strings.quoteStudioCustomerVatPlaceholder}
-              onChange={(value) => setCustomerDetail("vatId", value)}
-            />
-          </div>
-        </section>
-          </>
-        )}
-        <div className="min-w-0 space-y-7">
-          {mode === "header" && (
-            <>
-          <section>
-            <h3 className="text-base font-semibold text-primary">{strings.quoteStudioHeaderStyle}</h3>
-            <p className="mt-1 text-sm text-secondary">
-              {strings.quoteStudioHeaderStyleHelp}
-            </p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-              {headerStyleChoices.map((choice) => (
+                {design.logo ? (
+                  <img
+                    src={design.logo}
+                    alt={strings.quoteStudioQuoteLogo}
+                    className="max-h-20 max-w-full object-contain"
+                  />
+                ) : (
+                  <span className="flex flex-col items-center gap-3 text-center">
+                    <span className="grid size-10 place-items-center rounded-xl bg-accent-soft text-accent">
+                      <Upload className="size-5" />
+                    </span>
+                    <span>
+                      <strong className="sr-only">
+                        {strings.quoteStudioUploadLogo}
+                      </strong>
+                    </span>
+                  </span>
+                )}
+              </button>
+              <div className="flex shrink-0 items-center gap-2">
                 <button
-                  key={choice.id}
                   type="button"
-                  aria-pressed={design.headerStyle === choice.id}
-                  className={cx(
-                    "relative min-h-40 rounded-2xl border p-4 text-left transition-colors hover:border-accent hover:bg-accent-soft/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
-                    design.headerStyle === choice.id
-                      ? "border-accent bg-accent-soft/25"
-                      : "border-default bg-surface",
-                  )}
+                  className="inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-accent transition-colors hover:bg-accent-soft hover:text-accent-hover disabled:cursor-not-allowed disabled:text-tertiary disabled:opacity-50"
+                  onClick={() => logoInput.current?.click()}
+                >
+                  <Upload className="size-4" />
+                  {design.logo
+                    ? strings.quoteStudioReplace
+                    : strings.quoteStudioChooseFile}
+                </button>
+                <button
+                  type="button"
+                  disabled={!design.logo}
+                  className="min-h-9 rounded-lg px-3 text-sm font-semibold text-secondary transition-colors hover:bg-danger-tint hover:text-danger disabled:cursor-not-allowed disabled:text-tertiary disabled:opacity-40"
                   onClick={() =>
-                    onChange((current) => ({ ...current, headerStyle: choice.id }))
+                    onChange((current) => ({ ...current, logo: "" }))
                   }
                 >
-                  <HeaderStylePreview style={choice.id} />
-                  <span className="mt-4 flex items-start justify-between gap-3">
-                    <span>
-                      <strong className="block text-sm font-semibold text-primary">
-                        {choice.name}
-                      </strong>
-                      <small className="mt-1 block text-xs leading-relaxed text-secondary">
-                        {choice.help}
-                      </small>
-                    </span>
-                    <span
-                      className={cx(
-                        "grid size-5 shrink-0 place-items-center rounded-full border",
-                        design.headerStyle === choice.id
-                          ? "border-accent bg-accent text-white"
-                          : "border-default",
-                      )}
-                    >
-                      {design.headerStyle === choice.id && <Check className="size-3" />}
-                    </span>
-                  </span>
+                  {strings.quoteStudioRemove}
                 </button>
-              ))}
-            </div>
-          </section>
-          <section>
-            <div>
-              <h3 className="text-base font-semibold text-primary">
-                {strings.quoteStudioHeaderArrangement}
-              </h3>
-              <p className="mt-1 text-sm text-secondary">
-                {strings.quoteStudioHeaderArrangementHelp}
-              </p>
-            </div>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              {(["left", "right"] as const).map((alignment) => (
+              </div>
+              <input
+                ref={logoInput}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                className="sr-only"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file)
+                    imageData(file, (logo) =>
+                      onChange((current) => ({ ...current, logo })),
+                    );
+                }}
+              />
+            </section>
+            <section className="rounded-2xl border border-subtle bg-surface p-6 shadow-sm sm:p-8">
+              <div className="flex flex-wrap items-center justify-between gap-5">
+                <div className="flex items-start gap-4">
+                  <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+                    <QrCode className="size-5" aria-hidden="true" />
+                  </span>
+                  <div>
+                    <h3 className="text-xl font-semibold tracking-tight text-primary">
+                      {strings.quoteStudioQrTitle}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-secondary">
+                      {strings.quoteStudioQrHelp}
+                    </p>
+                  </div>
+                </div>
                 <button
-                  key={alignment}
                   type="button"
-                  aria-pressed={design.headerAlignment === alignment}
+                  role="switch"
+                  aria-checked={design.showContactQr}
                   className={cx(
-                    "group relative min-h-40 overflow-hidden rounded-2xl border !p-5 text-left transition-colors hover:border-accent hover:bg-accent-soft/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
-                    design.headerAlignment === alignment
-                      ? "border-accent bg-accent-soft/30"
-                      : "border-default bg-surface",
+                    "relative h-7 w-12 shrink-0 rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
+                    design.showContactQr
+                      ? "border-accent bg-accent"
+                      : "border-default bg-raised",
                   )}
                   onClick={() =>
                     onChange((current) => ({
                       ...current,
-                      headerAlignment: alignment,
+                      showContactQr: !current.showContactQr,
                     }))
                   }
                 >
                   <span
                     className={cx(
-                      "flex h-20 items-center justify-between gap-5 rounded-xl bg-raised px-5",
-                      alignment === "right" && "flex-row-reverse",
+                      "absolute top-1 size-5 rounded-full bg-white shadow-sm transition-[left]",
+                      design.showContactQr ? "left-6" : "left-1",
                     )}
-                    aria-hidden="true"
-                  >
-                    <span className="flex items-center gap-2.5">
-                      <span className="size-9 rounded-lg border border-accent/20 bg-accent-soft" />
-                      <span className="space-y-1.5">
-                        <span className="block h-2 w-16 rounded-full bg-primary/20" />
-                        <span className="block h-1.5 w-11 rounded-full bg-primary/10" />
-                      </span>
-                    </span>
-                    <span className="space-y-1.5">
-                      <span className="block h-1.5 w-10 rounded-full bg-primary/15" />
-                      <span className="block h-1.5 w-14 rounded-full bg-accent/70" />
-                    </span>
-                  </span>
-                  <span className="flex items-start justify-between gap-5 pt-5">
-                    <span>
-                      <strong className="block text-sm font-semibold text-primary">
-                        {alignment === "left" ? strings.quoteStudioLogoLeft : strings.quoteStudioLogoRight}
-                      </strong>
-                      <small className="mt-1 block text-xs font-normal leading-relaxed text-secondary">
-                        {alignment === "left" ? strings.quoteStudioLogoLeftHelp : strings.quoteStudioLogoRightHelp}
-                      </small>
-                    </span>
-                    <span
-                      className={cx(
-                        "mt-0.5 grid size-6 shrink-0 place-items-center rounded-full border transition-colors",
-                        design.headerAlignment === alignment
-                          ? "border-accent bg-accent text-white"
-                          : "border-default bg-surface group-hover:border-accent",
-                      )}
-                    >
-                      {design.headerAlignment === alignment && (
-                        <Check className="size-3.5" />
-                      )}
-                    </span>
-                  </span>
+                  />
+                  <span className="sr-only">{strings.quoteStudioShowQr}</span>
                 </button>
-              ))}
-            </div>
-          </section>
-          <section className="border-t border-subtle pt-7">
-            <div>
-              <h3 className="text-base font-semibold text-primary">{strings.quoteStudioColumnBalance}</h3>
-              <p className="mt-1 text-sm text-secondary">
-                {strings.quoteStudioColumnBalanceHelp}
-              </p>
-            </div>
-            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3" role="radiogroup" aria-label={strings.quoteStudioColumnBalanceA11y}>
-              {headerRatioChoices.map((choice) => {
-                const selected = design.headerRatio === choice.id;
-                const [company = "50", customer = "50"] = choice.id.split("-");
-                return (
-                  <button
-                    key={choice.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    aria-label={strings.quoteStudioColumnRatioA11y(company, customer)}
-                    className={cx(
-                      "group relative rounded-2xl p-3 transition-colors hover:bg-accent-soft/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
-                      selected && "bg-accent-soft/40",
-                    )}
-                    onClick={() => onChange((current) => ({ ...current, headerRatio: choice.id }))}
+              </div>
+              <div className="mt-7 grid gap-7 xl:grid-cols-2">
+                <fieldset>
+                  <legend className="text-sm font-semibold text-primary">
+                    {strings.quoteStudioPlacement}
+                  </legend>
+                  <p className="mt-1 text-xs text-secondary">
+                    {strings.quoteStudioPlacementHelp}
+                  </p>
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    {(["left", "right"] as const).map((alignment) => (
+                      <button
+                        key={alignment}
+                        type="button"
+                        aria-pressed={design.contactQrAlignment === alignment}
+                        aria-label={strings.quoteStudioQrPlacementA11y(
+                          alignment === "left"
+                            ? strings.quoteStudioLeft
+                            : strings.quoteStudioRight,
+                        )}
+                        className={cx(
+                          "group relative min-h-24 cursor-pointer rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
+                          design.contactQrAlignment === alignment
+                            ? "border-accent bg-accent-soft/40"
+                            : "border-default bg-surface hover:border-accent hover:bg-accent-soft/20",
+                        )}
+                        onClick={() =>
+                          onChange((current) => ({
+                            ...current,
+                            showContactQr: true,
+                            contactQrAlignment: alignment,
+                          }))
+                        }
+                      >
+                        <span
+                          className={cx(
+                            "flex h-16 items-end gap-3 rounded-lg bg-raised p-3",
+                            alignment === "right" && "flex-row-reverse",
+                          )}
+                          aria-hidden="true"
+                        >
+                          <span className="grid size-9 shrink-0 place-items-center rounded-md bg-surface text-accent ring-1 ring-default">
+                            <QrCode className="size-6" />
+                          </span>
+                          <span className="mb-1 flex-1 space-y-2">
+                            <span className="block h-1.5 w-full rounded-full bg-primary/15" />
+                            <span className="block h-1.5 w-2/3 rounded-full bg-primary/10" />
+                          </span>
+                        </span>
+                        <span className="mt-2 block text-center text-xs font-semibold text-primary">
+                          {alignment === "left"
+                            ? strings.quoteStudioLeft
+                            : strings.quoteStudioRight}
+                        </span>
+                        <span
+                          className={cx(
+                            "absolute right-2 top-2 grid size-5 place-items-center rounded-full border transition-colors",
+                            design.contactQrAlignment === alignment
+                              ? "border-accent bg-accent text-white"
+                              : "border-default bg-surface group-hover:border-accent",
+                          )}
+                          aria-hidden="true"
+                        >
+                          {design.contactQrAlignment === alignment && (
+                            <Check className="size-3" strokeWidth={3} />
+                          )}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+                <fieldset>
+                  <legend className="text-sm font-semibold text-primary">
+                    {strings.quoteStudioSize}
+                  </legend>
+                  <p className="mt-1 text-xs text-secondary">
+                    {strings.quoteStudioSizeHelp}
+                  </p>
+                  <div className="mt-4 grid grid-cols-3 gap-3">
+                    {(["small", "medium", "large"] as const).map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        aria-pressed={design.contactQrSize === size}
+                        className={cx(
+                          "group relative min-h-24 cursor-pointer rounded-xl border p-3 transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
+                          design.contactQrSize === size
+                            ? "border-accent bg-accent-soft/40"
+                            : "border-default bg-surface hover:border-accent hover:bg-accent-soft/20",
+                        )}
+                        onClick={() =>
+                          onChange((current) => ({
+                            ...current,
+                            showContactQr: true,
+                            contactQrSize: size,
+                          }))
+                        }
+                      >
+                        <span
+                          className="flex h-12 items-center justify-center"
+                          aria-hidden="true"
+                        >
+                          <QrCode
+                            className={cx(
+                              "text-accent",
+                              size === "small"
+                                ? "size-6"
+                                : size === "large"
+                                  ? "size-11"
+                                  : "size-8",
+                            )}
+                          />
+                        </span>
+                        <span className="mt-2 block text-center text-xs font-semibold text-primary">
+                          {size === "small"
+                            ? strings.quoteStudioSmall
+                            : size === "medium"
+                              ? strings.quoteStudioMedium
+                              : strings.quoteStudioLarge}
+                        </span>
+                        <span
+                          className={cx(
+                            "absolute right-2 top-2 grid size-5 place-items-center rounded-full border transition-colors",
+                            design.contactQrSize === size
+                              ? "border-accent bg-accent text-white"
+                              : "border-default bg-surface group-hover:border-accent",
+                          )}
+                          aria-hidden="true"
+                        >
+                          {design.contactQrSize === size && (
+                            <Check className="size-3" strokeWidth={3} />
+                          )}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+                <div className="xl:col-span-2">
+                  <ColorField
+                    label={strings.quoteStudioQrColour}
+                    help={strings.quoteStudioQrColourHelp}
+                    value={design.contactQrColor}
+                    onChange={(contactQrColor) =>
+                      onChange((current) => ({
+                        ...current,
+                        showContactQr: true,
+                        contactQrColor,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+            </section>
+            <section className="rounded-2xl border border-subtle bg-surface p-6 shadow-sm sm:p-8">
+              <div>
+                <div className="flex flex-wrap items-center justify-between gap-5">
+                  <div className="flex items-start gap-4">
+                    <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+                      <Building2 className="size-5" aria-hidden="true" />
+                    </span>
+                    <div>
+                      <h3 className="text-xl font-semibold tracking-tight text-primary">
+                        {strings.quoteStudioCompanyInformation}
+                      </h3>
+                      <p className="mt-2 text-sm leading-relaxed text-secondary">
+                        {strings.quoteStudioCompanyLinkedHelp}
+                        <span className="block">
+                          {strings.quoteStudioOverrideHelp}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  {design.headerDetailsCustomized ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon={<RotateCcw aria-hidden="true" />}
+                      onClick={() =>
+                        onChange((current) => ({
+                          ...current,
+                          headerDetailsCustomized: false,
+                        }))
+                      }
+                    >
+                      {strings.quoteStudioUseYourDetails}
+                    </Button>
+                  ) : (
+                    <span className="inline-flex min-h-10 items-center gap-2 rounded-full bg-accent-soft px-4 text-sm font-semibold text-accent">
+                      <Link className="size-4" aria-hidden="true" />
+                      {strings.quoteStudioLinkedYourDetails}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="mt-8 grid gap-x-8 gap-y-5 sm:grid-cols-2">
+                <HeaderField
+                  label={strings.quoteStudioCompanyName}
+                  icon={<Building2 />}
+                  value={displayedHeaderDetails.companyName}
+                  placeholder={strings.quoteStudioCompanyNamePlaceholder}
+                  onChange={(value) => setHeaderDetail("companyName", value)}
+                />
+                <HeaderField
+                  label={strings.quoteStudioWebsite}
+                  icon={<Globe2 />}
+                  value={displayedHeaderDetails.website}
+                  placeholder={strings.quoteStudioWebsitePlaceholder}
+                  onChange={(value) => setHeaderDetail("website", value)}
+                />
+                <HeaderField
+                  label={strings.quoteStudioEmail}
+                  icon={<Mail />}
+                  value={displayedHeaderDetails.email}
+                  placeholder={strings.quoteStudioEmailPlaceholder}
+                  onChange={(value) => setHeaderDetail("email", value)}
+                />
+                <HeaderField
+                  label={strings.quoteStudioPhone}
+                  icon={<Phone />}
+                  value={displayedHeaderDetails.phone}
+                  placeholder={strings.quoteStudioPhonePlaceholder}
+                  onChange={(value) => setHeaderDetail("phone", value)}
+                />
+                <label className="grid gap-2 sm:col-span-2">
+                  <span className="text-sm font-semibold text-primary">
+                    {strings.quoteStudioAddress}
+                  </span>
+                  <textarea
+                    className="min-h-32 resize-y rounded-xl border border-default bg-surface px-4 py-4 text-base leading-relaxed text-primary placeholder:text-tertiary hover:border-accent focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10"
+                    value={displayedHeaderDetails.address}
+                    placeholder={strings.quoteStudioAddressPlaceholder}
+                    onChange={(event) =>
+                      setHeaderDetail("address", event.target.value)
+                    }
+                  />
+                </label>
+                <HeaderField
+                  label={strings.quoteStudioVatId}
+                  value={displayedHeaderDetails.vatId}
+                  placeholder={strings.quoteStudioVatPlaceholder}
+                  onChange={(value) => setHeaderDetail("vatId", value)}
+                />
+                <HeaderField
+                  label={strings.quoteStudioCompanyNumber}
+                  value={displayedHeaderDetails.registrationNo}
+                  placeholder={strings.quoteStudioCompanyNumberPlaceholder}
+                  onChange={(value) => setHeaderDetail("registrationNo", value)}
+                />
+              </div>
+            </section>
+            <section className="rounded-2xl border border-subtle bg-surface p-6 shadow-sm sm:p-8">
+              <div className="flex flex-wrap items-center justify-between gap-5">
+                <div className="flex items-start gap-4">
+                  <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+                    <ContactRound className="size-5" aria-hidden="true" />
+                  </span>
+                  <div>
+                    <h3 className="text-xl font-semibold tracking-tight text-primary">
+                      {strings.quoteStudioCustomerInformation}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-secondary">
+                      {strings.quoteStudioCustomerInformationHelp}
+                      <span className="block">
+                        {strings.quoteStudioCustomerOverrideHelp}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+                {design.customerDetailsCustomized ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon={<RotateCcw aria-hidden="true" />}
+                    onClick={() =>
+                      onChange((current) => ({
+                        ...current,
+                        customerDetailsCustomized: false,
+                      }))
+                    }
                   >
-                    <span className={cx("grid h-24 gap-2 rounded-xl bg-raised p-3", design.headerAlignment === "left" ? choice.columns : choice.reverseColumns)} aria-hidden="true">
-                      <span className={cx("flex items-center justify-center rounded-lg bg-surface text-primary", design.headerAlignment === "right" && "order-2", selected && "ring-1 ring-accent/30")}>
-                        <Building2 className="size-6" strokeWidth={1.7} />
+                    {strings.quoteStudioUseSelectedCustomer}
+                  </Button>
+                ) : (
+                  <span className="inline-flex min-h-10 items-center gap-2 rounded-full bg-accent-soft px-4 text-sm font-semibold text-accent">
+                    <Link className="size-4" aria-hidden="true" />
+                    {strings.quoteStudioLinkedSelectedCustomer}
+                  </span>
+                )}
+              </div>
+              <div className="mt-8 grid gap-x-8 gap-y-5 sm:grid-cols-2">
+                <HeaderField
+                  label={strings.quoteStudioCompanyName}
+                  icon={<Building2 />}
+                  value={displayedCustomerDetails.companyName}
+                  placeholder={strings.quoteStudioCustomerCompanyPlaceholder}
+                  onChange={(value) => setCustomerDetail("companyName", value)}
+                />
+                <HeaderField
+                  label={strings.quoteStudioContactPerson}
+                  icon={<ContactRound />}
+                  value={displayedCustomerDetails.contactName}
+                  placeholder={strings.quoteStudioContactNamePlaceholder}
+                  onChange={(value) => setCustomerDetail("contactName", value)}
+                />
+                <HeaderField
+                  label={strings.quoteStudioEmail}
+                  icon={<Mail />}
+                  value={displayedCustomerDetails.email}
+                  placeholder={strings.quoteStudioCustomerEmailPlaceholder}
+                  onChange={(value) => setCustomerDetail("email", value)}
+                />
+                <HeaderField
+                  label={strings.quoteStudioPhone}
+                  icon={<Phone />}
+                  value={displayedCustomerDetails.phone}
+                  placeholder={strings.quoteStudioPhonePlaceholder}
+                  onChange={(value) => setCustomerDetail("phone", value)}
+                />
+                <label className="grid gap-2 sm:col-span-2">
+                  <span className="text-sm font-semibold text-primary">
+                    {strings.quoteStudioAddress}
+                  </span>
+                  <textarea
+                    className="min-h-32 resize-y rounded-xl border border-default bg-surface px-4 py-4 text-base leading-relaxed text-primary placeholder:text-tertiary hover:border-accent focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10"
+                    value={displayedCustomerDetails.address}
+                    placeholder={strings.quoteStudioAddressPlaceholder}
+                    onChange={(event) =>
+                      setCustomerDetail("address", event.target.value)
+                    }
+                  />
+                </label>
+                <HeaderField
+                  label={strings.quoteStudioVatId}
+                  value={displayedCustomerDetails.vatId}
+                  placeholder={strings.quoteStudioCustomerVatPlaceholder}
+                  onChange={(value) => setCustomerDetail("vatId", value)}
+                />
+              </div>
+            </section>
+          </>
+        )}
+        <div className="min-w-0 space-y-7">
+          {mode === "header" && (
+            <>
+              <section>
+                <h3 className="text-base font-semibold text-primary">
+                  {strings.quoteStudioHeaderStyle}
+                </h3>
+                <p className="mt-1 text-sm text-secondary">
+                  {strings.quoteStudioHeaderStyleHelp}
+                </p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                  {headerStyleChoices.map((choice) => (
+                    <button
+                      key={choice.id}
+                      type="button"
+                      aria-pressed={design.headerStyle === choice.id}
+                      className={cx(
+                        "relative min-h-40 rounded-2xl border p-4 text-left transition-colors hover:border-accent hover:bg-accent-soft/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
+                        design.headerStyle === choice.id
+                          ? "border-accent bg-accent-soft/25"
+                          : "border-default bg-surface",
+                      )}
+                      onClick={() =>
+                        onChange((current) => ({
+                          ...current,
+                          headerStyle: choice.id,
+                        }))
+                      }
+                    >
+                      <HeaderStylePreview style={choice.id} />
+                      <span className="mt-4 flex items-start justify-between gap-3">
+                        <span>
+                          <strong className="block text-sm font-semibold text-primary">
+                            {choice.name}
+                          </strong>
+                          <small className="mt-1 block text-xs leading-relaxed text-secondary">
+                            {choice.help}
+                          </small>
+                        </span>
+                        <span
+                          className={cx(
+                            "grid size-5 shrink-0 place-items-center rounded-full border",
+                            design.headerStyle === choice.id
+                              ? "border-accent bg-accent text-white"
+                              : "border-default",
+                          )}
+                        >
+                          {design.headerStyle === choice.id && (
+                            <Check className="size-3" />
+                          )}
+                        </span>
                       </span>
-                      <span className={cx("flex items-center justify-center rounded-lg bg-surface text-accent", design.headerAlignment === "right" && "order-1", selected && "ring-1 ring-accent/30")}>
-                        <ContactRound className="size-6" strokeWidth={1.7} />
+                    </button>
+                  ))}
+                </div>
+              </section>
+              <section>
+                <div>
+                  <h3 className="text-base font-semibold text-primary">
+                    {strings.quoteStudioHeaderArrangement}
+                  </h3>
+                  <p className="mt-1 text-sm text-secondary">
+                    {strings.quoteStudioHeaderArrangementHelp}
+                  </p>
+                </div>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  {(["left", "right"] as const).map((alignment) => (
+                    <button
+                      key={alignment}
+                      type="button"
+                      aria-pressed={design.headerAlignment === alignment}
+                      className={cx(
+                        "group relative min-h-40 overflow-hidden rounded-2xl border !p-5 text-left transition-colors hover:border-accent hover:bg-accent-soft/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
+                        design.headerAlignment === alignment
+                          ? "border-accent bg-accent-soft/30"
+                          : "border-default bg-surface",
+                      )}
+                      onClick={() =>
+                        onChange((current) => ({
+                          ...current,
+                          headerAlignment: alignment,
+                        }))
+                      }
+                    >
+                      <span
+                        className={cx(
+                          "flex h-20 items-center justify-between gap-5 rounded-xl bg-raised px-5",
+                          alignment === "right" && "flex-row-reverse",
+                        )}
+                        aria-hidden="true"
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <span className="size-9 rounded-lg border border-accent/20 bg-accent-soft" />
+                          <span className="space-y-1.5">
+                            <span className="block h-2 w-16 rounded-full bg-primary/20" />
+                            <span className="block h-1.5 w-11 rounded-full bg-primary/10" />
+                          </span>
+                        </span>
+                        <span className="space-y-1.5">
+                          <span className="block h-1.5 w-10 rounded-full bg-primary/15" />
+                          <span className="block h-1.5 w-14 rounded-full bg-accent/70" />
+                        </span>
                       </span>
-                    </span>
-                    <span className={cx("absolute right-2 top-2 grid size-6 place-items-center rounded-full border", selected ? "border-accent bg-accent text-white" : "border-default bg-surface group-hover:border-accent")} aria-hidden="true">
-                      {selected && <Check className="size-3" />}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
+                      <span className="flex items-start justify-between gap-5 pt-5">
+                        <span>
+                          <strong className="block text-sm font-semibold text-primary">
+                            {alignment === "left"
+                              ? strings.quoteStudioLogoLeft
+                              : strings.quoteStudioLogoRight}
+                          </strong>
+                          <small className="mt-1 block text-xs font-normal leading-relaxed text-secondary">
+                            {alignment === "left"
+                              ? strings.quoteStudioLogoLeftHelp
+                              : strings.quoteStudioLogoRightHelp}
+                          </small>
+                        </span>
+                        <span
+                          className={cx(
+                            "mt-0.5 grid size-6 shrink-0 place-items-center rounded-full border transition-colors",
+                            design.headerAlignment === alignment
+                              ? "border-accent bg-accent text-white"
+                              : "border-default bg-surface group-hover:border-accent",
+                          )}
+                        >
+                          {design.headerAlignment === alignment && (
+                            <Check className="size-3.5" />
+                          )}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+              <section className="border-t border-subtle pt-7">
+                <div>
+                  <h3 className="text-base font-semibold text-primary">
+                    {strings.quoteStudioColumnBalance}
+                  </h3>
+                  <p className="mt-1 text-sm text-secondary">
+                    {strings.quoteStudioColumnBalanceHelp}
+                  </p>
+                </div>
+                <div
+                  className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3"
+                  role="radiogroup"
+                  aria-label={strings.quoteStudioColumnBalanceA11y}
+                >
+                  {headerRatioChoices.map((choice) => {
+                    const selected = design.headerRatio === choice.id;
+                    const [company = "50", customer = "50"] =
+                      choice.id.split("-");
+                    return (
+                      <button
+                        key={choice.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        aria-label={strings.quoteStudioColumnRatioA11y(
+                          company,
+                          customer,
+                        )}
+                        className={cx(
+                          "group relative rounded-2xl p-3 transition-colors hover:bg-accent-soft/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
+                          selected && "bg-accent-soft/40",
+                        )}
+                        onClick={() =>
+                          onChange((current) => ({
+                            ...current,
+                            headerRatio: choice.id,
+                          }))
+                        }
+                      >
+                        <span
+                          className={cx(
+                            "grid h-24 gap-2 rounded-xl bg-raised p-3",
+                            design.headerAlignment === "left"
+                              ? choice.columns
+                              : choice.reverseColumns,
+                          )}
+                          aria-hidden="true"
+                        >
+                          <span
+                            className={cx(
+                              "flex items-center justify-center rounded-lg bg-surface text-primary",
+                              design.headerAlignment === "right" && "order-2",
+                              selected && "ring-1 ring-accent/30",
+                            )}
+                          >
+                            <Building2 className="size-6" strokeWidth={1.7} />
+                          </span>
+                          <span
+                            className={cx(
+                              "flex items-center justify-center rounded-lg bg-surface text-accent",
+                              design.headerAlignment === "right" && "order-1",
+                              selected && "ring-1 ring-accent/30",
+                            )}
+                          >
+                            <ContactRound
+                              className="size-6"
+                              strokeWidth={1.7}
+                            />
+                          </span>
+                        </span>
+                        <span
+                          className={cx(
+                            "absolute right-2 top-2 grid size-6 place-items-center rounded-full border",
+                            selected
+                              ? "border-accent bg-accent text-white"
+                              : "border-default bg-surface group-hover:border-accent",
+                          )}
+                          aria-hidden="true"
+                        >
+                          {selected && <Check className="size-3" />}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
             </>
           )}
           {mode === "document" && (
             <>
-          <section className="rounded-2xl border border-subtle bg-surface p-6 shadow-sm sm:p-8">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <h3 className="text-2xl font-semibold tracking-tight text-primary">
-                  {strings.quoteStudioDocumentPalette}
-                </h3>
-                <p className="mt-2 text-base text-secondary">
-                  {strings.quoteStudioDocumentPaletteHelp}
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={<RotateCcw aria-hidden="true" />}
-                onClick={() =>
-                  onChange((current) => ({
-                    ...current,
-                    colors: DEFAULT_COLORS,
-                  }))
-                }
-              >
-                {strings.quoteStudioResetDefaults}
-              </Button>
-            </div>
-            <div className="mt-8 grid gap-8 xl:grid-cols-2 xl:gap-0">
-              <div>
-                <div className="mb-6 flex items-center gap-4">
-                  <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
-                    <FileText className="size-5" aria-hidden="true" />
-                  </span>
+              <section className="rounded-2xl border border-subtle bg-surface p-6 shadow-sm sm:p-8">
+                <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <h4 className="text-base font-semibold text-primary">{strings.quoteStudioDocument}</h4>
-                    <p className="mt-1 text-sm text-secondary">{strings.quoteStudioDocumentHelp}</p>
+                    <h3 className="text-2xl font-semibold tracking-tight text-primary">
+                      {strings.quoteStudioDocumentPalette}
+                    </h3>
+                    <p className="mt-2 text-base text-secondary">
+                      {strings.quoteStudioDocumentPaletteHelp}
+                    </p>
                   </div>
-                </div>
-                <div className="grid gap-3">
-                  <ColorField
-                    label={strings.quoteStudioAccent}
-                    help={strings.quoteStudioAccentHelp}
-                    value={design.colors.accent}
-                    onChange={(value) => setColor("accent", value)}
-                  />
-                  <ColorField
-                    label={strings.quoteStudioContactIcons}
-                    help={strings.quoteStudioContactIconsHelp}
-                    value={design.colors.contactIcons}
-                    onChange={(value) => setColor("contactIcons", value)}
-                  />
-                  <ColorField
-                    label={strings.quoteStudioPage}
-                    help={strings.quoteStudioPageHelp}
-                    value={design.colors.background}
-                    onChange={(value) => setColor("background", value)}
-                  />
-                  <ColorField
-                    label={strings.quoteStudioHeader}
-                    help={strings.quoteStudioHeaderHelp}
-                    value={design.colors.headerBackground}
-                    onChange={(value) => setColor("headerBackground", value)}
-                  />
-                  <ColorField
-                    label={strings.quoteStudioText}
-                    help={strings.quoteStudioTextHelp}
-                    value={design.colors.text}
-                    onChange={(value) => setColor("text", value)}
-                  />
-                  <ColorField
-                    label={strings.quoteStudioBulletDots}
-                    help={strings.quoteStudioListMarkers}
-                    value={design.colors.bulletMarker}
-                    onChange={(value) => setColor("bulletMarker", value)}
-                  />
-                  <ColorField
-                    label={strings.quoteStudioNumberMarkers}
-                    help={strings.quoteStudioNumberedSteps}
-                    value={design.colors.numberMarker}
-                    onChange={(value) => setColor("numberMarker", value)}
-                  />
-                </div>
-              </div>
-              <div className="border-t border-subtle pt-8 xl:border-l xl:border-t-0 xl:pl-8 xl:pt-0">
-                <div className="mb-6 flex items-center gap-4">
-                  <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
-                    <Table2 className="size-5" aria-hidden="true" />
-                  </span>
-                  <div>
-                    <h4 className="text-base font-semibold text-primary">{strings.quoteStudioPricingTables}</h4>
-                    <p className="mt-1 text-sm text-secondary">{strings.quoteStudioPricingTablesHelp}</p>
-                  </div>
-                </div>
-                <div className="grid gap-3">
-                  <ColorField
-                    label={strings.quoteStudioTableHeading}
-                    help={strings.quoteStudioTableHeadingHelp}
-                    value={design.colors.tableHeader}
-                    onChange={(value) => setColor("tableHeader", value)}
-                  />
-                  <ColorField
-                    label={strings.quoteStudioTableRows}
-                    help={strings.quoteStudioTableRowsHelp}
-                    value={design.colors.tableRows}
-                    onChange={(value) => setColor("tableRows", value)}
-                  />
-                </div>
-              </div>
-            </div>
-          </section>
-          <section className="border-t border-subtle pt-7">
-            <div>
-              <h3 className="text-base font-semibold text-primary">
-                {strings.quoteStudioTypography}
-              </h3>
-              <p className="mt-1 text-sm text-secondary">
-                {strings.quoteStudioTypographyHelp}
-              </p>
-            </div>
-            <div className="mt-5 grid gap-4 sm:grid-cols-3">
-              {themeChoices.map((theme) => (
-                <button
-                  key={theme.id}
-                  type="button"
-                  aria-pressed={design.theme === theme.id}
-                  className={cx(
-                    "group relative min-h-52 overflow-hidden rounded-2xl border !p-4 text-left transition-colors hover:border-accent hover:bg-accent-soft/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
-                    design.theme === theme.id
-                      ? "border-accent bg-accent-soft/30"
-                      : "border-default bg-surface",
-                  )}
-                  onClick={() =>
-                    onChange((current) => ({ ...current, theme: theme.id }))
-                  }
-                >
-                  <span
-                    className={cx(
-                      "block h-28 rounded-xl border border-subtle bg-raised px-4 py-4",
-                    )}
-                    aria-hidden="true"
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon={<RotateCcw aria-hidden="true" />}
+                    onClick={() =>
+                      onChange((current) => ({
+                        ...current,
+                        colors: DEFAULT_COLORS,
+                      }))
+                    }
                   >
-                    <span
+                    {strings.quoteStudioResetDefaults}
+                  </Button>
+                </div>
+                <div className="mt-8 grid gap-8 xl:grid-cols-2 xl:gap-0">
+                  <div>
+                    <div className="mb-6 flex items-center gap-4">
+                      <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+                        <FileText className="size-5" aria-hidden="true" />
+                      </span>
+                      <div>
+                        <h4 className="text-base font-semibold text-primary">
+                          {strings.quoteStudioDocument}
+                        </h4>
+                        <p className="mt-1 text-sm text-secondary">
+                          {strings.quoteStudioDocumentHelp}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid gap-3">
+                      <ColorField
+                        label={strings.quoteStudioAccent}
+                        help={strings.quoteStudioAccentHelp}
+                        value={design.colors.accent}
+                        onChange={(value) => setColor("accent", value)}
+                      />
+                      <ColorField
+                        label={strings.quoteStudioContactIcons}
+                        help={strings.quoteStudioContactIconsHelp}
+                        value={design.colors.contactIcons}
+                        onChange={(value) => setColor("contactIcons", value)}
+                      />
+                      <ColorField
+                        label={strings.quoteStudioPage}
+                        help={strings.quoteStudioPageHelp}
+                        value={design.colors.background}
+                        onChange={(value) => setColor("background", value)}
+                      />
+                      <ColorField
+                        label={strings.quoteStudioHeader}
+                        help={strings.quoteStudioHeaderHelp}
+                        value={design.colors.headerBackground}
+                        onChange={(value) =>
+                          setColor("headerBackground", value)
+                        }
+                      />
+                      <ColorField
+                        label={strings.quoteStudioText}
+                        help={strings.quoteStudioTextHelp}
+                        value={design.colors.text}
+                        onChange={(value) => setColor("text", value)}
+                      />
+                      <ColorField
+                        label={strings.quoteStudioBulletDots}
+                        help={strings.quoteStudioListMarkers}
+                        value={design.colors.bulletMarker}
+                        onChange={(value) => setColor("bulletMarker", value)}
+                      />
+                      <ColorField
+                        label={strings.quoteStudioNumberMarkers}
+                        help={strings.quoteStudioNumberedSteps}
+                        value={design.colors.numberMarker}
+                        onChange={(value) => setColor("numberMarker", value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="border-t border-subtle pt-8 xl:border-l xl:border-t-0 xl:pl-8 xl:pt-0">
+                    <div className="mb-6 flex items-center gap-4">
+                      <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+                        <Table2 className="size-5" aria-hidden="true" />
+                      </span>
+                      <div>
+                        <h4 className="text-base font-semibold text-primary">
+                          {strings.quoteStudioPricingTables}
+                        </h4>
+                        <p className="mt-1 text-sm text-secondary">
+                          {strings.quoteStudioPricingTablesHelp}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid gap-3">
+                      <ColorField
+                        label={strings.quoteStudioTableHeading}
+                        help={strings.quoteStudioTableHeadingHelp}
+                        value={design.colors.tableHeader}
+                        onChange={(value) => setColor("tableHeader", value)}
+                      />
+                      <ColorField
+                        label={strings.quoteStudioTableRows}
+                        help={strings.quoteStudioTableRowsHelp}
+                        value={design.colors.tableRows}
+                        onChange={(value) => setColor("tableRows", value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </section>
+              <section className="border-t border-subtle pt-7">
+                <div>
+                  <h3 className="text-base font-semibold text-primary">
+                    {strings.quoteStudioTypography}
+                  </h3>
+                  <p className="mt-1 text-sm text-secondary">
+                    {strings.quoteStudioTypographyHelp}
+                  </p>
+                </div>
+                <div className="mt-5 grid gap-4 sm:grid-cols-3">
+                  {themeChoices.map((theme) => (
+                    <button
+                      key={theme.id}
+                      type="button"
+                      aria-pressed={design.theme === theme.id}
                       className={cx(
-                        "block text-xl leading-none text-primary",
-                        theme.id === "modern" && "font-semibold tracking-tight",
-                      theme.id === "editorial" && "font-editorial",
-                        theme.id === "minimal" &&
-                          "font-light uppercase tracking-[0.14em]",
-                      )}
-                    >
-                      {strings.quoteStudioProposal}
-                    </span>
-                    <span
-                      className={cx(
-                        "mt-4 block h-1.5 rounded-full bg-primary/20",
-                        theme.id === "modern" && "w-4/5",
-                        theme.id === "editorial" && "w-full",
-                        theme.id === "minimal" && "w-3/5",
-                      )}
-                    />
-                    <span className="mt-2 block h-1.5 w-2/3 rounded-full bg-primary/10" />
-                  </span>
-                  <span className="flex items-start justify-between gap-3 px-1 pb-1 pt-4">
-                    <span>
-                      <strong className="block text-sm font-semibold text-primary">
-                        {theme.name}
-                      </strong>
-                      <small className="mt-1 block text-xs leading-relaxed text-secondary">
-                        {theme.help}
-                      </small>
-                    </span>
-                    <span
-                      className={cx(
-                        "grid size-6 shrink-0 place-items-center rounded-full border transition-colors",
+                        "group relative min-h-52 overflow-hidden rounded-2xl border !p-4 text-left transition-colors hover:border-accent hover:bg-accent-soft/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
                         design.theme === theme.id
-                          ? "border-accent bg-accent text-on-accent"
-                          : "border-default bg-surface group-hover:border-accent",
+                          ? "border-accent bg-accent-soft/30"
+                          : "border-default bg-surface",
                       )}
+                      onClick={() =>
+                        onChange((current) => ({ ...current, theme: theme.id }))
+                      }
                     >
-                      {design.theme === theme.id && (
-                        <Check className="size-3.5" aria-hidden="true" />
-                      )}
-                    </span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
+                      <span
+                        className={cx(
+                          "block h-28 rounded-xl border border-subtle bg-raised px-4 py-4",
+                        )}
+                        aria-hidden="true"
+                      >
+                        <span
+                          className={cx(
+                            "block text-xl leading-none text-primary",
+                            theme.id === "modern" &&
+                              "font-semibold tracking-tight",
+                            theme.id === "editorial" && "font-editorial",
+                            theme.id === "minimal" &&
+                              "font-light uppercase tracking-[0.14em]",
+                          )}
+                        >
+                          {strings.quoteStudioProposal}
+                        </span>
+                        <span
+                          className={cx(
+                            "mt-4 block h-1.5 rounded-full bg-primary/20",
+                            theme.id === "modern" && "w-4/5",
+                            theme.id === "editorial" && "w-full",
+                            theme.id === "minimal" && "w-3/5",
+                          )}
+                        />
+                        <span className="mt-2 block h-1.5 w-2/3 rounded-full bg-primary/10" />
+                      </span>
+                      <span className="flex items-start justify-between gap-3 px-1 pb-1 pt-4">
+                        <span>
+                          <strong className="block text-sm font-semibold text-primary">
+                            {theme.name}
+                          </strong>
+                          <small className="mt-1 block text-xs leading-relaxed text-secondary">
+                            {theme.help}
+                          </small>
+                        </span>
+                        <span
+                          className={cx(
+                            "grid size-6 shrink-0 place-items-center rounded-full border transition-colors",
+                            design.theme === theme.id
+                              ? "border-accent bg-accent text-on-accent"
+                              : "border-default bg-surface group-hover:border-accent",
+                          )}
+                        >
+                          {design.theme === theme.id && (
+                            <Check className="size-3.5" aria-hidden="true" />
+                          )}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </section>
             </>
           )}
         </div>
@@ -4092,16 +4739,30 @@ function CustomizeTable({
       }
     >
       <section>
-        <h3 className="text-sm font-semibold text-primary">{strings.quoteStudioChooseLayout}</h3>
+        <h3 className="text-sm font-semibold text-primary">
+          {strings.quoteStudioChooseLayout}
+        </h3>
         <p className="mt-1 text-sm text-secondary">
           {strings.quoteStudioChooseLayoutHelp}
         </p>
         <div className="mt-5 grid gap-5 sm:grid-cols-3">
           {(
             [
-              ["compact", strings.quoteStudioCompact, strings.quoteStudioCompactHelp],
-              ["detailed", strings.quoteStudioDetailed, strings.quoteStudioDetailedHelp],
-              ["catalogue", strings.quoteStudioCatalogue, strings.quoteStudioCatalogueHelp],
+              [
+                "compact",
+                strings.quoteStudioCompact,
+                strings.quoteStudioCompactHelp,
+              ],
+              [
+                "detailed",
+                strings.quoteStudioDetailed,
+                strings.quoteStudioDetailedHelp,
+              ],
+              [
+                "catalogue",
+                strings.quoteStudioCatalogue,
+                strings.quoteStudioCatalogueHelp,
+              ],
             ] as const
           ).map(([layout, label, help]) => (
             <button
@@ -4154,7 +4815,9 @@ function CustomizeTable({
       </section>
 
       <section className="mt-8 border-t border-subtle pt-7">
-        <h3 className="text-sm font-semibold text-primary">{strings.quoteStudioProductContent}</h3>
+        <h3 className="text-sm font-semibold text-primary">
+          {strings.quoteStudioProductContent}
+        </h3>
         <p className="mt-1 text-sm text-secondary">
           {strings.quoteStudioProductContentHelp}
         </p>
@@ -4185,7 +4848,9 @@ function CustomizeTable({
       </section>
 
       <section className="mt-8 border-t border-subtle pt-7">
-        <h3 className="text-sm font-semibold text-primary">{strings.quoteStudioVisibleColumns}</h3>
+        <h3 className="text-sm font-semibold text-primary">
+          {strings.quoteStudioVisibleColumns}
+        </h3>
         <p className="mt-1 text-sm text-secondary">
           {strings.quoteStudioVisibleColumnsHelp}
         </p>
@@ -4225,9 +4890,21 @@ function CustomizeTable({
         <div className="mt-5 grid gap-5 sm:grid-cols-3">
           {(
             [
-              ["summary", strings.quoteStudioSummaryCard, strings.quoteStudioSummaryCardHelp],
-              ["full", strings.quoteStudioFullWidth, strings.quoteStudioFullWidthHelp],
-              ["footer", strings.quoteStudioTableFooter, strings.quoteStudioTableFooterHelp],
+              [
+                "summary",
+                strings.quoteStudioSummaryCard,
+                strings.quoteStudioSummaryCardHelp,
+              ],
+              [
+                "full",
+                strings.quoteStudioFullWidth,
+                strings.quoteStudioFullWidthHelp,
+              ],
+              [
+                "footer",
+                strings.quoteStudioTableFooter,
+                strings.quoteStudioTableFooterHelp,
+              ],
             ] as const
           ).map(([placement, label, help]) => (
             <button
@@ -4279,9 +4956,21 @@ function CustomizeTable({
         <div className="mt-5 grid gap-4 sm:grid-cols-3">
           {(
             [
-              ["total", strings.quoteStudioTotalOnly, strings.quoteStudioTotalOnlyHelp],
-              ["summary", strings.quoteStudioNetVatTotal, strings.quoteStudioNetVatTotalHelp],
-              ["breakdown", strings.quoteStudioVatBreakdown, strings.quoteStudioVatBreakdownHelp],
+              [
+                "total",
+                strings.quoteStudioTotalOnly,
+                strings.quoteStudioTotalOnlyHelp,
+              ],
+              [
+                "summary",
+                strings.quoteStudioNetVatTotal,
+                strings.quoteStudioNetVatTotalHelp,
+              ],
+              [
+                "breakdown",
+                strings.quoteStudioVatBreakdown,
+                strings.quoteStudioVatBreakdownHelp,
+              ],
             ] as const
           ).map(([detail, label, help]) => (
             <TableToggle

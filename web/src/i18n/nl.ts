@@ -1832,26 +1832,33 @@ export const nl: Partial<Catalog> = {
   billingIncludingVat: "Inclusief btw",
   billingQuoteTemplate: "Offertesjabloon",
   billingQuoteStartFrom: "Begin met een sjabloon",
-  billingQuoteTemplateHint: "Gebruik je actuele prijslijst als nuttig vertrekpunt.",
+  billingQuoteTemplateHint:
+    "Gebruik je actuele prijslijst als nuttig vertrekpunt.",
   billingQuoteTemplateBlank: "Lege offerte",
   billingQuoteTemplateBlankDescription: "Begin met een lege prijstabel.",
   billingQuoteTemplateServices: "Professionele diensten",
-  billingQuoteTemplateServicesDescription: "Een gericht aanbod met twee kerndiensten.",
+  billingQuoteTemplateServicesDescription:
+    "Een gericht aanbod met twee kerndiensten.",
   billingQuoteTemplateProject: "Projectoplevering",
-  billingQuoteTemplateProjectDescription: "Een bredere scope met drie leveringsonderdelen.",
+  billingQuoteTemplateProjectDescription:
+    "Een bredere scope met drie leveringsonderdelen.",
   billingQuoteTemplateRetainer: "Doorlopende samenwerking",
-  billingQuoteTemplateRetainerDescription: "Begin met een terugkerende maandelijkse dienst.",
+  billingQuoteTemplateRetainerDescription:
+    "Begin met een terugkerende maandelijkse dienst.",
   quoteStudioTemplateServicesHeading: "Diensten op maat voor u",
-  quoteStudioTemplateServicesIntroduction: "Een helder overzicht van de diensten, resultaten en investering die we voor uw organisatie voorstellen.",
+  quoteStudioTemplateServicesIntroduction:
+    "Een helder overzicht van de diensten, resultaten en investering die we voor uw organisatie voorstellen.",
   quoteStudioTemplateServicesTable: "Diensten en tarieven",
   quoteStudioTemplateProjectHeading: "Projectvoorstel",
-  quoteStudioTemplateProjectIntroduction: "Dit voorstel brengt de projectomvang, aanpak en commerciële afspraken overzichtelijk samen.",
+  quoteStudioTemplateProjectIntroduction:
+    "Dit voorstel brengt de projectomvang, aanpak en commerciële afspraken overzichtelijk samen.",
   quoteStudioTemplateProjectDiscovery: "Verkenning en afstemming",
   quoteStudioTemplateProjectDelivery: "Uitvoering en beoordeling",
   quoteStudioTemplateProjectHandover: "Lancering en overdracht",
   quoteStudioTemplateProjectTable: "Projectinvestering",
   quoteStudioTemplateRetainerHeading: "Maandelijks partnerschap",
-  quoteStudioTemplateRetainerIntroduction: "Doorlopende ondersteuning met een voorspelbare maandelijkse investering en duidelijke werkafspraken.",
+  quoteStudioTemplateRetainerIntroduction:
+    "Doorlopende ondersteuning met een voorspelbare maandelijkse investering en duidelijke werkafspraken.",
   quoteStudioTemplateRetainerTable: "Maandelijkse diensten",
   quoteStudioTemplateRetainerReporting: "Regelmatige voortgangsrapportage",
   quoteStudioTemplateRetainerSupport: "Ondersteuning en planning met voorrang",
@@ -1863,8 +1870,10 @@ export const nl: Partial<Catalog> = {
   billingQuoteRemoveIncludedItem: (name: string) => `${name} verwijderen`,
   billingQuoteAddFromPriceList: "Items toevoegen",
   billingQuoteSearchPriceList: "Prijslijst doorzoeken",
-  billingQuoteAllItemsIncluded: "Alle actieve prijslijstitems zijn al inbegrepen.",
-  billingQuoteNoMatchingItems: "Geen prijslijstitems gevonden voor deze zoekopdracht.",
+  billingQuoteAllItemsIncluded:
+    "Alle actieve prijslijstitems zijn al inbegrepen.",
+  billingQuoteNoMatchingItems:
+    "Geen prijslijstitems gevonden voor deze zoekopdracht.",
   billingQuotePerItem: "per stuk",
   billingQuoteContinueToEditor: "Verder naar editor",
   billingNewQuote: "Nieuwe offerte",
@@ -6754,19 +6763,23 @@ export const nl: Partial<Catalog> = {
   billingImportMissingName: "Naam ontbreekt",
   billingImportInvalidPrice: "Ongeldige prijs",
   billingImportInvalidVat: "Ongeldig btw-tarief",
-  billingImportReadFailed: "We konden deze prijslijst niet lezen. Probeer een CSV-, Excel-, PNG-, JPEG- of WebP-bestand.",
-  billingImportSaveFailed: "De import is gestopt voordat alle artikelen konden worden opgeslagen.",
+  billingImportReadFailed:
+    "We konden deze prijslijst niet lezen. Probeer een CSV-, Excel-, PNG-, JPEG- of WebP-bestand.",
+  billingImportSaveFailed:
+    "De import is gestopt voordat alle artikelen konden worden opgeslagen.",
   billingImportNotInFile: "Niet in dit bestand",
   billingImportTitle: "Prijslijst importeren",
   billingImportItems: (count: number) => `${count} artikelen importeren`,
   billingImportViewPriceList: "Prijslijst bekijken",
   billingImportDropTitle: "Zet hier een prijslijst neer",
-  billingImportDropHelp: "Excel- en CSV-bestanden worden direct in uw browser gelezen. Bij een foto of schermafbeelding haalt alo AI de rijen eruit zodat u ze kunt controleren.",
+  billingImportDropHelp:
+    "Excel- en CSV-bestanden worden direct in uw browser gelezen. Bij een foto of schermafbeelding haalt alo AI de rijen eruit zodat u ze kunt controleren.",
   billingImportSpreadsheetFormats: "CSV · XLSX",
   billingImportImageFormats: "PNG · JPEG · WebP",
   billingImportChooseFile: "Bestand kiezen",
   billingImportReading: (name: string) => `${name} wordt gelezen…`,
-  billingImportRowsFound: (count: number) => `${count} rijen gevonden. Controleer de koppeling en sluit uit wat u niet wilt importeren.`,
+  billingImportRowsFound: (count: number) =>
+    `${count} rijen gevonden. Controleer de koppeling en sluit uit wat u niet wilt importeren.`,
   billingImportReplaceFile: "Bestand vervangen",
   billingImportMatchColumns: "Kolommen koppelen",
   billingImportSku: "Artikelnummer",
@@ -6777,8 +6790,10 @@ export const nl: Partial<Catalog> = {
   billingImportRow: (number: number) => `rij ${number}`,
   billingImportAlreadyExists: "Bestaat al",
   billingImportReady: "Gereed",
-  billingImportComplete: (count: number) => `${count} prijslijstartikelen geïmporteerd`,
-  billingImportCompleteHelp: "Ze zijn nu beschikbaar voor offertes, facturen en gedeelde prijsverbindingen.",
+  billingImportComplete: (count: number) =>
+    `${count} prijslijstartikelen geïmporteerd`,
+  billingImportCompleteHelp:
+    "Ze zijn nu beschikbaar voor offertes, facturen en gedeelde prijsverbindingen.",
   colorPickerEyedropper: "Kleur van het scherm kiezen",
   colorPickerHue: "Tint",
   colorPickerChannelValue: (channel: string) => `${channel}-waarde`,
@@ -6793,7 +6808,8 @@ export const nl: Partial<Catalog> = {
   billingApplyImage: "Afbeelding toepassen",
   billingPdfPreview: "Pdf-voorbeeld",
   billingQuotationPreview: "Offertevoorbeeld",
-  billingImagePdfHelp: "Dit zijn het formaat en de uitsnede van de afbeelding in de pdf.",
+  billingImagePdfHelp:
+    "Dit zijn het formaat en de uitsnede van de afbeelding in de pdf.",
   billingPdfPaperSizeA4: "A4",
   billingProductPdfPreview: "Productafbeelding in het pdf-voorbeeld",
   billingCropStyle: "Uitsnede",
@@ -6801,7 +6817,8 @@ export const nl: Partial<Catalog> = {
   billingShowFullImage: "Hele afbeelding tonen",
   billingZoom: "Zoom",
   billingCustomZoom: "Aangepast zoompercentage",
-  billingZoomHelp: "Gebruik 50–90% om meer van de afbeelding te tonen, of meer dan 100% voor een strakkere uitsnede.",
+  billingZoomHelp:
+    "Gebruik 50–90% om meer van de afbeelding te tonen, of meer dan 100% voor een strakkere uitsnede.",
   billingFocusArea: "Focusgebied",
   billingCentre: "Midden",
   billingTop: "Boven",
@@ -6809,45 +6826,54 @@ export const nl: Partial<Catalog> = {
   billingLeft: "Links",
   billingRight: "Rechts",
   billingProductImage: "Productafbeelding",
-  billingProductImageHelp: "Wordt naast dit artikel in de offerte voor de klant getoond.",
+  billingProductImageHelp:
+    "Wordt naast dit artikel in de offerte voor de klant getoond.",
   billingReplaceImage: "Afbeelding vervangen",
   billingUploadImage: "Afbeelding uploaden",
   billingRemoveImage: "Afbeelding verwijderen",
   billingProductDescription: "Productbeschrijving",
-  billingProductDescriptionPlaceholder: "Voeg specificaties, materialen, werkzaamheden of andere nuttige details toe…",
+  billingProductDescriptionPlaceholder:
+    "Voeg specificaties, materialen, werkzaamheden of andere nuttige details toe…",
   billingConnectionsSyncNow: "Nu synchroniseren",
   billingConnectionsConnectSupplier: "Leveranciersprijzen koppelen",
   billingConnectionsConnectPrices: "Prijzen koppelen",
   billingConnectionsEasyOption: "Begin met de eenvoudigste optie",
-  billingConnectionsEasyOptionHelp: "Gebruikt uw leverancier alo, plak dan de uitnodigingslink. Wij regelen de verificatie en productvelden automatisch.",
+  billingConnectionsEasyOptionHelp:
+    "Gebruikt uw leverancier alo, plak dan de uitnodigingslink. Wij regelen de verificatie en productvelden automatisch.",
   billingConnectionsSupplier: "Leverancier",
   billingConnectionsSupplierPlaceholder: "Bedrijfsnaam van de leverancier",
   billingConnectionsType: "Type verbinding",
   billingConnectionsChooseConnection: "Kies een verbinding",
   billingConnectionsInvitationLink: "Uitnodigingslink",
-  billingConnectionsInvitationHelp: "Uw leverancier maakt deze link aan bij Door mij gedeeld in de eigen alo-werkruimte.",
+  billingConnectionsInvitationHelp:
+    "Uw leverancier maakt deze link aan bij Door mij gedeeld in de eigen alo-werkruimte.",
   billingConnectionsInvitationPlaceholder: "Plak de alo-uitnodigingslink",
   billingConnectionsAccessKey: "Toegangssleutel",
-  billingConnectionsAccessKeyHelp: "Blijft vertrouwelijk en wordt nooit in uw klantdocumenten getoond.",
+  billingConnectionsAccessKeyHelp:
+    "Blijft vertrouwelijk en wordt nooit in uw klantdocumenten getoond.",
   billingConnectionsAccessKeyPlaceholder: "Plak de sleutel van uw leverancier",
   billingConnectionsReady: "Verbinding is gereed",
   billingConnectionsTestPreview: "Testen en bekijken",
   billingConnectionsSyncApprovals: "Synchronisatie en goedkeuringen",
-  billingConnectionsSyncApprovalsHelp: "Kies wanneer prijzen worden gecontroleerd en welke wijzigingen goedkeuring vereisen.",
+  billingConnectionsSyncApprovalsHelp:
+    "Kies wanneer prijzen worden gecontroleerd en welke wijzigingen goedkeuring vereisen.",
   billingConnectionsCheckUpdates: "Controleren op updates",
   billingConnectionsChooseSchedule: "Kies een planning",
   billingConnectionsApplyChanges: "Prijswijzigingen toepassen",
   billingConnectionsChooseApproval: "Kies een goedkeuringsregel",
   billingConnectionsChangeLimit: "Limiet voor automatische wijzigingen",
-  billingConnectionsChangeLimitHelp: "Wijzigingen boven dit percentage wachten op goedkeuring.",
+  billingConnectionsChangeLimitHelp:
+    "Wijzigingen boven dit percentage wachten op goedkeuring.",
   billingConnectionsProductMatching: "Producten koppelen",
-  billingConnectionsProductMatchingHelp: "Bepaal hoe leveranciersproducten aan bestaande artikelen in uw catalogus worden gekoppeld.",
+  billingConnectionsProductMatchingHelp:
+    "Bepaal hoe leveranciersproducten aan bestaande artikelen in uw catalogus worden gekoppeld.",
   billingConnectionsMatchBy: "Producten koppelen op",
   billingConnectionsChooseMatching: "Kies een koppelingsmethode",
   billingConnectionsNewProducts: "Nieuwe leveranciersproducten",
   billingConnectionsChooseAction: "Kies een actie",
   billingConnectionsFieldMapping: "Leveranciersvelden koppelen",
-  billingConnectionsFieldMappingHelp: "Voer de veldnamen van deze leverancier in. alo stelt ze na het eerste voorbeeld voor.",
+  billingConnectionsFieldMappingHelp:
+    "Voer de veldnamen van deze leverancier in. alo stelt ze na het eerste voorbeeld voor.",
   billingConnectionsSkuField: "SKU-veld",
   billingConnectionsNameField: "Naamveld",
   billingConnectionsNetPriceField: "Nettoprijsveld",
@@ -6859,7 +6885,8 @@ export const nl: Partial<Catalog> = {
   billingConnectionsSharePrices: "Mijn prijzen delen",
   billingConnectionsCreateSecure: "Beveiligde verbinding maken",
   billingConnectionsYouControl: "U bepaalt precies wat deze klant ontvangt",
-  billingConnectionsYouControlHelp: "Interne inkoopkosten, leveranciersnamen en marges worden nooit gedeeld.",
+  billingConnectionsYouControlHelp:
+    "Interne inkoopkosten, leveranciersnamen en marges worden nooit gedeeld.",
   billingConnectionsClientPartner: "Klant of partner",
   billingConnectionsCompanyName: "Bedrijfsnaam",
   billingConnectionsDeliveryMethod: "Hoe maakt deze partij verbinding?",
@@ -6868,37 +6895,50 @@ export const nl: Partial<Catalog> = {
   billingConnectionsChoosePrices: "Kies prijzen",
   billingConnectionsChooseProducts: "Producten uit de prijslijst kiezen",
   billingConnectionsSearchPriceList: "Uw prijslijst doorzoeken",
-  billingConnectionsNoProducts: "Geen producten in de prijslijst voldoen aan deze zoekopdracht.",
+  billingConnectionsNoProducts:
+    "Geen producten in de prijslijst voldoen aan deze zoekopdracht.",
   billingConnectionsLoadingPriceList: "Uw prijslijst wordt geladen…",
   billingConnectionsSecureCreated: "Beveiligde prijsverbinding gemaakt",
-  billingConnectionsSendTo: (company: string) => `Stuur dit naar ${company}. U kunt de toegang op elk moment pauzeren of intrekken.`,
-  billingConnectionsKeyShownOnce: "De volledige sleutel wordt alleen bij het aanmaken getoond.",
+  billingConnectionsSendTo: (company: string) =>
+    `Stuur dit naar ${company}. U kunt de toegang op elk moment pauzeren of intrekken.`,
+  billingConnectionsKeyShownOnce:
+    "De volledige sleutel wordt alleen bij het aanmaken getoond.",
   billingConnectionsCopy: "Kopiëren",
   billingConnectionsConnected: "Verbonden",
   billingConnectionsActionNeeded: "Actie nodig",
   billingConnectionsPaused: "Gepauzeerd",
   billingConnectionsIndustrialComponentsEur: "Industriële componenten · EUR",
-  billingConnectionsChangesReady: (count: number) => `${count} prijswijzigingen staan klaar voor beoordeling`,
-  billingConnectionsUpdatedMinutesAgo: (count: number) => `${count} minuten geleden bijgewerkt`,
+  billingConnectionsChangesReady: (count: number) =>
+    `${count} prijswijzigingen staan klaar voor beoordeling`,
+  billingConnectionsUpdatedMinutesAgo: (count: number) =>
+    `${count} minuten geleden bijgewerkt`,
   billingConnectionsDaily: "Dagelijks",
   billingConnectionsMetalsSheetEur: "Metalen en plaatmateriaal · EUR",
-  billingConnectionsSupplierRenew: "De leverancier moet deze verbinding vernieuwen",
-  billingConnectionsUpdatedDaysAgo: (count: number) => `${count} dagen geleden voor het laatst bijgewerkt`,
-  billingConnectionsWholesaleContract: "Groothandelscatalogus · Contractprijzen",
-  billingConnectionsWorkspaceReceivesApproved: "Hun alo-werkruimte ontvangt goedgekeurde prijswijzigingen",
-  billingConnectionsUsedHoursAgo: (count: number) => `${count} uur geleden gebruikt`,
+  billingConnectionsSupplierRenew:
+    "De leverancier moet deze verbinding vernieuwen",
+  billingConnectionsUpdatedDaysAgo: (count: number) =>
+    `${count} dagen geleden voor het laatst bijgewerkt`,
+  billingConnectionsWholesaleContract:
+    "Groothandelscatalogus · Contractprijzen",
+  billingConnectionsWorkspaceReceivesApproved:
+    "Hun alo-werkruimte ontvangt goedgekeurde prijswijzigingen",
+  billingConnectionsUsedHoursAgo: (count: number) =>
+    `${count} uur geleden gebruikt`,
   billingConnectionsOnApproval: "Na goedkeuring",
   billingConnectionsProjectSupplyEur: "Projectleveringsprijzen · EUR",
-  billingConnectionsApiExpiryDemo: "Externe API-toegang verloopt op 30 september 2026",
+  billingConnectionsApiExpiryDemo:
+    "Externe API-toegang verloopt op 30 september 2026",
   billingConnectionsUsedYesterday: "Gisteren gebruikt",
   billingConnectionsLive: "Live",
   billingConnectionsSupplierCatalogueEur: "Leverancierscatalogus · EUR",
-  billingConnectionsNoChangesAttention: "Geen prijswijzigingen vereisen uw aandacht",
+  billingConnectionsNoChangesAttention:
+    "Geen prijswijzigingen vereisen uw aandacht",
   billingConnectionsConnectedNow: "Zojuist verbonden",
   billingConnectionsHourly: "Elk uur",
   billingConnectionsWeekly: "Wekelijks",
   billingConnectionsManual: "Handmatig",
-  billingConnectionsLivePriceListAutomatic: "Live prijslijst · Automatisch bijgewerkt",
+  billingConnectionsLivePriceListAutomatic:
+    "Live prijslijst · Automatisch bijgewerkt",
   billingConnectionsSelectedPriceItems: "Geselecteerde prijslijstitems",
   billingConnectionsWaitingClient: "Wachten tot de klant in alo accepteert",
   billingConnectionsExternalReady: "Externe API-toegang is klaar om te delen",
@@ -6907,25 +6947,32 @@ export const nl: Partial<Catalog> = {
   billingConnectionsSharedByMe: "Door mij gedeeld",
   billingConnectionsUpdatedNow: "Zojuist bijgewerkt",
   billingConnectionsUpToDate: (company: string) => `${company} is bijgewerkt.`,
-  billingConnectionsNowSupplying: (company: string) => `${company} levert nu prijzen aan deze werkruimte.`,
-  billingConnectionsNowReceiving: (company: string) => `${company} ontvangt nu prijzen van deze werkruimte.`,
+  billingConnectionsNowSupplying: (company: string) =>
+    `${company} levert nu prijzen aan deze werkruimte.`,
+  billingConnectionsNowReceiving: (company: string) =>
+    `${company} ontvangt nu prijzen van deze werkruimte.`,
   billingConnectionsDisconnectTitle: "Prijsverbinding loskoppelen?",
-  billingConnectionsDisconnectReceived: (company: string) => `${company} stopt met het verzenden van leveranciersprijzen naar deze werkruimte. Bestaande prijzen blijven behouden, maar worden niet meer automatisch bijgewerkt.`,
-  billingConnectionsDisconnectShared: (company: string) => `${company} stopt met het ontvangen van prijzen uit deze werkruimte. Bestaande prijzen blijven behouden, maar worden niet meer automatisch bijgewerkt.`,
+  billingConnectionsDisconnectReceived: (company: string) =>
+    `${company} stopt met het verzenden van leveranciersprijzen naar deze werkruimte. Bestaande prijzen blijven behouden, maar worden niet meer automatisch bijgewerkt.`,
+  billingConnectionsDisconnectShared: (company: string) =>
+    `${company} stopt met het ontvangen van prijzen uit deze werkruimte. Bestaande prijzen blijven behouden, maar worden niet meer automatisch bijgewerkt.`,
   billingConnectionsDisconnect: "Loskoppelen",
   billingConnectionsKeepConnected: "Verbonden houden",
   billingConnectionsTitle: "Prijsverbindingen",
   billingPriceConnections: "Prijsverbindingen",
   billingVat: "Btw",
-  billingConnectionsSubtitle: "Ontvang actuele leverancierskosten en deel geselecteerde verkoopprijzen veilig met uw klanten.",
+  billingConnectionsSubtitle:
+    "Ontvang actuele leverancierskosten en deel geselecteerde verkoopprijzen veilig met uw klanten.",
   billingConnectionsDirection: "Richting van de prijsverbinding",
   billingConnectionsSearch: "Verbindingen zoeken",
   billingConnectionsDismiss: "Sluiten",
   billingConnectionsNoMatches: "Geen overeenkomende verbindingen",
-  billingConnectionsNoMatchesHelp: "Probeer een andere zoekopdracht of maak een nieuwe prijsverbinding.",
+  billingConnectionsNoMatchesHelp:
+    "Probeer een andere zoekopdracht of maak een nieuwe prijsverbinding.",
   quoteStudioScanToSave: "Scan om op te slaan",
   quoteStudioBuildTitle: "Stel uw offerte samen",
-  quoteStudioBuildHelp: "Voeg direct inhoud toe. Wijzigingen worden automatisch opgeslagen.",
+  quoteStudioBuildHelp:
+    "Voeg direct inhoud toe. Wijzigingen worden automatisch opgeslagen.",
   quoteStudioCompanyLogo: "Bedrijfslogo",
   quoteStudioAddress: "Adres",
   quoteStudioContact: "Contact",
@@ -6951,13 +6998,16 @@ export const nl: Partial<Catalog> = {
   quoteStudioSectionHeading: "Sectiekop",
   quoteStudioParagraph: "Alinea",
   quoteStudioWriteParagraph: "Schrijf een alinea…",
-  quoteStudioImportantStatement: "Voeg een klantcitaat of belangrijke mededeling toe…",
+  quoteStudioImportantStatement:
+    "Voeg een klantcitaat of belangrijke mededeling toe…",
   quoteStudioAttribution: "Bronvermelding (optioneel)",
   quoteStudioQuoteAttribution: "Bronvermelding citaat",
   quoteStudioSectionText: "Sectietekst",
-  quoteStudioSectionTextPlaceholder: "Schrijf de informatie die uw klant nodig heeft…",
+  quoteStudioSectionTextPlaceholder:
+    "Schrijf de informatie die uw klant nodig heeft…",
   quoteStudioListLayout: "Lijstindeling",
-  quoteStudioListLayoutHelp: "Verdeel langere lijsten over overzichtelijke kolommen.",
+  quoteStudioListLayoutHelp:
+    "Verdeel langere lijsten over overzichtelijke kolommen.",
   quoteStudioColumns: "Kolommen",
   quoteStudioChooseColumns: "Kies kolommen",
   quoteStudioWriteItem: "Schrijf een item",
@@ -6972,14 +7022,17 @@ export const nl: Partial<Catalog> = {
   quoteStudioChangesImmediate: "Wijzigingen verschijnen direct in de offerte.",
   quoteStudioDone: "Gereed",
   quoteStudioComposeImageText: "Afbeelding en tekst samenstellen",
-  quoteStudioComposeImageTextHelp: "Rangschik het blok en bekijk precies hoe het in de offerte verschijnt.",
+  quoteStudioComposeImageTextHelp:
+    "Rangschik het blok en bekijk precies hoe het in de offerte verschijnt.",
   quoteStudioLayoutTools: "Indelingsopties",
-  quoteStudioLayoutToolsHelp: "Kies hoe dit inhoudsblok in de offerte wordt weergegeven.",
+  quoteStudioLayoutToolsHelp:
+    "Kies hoe dit inhoudsblok in de offerte wordt weergegeven.",
   quoteStudioComposition: "Compositie",
   quoteStudioImageFrame: "Afbeeldingskader",
   quoteStudioFit: "Passend maken",
   quoteStudioImage: "Afbeelding",
-  quoteStudioImageDescriptionPlaceholder: "Beschrijf het getoonde product, project of resultaat.",
+  quoteStudioImageDescriptionPlaceholder:
+    "Beschrijf het getoonde product, project of resultaat.",
   quoteStudioCaption: "Bijschrift",
   quoteStudioCaptionPlaceholder: "Optioneel kort bijschrift",
   quoteStudioTextTools: "Tekstopties",
@@ -6993,11 +7046,13 @@ export const nl: Partial<Catalog> = {
   quoteStudioZoomOut: "Uitzoomen",
   quoteStudioZoomIn: "Inzoomen",
   quoteStudioInformationTable: "Informatietabel",
-  quoteStudioInformationTableHelp: "Hernoem kolommen en voeg vervolgens zoveel rijen of kolommen toe als nodig.",
+  quoteStudioInformationTableHelp:
+    "Hernoem kolommen en voeg vervolgens zoveel rijen of kolommen toe als nodig.",
   quoteStudioTableColumnCount: "Aantal tabelkolommen",
   quoteStudioRowActions: "Rijacties",
   quoteStudioEnterValue: "Voer een waarde in",
-  quoteStudioAddFirstRow: "Voeg de eerste rij toe om met deze tabel te beginnen.",
+  quoteStudioAddFirstRow:
+    "Voeg de eerste rij toe om met deze tabel te beginnen.",
   quoteStudioAddRowBelow: "Rij hieronder toevoegen",
   quoteStudioAddContentA11y: "Offerte-inhoud toevoegen",
   quoteStudioAddContentBelow: "Inhoud hieronder toevoegen",
@@ -7009,10 +7064,12 @@ export const nl: Partial<Catalog> = {
   quoteStudioSearchBlocksA11y: "Offerteblokken zoeken",
   quoteStudioNoMatchingBlocks: "Geen passende blokken",
   quoteStudioTryAnotherName: "Probeer een andere zoekterm.",
-  quoteStudioFirstBlockHelp: "Voeg tekst, een kop of een afbeelding als eerste blok toe.",
+  quoteStudioFirstBlockHelp:
+    "Voeg tekst, een kop of een afbeelding als eerste blok toe.",
   quoteStudioClose: "Sluiten",
   quoteStudioBrandMark: "Merkidentiteit",
-  quoteStudioBrandMarkHelp: "Wordt bovenaan de offerte voor de klant weergegeven.",
+  quoteStudioBrandMarkHelp:
+    "Wordt bovenaan de offerte voor de klant weergegeven.",
   quoteStudioQuoteLogo: "Offertelogo",
   quoteStudioUploadLogo: "Uw logo uploaden",
   quoteStudioRemove: "Verwijderen",
@@ -7022,11 +7079,14 @@ export const nl: Partial<Catalog> = {
   quoteStudioPlacement: "Plaatsing",
   quoteStudioPlacementHelp: "Kies waar de code naast uw bedrijfsgegevens komt.",
   quoteStudioSize: "Grootte",
-  quoteStudioSizeHelp: "Bekijk hoeveel ruimte de QR-code in de koptekst inneemt.",
+  quoteStudioSizeHelp:
+    "Bekijk hoeveel ruimte de QR-code in de koptekst inneemt.",
   quoteStudioQrColour: "Kleur van QR-code",
   quoteStudioCompanyInformation: "Bedrijfsgegevens",
-  quoteStudioCompanyLinkedHelp: "Deze waarden komen uit Facturatie → Uw gegevens.",
-  quoteStudioOverrideHelp: "Als u een waarde wijzigt, wordt die alleen voor deze offerte overschreven.",
+  quoteStudioCompanyLinkedHelp:
+    "Deze waarden komen uit Facturatie → Uw gegevens.",
+  quoteStudioOverrideHelp:
+    "Als u een waarde wijzigt, wordt die alleen voor deze offerte overschreven.",
   quoteStudioUseYourDetails: "Uw gegevens gebruiken",
   quoteStudioLinkedYourDetails: "Gekoppeld aan Uw gegevens",
   quoteStudioCompanyName: "Bedrijfsnaam",
@@ -7039,8 +7099,10 @@ export const nl: Partial<Catalog> = {
   quoteStudioVatPlaceholder: "Btw-nummer",
   quoteStudioCompanyNumberPlaceholder: "Registratienummer van het bedrijf",
   quoteStudioCustomerInformation: "Klantgegevens",
-  quoteStudioCustomerInformationHelp: "Wordt onder Voorbereid voor in de koptekst weergegeven.",
-  quoteStudioCustomerOverrideHelp: "Als u een waarde wijzigt, wordt die alleen voor deze offerte overschreven.",
+  quoteStudioCustomerInformationHelp:
+    "Wordt onder Voorbereid voor in de koptekst weergegeven.",
+  quoteStudioCustomerOverrideHelp:
+    "Als u een waarde wijzigt, wordt die alleen voor deze offerte overschreven.",
   quoteStudioUseSelectedCustomer: "Geselecteerde klant gebruiken",
   quoteStudioLinkedSelectedCustomer: "Gekoppeld aan geselecteerde klant",
   quoteStudioCustomerCompanyPlaceholder: "Naam van het klantbedrijf",
@@ -7064,10 +7126,26 @@ export const nl: Partial<Catalog> = {
   quoteStudioTableHelp: "Maak flexibele rijen en kolommen",
   quoteStudioDivider: "Scheidslijn",
   quoteStudioDividerHelp: "Scheid onderdelen van het document",
+  quoteStudioDividerSettings: "Instellingen scheidslijn",
+  quoteStudioDividerAppearance: "Weergave van scheidslijn",
+  quoteStudioDividerAppearanceHelp:
+    "Kies hoe deze scheidslijn in de offerte voor de klant wordt weergegeven.",
+  quoteStudioDividerStyle: "Lijnstijl",
+  quoteStudioDividerSolid: "Doorgetrokken",
+  quoteStudioDividerDashed: "Streepjes",
+  quoteStudioDividerDotted: "Stippen",
+  quoteStudioDividerThickness: "Lijndikte",
+  quoteStudioDividerFine: "Dun",
+  quoteStudioDividerMedium: "Normaal",
+  quoteStudioDividerBold: "Dik",
+  quoteStudioDividerWidth: "Lijnbreedte",
+  quoteStudioDividerColour: "Lijnkleur",
+  quoteStudioChooseDividerColour: "Kleur van scheidslijn kiezen",
   quoteStudioCategoryText: "Tekst",
   quoteStudioEditQuotationHeader: "Offertekop bewerken",
   quoteStudioCustomizeQuotation: "Offerte aanpassen",
-  quoteStudioChangesSavedAutomatically: "Wijzigingen worden automatisch opgeslagen.",
+  quoteStudioChangesSavedAutomatically:
+    "Wijzigingen worden automatisch opgeslagen.",
   quoteStudioReplace: "Vervangen",
   quoteStudioChooseFile: "Bestand kiezen",
   quoteStudioLeft: "Links",
@@ -7075,24 +7153,33 @@ export const nl: Partial<Catalog> = {
   quoteStudioSmall: "Klein",
   quoteStudioMedium: "Middelgroot",
   quoteStudioLarge: "Groot",
-  quoteStudioQrPlacementA11y: (side: string) => `QR-code ${side.toLowerCase()} plaatsen`,
+  quoteStudioQrPlacementA11y: (side: string) =>
+    `QR-code ${side.toLowerCase()} plaatsen`,
   quoteStudioQrColourHelp: "Kies een donkere kleur voor betrouwbaar scannen",
   quoteStudioPhonePlaceholder: "+31 20 123 45 67",
-  quoteStudioAddressPlaceholder: "Straat en huisnummer\nPostcode en plaats\nLand",
+  quoteStudioAddressPlaceholder:
+    "Straat en huisnummer\nPostcode en plaats\nLand",
   quoteStudioHeaderStyle: "Kopstijl",
-  quoteStudioHeaderStyleHelp: "Kies een professionele compositie. Uw opgeslagen bedrijfsgegevens worden automatisch ingevuld.",
+  quoteStudioHeaderStyleHelp:
+    "Kies een professionele compositie. Uw opgeslagen bedrijfsgegevens worden automatisch ingevuld.",
   quoteStudioHeaderArrangement: "Indeling van de kop",
-  quoteStudioHeaderArrangementHelp: "Kies aan welke kant uw bedrijfsidentiteit staat.",
+  quoteStudioHeaderArrangementHelp:
+    "Kies aan welke kant uw bedrijfsidentiteit staat.",
   quoteStudioLogoLeft: "Logo links",
   quoteStudioLogoRight: "Logo rechts",
-  quoteStudioLogoLeftHelp: "Bedrijfsidentiteit links, offertegegevens aan de overzijde.",
-  quoteStudioLogoRightHelp: "Bedrijfsidentiteit rechts, offertegegevens aan de overzijde.",
+  quoteStudioLogoLeftHelp:
+    "Bedrijfsidentiteit links, offertegegevens aan de overzijde.",
+  quoteStudioLogoRightHelp:
+    "Bedrijfsidentiteit rechts, offertegegevens aan de overzijde.",
   quoteStudioColumnBalance: "Kolomverdeling",
-  quoteStudioColumnBalanceHelp: "Kies hoeveel ruimte het bedrijf en de klant krijgen.",
+  quoteStudioColumnBalanceHelp:
+    "Kies hoeveel ruimte het bedrijf en de klant krijgen.",
   quoteStudioColumnBalanceA11y: "Kolomverdeling van de offertekop",
-  quoteStudioColumnRatioA11y: (company: string, customer: string) => `Bedrijf ${company} procent, klant ${customer} procent`,
+  quoteStudioColumnRatioA11y: (company: string, customer: string) =>
+    `Bedrijf ${company} procent, klant ${customer} procent`,
   quoteStudioDocumentPalette: "Documentpalet",
-  quoteStudioDocumentPaletteHelp: "Bepaal de kleuren van de klantpagina en prijstabellen.",
+  quoteStudioDocumentPaletteHelp:
+    "Bepaal de kleuren van de klantpagina en prijstabellen.",
   quoteStudioResetDefaults: "Standaardinstellingen herstellen",
   quoteStudioDocument: "Document",
   quoteStudioDocumentHelp: "Merk, pagina, kop en tekst.",
@@ -7120,9 +7207,11 @@ export const nl: Partial<Catalog> = {
   quoteStudioTypographyHelp: "Kies de leesstijl die het best bij uw merk past.",
   quoteStudioProposal: "Voorstel",
   quoteStudioCloseTableSettings: "Tabelinstellingen sluiten",
-  quoteStudioTableChangesSavedAutomatically: "Tabelwijzigingen worden automatisch opgeslagen.",
+  quoteStudioTableChangesSavedAutomatically:
+    "Tabelwijzigingen worden automatisch opgeslagen.",
   quoteStudioChooseLayout: "Kies een indeling",
-  quoteStudioChooseLayoutHelp: "Kies een uitgangspunt en pas daarna de zichtbare inhoud en kolommen aan.",
+  quoteStudioChooseLayoutHelp:
+    "Kies een uitgangspunt en pas daarna de zichtbare inhoud en kolommen aan.",
   quoteStudioCompact: "Compact",
   quoteStudioCompactHelp: "Alleen namen en prijzen",
   quoteStudioDetailed: "Gedetailleerd",
@@ -7130,21 +7219,26 @@ export const nl: Partial<Catalog> = {
   quoteStudioCatalogue: "Catalogus",
   quoteStudioCatalogueHelp: "Grotere productafbeeldingen en details",
   quoteStudioProductContent: "Productinhoud",
-  quoteStudioProductContentHelp: "Optionele informatie bij elk product of elke dienst.",
+  quoteStudioProductContentHelp:
+    "Optionele informatie bij elk product of elke dienst.",
   quoteStudioProductImages: "Productafbeeldingen",
   quoteStudioProductImagesHelp: "Voeg aan elke tabelrij een afbeelding toe",
   quoteStudioProductDescriptions: "Productbeschrijvingen",
-  quoteStudioProductDescriptionsHelp: "Voeg specificaties of de scope onder elk item toe",
+  quoteStudioProductDescriptionsHelp:
+    "Voeg specificaties of de scope onder elk item toe",
   quoteStudioVisibleColumns: "Zichtbare kolommen",
-  quoteStudioVisibleColumnsHelp: "De productnaam en het offertotaal blijven altijd zichtbaar.",
+  quoteStudioVisibleColumnsHelp:
+    "De productnaam en het offertotaal blijven altijd zichtbaar.",
   quoteStudioUnit: "Eenheid",
   quoteStudioQuantity: "Aantal",
   quoteStudioUnitPrice: "Eenheidsprijs",
   quoteStudioVatRate: "Btw-tarief",
   quoteStudioLineTotal: "Regeltotaal",
-  quoteStudioShowColumn: (label: string) => `Kolom ${label.toLowerCase()} tonen`,
+  quoteStudioShowColumn: (label: string) =>
+    `Kolom ${label.toLowerCase()} tonen`,
   quoteStudioPricingTableTotals: "Totalen van de prijstabel",
-  quoteStudioPricingTableTotalsHelp: "Kies hoe het bedragenoverzicht onder elke prijstabel verschijnt. Elke tabel behoudt zijn eigen subtotaal.",
+  quoteStudioPricingTableTotalsHelp:
+    "Kies hoe het bedragenoverzicht onder elke prijstabel verschijnt. Elke tabel behoudt zijn eigen subtotaal.",
   quoteStudioSummaryCard: "Overzichtskaart",
   quoteStudioSummaryCardHelp: "Compact en rechts uitgelijnd",
   quoteStudioFullWidth: "Volledige breedte",
@@ -7169,7 +7263,8 @@ export const nl: Partial<Catalog> = {
   quoteStudioPricingTableNumber: (number: number) => `Prijstabel ${number}`,
   quoteStudioNumberedListColumns: "Kolommen voor genummerde lijst",
   quoteStudioBulletListColumns: "Kolommen voor opsomming",
-  quoteStudioColumnCount: (count: number) => count === 1 ? "1 kolom" : `${count} kolommen`,
+  quoteStudioColumnCount: (count: number) =>
+    count === 1 ? "1 kolom" : `${count} kolommen`,
   quoteStudioNumberedItemA11y: (number: number) => `Genummerd item ${number}`,
   quoteStudioBulletItemA11y: (number: number) => `Opsommingsitem ${number}`,
   quoteStudioBelowImage: "Onder afbeelding",
@@ -7182,15 +7277,19 @@ export const nl: Partial<Catalog> = {
   quoteStudioWholeImage: "Volledige afbeelding",
   quoteStudioColumnNumber: (number: number) => `Kolom ${number}`,
   quoteStudioColumnNameA11y: (number: number) => `Naam van kolom ${number}`,
-  quoteStudioTableCellA11y: (column: string, row: number) => `${column}, rij ${row}`,
+  quoteStudioTableCellA11y: (column: string, row: number) =>
+    `${column}, rij ${row}`,
   quoteStudioCategoryMedia: "Media",
   quoteStudioCategoryTables: "Tabellen",
   quoteStudioCategoryLayout: "Opmaak",
   quoteStudioSearchResults: "Zoekresultaten",
-  quoteStudioDesignDatabaseError: "De database met offerteontwerpen kon niet worden geopend.",
+  quoteStudioDesignDatabaseError:
+    "De database met offerteontwerpen kon niet worden geopend.",
   quoteStudioDesignSaveError: "Het offerteontwerp kon niet worden opgeslagen.",
-  quoteStudioDesignSaveCancelled: "Het opslaan van het offerteontwerp is geannuleerd.",
-  quoteStudioDesignSaveRetry: "Het offerteontwerp kon niet worden opgeslagen. Probeer een kleinere afbeelding of upload deze opnieuw.",
+  quoteStudioDesignSaveCancelled:
+    "Het opslaan van het offerteontwerp is geannuleerd.",
+  quoteStudioDesignSaveRetry:
+    "Het offerteontwerp kon niet worden opgeslagen. Probeer een kleinere afbeelding of upload deze opnieuw.",
   quoteStudioShowSubtotal: "Subtotaal tonen",
   quoteStudioHideSubtotal: "Subtotaal verbergen",
   quoteStudioQuotationImageAlt: "Afbeelding in de offerte",
@@ -7213,30 +7312,41 @@ export const nl: Partial<Catalog> = {
   quoteStudioLogoStackHelp: "Bedrijfsnaam onder het logo",
   billingVatIncludedNote: "De btw is in het totaal inbegrepen.",
   billingVatSeparateNote: "De btw wordt apart van het nettobedrag weergegeven.",
-  billingPricingTableEditorHelp: "Voeg producten en diensten toe, bewerk of verwijder ze en sleep ze naar de juiste volgorde.",
-  billingPricingTableEmptyHelp: "Voeg een product of dienst toe om met deze prijstabel te beginnen.",
+  billingPricingTableEditorHelp:
+    "Voeg producten en diensten toe, bewerk of verwijder ze en sleep ze naar de juiste volgorde.",
+  billingPricingTableEmptyHelp:
+    "Voeg een product of dienst toe om met deze prijstabel te beginnen.",
   billingImage: "Afbeelding",
-  billingQuoteExitPreviewToEdit: "Verlaat de preview om deze offerte te bewerken",
+  billingQuoteExitPreviewToEdit:
+    "Verlaat de preview om deze offerte te bewerken",
   billingQuoteEditContent: "Offerte-inhoud bewerken",
-  billingQuoteCreateRevision: "Maak een revisie om deze definitieve offerte te bewerken",
+  billingQuoteCreateRevision:
+    "Maak een revisie om deze definitieve offerte te bewerken",
   billingQuoteEdit: "Offerte bewerken",
-  billingQuoteExitPreviewToCustomize: "Verlaat de preview om deze offerte aan te passen",
-  billingQuoteCreateRevisionToCustomize: "Maak een revisie om deze definitieve offerte aan te passen",
+  billingQuoteExitPreviewToCustomize:
+    "Verlaat de preview om deze offerte aan te passen",
+  billingQuoteCreateRevisionToCustomize:
+    "Maak een revisie om deze definitieve offerte aan te passen",
   billingQuoteCreateRevisionTitle: "Een bewerkbare revisie maken?",
-  billingQuoteCreateRevisionConfirm: "De definitieve offerte blijft ongewijzigd. alo maakt één nieuw concept met dezelfde klant, inhoud, prijzen en vormgeving.",
+  billingQuoteCreateRevisionConfirm:
+    "De definitieve offerte blijft ongewijzigd. alo maakt één nieuw concept met dezelfde klant, inhoud, prijzen en vormgeving.",
   billingQuoteCreateRevisionAction: "Revisie maken",
-  billingConnectionsProductCount: (count: number) => count === 1 ? "1 product" : `${count} producten`,
+  billingConnectionsProductCount: (count: number) =>
+    count === 1 ? "1 product" : `${count} producten`,
   billingConnectionsUpdateCadence: (cadence: string) => `Updates: ${cadence}`,
   billingConnectionsViaAlo: "Verbonden via alo",
   billingConnectionsExternalApi: "Externe API",
-  billingConnectionsReviewChanges: (count: number) => `${count} wijzigingen beoordelen`,
+  billingConnectionsReviewChanges: (count: number) =>
+    `${count} wijzigingen beoordelen`,
   billingConnectionsResume: "Hervatten",
   billingConnectionsPause: "Pauzeren",
-  billingConnectionsDisconnectCompany: (company: string) => `${company} loskoppelen`,
+  billingConnectionsDisconnectCompany: (company: string) =>
+    `${company} loskoppelen`,
   billingConnectionsSpreadsheetFeed: "Spreadsheet of feed",
   billingConnectionsPriceApiAddress: "Adres van prijs-API",
   billingConnectionsFeedAddress: "Feedadres",
-  billingConnectionsFormatDetection: "alo herkent JSON-, CSV- en spreadsheetfeeds automatisch.",
+  billingConnectionsFormatDetection:
+    "alo herkent JSON-, CSV- en spreadsheetfeeds automatisch.",
   billingConnectionsAddressPlaceholder: "https://leverancier.voorbeeld/prijzen",
   billingConnectionsAdvancedSettings: "Geavanceerde instellingen",
   billingConnectionsEveryHour: "Elk uur",
@@ -7256,18 +7366,29 @@ export const nl: Partial<Catalog> = {
   billingConnectionsHeaderNamePlaceholder: "X-API-Key",
   billingConnectionsAloInvitationLink: "alo-uitnodigingslink",
   billingConnectionsExternalPricingApi: "Externe prijs-API",
-  billingConnectionsTestSummary: (found: number, matched: number, review: number) => `${found} producten gevonden · ${matched} automatisch gekoppeld · ${review} na het verbinden te beoordelen.`,
-  billingConnectionsCustomHeaderHelp: "Optioneel. Gebruik dit alleen wanneer de documentatie van de leverancier een andere header vereist dan de toegangssleutel hierboven.",
+  billingConnectionsTestSummary: (
+    found: number,
+    matched: number,
+    review: number,
+  ) =>
+    `${found} producten gevonden · ${matched} automatisch gekoppeld · ${review} na het verbinden te beoordelen.`,
+  billingConnectionsCustomHeaderHelp:
+    "Optioneel. Gebruik dit alleen wanneer de documentatie van de leverancier een andere header vereist dan de toegangssleutel hierboven.",
   billingConnectionsInviteAloWorkspace: "Hun alo-werkruimte uitnodigen",
   billingConnectionsGiveExternalApi: "Externe API-toegang geven",
-  billingConnectionsLivePriceListActive: (count: number) => `Live prijslijst · ${count} actieve producten`,
-  billingConnectionsChooseProductsSelected: (count: number) => `Producten kiezen · ${count} geselecteerd`,
+  billingConnectionsLivePriceListActive: (count: number) =>
+    `Live prijslijst · ${count} actieve producten`,
+  billingConnectionsChooseProductsSelected: (count: number) =>
+    `Producten kiezen · ${count} geselecteerd`,
   billingConnectionsItemUnit: "stuk",
   billingConnectionsPrices: "Prijzen",
   billingConnectionsUpdates: "Updates",
   billingConnectionsValidity: "Geldigheid",
-  billingConnectionsLivePriceListCount: (count: number) => `Live prijslijst (${count})`,
-  billingConnectionsSelectedProductsCount: (count: number) => `${count} geselecteerde producten`,
-  billingConnectionsChangesFlow: "Prijslijstwijzigingen lopen via deze verbinding",
+  billingConnectionsLivePriceListCount: (count: number) =>
+    `Live prijslijst (${count})`,
+  billingConnectionsSelectedProductsCount: (count: number) =>
+    `${count} geselecteerde producten`,
+  billingConnectionsChangesFlow:
+    "Prijslijstwijzigingen lopen via deze verbinding",
   billingConnectionsNoExpiry: "Geen vervaldatum",
 };

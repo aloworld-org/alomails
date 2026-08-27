@@ -2816,26 +2816,33 @@ export const en = {
   billingIncludingVat: "Including VAT",
   billingQuoteTemplate: "Quote template",
   billingQuoteStartFrom: "Start from a template",
-  billingQuoteTemplateHint: "Use your live price list to prepare a useful starting point.",
+  billingQuoteTemplateHint:
+    "Use your live price list to prepare a useful starting point.",
   billingQuoteTemplateBlank: "Blank quote",
   billingQuoteTemplateBlankDescription: "Start with an empty pricing table.",
   billingQuoteTemplateServices: "Professional services",
-  billingQuoteTemplateServicesDescription: "A focused offer with two core services.",
+  billingQuoteTemplateServicesDescription:
+    "A focused offer with two core services.",
   billingQuoteTemplateProject: "Project delivery",
-  billingQuoteTemplateProjectDescription: "A broader scope with three delivery items.",
+  billingQuoteTemplateProjectDescription:
+    "A broader scope with three delivery items.",
   billingQuoteTemplateRetainer: "Ongoing partnership",
-  billingQuoteTemplateRetainerDescription: "Start from a recurring monthly service.",
+  billingQuoteTemplateRetainerDescription:
+    "Start from a recurring monthly service.",
   quoteStudioTemplateServicesHeading: "Services selected for you",
-  quoteStudioTemplateServicesIntroduction: "A clear overview of the services, deliverables and investment proposed for your business.",
+  quoteStudioTemplateServicesIntroduction:
+    "A clear overview of the services, deliverables and investment proposed for your business.",
   quoteStudioTemplateServicesTable: "Services and fees",
   quoteStudioTemplateProjectHeading: "Project proposal",
-  quoteStudioTemplateProjectIntroduction: "This proposal brings the project scope, delivery approach and commercial terms together in one place.",
+  quoteStudioTemplateProjectIntroduction:
+    "This proposal brings the project scope, delivery approach and commercial terms together in one place.",
   quoteStudioTemplateProjectDiscovery: "Discovery and alignment",
   quoteStudioTemplateProjectDelivery: "Delivery and review",
   quoteStudioTemplateProjectHandover: "Launch and handover",
   quoteStudioTemplateProjectTable: "Project investment",
   quoteStudioTemplateRetainerHeading: "Monthly partnership",
-  quoteStudioTemplateRetainerIntroduction: "Ongoing support with a predictable monthly investment and a clear working rhythm.",
+  quoteStudioTemplateRetainerIntroduction:
+    "Ongoing support with a predictable monthly investment and a clear working rhythm.",
   quoteStudioTemplateRetainerTable: "Monthly services",
   quoteStudioTemplateRetainerReporting: "Regular progress reporting",
   quoteStudioTemplateRetainerSupport: "Priority support and planning",
@@ -2847,7 +2854,8 @@ export const en = {
   billingQuoteRemoveIncludedItem: (name: string) => `Remove ${name}`,
   billingQuoteAddFromPriceList: "Add items",
   billingQuoteSearchPriceList: "Search the price list",
-  billingQuoteAllItemsIncluded: "Every active price-list item is already included.",
+  billingQuoteAllItemsIncluded:
+    "Every active price-list item is already included.",
   billingQuoteNoMatchingItems: "No price-list items match that search.",
   billingQuotePerItem: "each",
   billingQuoteContinueToEditor: "Continue to editor",
@@ -2883,8 +2891,7 @@ export const en = {
   billingDeleteQuoteDraft: "Delete draft",
   billingDeleteQuoteDraftConfirm:
     "Delete this draft? It carries no number and was never made to anybody — and nothing can be recovered.",
-  billingQuoteSentNotice:
-    "Finalized in alo. No email was sent.",
+  billingQuoteSentNotice: "Finalized in alo. No email was sent.",
   billingQuoteClosedNotice:
     "This offer is closed and can no longer be changed.",
   billingSendQuote: "Finalize quote",
@@ -6917,19 +6924,23 @@ export const en = {
   billingImportMissingName: "Missing name",
   billingImportInvalidPrice: "Invalid price",
   billingImportInvalidVat: "Invalid VAT",
-  billingImportReadFailed: "We could not read that price list. Try CSV, Excel, PNG, JPEG or WebP.",
-  billingImportSaveFailed: "The import stopped before every item could be saved.",
+  billingImportReadFailed:
+    "We could not read that price list. Try CSV, Excel, PNG, JPEG or WebP.",
+  billingImportSaveFailed:
+    "The import stopped before every item could be saved.",
   billingImportNotInFile: "Not in this file",
   billingImportTitle: "Import price list",
   billingImportItems: (count: number) => `Import ${count} items`,
   billingImportViewPriceList: "View price list",
   billingImportDropTitle: "Drop a price list here",
-  billingImportDropHelp: "Excel and CSV files are read instantly in your browser. For a photo or screenshot, alo AI extracts the rows for you to review.",
+  billingImportDropHelp:
+    "Excel and CSV files are read instantly in your browser. For a photo or screenshot, alo AI extracts the rows for you to review.",
   billingImportSpreadsheetFormats: "CSV · XLSX",
   billingImportImageFormats: "PNG · JPEG · WebP",
   billingImportChooseFile: "Choose a file",
   billingImportReading: (name: string) => `Reading ${name}…`,
-  billingImportRowsFound: (count: number) => `${count} rows found. Review the mapping and exclude anything you do not want.`,
+  billingImportRowsFound: (count: number) =>
+    `${count} rows found. Review the mapping and exclude anything you do not want.`,
   billingImportReplaceFile: "Replace file",
   billingImportMatchColumns: "Match your columns",
   billingImportSku: "SKU",
@@ -6940,8 +6951,10 @@ export const en = {
   billingImportRow: (number: number) => `row ${number}`,
   billingImportAlreadyExists: "Already exists",
   billingImportReady: "Ready",
-  billingImportComplete: (count: number) => `${count} price-list items imported`,
-  billingImportCompleteHelp: "They are ready to use in quotes, invoices and shared price connections.",
+  billingImportComplete: (count: number) =>
+    `${count} price-list items imported`,
+  billingImportCompleteHelp:
+    "They are ready to use in quotes, invoices and shared price connections.",
   colorPickerEyedropper: "Pick a colour from the screen",
   colorPickerHue: "Hue",
   colorPickerChannelValue: (channel: string) => `${channel} value`,
@@ -6964,7 +6977,8 @@ export const en = {
   billingShowFullImage: "Show full image",
   billingZoom: "Zoom",
   billingCustomZoom: "Custom zoom percentage",
-  billingZoomHelp: "Use 50–90% to show more of the image, or more than 100% for a tighter crop.",
+  billingZoomHelp:
+    "Use 50–90% to show more of the image, or more than 100% for a tighter crop.",
   billingFocusArea: "Focus area",
   billingCentre: "Centre",
   billingTop: "Top",
@@ -6977,40 +6991,48 @@ export const en = {
   billingUploadImage: "Upload image",
   billingRemoveImage: "Remove image",
   billingProductDescription: "Product description",
-  billingProductDescriptionPlaceholder: "Add specifications, materials, scope, or other useful details…",
+  billingProductDescriptionPlaceholder:
+    "Add specifications, materials, scope, or other useful details…",
   billingConnectionsSyncNow: "Sync now",
   billingConnectionsConnectSupplier: "Connect supplier prices",
   billingConnectionsConnectPrices: "Connect prices",
   billingConnectionsEasyOption: "Start with the easiest option",
-  billingConnectionsEasyOptionHelp: "If your supplier uses alo, paste their invitation link. We handle authentication and product fields automatically.",
+  billingConnectionsEasyOptionHelp:
+    "If your supplier uses alo, paste their invitation link. We handle authentication and product fields automatically.",
   billingConnectionsSupplier: "Supplier",
   billingConnectionsSupplierPlaceholder: "Supplier company name",
   billingConnectionsType: "Connection type",
   billingConnectionsChooseConnection: "Choose a connection",
   billingConnectionsInvitationLink: "Invitation link",
-  billingConnectionsInvitationHelp: "Your supplier creates this from Shared by me in their alo workspace.",
+  billingConnectionsInvitationHelp:
+    "Your supplier creates this from Shared by me in their alo workspace.",
   billingConnectionsInvitationPlaceholder: "Paste the alo invitation link",
   billingConnectionsAccessKey: "Access key",
-  billingConnectionsAccessKeyHelp: "Kept private and never shown in your customer documents.",
+  billingConnectionsAccessKeyHelp:
+    "Kept private and never shown in your customer documents.",
   billingConnectionsAccessKeyPlaceholder: "Paste the key from your supplier",
   billingConnectionsReady: "Connection ready",
   billingConnectionsTestPreview: "Test and preview",
   billingConnectionsSyncApprovals: "Synchronization and approvals",
-  billingConnectionsSyncApprovalsHelp: "Choose when prices are checked and which changes require approval.",
+  billingConnectionsSyncApprovalsHelp:
+    "Choose when prices are checked and which changes require approval.",
   billingConnectionsCheckUpdates: "Check for updates",
   billingConnectionsChooseSchedule: "Choose a schedule",
   billingConnectionsApplyChanges: "Apply price changes",
   billingConnectionsChooseApproval: "Choose an approval rule",
   billingConnectionsChangeLimit: "Automatic change limit",
-  billingConnectionsChangeLimitHelp: "Changes above this percentage wait for approval.",
+  billingConnectionsChangeLimitHelp:
+    "Changes above this percentage wait for approval.",
   billingConnectionsProductMatching: "Product matching",
-  billingConnectionsProductMatchingHelp: "Control how supplier products are paired with items already in your catalogue.",
+  billingConnectionsProductMatchingHelp:
+    "Control how supplier products are paired with items already in your catalogue.",
   billingConnectionsMatchBy: "Match products by",
   billingConnectionsChooseMatching: "Choose a matching method",
   billingConnectionsNewProducts: "New supplier products",
   billingConnectionsChooseAction: "Choose an action",
   billingConnectionsFieldMapping: "Supplier field mapping",
-  billingConnectionsFieldMappingHelp: "Enter the field names used by this supplier. alo will suggest them after the first preview.",
+  billingConnectionsFieldMappingHelp:
+    "Enter the field names used by this supplier. alo will suggest them after the first preview.",
   billingConnectionsSkuField: "SKU field",
   billingConnectionsNameField: "Name field",
   billingConnectionsNetPriceField: "Net price field",
@@ -7022,7 +7044,8 @@ export const en = {
   billingConnectionsSharePrices: "Share my prices",
   billingConnectionsCreateSecure: "Create secure connection",
   billingConnectionsYouControl: "You control exactly what this client receives",
-  billingConnectionsYouControlHelp: "Internal purchase costs, supplier names and margins are never included.",
+  billingConnectionsYouControlHelp:
+    "Internal purchase costs, supplier names and margins are never included.",
   billingConnectionsClientPartner: "Client or partner",
   billingConnectionsCompanyName: "Company name",
   billingConnectionsDeliveryMethod: "How will they connect?",
@@ -7034,25 +7057,33 @@ export const en = {
   billingConnectionsNoProducts: "No price-list products match this search.",
   billingConnectionsLoadingPriceList: "Loading your price list…",
   billingConnectionsSecureCreated: "Secure price connection created",
-  billingConnectionsSendTo: (company: string) => `Send this to ${company}. Access can be paused or revoked at any time.`,
-  billingConnectionsKeyShownOnce: "The full key is shown only when it is created.",
+  billingConnectionsSendTo: (company: string) =>
+    `Send this to ${company}. Access can be paused or revoked at any time.`,
+  billingConnectionsKeyShownOnce:
+    "The full key is shown only when it is created.",
   billingConnectionsCopy: "Copy",
   billingConnectionsConnected: "Connected",
   billingConnectionsActionNeeded: "Action needed",
   billingConnectionsPaused: "Paused",
   billingConnectionsIndustrialComponentsEur: "Industrial components · EUR",
-  billingConnectionsChangesReady: (count: number) => `${count} price changes are ready to review`,
-  billingConnectionsUpdatedMinutesAgo: (count: number) => `Updated ${count} minutes ago`,
+  billingConnectionsChangesReady: (count: number) =>
+    `${count} price changes are ready to review`,
+  billingConnectionsUpdatedMinutesAgo: (count: number) =>
+    `Updated ${count} minutes ago`,
   billingConnectionsDaily: "Daily",
   billingConnectionsMetalsSheetEur: "Metals and sheet stock · EUR",
-  billingConnectionsSupplierRenew: "The supplier needs to renew this connection",
-  billingConnectionsUpdatedDaysAgo: (count: number) => `Last updated ${count} days ago`,
+  billingConnectionsSupplierRenew:
+    "The supplier needs to renew this connection",
+  billingConnectionsUpdatedDaysAgo: (count: number) =>
+    `Last updated ${count} days ago`,
   billingConnectionsWholesaleContract: "Wholesale catalogue · Contract pricing",
-  billingConnectionsWorkspaceReceivesApproved: "Their alo workspace receives approved price changes",
+  billingConnectionsWorkspaceReceivesApproved:
+    "Their alo workspace receives approved price changes",
   billingConnectionsUsedHoursAgo: (count: number) => `Used ${count} hour ago`,
   billingConnectionsOnApproval: "On approval",
   billingConnectionsProjectSupplyEur: "Project supply prices · EUR",
-  billingConnectionsApiExpiryDemo: "External API access expires 30 September 2026",
+  billingConnectionsApiExpiryDemo:
+    "External API access expires 30 September 2026",
   billingConnectionsUsedYesterday: "Used yesterday",
   billingConnectionsLive: "Live",
   billingConnectionsSupplierCatalogueEur: "Supplier catalogue · EUR",
@@ -7061,7 +7092,8 @@ export const en = {
   billingConnectionsHourly: "Hourly",
   billingConnectionsWeekly: "Weekly",
   billingConnectionsManual: "Manual",
-  billingConnectionsLivePriceListAutomatic: "Live price list · Automatically updated",
+  billingConnectionsLivePriceListAutomatic:
+    "Live price list · Automatically updated",
   billingConnectionsSelectedPriceItems: "Selected price-list items",
   billingConnectionsWaitingClient: "Waiting for the client to accept in alo",
   billingConnectionsExternalReady: "External API access is ready to share",
@@ -7070,22 +7102,28 @@ export const en = {
   billingConnectionsSharedByMe: "Shared by me",
   billingConnectionsUpdatedNow: "Updated just now",
   billingConnectionsUpToDate: (company: string) => `${company} is up to date.`,
-  billingConnectionsNowSupplying: (company: string) => `${company} is now supplying prices to this workspace.`,
-  billingConnectionsNowReceiving: (company: string) => `${company} is now receiving prices from this workspace.`,
+  billingConnectionsNowSupplying: (company: string) =>
+    `${company} is now supplying prices to this workspace.`,
+  billingConnectionsNowReceiving: (company: string) =>
+    `${company} is now receiving prices from this workspace.`,
   billingConnectionsDisconnectTitle: "Disconnect price connection?",
-  billingConnectionsDisconnectReceived: (company: string) => `${company} will stop sending supplier prices to this workspace. Existing prices will be kept, but they will no longer update automatically.`,
-  billingConnectionsDisconnectShared: (company: string) => `${company} will stop receiving prices from this workspace. Existing prices will be kept, but they will no longer update automatically.`,
+  billingConnectionsDisconnectReceived: (company: string) =>
+    `${company} will stop sending supplier prices to this workspace. Existing prices will be kept, but they will no longer update automatically.`,
+  billingConnectionsDisconnectShared: (company: string) =>
+    `${company} will stop receiving prices from this workspace. Existing prices will be kept, but they will no longer update automatically.`,
   billingConnectionsDisconnect: "Disconnect",
   billingConnectionsKeepConnected: "Keep connected",
   billingConnectionsTitle: "Price connections",
   billingPriceConnections: "Price connections",
   billingVat: "VAT",
-  billingConnectionsSubtitle: "Receive live supplier costs and securely share selected selling prices with your clients.",
+  billingConnectionsSubtitle:
+    "Receive live supplier costs and securely share selected selling prices with your clients.",
   billingConnectionsDirection: "Price connection direction",
   billingConnectionsSearch: "Search connections",
   billingConnectionsDismiss: "Dismiss",
   billingConnectionsNoMatches: "No matching connections",
-  billingConnectionsNoMatchesHelp: "Try another search or create a new price connection.",
+  billingConnectionsNoMatchesHelp:
+    "Try another search or create a new price connection.",
   quoteStudioScanToSave: "Scan to save",
   quoteStudioBuildTitle: "Build your quotation",
   quoteStudioBuildHelp: "Add content directly. Changes save automatically.",
@@ -7118,7 +7156,8 @@ export const en = {
   quoteStudioAttribution: "Attribution (optional)",
   quoteStudioQuoteAttribution: "Quote attribution",
   quoteStudioSectionText: "Section text",
-  quoteStudioSectionTextPlaceholder: "Write the information your customer needs…",
+  quoteStudioSectionTextPlaceholder:
+    "Write the information your customer needs…",
   quoteStudioListLayout: "List layout",
   quoteStudioListLayoutHelp: "Split longer lists into easy-to-scan columns.",
   quoteStudioColumns: "Columns",
@@ -7132,17 +7171,21 @@ export const en = {
   quoteStudioBold: "Bold",
   quoteStudioItalic: "Italic",
   quoteStudioEditContentBlock: "Edit content block",
-  quoteStudioChangesImmediate: "Changes are shown immediately in the quotation.",
+  quoteStudioChangesImmediate:
+    "Changes are shown immediately in the quotation.",
   quoteStudioDone: "Done",
   quoteStudioComposeImageText: "Compose image and text",
-  quoteStudioComposeImageTextHelp: "Arrange the block once and see exactly how it will appear in the quotation.",
+  quoteStudioComposeImageTextHelp:
+    "Arrange the block once and see exactly how it will appear in the quotation.",
   quoteStudioLayoutTools: "Layout tools",
-  quoteStudioLayoutToolsHelp: "Choose how this content block will appear in the quotation.",
+  quoteStudioLayoutToolsHelp:
+    "Choose how this content block will appear in the quotation.",
   quoteStudioComposition: "Composition",
   quoteStudioImageFrame: "Image frame",
   quoteStudioFit: "Fit",
   quoteStudioImage: "Image",
-  quoteStudioImageDescriptionPlaceholder: "Explain the product, project, or result shown in the image.",
+  quoteStudioImageDescriptionPlaceholder:
+    "Explain the product, project, or result shown in the image.",
   quoteStudioCaption: "Caption",
   quoteStudioCaptionPlaceholder: "Optional short caption",
   quoteStudioTextTools: "Text tools",
@@ -7156,7 +7199,8 @@ export const en = {
   quoteStudioZoomOut: "Zoom out",
   quoteStudioZoomIn: "Zoom in",
   quoteStudioInformationTable: "Information table",
-  quoteStudioInformationTableHelp: "Rename columns, then add as many rows or columns as the document needs.",
+  quoteStudioInformationTableHelp:
+    "Rename columns, then add as many rows or columns as the document needs.",
   quoteStudioTableColumnCount: "Number of table columns",
   quoteStudioRowActions: "Row actions",
   quoteStudioEnterValue: "Enter value",
@@ -7166,13 +7210,15 @@ export const en = {
   quoteStudioAddContentBelow: "Add content below",
   quoteStudioAddContent: "Add content",
   quoteStudioAddToQuotation: "Add to quotation",
-  quoteStudioAddToQuotationHelp: "Choose what should appear next in the document.",
+  quoteStudioAddToQuotationHelp:
+    "Choose what should appear next in the document.",
   quoteStudioCloseBlockPicker: "Close block picker",
   quoteStudioSearchBlocks: "Search blocks…",
   quoteStudioSearchBlocksA11y: "Search quotation blocks",
   quoteStudioNoMatchingBlocks: "No matching blocks",
   quoteStudioTryAnotherName: "Try another name.",
-  quoteStudioFirstBlockHelp: "Add text, a heading, or an image as the first block.",
+  quoteStudioFirstBlockHelp:
+    "Add text, a heading, or an image as the first block.",
   quoteStudioClose: "Close",
   quoteStudioBrandMark: "Brand mark",
   quoteStudioBrandMarkHelp: "Shown at the top of the customer quotation.",
@@ -7180,16 +7226,20 @@ export const en = {
   quoteStudioUploadLogo: "Upload your logo",
   quoteStudioRemove: "Remove",
   quoteStudioQrTitle: "Contact QR code",
-  quoteStudioQrHelp: "Let customers scan and save your company contact details.",
+  quoteStudioQrHelp:
+    "Let customers scan and save your company contact details.",
   quoteStudioShowQr: "Show contact QR code",
   quoteStudioPlacement: "Placement",
-  quoteStudioPlacementHelp: "Choose where the code sits beside your company details.",
+  quoteStudioPlacementHelp:
+    "Choose where the code sits beside your company details.",
   quoteStudioSize: "Size",
   quoteStudioSizeHelp: "Preview the QR footprint in the quotation header.",
   quoteStudioQrColour: "QR code colour",
   quoteStudioCompanyInformation: "Company information",
-  quoteStudioCompanyLinkedHelp: "These values come from Billing → Your details.",
-  quoteStudioOverrideHelp: "Editing one creates an override for this quotation.",
+  quoteStudioCompanyLinkedHelp:
+    "These values come from Billing → Your details.",
+  quoteStudioOverrideHelp:
+    "Editing one creates an override for this quotation.",
   quoteStudioUseYourDetails: "Use Your details",
   quoteStudioLinkedYourDetails: "Linked to Your details",
   quoteStudioCompanyName: "Company name",
@@ -7202,8 +7252,10 @@ export const en = {
   quoteStudioVatPlaceholder: "VAT registration number",
   quoteStudioCompanyNumberPlaceholder: "Company registration number",
   quoteStudioCustomerInformation: "Customer information",
-  quoteStudioCustomerInformationHelp: "Shown beneath Prepared for in the quotation header.",
-  quoteStudioCustomerOverrideHelp: "Editing a value creates an override for this quotation only.",
+  quoteStudioCustomerInformationHelp:
+    "Shown beneath Prepared for in the quotation header.",
+  quoteStudioCustomerOverrideHelp:
+    "Editing a value creates an override for this quotation only.",
   quoteStudioUseSelectedCustomer: "Use selected customer",
   quoteStudioLinkedSelectedCustomer: "Linked to selected customer",
   quoteStudioCustomerCompanyPlaceholder: "Customer company name",
@@ -7227,6 +7279,21 @@ export const en = {
   quoteStudioTableHelp: "Create flexible rows and columns",
   quoteStudioDivider: "Divider",
   quoteStudioDividerHelp: "Separate document sections",
+  quoteStudioDividerSettings: "Divider settings",
+  quoteStudioDividerAppearance: "Divider appearance",
+  quoteStudioDividerAppearanceHelp:
+    "Choose how this divider appears in the customer quotation.",
+  quoteStudioDividerStyle: "Line style",
+  quoteStudioDividerSolid: "Solid",
+  quoteStudioDividerDashed: "Dashed",
+  quoteStudioDividerDotted: "Dotted",
+  quoteStudioDividerThickness: "Line thickness",
+  quoteStudioDividerFine: "Fine",
+  quoteStudioDividerMedium: "Medium",
+  quoteStudioDividerBold: "Bold",
+  quoteStudioDividerWidth: "Line width",
+  quoteStudioDividerColour: "Line colour",
+  quoteStudioChooseDividerColour: "Choose divider colour",
   quoteStudioCategoryText: "Text",
   quoteStudioEditQuotationHeader: "Edit quotation header",
   quoteStudioCustomizeQuotation: "Customize quotation",
@@ -7241,21 +7308,29 @@ export const en = {
   quoteStudioQrPlacementA11y: (side: string) => `Place QR code on the ${side}`,
   quoteStudioQrColourHelp: "Choose a dark colour for reliable scanning",
   quoteStudioPhonePlaceholder: "+49 30 123 456",
-  quoteStudioAddressPlaceholder: "Street and number\nPostal code and city\nCountry",
+  quoteStudioAddressPlaceholder:
+    "Street and number\nPostal code and city\nCountry",
   quoteStudioHeaderStyle: "Header style",
-  quoteStudioHeaderStyleHelp: "Choose a professional composition. Your saved company information fills it automatically.",
+  quoteStudioHeaderStyleHelp:
+    "Choose a professional composition. Your saved company information fills it automatically.",
   quoteStudioHeaderArrangement: "Header arrangement",
-  quoteStudioHeaderArrangementHelp: "Choose which side carries your company identity.",
+  quoteStudioHeaderArrangementHelp:
+    "Choose which side carries your company identity.",
   quoteStudioLogoLeft: "Logo left",
   quoteStudioLogoRight: "Logo right",
-  quoteStudioLogoLeftHelp: "Company identity on the left; quotation details opposite.",
-  quoteStudioLogoRightHelp: "Company identity on the right; quotation details opposite.",
+  quoteStudioLogoLeftHelp:
+    "Company identity on the left; quotation details opposite.",
+  quoteStudioLogoRightHelp:
+    "Company identity on the right; quotation details opposite.",
   quoteStudioColumnBalance: "Column balance",
-  quoteStudioColumnBalanceHelp: "Choose how much space the company and customer sides receive.",
+  quoteStudioColumnBalanceHelp:
+    "Choose how much space the company and customer sides receive.",
   quoteStudioColumnBalanceA11y: "Quotation header column balance",
-  quoteStudioColumnRatioA11y: (company: string, customer: string) => `Company ${company} percent, customer ${customer} percent`,
+  quoteStudioColumnRatioA11y: (company: string, customer: string) =>
+    `Company ${company} percent, customer ${customer} percent`,
   quoteStudioDocumentPalette: "Document palette",
-  quoteStudioDocumentPaletteHelp: "Control the customer-facing page and pricing table colours.",
+  quoteStudioDocumentPaletteHelp:
+    "Control the customer-facing page and pricing table colours.",
   quoteStudioResetDefaults: "Reset to defaults",
   quoteStudioDocument: "Document",
   quoteStudioDocumentHelp: "Brand, page, header, and copy.",
@@ -7280,12 +7355,15 @@ export const en = {
   quoteStudioTableRows: "Table rows",
   quoteStudioTableRowsHelp: "Default row background",
   quoteStudioTypography: "Typography",
-  quoteStudioTypographyHelp: "Choose the reading style that best matches your brand.",
+  quoteStudioTypographyHelp:
+    "Choose the reading style that best matches your brand.",
   quoteStudioProposal: "Proposal",
   quoteStudioCloseTableSettings: "Close table settings",
-  quoteStudioTableChangesSavedAutomatically: "Table changes are saved automatically.",
+  quoteStudioTableChangesSavedAutomatically:
+    "Table changes are saved automatically.",
   quoteStudioChooseLayout: "Choose a layout",
-  quoteStudioChooseLayoutHelp: "Select a starting point, then adjust the visible content and columns below.",
+  quoteStudioChooseLayoutHelp:
+    "Select a starting point, then adjust the visible content and columns below.",
   quoteStudioCompact: "Compact",
   quoteStudioCompactHelp: "Names and prices only",
   quoteStudioDetailed: "Detailed",
@@ -7293,21 +7371,26 @@ export const en = {
   quoteStudioCatalogue: "Catalogue",
   quoteStudioCatalogueHelp: "Larger product images and details",
   quoteStudioProductContent: "Product content",
-  quoteStudioProductContentHelp: "Optional information shown with each product or service.",
+  quoteStudioProductContentHelp:
+    "Optional information shown with each product or service.",
   quoteStudioProductImages: "Product images",
   quoteStudioProductImagesHelp: "Upload an image for each table row",
   quoteStudioProductDescriptions: "Product descriptions",
-  quoteStudioProductDescriptionsHelp: "Add specifications or scope beneath each item",
+  quoteStudioProductDescriptionsHelp:
+    "Add specifications or scope beneath each item",
   quoteStudioVisibleColumns: "Visible columns",
-  quoteStudioVisibleColumnsHelp: "Product name and quotation total always remain visible.",
+  quoteStudioVisibleColumnsHelp:
+    "Product name and quotation total always remain visible.",
   quoteStudioUnit: "Unit",
   quoteStudioQuantity: "Quantity",
   quoteStudioUnitPrice: "Unit price",
   quoteStudioVatRate: "VAT rate",
   quoteStudioLineTotal: "Line total",
-  quoteStudioShowColumn: (label: string) => `Show the ${label.toLowerCase()} column`,
+  quoteStudioShowColumn: (label: string) =>
+    `Show the ${label.toLowerCase()} column`,
   quoteStudioPricingTableTotals: "Pricing table totals",
-  quoteStudioPricingTableTotalsHelp: "Choose how the amount summary appears beneath each pricing table. Every table keeps its own subtotal.",
+  quoteStudioPricingTableTotalsHelp:
+    "Choose how the amount summary appears beneath each pricing table. Every table keeps its own subtotal.",
   quoteStudioSummaryCard: "Summary card",
   quoteStudioSummaryCardHelp: "Compact and right aligned",
   quoteStudioFullWidth: "Full width",
@@ -7332,7 +7415,8 @@ export const en = {
   quoteStudioPricingTableNumber: (number: number) => `Pricing table ${number}`,
   quoteStudioNumberedListColumns: "Numbered list columns",
   quoteStudioBulletListColumns: "Bullet list columns",
-  quoteStudioColumnCount: (count: number) => count === 1 ? "1 column" : `${count} columns`,
+  quoteStudioColumnCount: (count: number) =>
+    count === 1 ? "1 column" : `${count} columns`,
   quoteStudioNumberedItemA11y: (number: number) => `Numbered item ${number}`,
   quoteStudioBulletItemA11y: (number: number) => `Bullet item ${number}`,
   quoteStudioBelowImage: "Below image",
@@ -7345,15 +7429,18 @@ export const en = {
   quoteStudioWholeImage: "Whole image",
   quoteStudioColumnNumber: (number: number) => `Column ${number}`,
   quoteStudioColumnNameA11y: (number: number) => `Column ${number} name`,
-  quoteStudioTableCellA11y: (column: string, row: number) => `${column}, row ${row}`,
+  quoteStudioTableCellA11y: (column: string, row: number) =>
+    `${column}, row ${row}`,
   quoteStudioCategoryMedia: "Media",
   quoteStudioCategoryTables: "Tables",
   quoteStudioCategoryLayout: "Layout",
   quoteStudioSearchResults: "Search results",
-  quoteStudioDesignDatabaseError: "The quotation design database could not be opened.",
+  quoteStudioDesignDatabaseError:
+    "The quotation design database could not be opened.",
   quoteStudioDesignSaveError: "The quotation design could not be saved.",
   quoteStudioDesignSaveCancelled: "Saving the quotation design was cancelled.",
-  quoteStudioDesignSaveRetry: "This design could not be saved. Try a smaller image or upload it again.",
+  quoteStudioDesignSaveRetry:
+    "This design could not be saved. Try a smaller image or upload it again.",
   quoteStudioShowSubtotal: "Show subtotal",
   quoteStudioHideSubtotal: "Hide subtotal",
   quoteStudioQuotationImageAlt: "Quotation image",
@@ -7376,30 +7463,39 @@ export const en = {
   quoteStudioLogoStackHelp: "Company name beneath the logo",
   billingVatIncludedNote: "VAT is included in the total.",
   billingVatSeparateNote: "VAT is shown separately from the net amount.",
-  billingPricingTableEditorHelp: "Add, edit, remove, or drag products and services into the right order.",
-  billingPricingTableEmptyHelp: "Add a product or service to begin this pricing table.",
+  billingPricingTableEditorHelp:
+    "Add, edit, remove, or drag products and services into the right order.",
+  billingPricingTableEmptyHelp:
+    "Add a product or service to begin this pricing table.",
   billingImage: "Image",
   billingQuoteExitPreviewToEdit: "Exit preview to edit this quotation",
   billingQuoteEditContent: "Edit quotation content",
-  billingQuoteCreateRevision: "Create a revision to edit this finalized quotation",
+  billingQuoteCreateRevision:
+    "Create a revision to edit this finalized quotation",
   billingQuoteEdit: "Edit quote",
-  billingQuoteExitPreviewToCustomize: "Exit preview to customize this quotation",
-  billingQuoteCreateRevisionToCustomize: "Create a revision to customize this finalized quotation",
+  billingQuoteExitPreviewToCustomize:
+    "Exit preview to customize this quotation",
+  billingQuoteCreateRevisionToCustomize:
+    "Create a revision to customize this finalized quotation",
   billingQuoteCreateRevisionTitle: "Create an editable revision?",
-  billingQuoteCreateRevisionConfirm: "The finalized quotation will stay unchanged. alo will create one new draft with the same customer, content, prices, and design.",
+  billingQuoteCreateRevisionConfirm:
+    "The finalized quotation will stay unchanged. alo will create one new draft with the same customer, content, prices, and design.",
   billingQuoteCreateRevisionAction: "Create revision",
-  billingConnectionsProductCount: (count: number) => count === 1 ? "1 product" : `${count} products`,
+  billingConnectionsProductCount: (count: number) =>
+    count === 1 ? "1 product" : `${count} products`,
   billingConnectionsUpdateCadence: (cadence: string) => `${cadence} updates`,
   billingConnectionsViaAlo: "Connected through alo",
   billingConnectionsExternalApi: "External API",
   billingConnectionsReviewChanges: (count: number) => `Review ${count} changes`,
   billingConnectionsResume: "Resume",
   billingConnectionsPause: "Pause",
-  billingConnectionsDisconnectCompany: (company: string) => `Disconnect ${company}`,
+  billingConnectionsDisconnectCompany: (company: string) =>
+    `Disconnect ${company}`,
   billingConnectionsSpreadsheetFeed: "Spreadsheet or feed",
   billingConnectionsPriceApiAddress: "Price API address",
   billingConnectionsFeedAddress: "Feed address",
-  billingConnectionsFormatDetection: "alo detects JSON, CSV, and spreadsheet feeds automatically.",
+  billingConnectionsFormatDetection:
+    "alo detects JSON, CSV, and spreadsheet feeds automatically.",
   billingConnectionsAddressPlaceholder: "https://supplier.example/prices",
   billingConnectionsAdvancedSettings: "Advanced settings",
   billingConnectionsEveryHour: "Every hour",
@@ -7419,19 +7515,30 @@ export const en = {
   billingConnectionsHeaderNamePlaceholder: "X-API-Key",
   billingConnectionsAloInvitationLink: "alo invitation link",
   billingConnectionsExternalPricingApi: "External pricing API",
-  billingConnectionsTestSummary: (found: number, matched: number, review: number) => `${found} products found · ${matched} matched automatically · ${review} can be reviewed after connecting.`,
-  billingConnectionsCustomHeaderHelp: "Optional. Use this only when the supplier's documentation requires a header other than the access key above.",
+  billingConnectionsTestSummary: (
+    found: number,
+    matched: number,
+    review: number,
+  ) =>
+    `${found} products found · ${matched} matched automatically · ${review} can be reviewed after connecting.`,
+  billingConnectionsCustomHeaderHelp:
+    "Optional. Use this only when the supplier's documentation requires a header other than the access key above.",
   billingConnectionsInviteAloWorkspace: "Invite their alo workspace",
   billingConnectionsGiveExternalApi: "Give them external API access",
-  billingConnectionsLivePriceListActive: (count: number) => `Live price list · ${count} active products`,
-  billingConnectionsChooseProductsSelected: (count: number) => `Choose products · ${count} selected`,
+  billingConnectionsLivePriceListActive: (count: number) =>
+    `Live price list · ${count} active products`,
+  billingConnectionsChooseProductsSelected: (count: number) =>
+    `Choose products · ${count} selected`,
   billingConnectionsItemUnit: "item",
   billingConnectionsPrices: "Prices",
   billingConnectionsUpdates: "Updates",
   billingConnectionsValidity: "Validity",
-  billingConnectionsLivePriceListCount: (count: number) => `Live price list (${count})`,
-  billingConnectionsSelectedProductsCount: (count: number) => `${count} selected products`,
-  billingConnectionsChangesFlow: "Price-list changes flow through this connection",
+  billingConnectionsLivePriceListCount: (count: number) =>
+    `Live price list (${count})`,
+  billingConnectionsSelectedProductsCount: (count: number) =>
+    `${count} selected products`,
+  billingConnectionsChangesFlow:
+    "Price-list changes flow through this connection",
   billingConnectionsNoExpiry: "No expiry",
 } as const;
 

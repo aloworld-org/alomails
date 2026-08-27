@@ -1089,4 +1089,43 @@ describe("the quotation document preview", () => {
     ).toBeTruthy();
     storage.removeItem(`alo:quote-design:${quoteId}`);
   });
+
+  test("renders the saved divider appearance in quotation preview", async () => {
+    const quoteId = "divider-appearance-preview";
+    localStorage.setItem(
+      `alo:quote-design:${quoteId}`,
+      JSON.stringify({
+        blocks: [
+          {
+            id: "custom-divider",
+            kind: "divider",
+            style: "dotted",
+            thickness: "bold",
+            width: 50,
+            color: "#8b5cf6",
+          },
+        ],
+      }),
+    );
+
+    const view = render(
+      <QuoteContentStudio
+        quoteId={quoteId}
+        readOnly
+        preview
+        pricingTable={() => null}
+        tableSubtotal={() => null}
+        lineKeys={[]}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(
+        view.container.querySelector(
+          '.w-1\\/2.border-t-4[style*="border-top-color: rgb(139, 92, 246)"][style*="border-top-style: dotted"]',
+        ),
+      ).toBeTruthy();
+    });
+    localStorage.removeItem(`alo:quote-design:${quoteId}`);
+  });
 });
