@@ -1,9 +1,11 @@
 // Makes the app installable: injects the product's web app manifest, icons,
-// and theme color into <head>. Loaded from index.html as its own module entry
+// and theme color into <head>, and registers the offline-shell service
+// worker. Loaded from index.html as its own module entry
 // (before main.tsx), so the whole PWA surface lives in index.html + public/ +
 // src/pwa/ and the app shell never has to know about it. Runs before React
 // touches the document, while <title> still holds the build-stamped brand.
 import { pwaAssetsFor } from "./productPwa";
+import { registerOfflineShell } from "./registerSw";
 
 /** Inject the PWA head tags for the document's stamped brand. Idempotent —
  *  a document that already links a manifest is left alone. */
@@ -31,3 +33,4 @@ export function installPwaHead(doc: Document): void {
 }
 
 installPwaHead(document);
+registerOfflineShell(window, import.meta.env.PROD);

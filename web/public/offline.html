@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>alo</title>
+    <!-- The honest offline screen, precached by sw.js. Fully self-contained
+         on purpose: no external stylesheet, script, font or image — offline
+         is exactly when a second request would fail. Colors are the ds token
+         values spelled inline (canvas #f4f1ec, ink #102a43, terracotta
+         #e76f51) because tokens.css is not reachable from here. -->
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        display: grid;
+        place-items: center;
+        background: #f4f1ec;
+        color: #102a43;
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        text-align: center;
+        padding: 24px;
+      }
+      main {
+        max-width: 26rem;
+      }
+      svg {
+        width: 56px;
+        height: 56px;
+        margin-bottom: 20px;
+      }
+      h1 {
+        font-size: 1.375rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+      }
+      p {
+        color: #486581;
+        line-height: 1.5;
+        margin-bottom: 24px;
+      }
+      button {
+        font: inherit;
+        font-weight: 500;
+        color: #fff;
+        background: #e76f51;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 22px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #d95f41;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <svg viewBox="0 0 24 24" fill="none" stroke="#e76f51" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2" />
+        <path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2" />
+        <path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8" />
+        <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
+      </svg>
+      <h1 id="title">You're offline</h1>
+      <p id="body">
+        alo can't reach the server right now. Your mail is safe and will be
+        waiting as soon as the connection returns.
+      </p>
+      <button id="retry" type="button">Try again</button>
+    </main>
+    <script>
+      // This static page cannot reach the app's i18n catalogs, so it carries
+      // its own four-language dictionary (the catalog languages, en fallback)
+      // and picks by the browser's language. Markup defaults stay English so
+      // a no-JS render still reads.
+      var STRINGS = {
+        en: {
+          title: "You're offline",
+          body:
+            "alo can't reach the server right now. Your mail is safe and " +
+            "will be waiting as soon as the connection returns.",
+          retry: "Try again",
+        },
+        fr: {
+          title: "Vous êtes hors ligne",
+          body:
+            "alo ne parvient pas à joindre le serveur pour le moment. Vos " +
+            "e-mails sont en sécurité et vous attendront dès que la " +
+            "connexion reviendra.",
+          retry: "Réessayer",
+        },
+        nl: {
+          title: "Je bent offline",
+          body:
+            "alo kan de server momenteel niet bereiken. Je e-mail is veilig " +
+            "en staat voor je klaar zodra de verbinding terug is.",
+          retry: "Opnieuw proberen",
+        },
+        de: {
+          title: "Du bist offline",
+          body:
+            "alo erreicht den Server gerade nicht. Deine E-Mails sind " +
+            "sicher und warten auf dich, sobald die Verbindung zurück ist.",
+          retry: "Erneut versuchen",
+        },
+      };
+      var lang = (navigator.language || "en").slice(0, 2).toLowerCase();
+      var t = STRINGS[lang] || STRINGS.en;
+      if (STRINGS[lang]) document.documentElement.lang = lang;
+      document.title = t.title;
+      document.getElementById("title").textContent = t.title;
+      document.getElementById("body").textContent = t.body;
+      document.getElementById("retry").textContent = t.retry;
+      document.getElementById("retry").addEventListener("click", function () {
+        location.reload();
+      });
+      // Zero-manual: when the connection comes back, go back to the app
+      // without waiting for the button.
+      window.addEventListener("online", function () {
+        location.reload();
+      });
+    </script>
+  </body>
+</html>
