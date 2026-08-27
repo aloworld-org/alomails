@@ -285,7 +285,7 @@ export function QuoteEditor() {
               type="button"
               className={`${styles.linkAction} ${
                 quote.status === "draft" && !preview
-                  ? "!bg-accent-soft !text-accent shadow-sm hover:!bg-accent-soft hover:!text-accent"
+                  ? "!min-h-10 !rounded-xl !bg-accent-soft !px-4 !text-accent hover:!bg-accent-soft hover:!text-accent"
                   : ""
               }`}
               onClick={() => void editAsDraft()}
@@ -320,7 +320,7 @@ export function QuoteEditor() {
               type="button"
               className={`${styles.linkAction} ${
                 preview
-                  ? "!bg-accent-soft !text-accent shadow-sm hover:!bg-accent-soft hover:!text-accent"
+                  ? "!min-h-10 !rounded-xl !bg-accent-soft !px-4 !text-accent hover:!bg-accent-soft hover:!text-accent"
                   : ""
               }`}
               aria-pressed={preview}
