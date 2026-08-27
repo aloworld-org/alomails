@@ -145,7 +145,7 @@ export function NewProjectDialog({ customers, onClose, onCreate }: {
               <button
                 key={option}
                 type="button"
-                className={`relative flex min-h-20 items-center gap-3 rounded-xl border-2 px-4 py-3 text-left transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${selected ? "border-accent bg-accent-soft shadow-sm" : "border-default bg-surface hover:border-strong hover:bg-raised"}`}
+                className={`relative flex min-h-20 items-center gap-3 rounded-xl border-2 px-5 py-4 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${selected ? "border-accent bg-accent-soft" : "border-default bg-surface hover:border-strong hover:bg-raised"}`}
                 role="radio"
                 aria-checked={selected}
                 onClick={() => setKind(option)}

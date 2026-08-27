@@ -74,7 +74,7 @@ const styles = {
   templateGrid:
     "grid grid-cols-4 gap-2 max-[46rem]:grid-cols-2 max-[28rem]:grid-cols-1",
   templateCard:
-    "flex min-h-28 flex-col items-start gap-2 rounded-xl border border-default bg-surface !px-4 !py-4 text-left shadow-sm transition-[border-color,background-color,box-shadow] hover:border-accent/40 hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
+    "flex min-h-28 flex-col items-start gap-2 rounded-xl border border-default bg-surface !px-4 !py-4 text-left shadow-sm transition-colors hover:border-accent/40 hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
   templateCardActive:
     "!border-accent !bg-accent-soft ring-1 ring-accent/20 [&>span:first-child]:text-accent",
   templateCardName: "block text-sm font-semibold leading-snug text-primary",

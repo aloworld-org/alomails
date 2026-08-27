@@ -103,7 +103,7 @@ export function CalendarView({ tasks, onOpen, onAdd }: Props) {
                   <button
                     key={t.id}
                     type="button"
-                    className="w-full overflow-hidden rounded-lg border text-left text-xs font-medium text-primary shadow-sm transition-[filter,box-shadow] hover:brightness-95 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+                    className="w-full overflow-hidden rounded-lg border text-left text-xs font-medium text-primary shadow-sm transition-[filter,border-color] hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
                     style={{
                       borderColor: `color-mix(in srgb, ${statusColor(t.status)} 28%, transparent)`,
                       background: `color-mix(in srgb, ${statusColor(t.status)} 10%, var(--surface))`,

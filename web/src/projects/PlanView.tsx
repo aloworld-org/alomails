@@ -50,7 +50,7 @@ const styles = {
   timelineDay: "whitespace-nowrap text-xs text-tertiary",
   plan: "m-0 grid list-none gap-4 p-0 xl:grid-cols-2",
   milestone:
-    "overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm transition-shadow hover:shadow-md",
+    "overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm transition-colors hover:border-default hover:bg-raised/30",
   milestoneHead: "flex flex-wrap items-start gap-3 px-5 py-4",
   rowName: "text-left text-base font-semibold text-link hover:text-accent",
   muted: "text-tertiary",

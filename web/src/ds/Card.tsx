@@ -31,12 +31,12 @@ const PAD = { none: "", sm: "p-3", md: "p-5", lg: "p-8" } as const;
 
 /** Only when the whole card is a link or a button. A hover state on something
  *  that does not respond to a click is a promise the screen does not keep.
- *  The focus ring is the accent rather than `global.css`'s neutral one: this
- *  card *is* the control, and it is the only thing on the row that moves. */
+ *  The focus ring is the accent rather than the neutral one: this card *is*
+ *  the control. Its hover feedback stays spatially stable. */
 const INTERACTIVE =
-  "cursor-pointer transition-[border-color,box-shadow] " +
+  "cursor-pointer transition-colors " +
   "duration-[var(--duration-fast)] ease-standard " +
-  "hover:border-default hover:shadow-md " +
+  "hover:border-default hover:bg-raised " +
   "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2";
 
 export interface CardProps extends HTMLAttributes<HTMLElement> {
@@ -86,9 +86,8 @@ export function Card({
   const classes = [
     BASE,
     PAD[pad],
-    // Elevation is chosen once. `hover:shadow-md` still wins over either, which
-    // is the order the stylesheet resolved to: a flat card that is clickable
-    // lifts under the pointer.
+    // Elevation is chosen once and never changes on hover. Moving a card
+    // toward the pointer makes the surrounding layout feel unstable.
     flat === true ? "shadow-none" : "shadow-sm",
     interactive === true ? INTERACTIVE : "",
     className ?? "",
