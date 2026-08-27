@@ -48,13 +48,13 @@ describe("catalog fallback", () => {
       expect(en).toHaveProperty(key);
     }
     // German is deliberately partial while M4.1 ships it module by module:
-    // an untranslated surface (here: inventory) must read as English, not
-    // blank.
-    expect(catalog.inventoryTabCatalog).toBe(en.inventoryTabCatalog);
+    // an untranslated surface (here: sites, the last one) must read as
+    // English, not blank.
+    expect(catalog.sitesNewSite).toBe(en.sitesNewSite);
   });
 });
 
-describe("German ships complete modules (M4.1, tranches 1–6: mail + Docs/Drive + Chat/Meet + admin/control + Billing/CRM/Insights + Projects/Finance)", () => {
+describe("German ships complete modules (M4.1, tranches 1–7: mail + Docs/Drive + Chat/Meet + admin/control + Billing/CRM/Insights + Projects/Finance + Inventory/HR/Campaigns/Base + the agent tail)", () => {
   /** The sections `de.ts` claims to cover, by key prefix. The catalog is
    *  allowed to be partial across *modules* — the fallback shows English —
    *  but never inside one: a reading pane that mixes German buttons with
@@ -72,16 +72,21 @@ describe("German ships complete modules (M4.1, tranches 1–6: mail + Docs/Drive
    *  cards are enforced by those modules' own fully-translated describes
    *  below, which German joined in the same tranche); tranche 6 adds
    *  Projects and Finance entire, their agent cards enforced the same way
-   *  (B3.11 and B4.15 below). */
+   *  (B3.11 and B4.15 below); tranche 7 adds Inventory, HR and Campaigns
+   *  entire (incl. the stranger-facing unsubscribe page under the
+   *  `campaign` singular prefix), the Drive Base family, and the whole
+   *  `agent` family — the assistant's mail/calendar/chat/Drive cards were
+   *  the last agent keys out, so the anchored agentApprove/agentDiscard
+   *  singletons widened to the plain prefix. Only `sites` remains. */
   const SHIPPED_PREFIXES =
-    /^(agenda|task|mail|compose|flag|folder|filter|spam|snooze|unsubscribe|appPassword|delegate|sharing|shared|categor|transfer|contact|import|signup|reset|settings|brand|home|module|rsvp|error|twoFactor|recovery|doc|drive|sheet|office|picker|search|ai|eq|spec|tb|ref|block|heading|para|table|chart|code|insert|font|size|align|text|style|highlight|strikethrough|bullet|numbered|horizontal|clear|close|cancel|chat|meet|admin|audit|control|domain|group|invite|overview|provider|security|tenant|user|dkim|kind|access|billing|crm|insights|projects|finance|add$|save$|deleteLabel$|agentApprove$|agentDiscard$|aloDesc$|anthropicDesc$|openaiDesc$|mistralDesc$|ollamaDesc$|customDesc$|builtInTag$|connectTitle$|configureTitle$|removeRecipient$|recipientCount$|archiveUnavailable$)/;
+    /^(agenda|task|mail|compose|flag|folder|filter|spam|snooze|unsubscribe|appPassword|delegate|sharing|shared|categor|transfer|contact|import|signup|reset|settings|brand|home|module|rsvp|error|twoFactor|recovery|doc|drive|sheet|office|picker|search|ai|eq|spec|tb|ref|block|heading|para|table|chart|code|insert|font|size|align|text|style|highlight|strikethrough|bullet|numbered|horizontal|clear|close|cancel|chat|meet|admin|audit|control|domain|group|invite|overview|provider|security|tenant|user|dkim|kind|access|billing|crm|insights|projects|finance|inventory|hr|campaign|base|agent|add$|save$|deleteLabel$|aloDesc$|anthropicDesc$|openaiDesc$|mistralDesc$|ollamaDesc$|customDesc$|builtInTag$|connectTitle$|configureTitle$|removeRecipient$|recipientCount$|archiveUnavailable$)/;
   const shippedKeys = Object.keys(en).filter((key) =>
     SHIPPED_PREFIXES.test(key),
   );
 
   test("the key list is the real shipped surface, not an empty filter", () => {
-    expect(shippedKeys.length).toBeGreaterThan(2900);
-    expect(Object.keys(de).length).toBeGreaterThan(3100);
+    expect(shippedKeys.length).toBeGreaterThan(3700);
+    expect(Object.keys(de).length).toBeGreaterThan(3800);
   });
 
   test("every shipped-module string exists in German", () => {
@@ -240,6 +245,42 @@ describe("German ships complete modules (M4.1, tranches 1–6: mail + Docs/Drive
     );
     expect(catalog.financeReportOpenDocuments(1)).toBe("1 offenes Dokument");
     expect(catalog.financeReportOpenDocuments(3)).toBe("3 offene Dokumente");
+    // Tranche 7: Inventory/HR/Campaigns/Base + the agent tail. German trade
+    // language splits what English shares — a purchase order is a Bestellung,
+    // a sales order an Auftrag — and the movement reasons carry the
+    // warehouse's own nouns, not translations of our English.
+    expect(catalog.inventoryNewPurchaseOrder).toBe("Neue Bestellung");
+    expect(catalog.inventoryNewSalesOrder).toBe("Neuer Auftrag");
+    expect(catalog.inventoryReasonReceipt).toBe("Wareneingang");
+    expect(catalog.inventoryReasonCount).toBe("Inventur");
+    expect(catalog.inventoryReasonShrinkage).toBe("Schwund");
+    // The draft-invoice word is Billing's own, in both modules that raise one.
+    expect(catalog.inventoryDraftInvoice).toBe(catalog.billingDraftInvoice);
+    expect(catalog.inventoryInvoiceDrafted).toContain(catalog.moduleBilling);
+    // HR: sending a week back is the same act (and word) as in Projects, a
+    // candidate is told "nicht berücksichtigt" — the rejection letter's own
+    // phrase, never the form's reject word — and Ausgeschieden is said
+    // plainly.
+    expect(catalog.hrSendBack).toBe(catalog.projectsReject);
+    expect(catalog.hrStageRejected).toBe("Nicht berücksichtigt");
+    expect(catalog.hrStageRejected).not.toBe(catalog.auditActionReject);
+    expect(catalog.hrLeft).toBe("Ausgeschieden");
+    expect(catalog.hrKindPermanent).toBe("Unbefristet");
+    // Plural branches across the three new families.
+    expect(catalog.agentReorderDrafted(1)).toBe("1 Bestellentwurf");
+    expect(catalog.agentReorderDrafted(3)).toBe("3 Bestellentwürfe");
+    expect(catalog.hrPeopleCount(1)).toBe("1 Person");
+    expect(catalog.hrPeopleCount(9)).toBe("9 Personen");
+    expect(catalog.hrWaitingCount(1)).toBe("1 wartet");
+    expect(catalog.hrWaitingCount(4)).toBe("4 warten");
+    expect(catalog.campaignsTallyMailable(3, 5)).toBe(
+      "3 von 5 Personen werden angeschrieben",
+    );
+    // The unsubscribe page says stop, not "manage preferences".
+    expect(catalog.campaignUnsubscribeLinkText).toBe("Abmelden");
+    expect(catalog.campaignUnsubscribeStopAll).toBe(
+      "Senden Sie mir gar nichts mehr",
+    );
   });
 
   test("the spam-banner fallback declines correctly in both sentences", () => {
@@ -967,6 +1008,7 @@ describe("alo Inventory is fully translated (B5.11)", () => {
   test.each([
     ["fr", fr],
     ["nl", nl],
+    ["de", de],
   ])("%s translates every Inventory string", (_locale, catalog) => {
     const missing = inventoryKeys.filter((key) => !(key in catalog));
     expect(missing).toEqual([]);
@@ -975,6 +1017,7 @@ describe("alo Inventory is fully translated (B5.11)", () => {
   test.each([
     ["fr", fr],
     ["nl", nl],
+    ["de", de],
   ])(
     "%s keeps every interpolation a function of the same shape",
     (locale, catalog) => {
@@ -988,13 +1031,14 @@ describe("alo Inventory is fully translated (B5.11)", () => {
           expect(String(translated).trim()).not.toBe("");
         }
       }
-      expect(locale).toMatch(/^(fr|nl)$/);
+      expect(locale).toMatch(/^(fr|nl|de)$/);
     },
   );
 
   test("the translated strings really are different words", () => {
     expect(buildCatalog("fr").moduleInventory).toBe("Inventaire");
     expect(buildCatalog("nl").moduleInventory).toBe("Voorraad");
+    expect(buildCatalog("de").moduleInventory).toBe("Lager");
     // The two order documents are what a stranger reads.
     expect(buildCatalog("fr").inventoryNewPurchaseOrder).toBe(
       "Nouvelle commande d’achat",
@@ -1015,6 +1059,28 @@ describe("alo Inventory is fully translated (B5.11)", () => {
     );
     expect(buildCatalog("nl").agentReorderDrafted(1)).toBe("1 conceptorder");
     expect(buildCatalog("nl").agentReorderDrafted(3)).toBe("3 conceptorders");
+    expect(buildCatalog("de").inventoryConsignmentNo(2)).toBe("Sendung 2");
+    expect(buildCatalog("de").inventoryArrivalNo(2)).toBe("Eingang 2");
+  });
+
+  test("German splits the trade's two documents and keeps the warehouse's own nouns", () => {
+    // English says "order" for both directions; German paperwork does not: a
+    // purchase order is a Bestellung, a sales order an Auftrag, and where one
+    // column lists both the document is a Beleg. The movement reasons are the
+    // warehouse's own words (Wareneingang, Umlagerung, Inventur, Schwund) —
+    // the same finding as nl's ingeslagen/uitgeslagen: written, not
+    // translated.
+    const catalog = buildCatalog("de");
+    expect(catalog.inventoryTabPurchasing).toBe("Einkauf");
+    expect(catalog.inventoryTabSales).toBe("Aufträge");
+    expect(catalog.inventoryColOrder).toBe("Beleg");
+    expect(catalog.inventoryReasonTransfer).toBe("Umlagerung");
+    expect(catalog.inventoryReceiveWhere).toBe("Eingelagert in");
+    expect(catalog.inventoryDeliverWhere).toBe("Entnommen aus");
+    // The agent card's quantity phrase is invariable, as in French: the
+    // number arrives formatted, so no word may have to agree with it.
+    expect(catalog.agentReorderNeeded("1", "Stück")).toBe("1 Stück benötigt");
+    expect(catalog.agentReorderNeeded("12", "")).toBe("12 benötigt");
   });
 
   test("no French label makes a participle agree with goods it cannot see", () => {
@@ -1074,6 +1140,13 @@ describe("alo Inventory is fully translated (B5.11)", () => {
     expect(buildCatalog("nl").inventoryInvoiceDrafted).toContain(
       buildCatalog("nl").moduleBilling,
     );
+    expect(buildCatalog("de").inventoryDraftInvoice).toBe("Rechnungsentwurf");
+    expect(buildCatalog("de").crmDocumentDraft("invoice")).toBe(
+      "Rechnungsentwurf",
+    );
+    expect(buildCatalog("de").inventoryInvoiceDrafted).toContain(
+      buildCatalog("de").moduleBilling,
+    );
   });
 
   test("every reason a product was left out of an order has words in each language", () => {
@@ -1081,7 +1154,7 @@ describe("alo Inventory is fully translated (B5.11)", () => {
     // that explains itself in English. The default branch matters most: a newer
     // server's reason must still read as "left out", never as nothing.
     const codes = ["noSupplier", "nothingToBuy", "somethingNewerServersKnow"];
-    for (const locale of ["fr", "nl"] as const) {
+    for (const locale of ["fr", "nl", "de"] as const) {
       const say = buildCatalog(locale).agentReorderReason;
       for (const code of codes) {
         expect(say(code)).not.toBe(en.agentReorderReason(code));
@@ -1093,6 +1166,9 @@ describe("alo Inventory is fully translated (B5.11)", () => {
     );
     expect(buildCatalog("nl").agentReorderReason("noSupplier")).toBe(
       "niemand heeft er u een prijs voor gegeven",
+    );
+    expect(buildCatalog("de").agentReorderReason("noSupplier")).toBe(
+      "niemand hat Ihnen dafür einen Preis genannt",
     );
   });
 });
@@ -1130,6 +1206,7 @@ describe("alo HR is fully translated (B6.11)", () => {
   test.each([
     ["fr", fr],
     ["nl", nl],
+    ["de", de],
   ])("%s translates every HR string", (_locale, catalog) => {
     const missing = hrKeys.filter((key) => !(key in catalog));
     expect(missing).toEqual([]);
@@ -1145,6 +1222,7 @@ describe("alo HR is fully translated (B6.11)", () => {
   test.each([
     ["fr", fr],
     ["nl", nl],
+    ["de", de],
   ])(
     "%s keeps every interpolation a function of the same shape",
     (locale, catalog) => {
@@ -1158,13 +1236,14 @@ describe("alo HR is fully translated (B6.11)", () => {
           expect(String(translated).trim()).not.toBe("");
         }
       }
-      expect(locale).toMatch(/^(fr|nl)$/);
+      expect(locale).toMatch(/^(fr|nl|de)$/);
     },
   );
 
   test("the translated strings really are different words", () => {
     expect(buildCatalog("fr").moduleHr).toBe("Personnes");
     expect(buildCatalog("nl").moduleHr).toBe("Mensen");
+    expect(buildCatalog("de").moduleHr).toBe("Personen");
     // …including the ones built by a function, in both branches.
     expect(buildCatalog("fr").hrWorkingDays(1)).toBe("1 jour");
     expect(buildCatalog("fr").hrWorkingDays(4)).toBe("4 jours");
@@ -1172,6 +1251,8 @@ describe("alo HR is fully translated (B6.11)", () => {
     expect(buildCatalog("nl").hrPeopleCount(9)).toBe("9 mensen");
     expect(buildCatalog("fr").agentWhoIsOffCount(1)).toBe("1 personne");
     expect(buildCatalog("nl").agentWhoIsOffDays(3)).toBe("3 dagen");
+    expect(buildCatalog("de").agentWhoIsOffDays(1)).toBe("1 Tag");
+    expect(buildCatalog("de").agentWhoIsOffDays(3)).toBe("3 Tage");
   });
 
   test("no string in any language says WHY somebody is away", () => {
@@ -1181,8 +1262,8 @@ describe("alo HR is fully translated (B6.11)", () => {
     // a screen whose English says only "away" would invent health data the
     // server never sent. Public holidays are a different thing and stay.
     const reason =
-      /\bsick|\billness|\bmalad|\bziek|\bmatern|\bparental\b|ouderschap|zwangerschap/i;
-    for (const catalog of [en, fr, nl]) {
+      /\bsick|\billness|\bmalad|\bziek|\bmatern|\bparental\b|ouderschap|zwangerschap|krank|elternzeit|mutterschutz|schwanger/i;
+    for (const catalog of [en, fr, nl, de]) {
       const named = hrKeys
         .filter((key) => key in catalog)
         .filter((key) => {
@@ -1202,6 +1283,12 @@ describe("alo HR is fully translated (B6.11)", () => {
     expect(buildCatalog("fr").hrKindFixedTerm).toBe("Durée déterminée");
     expect(buildCatalog("nl").hrKindPermanent).toBe("Vast");
     expect(buildCatalog("nl").hrKindContractor).toBe("Zelfstandige");
+    // German paperwork says unbefristet/befristet, and a self-employed
+    // person is selbstständig — never "Auftragnehmer", which is a party to
+    // a contract, not a way of working.
+    expect(buildCatalog("de").hrKindPermanent).toBe("Unbefristet");
+    expect(buildCatalog("de").hrKindFixedTerm).toBe("Befristet");
+    expect(buildCatalog("de").hrKindContractor).toBe("Selbstständig");
   });
 
   test("a candidate who did not get the job is told so without an insult", () => {
@@ -1210,6 +1297,9 @@ describe("alo HR is fully translated (B6.11)", () => {
     // process ending, rather than *afgewezen* aimed at the person.
     expect(buildCatalog("fr").hrStageRejected).toBe("Non retenu");
     expect(buildCatalog("nl").hrStageRejected).toBe("Niet verder");
+    // German takes the rejection letter's own phrase — nicht berücksichtigt —
+    // never the form's Zurückgewiesen or Abgelehnt aimed at the person.
+    expect(buildCatalog("de").hrStageRejected).toBe("Nicht berücksichtigt");
   });
 
   test("having left is said plainly, in every language", () => {
@@ -1217,6 +1307,7 @@ describe("alo HR is fully translated (B6.11)", () => {
     // that a person's employment ended is a fact the directory states.
     expect(buildCatalog("fr").hrLeft).toBe("Parti");
     expect(buildCatalog("nl").hrLeft).toBe("Vertrokken");
+    expect(buildCatalog("de").hrLeft).toBe("Ausgeschieden");
   });
 });
 

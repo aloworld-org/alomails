@@ -28,7 +28,13 @@
 // templates, the approvals inbox, the profitability report, the timer)
 // and Finance entire (expense claims, the bank and reconciliation, the
 // chart of accounts, the four reports), plus the agent cards both
-// render. Vocabulary held from tranche 4: a document is "ausgestellt"
+// render — and (tranche 7) the rest of the assistant's cards (mail,
+// calendar, chat and Drive acts), the Drive Base family, Inventory
+// entire (catalog, stock, movements, purchase + sales orders, the
+// order book, scanning), HR entire (recruiting, letter templates, the
+// directory and org chart, leave, the absence month, approvals) and
+// Campaigns entire (audience, letters, the unsubscribe page). Only
+// Sites remains. Vocabulary held from tranche 4: a document is "ausgestellt"
 // (matching auditActionIssue), a declined quote is "abgelehnt"
 // (matching auditActionDecline), a sent-back timesheet is
 // "zurückgewiesen" (matching auditActionReject), and the module names
@@ -4153,4 +4159,897 @@ export const de: Partial<Catalog> = {
   financeReportVatRefund: "Zu erstatten",
   financeReportVatNote:
     "Das sind die Zahlen Ihrer Bücher — Verkäufe und Einkäufe zusammen —, und aus ihnen wird eine Erklärung abgegeben. Die MwSt.-Übersicht unter Rechnungen zeigt, was Sie in Rechnung gestellt haben — eine andere Frage.",
+
+  // ---- Tranche 7: der Assistent überall, Base, Lager, Personen und
+  // Kampagnen -----------------------------------------------------------------
+  //
+  // Der Rest des Agent-Schwanzes: die Karten, die der Assistent in E-Mail,
+  // Kalender, Chat und Drive zeigt. Die Verben sind dieselben wie auf den
+  // Bildschirmen, deren Arbeit sie auslösen (Kennzeichnen, Zurückstellen,
+  // In Ordner verschieben) — zwei Wörter für einen Knopf wären zwei Knöpfe.
+  agentActWhatsOn: "Ihren Kalender lesen",
+  agentActAmIFree: "Auf Überschneidung prüfen",
+  agentActCatchUp: "Nachlesen, was gesagt wurde",
+  agentActFindInChat: "Unterhaltungen durchsuchen",
+  agentActFindFile: "Ihr Drive durchsuchen",
+  agentActFindContact: "Kontakt nachschlagen",
+  agentFieldRoom: "Unterhaltung",
+  agentFieldLookingFor: "Gesucht",
+  agentActDraft: "Neue E-Mail",
+  agentActReply: "Antworten",
+  agentActSend: "E-Mail senden",
+  agentActArchive: "Archivieren",
+  agentActTrash: "In den Papierkorb",
+  agentActMarkRead: "Als gelesen markieren",
+  agentActMarkUnread: "Als ungelesen markieren",
+  agentActFlag: "Kennzeichnen",
+  agentActUnflag: "Kennzeichnung entfernen",
+  agentActSnooze: "Zurückstellen",
+  agentActMove: "In Ordner verschieben",
+  agentActTask: "Aufgabe erstellen",
+  agentActEvent: "In den Kalender eintragen",
+  agentSendButton: "Senden",
+  agentSendCaution:
+    "Damit wird die E-Mail jetzt gesendet — das lässt sich nicht rückgängig machen.",
+  agentFieldTo: "An",
+  agentFieldSubject: "Betreff",
+  agentFieldEmail: "E-Mail",
+  agentFieldReplyTo: "Als Antwort auf",
+  agentFieldUntil: "Bis",
+  agentFieldFolder: "Ordner",
+  agentFieldDue: "Fällig",
+  agentFieldWhen: "Wann",
+  agentFieldTask: "Aufgabe",
+  agentFieldEvent: "Termin",
+  agentNoSubject: "(kein Betreff)",
+  // Die Lager-Werkzeuge des Assistenten: Entwürfe und eine Auskunft, nie eine
+  // Bestellung.
+  agentActReorderProposals: "Nachbestellungen entwerfen",
+  agentReorderNote:
+    "Sieht alles durch, was unter Ihrem eigenen Mindestbestand liegt, und schreibt je Lieferant einen Bestellentwurf. Nichts wird gesendet — jeder Entwurf wartet bei Ihren Bestellungen darauf, dass Sie ihn prüfen und senden.",
+  agentActStockAnswer: "Bestand prüfen",
+  agentStockAnswerNote:
+    "Liest, wo ein Produkt gerade steht: im Regal, bestellt, Kunden zugesagt. Es ändert nichts und reserviert nichts.",
+  agentFieldSupplier: "Lieferant",
+  agentFieldLocation: "Ort",
+  agentFieldProduct: "Produkt",
+  agentReorderEverySupplier: "Jeder Lieferant",
+  agentReorderEverywhere: "Überall",
+  agentReorderShortages: (count: number): string =>
+    count === 1 ? "1 unter Minimum" : `${count} unter Minimum`,
+  agentReorderNothingShort: "Nichts liegt unter seinem Minimum",
+  agentReorderDrafted: (count: number): string =>
+    count === 1 ? "1 Bestellentwurf" : `${count} Bestellentwürfe`,
+  agentReorderLines: (count: number): string =>
+    count === 1 ? "1 Position" : `${count} Positionen`,
+  agentReorderLeftOut: "Nichts bestellt für",
+  agentReorderReason: (reason: string): string => {
+    switch (reason) {
+      case "noSupplier":
+        return "niemand hat Ihnen dafür einen Preis genannt";
+      case "nothingToBuy":
+        return "die Regel verlangt nichts";
+      default:
+        // Ein Grund, den ein neuerer Server kennt und dieser Client nicht:
+        // sichtbar ausgelassen, nie stillschweigend verschluckt.
+        return "ausgelassen";
+    }
+  },
+  agentReorderNeeded: (qty: string, unit: string): string =>
+    unit === "" ? `${qty} benötigt` : `${qty} ${unit} benötigt`,
+  agentReorderFooter:
+    "Das sind Entwürfe. Kein Lieferant wurde kontaktiert und keine Bestellnummer gezogen — öffnen Sie einen im Lager, um ihn zu prüfen und zu senden.",
+  agentStockOnHand: "Im Regal",
+  agentStockOnOrder: "Bestellt",
+  agentStockCommitted: "Zugesagt",
+  agentStockAvailable: "Bleibt",
+  agentStockNoShelf: "Eine Dienstleistung — nichts liegt auf Lager",
+  agentStockNowhere: "Nirgends etwas",
+  agentStockWatched: "Gehalten bei",
+  agentStockMinimum: (min: string, target: string): string =>
+    `Minimum ${min}, aufgefüllt auf ${target}`,
+  agentStockBelowMinimum: "unter Minimum",
+  agentStockFooter:
+    "Zahlen, wie sie jetzt gerade stehen. Nichts wurde bestellt und nichts zurückgelegt.",
+  // Die eine HR-Auskunft: Namen und Tage, nie ein Grund.
+  agentActWhoIsOff: "Sehen, wer abwesend ist",
+  agentWhoIsOffNote:
+    "Liest die Abwesenheitsübersicht, die hier ohnehin alle sehen: wer abwesend ist, und an welchen Tagen. Es ändert nichts, trägt nichts ein und benachrichtigt niemanden.",
+  agentWhoIsOffAway: "Abwesend",
+  agentWhoIsOffNobody: "Niemand",
+  agentWhoIsOffCount: (count: number): string =>
+    count === 1 ? "1 Person" : `${count} Personen`,
+  agentWhoIsOffDays: (count: number): string =>
+    count === 1 ? "1 Tag" : `${count} Tage`,
+  agentWhoIsOffFooter:
+    "Nur Namen und Tage — eine genehmigte Abwesenheit sagt nie, warum jemand fehlt. Wer nicht aufgeführt ist, kann trotzdem aus einem Grund fehlen, den diese Übersicht nicht abdeckt.",
+
+  // Base im Drive. Der Typname Base bleibt unübersetzt wie in jeder Sprache;
+  // Einträge heißen Einträge, nicht Datensätze — es ist ein Werkzeug für
+  // alle, kein Datenbankverwaltungssystem.
+  baseNewRow: "Neue Zeile",
+  baseAddField: "Feld hinzufügen",
+  baseFieldName: "Feldname",
+  baseNewTable: "Neue Tabelle",
+  baseTypeText: "Text",
+  baseTypeNumber: "Zahl",
+  baseTypeDate: "Datum",
+  baseTypeCheckbox: "Checkbox",
+  baseTypeSelect: "Auswahl",
+  baseTypeMultiselect: "Mehrfachauswahl",
+  baseTypePerson: "Person",
+  baseTypeLink: "Verknüpfung zu Tabelle",
+  baseViewGrid: "Raster",
+  baseViewBoard: "Board",
+  baseViewCalendar: "Kalender",
+  baseViewGallery: "Galerie",
+  baseAddView: "Ansicht hinzufügen",
+  baseGroupBy: "Gruppieren nach…",
+  baseByDate: "Nach Datum…",
+  baseChoicesPlaceholder: "Optionen, durch Kommas getrennt",
+  baseLinkTarget: "Verknüpfte Tabelle…",
+  baseUncategorised: "Ohne Kategorie",
+  baseBoardNeedsSelect:
+    "Fügen Sie eine Board-Ansicht hinzu, die nach einem Auswahlfeld gruppiert, um dies zu nutzen.",
+  baseCalendarNeedsDate:
+    "Fügen Sie eine Kalenderansicht auf Basis eines Datumsfelds hinzu, um dies zu nutzen.",
+  baseBoardEmptyTitle: "Einträge auf einem Board gruppieren",
+  baseCalendarEmptyTitle: "Einträge auf einen Kalender legen",
+  baseBoardEmptyBody:
+    "Boards gruppieren Einträge nach einem Auswahlfeld. Fügen Sie ein fertiges Statusfeld hinzu, um fortzufahren.",
+  baseCalendarEmptyBody:
+    "Kalender ordnen Einträge nach einem Datumsfeld an. Fügen Sie eines hinzu, um fortzufahren.",
+  baseAddStatusField: "Statusfeld hinzufügen",
+  baseAddDateField: "Datumsfeld hinzufügen",
+  baseStatusField: "Status",
+  baseDateField: "Datum",
+  baseStatusTodo: "Zu erledigen",
+  baseStatusInProgress: "In Arbeit",
+  baseStatusDone: "Erledigt",
+  baseCalendarPreviousMonth: "Vormonat",
+  baseCalendarNextMonth: "Folgemonat",
+  baseCalendarAddOnDate: (date: string): string =>
+    `Eintrag am ${date} hinzufügen`,
+  baseLoading: "Ihre Base wird geladen…",
+  baseLoadFailedTitle: "Diese Base wurde nicht geladen",
+  baseEmptyTitle: "Beginnen Sie mit Ihrer ersten Tabelle",
+  baseEmptyBody:
+    "Tabellen halten zusammengehörige Einträge beisammen. Legen Sie eine an, um Felder und Einträge hinzuzufügen.",
+  baseDefaultTableName: (number: number): string => `Tabelle ${number}`,
+  baseView: "Ansicht",
+  baseSaveChanges: "Änderungen speichern",
+  baseUntitledRecord: "Ohne Titel",
+  basePersonPlaceholder: "email@…",
+  baseNoChoices: "Noch keine Optionen — ergänzen Sie welche am Feld.",
+  baseLink: "Verknüpfen",
+  baseLinkNoTable: "Keine verknüpfte Tabelle festgelegt.",
+  baseLinkNoRecords: "Die verknüpfte Tabelle hat noch keine Einträge.",
+
+  // alo Lager. Die deutsche Handelssprache trennt, was das Englische teilt:
+  // eine Bestellung geht an den Lieferanten, ein Auftrag kommt vom Kunden,
+  // und wo beide auf einer Spalte stehen, heißt das Dokument Beleg. Die
+  // Bewegungsgründe tragen die Wörter des Lagers selbst (Wareneingang,
+  // Umlagerung, Inventur, Schwund), nicht Übersetzungen unserer englischen.
+  inventoryTabCatalog: "Katalog",
+  inventoryTabStock: "Bestand",
+  inventoryLoadFailed: "Ihr Katalog konnte nicht geladen werden.",
+  inventorySaveFailed: "Die Änderung konnte nicht gespeichert werden.",
+  inventoryHistoryFailed: "Dieser Verlauf konnte nicht geladen werden.",
+  inventoryClose: "Schließen",
+  inventoryEdit: "Bearbeiten",
+  inventoryArchive: "Archivieren",
+  inventoryRestore: "Wiederherstellen",
+  inventoryArchived: "archiviert",
+  inventoryColActions: "Aktionen",
+  inventoryNoMatches: "Nichts hier passt zu Ihrer Eingabe.",
+  inventoryNewProduct: "Neues Produkt",
+  inventorySearchCatalog: "Nach Name, Code oder Barcode suchen",
+  inventoryStockedOnly: "Nur Lagerware",
+  inventoryShowArchived: "Archivierte anzeigen",
+  inventoryCatalogEmptyTitle: "Ihr Katalog ist leer",
+  inventoryCatalogEmptyBody:
+    "Ein Produkt ist hier ein Eintrag: was Sie dafür berechnen, was Sie dafür zahlen und — wenn es etwas ist, das Sie im Regal führen — wie viel Sie davon haben. Legen Sie das erste an, und es kann noch am selben Tag auf eine Rechnung und in ein Lager.",
+  inventoryColProduct: "Produkt",
+  inventoryColSku: "Code",
+  inventoryColBarcode: "Barcode",
+  inventoryColOnHand: "Bestand",
+  inventoryColPurchasePrice: "Wir zahlen",
+  inventoryColSalePrice: "Wir berechnen",
+  inventoryColVatRate: "MwSt.",
+  inventoryTypeStocked: "Lagerware",
+  inventoryTypeService: "Dienstleistung",
+  inventoryNotStocked: "—",
+  inventoryArchiveProductConfirm: (name: string) =>
+    `${name} archivieren? Es bleibt auf jedem bereits erstellten Dokument stehen und wird auf neuen nicht mehr angeboten. Sie können es jederzeit wiederherstellen.`,
+  inventoryFieldSku: "Code (SKU)",
+  inventorySkuHint:
+    "Ihr eigener Code für diesen Artikel. Eindeutig unter Ihren Produkten; lassen Sie ihn leer, wenn Sie keinen haben.",
+  inventoryFieldBarcode: "Barcode",
+  inventoryBarcodeHint:
+    "Die GTIN auf der Verpackung. Ihre Prüfziffer wird geprüft — ein vertippter Code wird hier abgewiesen, statt erst aufzufallen, wenn das Falsche versendet wird.",
+  inventoryFieldPurchasePrice: "Einkaufspreis",
+  inventoryPurchasePriceHint:
+    "Was Sie dafür zahlen, in Ihrer eigenen Währung.",
+  inventoryFieldDefaultSupplier: "Üblicher Lieferant",
+  inventoryDefaultSupplierHint:
+    "Bei wem das normalerweise gekauft wird. Davon geht ein Nachbestellvorschlag aus.",
+  inventoryNoSupplier: "Niemand Bestimmtes",
+  inventoryFieldStocked: "Bestand",
+  inventoryStockedLabel: "Eine Menge davon führen",
+  inventoryStockedHint:
+    "Nur Lagerware kann zwischen Orten bewegt werden. Eine Dienstleistung lässt sich weder annehmen noch liefern noch zählen — und sobald etwas bewegt wurde, lässt sich dies nicht mehr abschalten.",
+  inventorySearchStock: "Nach Produkt, Code oder Ort suchen",
+  inventoryFilterLocation: "Ort",
+  inventoryAllLocations: "Überall",
+  inventoryShowCounterparties: "Gegenseiten anzeigen",
+  inventoryCounterpartiesNote:
+    "Lieferanten, Kunden, Korrekturen und Produktion sind Gegenseiten, keine Orte: Sie sind das andere Ende jeder Bewegung. Werden sie angezeigt, summiert sich die Gesamtzahl unten auf ungefähr nichts — so sieht ein Bestandsbuch aus, das aufgeht, nicht ein leeres Lager.",
+  inventoryStockEmptyTitle: "Noch liegt nichts im Regal",
+  inventoryStockEmptyBody:
+    "Bestand erscheint hier, wenn sich etwas bewegt: eine Bestellung, die Sie erhalten, eine Lieferung, die Sie senden, oder eine Korrektur von Hand. Es gibt keine Menge zum Eintippen — was hier steht, ist die Summe von allem, was geschehen ist.",
+  inventoryColLocation: "Ort",
+  inventoryColValue: "Wert",
+  inventoryColLastMove: "Letzte Bewegung",
+  inventoryOpenHistory: "Verlauf",
+  inventoryReferenceValue: (total: string) =>
+    `${total} zu heutigen Einkaufspreisen — ein Richtwert für das Aufgeführte, keine Buchhaltungszahl.`,
+  inventoryHistoryTitle: (product: string) => `${product} — Bewegungen`,
+  inventoryHistorySubtitle: (place: string) =>
+    `Alles, was bei ${place} ein- oder ausgegangen ist.`,
+  inventoryHistoryEmpty: "An diesem Ort ist noch nichts ein- oder ausgegangen.",
+  inventoryHistoryCapped: (limit: number) =>
+    `Die letzten ${limit} Bewegungen werden angezeigt. Ältere bleiben aufgezeichnet.`,
+  inventoryColWhen: "Wann",
+  inventoryColMovement: "Von → nach",
+  inventoryColQuantity: "Menge",
+  inventoryColWhy: "Warum",
+  inventoryColDocument: "Dokument",
+  inventoryNoDocument: "Von Hand",
+  inventoryKindStock: "Lager",
+  inventoryKindTransit: "Unterwegs",
+  inventoryKindSupplier: "Lieferant",
+  inventoryKindCustomer: "Kunde",
+  inventoryKindAdjust: "Korrektur",
+  inventoryKindProduction: "Produktion",
+  inventoryReasonReceipt: "Wareneingang",
+  inventoryReasonDelivery: "Warenausgang",
+  inventoryReasonTransfer: "Umlagerung",
+  inventoryReasonAdjustment: "Bestandskorrektur",
+  inventoryReasonReturn: "Retoure",
+  inventoryReasonShrinkage: "Schwund",
+  inventoryReasonCount: "Inventur",
+  inventoryAdjustDamaged: "Bruch",
+  inventoryAdjustLost: "Verloren",
+  inventoryAdjustFound: "Gefunden",
+  inventoryAdjustExpired: "Abgelaufen",
+  inventoryAdjustTheft: "Diebstahl",
+  inventoryAdjustSample: "Muster",
+  inventoryAdjustCorrection: "Korrektur",
+  inventoryTabPurchasing: "Einkauf",
+  inventoryTabSales: "Aufträge",
+  inventoryOrdersLoadFailed: "Diese Aufträge konnten nicht geladen werden.",
+  inventoryOrderLoadFailed: "Dieser Auftrag konnte nicht geladen werden.",
+  inventoryDraftOrder: "Entwurf",
+  inventoryDraftInvoice: "Rechnungsentwurf",
+  inventoryOrderLate: "Überfällig",
+  inventoryFilterStatus: "Status",
+  inventoryAllStatuses: "Jeder Status",
+  inventoryNoOrdersInState: "Keine Aufträge in diesem Status",
+  inventoryCancelAction: "Abbrechen",
+  inventoryOrderStatusCancelled: "Storniert",
+  inventoryPoStatusDraft: "Entwurf",
+  inventoryPoStatusSent: "Bestellt",
+  inventoryPoStatusPartial: "Teilweise erhalten",
+  inventoryPoStatusReceived: "Erhalten",
+  inventorySoStatusDraft: "Entwurf",
+  inventorySoStatusConfirmed: "Bestätigt",
+  inventorySoStatusPartial: "Teilweise geliefert",
+  inventorySoStatusDelivered: "Geliefert",
+  inventorySearchPurchaseOrders: "Nach Nummer, Lieferant oder Referenz suchen",
+  inventorySearchSalesOrders: "Nach Nummer, Kunde oder Referenz suchen",
+  inventoryNewPurchaseOrder: "Neue Bestellung",
+  inventoryNewSalesOrder: "Neuer Auftrag",
+  inventoryPurchaseOrdersEmptyTitle: "Sie haben noch nichts bestellt",
+  inventoryPurchaseOrdersEmptyBody:
+    "Eine Bestellung hält fest, was Sie bei einem Lieferanten angefragt haben. Legen Sie sie als Entwurf an, geben Sie sie auf, wenn Sie so weit sind, und buchen Sie ein, was ankommt — das Bestandsbuch wird für Sie geschrieben.",
+  inventorySalesOrdersEmptyTitle: "Noch hat kein Kunde etwas bestellt",
+  inventorySalesOrdersEmptyBody:
+    "Ein Auftrag hält fest, was ein Kunde bei Ihnen bestellt hat. Legen Sie ihn als Entwurf an, bestätigen Sie ihn, damit er seine Nummer erhält, und buchen Sie jede Sendung beim Rausgehen — die Rechnung berechnet, was tatsächlich gegangen ist.",
+  inventoryColOrder: "Beleg",
+  inventoryColSupplier: "Lieferant",
+  inventoryColCustomer: "Kunde",
+  inventoryColExpected: "Erwartet",
+  inventoryColPromised: "Zugesagt",
+  inventoryColState: "Status",
+  inventoryColTotal: "Summe",
+  inventoryTabOrderBook: "Auftragsbuch",
+  inventoryOrderBookLoadFailed: "Das Auftragsbuch konnte nicht geladen werden.",
+  inventoryFilterScope: "Anzeigen",
+  inventoryScopeOpen: "Offene Aufträge",
+  inventoryScopeAll: "Alle Aufträge",
+  inventoryColOrdered: "Bestellt",
+  inventoryColReserved: "Reserviert",
+  inventoryColInvoiced: "Berechnet",
+  inventoryBookTotal: "Über alle zusammen",
+  inventoryBookMixedCurrencies: (currencies: string) =>
+    `Diese Aufträge lauten auf ${currencies}, deshalb gibt es keine einzelne Summe. Die Zahlen jedes einzelnen Auftrags sind exakt.`,
+  inventoryBookQtyHint: (qtyMilli: string) => `Noch ausstehend: ${qtyMilli}`,
+  inventoryOrderBookEmptyTitle: "Nichts steht aus",
+  inventoryOrderBookEmptyBody:
+    "Das Auftragsbuch zeigt, worauf Kunden warten und was Sie ihnen noch zu berechnen haben. Bestätigen Sie einen Auftrag, und er erscheint hier, bis das Letzte davon rausgegangen und berechnet ist.",
+  inventoryOrderBookEmptyAllTitle: "Noch keine Aufträge angelegt",
+  inventoryOrderBookEmptyAllBody:
+    "Noch wurde nichts verkauft — nicht einmal ein Entwurf. Das Auftragsbuch füllt sich von selbst, sobald Aufträge angelegt werden.",
+  inventoryBackToPurchaseOrders: "Alle Bestellungen",
+  inventoryBackToSalesOrders: "Alle Aufträge",
+  inventoryCreateDraft: "Entwurf anlegen",
+  inventorySaveDraft: "Speichern",
+  inventoryPrintOrder: "Drucken",
+  inventoryUnsavedNotice:
+    "Diese Änderungen sind noch nicht gespeichert; die Summen unten sind die letzten, die der Server berechnet hat.",
+  inventoryOrderFrozenNotice:
+    "Diese Bestellung ist aufgegeben. Sie trägt eine Nummer, die der Lieferant kennt, und lässt sich deshalb nicht mehr bearbeiten — buchen Sie ein, was ankommt, oder stornieren Sie sie.",
+  inventorySalesOrderFrozenNotice:
+    "Dieser Auftrag ist bestätigt. Er trägt eine Nummer, die der Kunde kennt, und lässt sich deshalb nicht mehr bearbeiten — buchen Sie jede Sendung beim Rausgehen.",
+  inventoryFixLinesFirst:
+    "Eine der Positionen ist nicht fertig. Beheben Sie das und speichern Sie erneut.",
+  inventoryOrderNeedsSupplier:
+    "Wählen Sie den Lieferanten, bei dem diese Bestellung aufgegeben wird.",
+  inventoryOrderNeedsCustomer:
+    "Wählen Sie den Kunden, für den dieser Auftrag ist.",
+  inventoryPickSupplier: "Lieferant wählen",
+  inventoryPickCustomer: "Kunden wählen",
+  inventorySupplierHint:
+    "Bei wem Sie bestellen. Nach dem Aufgeben der Bestellung lässt sich das nicht mehr ändern.",
+  inventoryCustomerHint:
+    "Für wen der Auftrag ist. Nach dem Bestätigen lässt sich das nicht mehr ändern.",
+  inventoryExpectedHint:
+    "Der Tag, an dem Sie die Ware erwarten. Eine Bestellung darüber hinaus gilt als überfällig.",
+  inventoryPromisedHint:
+    "Der Tag, zu dem Sie die Ware zugesagt haben. Ein Auftrag darüber hinaus gilt als überfällig.",
+  inventoryFieldReference: "Referenz",
+  inventoryReferenceHint:
+    "Ihre eigene Referenz für diesen Vorgang — ein Projekt, eine Baustelle, eine Auftragsnummer.",
+  inventoryFieldOrdered: "Aufgegeben",
+  inventoryFieldConfirmed: "Bestätigt",
+  inventoryFieldNote: "Notiz",
+  inventoryOrderNoteHint:
+    "Alles, was die Gegenseite lesen soll. Es wird auf den Beleg gedruckt.",
+  inventoryLines: "Positionen",
+  inventoryAddLine: "Position hinzufügen",
+  inventoryNoLines: "Noch keine Positionen.",
+  inventoryColDescription: "Beschreibung",
+  inventoryColUnit: "Einheit",
+  inventoryColUnitPrice: "Einzelpreis",
+  inventoryColNet: "Netto",
+  inventoryColReceived: "Erhalten",
+  inventoryColDelivered: "Geliefert",
+  inventoryColOutstanding: "Ausstehend",
+  inventoryColToBill: "Zu berechnen",
+  inventoryPickProduct: "Aus dem Katalog",
+  inventoryDescriptionPlaceholder: "Was bestellt wird",
+  inventoryUnitPlaceholder: "Stück",
+  inventoryQtyPlaceholder: "1",
+  inventoryAmountPlaceholder: "0,00",
+  inventoryRatePlaceholder: "0",
+  inventoryRemoveLine: "Position entfernen",
+  inventoryLineNeedsDescription: "Sagen Sie, wofür diese Position ist.",
+  inventoryNotAQuantity: "Das ist keine Menge.",
+  inventoryNotAnAmount: "Das ist kein Betrag.",
+  inventoryNotARate: "Das ist kein Satz.",
+  inventorySendOrder: "Bestellung aufgeben",
+  inventorySendOrderConfirm:
+    "Damit erhält die Bestellung ihre Nummer, wird endgültig eingefroren, und das Begleitschreiben mit der gedruckten Bestellung im Anhang wird in Ihre Entwürfe gelegt. Gesendet wird nichts, bis Sie es selbst senden.",
+  inventoryOrderPlacedNotice: (to: string, file: string) =>
+    `Die Bestellung ist aufgegeben. Ein Begleitschreiben an ${to} mit ${file} im Anhang wartet in Ihren Entwürfen — gesendet wurde nichts.`,
+  inventoryConfirmOrder: "Auftrag bestätigen",
+  inventoryConfirmOrderConfirm:
+    "Damit erhält der Auftrag seine Nummer und wird endgültig eingefroren. Eine Nachricht schreibt das nicht: Den Kunden zu informieren ist ein gewöhnlicher Brief, den Sie selbst senden.",
+  inventoryCancelOrder: "Stornieren",
+  inventoryCancelOrderConfirm:
+    "Der Beleg bleibt erhalten und lesbar, aber es wird nichts mehr darauf erwartet.",
+  inventoryCancelShortConfirm:
+    "Ein Teil davon wurde bereits bewegt. Mit dem Stornieren gilt das bisher Abgewickelte als das Ganze, und mehr wird nicht erwartet. Der Beleg bleibt lesbar.",
+  inventoryDiscardDraft: "Entwurf verwerfen",
+  inventoryDiscardDraftConfirm:
+    "Dieser Entwurf hat keine Nummer und wurde niemandem gezeigt — er wird deshalb gelöscht, nicht storniert.",
+  inventoryReceiveGoods: "Eingang buchen",
+  inventoryDeliverGoods: "Sendung buchen",
+  inventoryReceiveTitle: (order: string) => `Was zu ${order} angekommen ist`,
+  inventoryDeliverTitle: (order: string) => `Was zu ${order} rausgeht`,
+  inventoryReceiveSubtitle:
+    "Jede Position beginnt mit dem noch Ausstehenden. Ändern Sie, was fehlt; der Rest bleibt bestellt. Für das Angekommene wird eine Eingangsrechnung als Entwurf angelegt.",
+  inventoryDeliverSubtitle:
+    "Jede Position beginnt mit dem noch Ausstehenden. Ändern Sie, was jetzt geht; der Rest bleibt auf dem Auftrag.",
+  inventoryReceiveWhere: "Eingelagert in",
+  inventoryReceiveWhereHint:
+    "Wohin die Ware tatsächlich gelegt wurde. Das Bestandsbuch wird für diesen Ort geschrieben.",
+  inventoryDeliverWhere: "Entnommen aus",
+  inventoryDeliverWhereHint:
+    "Woraus die Ware entnommen wurde. Das Bestandsbuch wird für diesen Ort geschrieben.",
+  inventoryColThisConsignment: "Diesmal",
+  inventoryFulfilNoteHint:
+    "Was die abwickelnde Person notiert hat — eine beschädigte Kiste, eine Teillieferung.",
+  inventoryFulfilNeedsPlace: "Wählen Sie zuerst den Ort.",
+  inventoryFulfilNeedsSomething:
+    "Auf keiner Position steht etwas, also gibt es nichts zu buchen.",
+  inventoryNoPlaces: "Noch keine Orte",
+  inventoryBookArrival: "Einbuchen",
+  inventoryBookConsignment: "Ausbuchen",
+  inventoryArrivalBooked:
+    "Der Eingang ist gebucht, das Bestandsbuch geschrieben, und eine Eingangsrechnung wartet als Entwurf auf Freigabe.",
+  inventoryConsignmentBooked:
+    "Die Sendung ist gebucht und das Bestandsbuch geschrieben.",
+  inventoryArrivals: "Eingänge",
+  inventoryNoArrivals: "Zu dieser Bestellung ist noch nichts angekommen.",
+  inventoryArrivalNo: (n: number) => `Eingang ${n}`,
+  inventoryBillDrafted: "Rechnungsentwurf angelegt",
+  inventoryConsignments: "Sendungen",
+  inventoryNoConsignments: "Zu diesem Auftrag ist noch nichts rausgegangen.",
+  inventoryConsignmentNo: (n: number) => `Sendung ${n}`,
+  inventoryRaiseInvoice: "Berechnen, was gegangen ist",
+  inventoryRaisedInvoices: "Rechnungen",
+  inventoryNoRaisedInvoices:
+    "Aus diesem Auftrag wurde noch nichts berechnet.",
+  inventoryInvoiceDrafted:
+    "Für das Rausgegangene wurde ein Rechnungsentwurf angelegt. Er trägt keine Nummer, bis ihn jemand in Rechnungen ausstellt.",
+  inventoryScan: "Scannen",
+  inventoryScanTitle: "Barcode scannen",
+  inventoryScanSubtitle:
+    "Scannen Sie mit einem Handscanner in das Feld, oder tippen Sie den Code ein. Am Telefon geht stattdessen die Kamera.",
+  inventoryScanFieldCode: "Barcode",
+  inventoryScanPlaceholder: "4006381333931",
+  inventoryScanHint:
+    "Ein Handscanner tippt den Code hier ein und drückt für Sie die Eingabetaste. Leerzeichen und Bindestriche werden ignoriert.",
+  inventoryScanLookup: "Nachschlagen",
+  inventoryScanFailed: "Dieser Code konnte nicht nachgeschlagen werden.",
+  inventoryScanWaiting: "Warten auf einen Code.",
+  inventoryScanCameraStart: "Kamera verwenden",
+  inventoryScanCameraStop: "Kamera stoppen",
+  inventoryScanCameraFailed:
+    "Die Kamera ließ sich nicht starten. Erlauben Sie den Zugriff, oder tippen Sie den Code ein — ein Handscanner braucht gar keine Berechtigung.",
+  inventoryScanAiming:
+    "Richten Sie die Kamera auf den Barcode. Sie stoppt, sobald sie einen gelesen hat.",
+  inventoryScanNoCamera:
+    "Dieser Browser kann keinen Barcode über die Kamera lesen. Ein Handscanner funktioniert hier: Er tippt in das Feld oben.",
+  inventoryScanOnHand: (quantity: string) =>
+    `${quantity} auf Lager, über alle Orte.`,
+  inventoryScanNowhere: "Davon liegt noch nirgends etwas.",
+  inventoryScanServiceNote:
+    "Das ist eine Dienstleistung — eine Menge davon gibt es nicht zu finden.",
+  inventoryScanOpenProduct: "Dieses Produkt öffnen",
+  inventoryScanShowInStock: "In der Liste zeigen",
+  inventoryScanAddProduct: "Mit diesem Barcode in den Katalog aufnehmen",
+
+  // alo Personen. Die Vertragsarten tragen die Namen der deutschen Papiere
+  // selbst (unbefristet, befristet, Ausbildung), eine Bewerbung, die nicht
+  // weiterkommt, ist „nicht berücksichtigt" — das Wort des Absagebriefs,
+  // nie eines gegen die Person —, und Ausgeschieden wird schlicht gesagt.
+  // Die Abwesenheitsschicht kennt keinen Grund, also nennt kein Wort hier
+  // einen: keine Krankheit, keine Elternzeit — Namen und Tage, sonst nichts.
+  hrTabHiring: "Recruiting",
+  hrTabTemplates: "Briefvorlagen",
+  hrTemplatesTitle: "Briefvorlagen",
+  hrTemplatesIntro:
+    "Schreiben Sie freigegebene Formulierungen einmal auf; HR erstellt daraus einen persönlichen Entwurf, ohne neu zu tippen.",
+  hrTemplatesLoadFailed: "Die Briefvorlagen konnten nicht geladen werden.",
+  hrTemplatesEmpty: "Noch keine Briefvorlagen",
+  hrTemplatesEmptyBody:
+    "Legen Sie die Formulierungen an, die Ihr Unternehmen zu versenden bereit ist. Von diesem Bildschirm wird nichts gesendet.",
+  hrTemplateNew: "Neue Vorlage",
+  hrTemplateCreateTitle: "Briefvorlage anlegen",
+  hrTemplateEditTitle: "Briefvorlage bearbeiten",
+  hrTemplateEditorIntro:
+    "Platzhalter werden erst gefüllt, wenn HR einen Entwurf für eine bestimmte Kollegin oder einen bestimmten Kollegen erstellt.",
+  hrTemplateName: "Name der Vorlage",
+  hrTemplateSubject: "Betreff der E-Mail",
+  hrTemplateBody: "Wortlaut des Briefs",
+  hrTemplateBodyHint:
+    "Verwenden Sie die zugelassenen Platzhalter unten. Unbekannte Platzhalter werden abgewiesen.",
+  hrTemplateInsertField: "Platzhalter einfügen",
+  hrTemplateSave: "Vorlage speichern",
+  hrTemplateSaveFailed: "Die Briefvorlage wurde nicht gespeichert.",
+  hrTemplateDelete: "Vorlage löschen",
+  hrTemplateDeleteTitle: (name: string) => `${name} löschen?`,
+  hrTemplateDeleteBody:
+    "Bestehende Briefentwürfe bleiben unverändert. Für neue Briefe steht diese Vorlage nicht mehr zur Verfügung.",
+  hrTemplateDeleteFailed: "Die Briefvorlage wurde nicht gelöscht.",
+  hrTemplateFields: (count: number) =>
+    count === 1 ? "1 Platzhalter" : `${count} Platzhalter`,
+  hrLoadFailed: "Das konnte nicht geladen werden.",
+  hrSaveFailed: "Diese Änderung wurde nicht gespeichert.",
+  hrClose: "Schließen",
+  hrCancel: "Abbrechen",
+  hrCreate: "Anlegen",
+  hrSave: "Speichern",
+  hrOpening: "Stelle",
+  hrNewOpening: "Neue Stelle",
+  hrEditOpening: "Stelle bearbeiten",
+  hrOpeningSubtitle:
+    "Eine aufgeschriebene Stelle. Veröffentlichen heißt: Die Runde läuft; Schließen beendet sie und friert ein, was die Stelle besagte.",
+  hrPublishOpening: "Veröffentlichen",
+  hrCloseOpening: "Runde schließen",
+  hrCloseConfirm: (title: string) =>
+    `Die Runde für ${title} schließen? Die Bewerbungen bleiben als Aufzeichnung dessen, was geschehen ist, und die Runde lässt sich nicht wieder öffnen.`,
+  hrIncludeClosed: "Geschlossene Runden einbeziehen",
+  hrClosedNotice:
+    "Diese Runde ist geschlossen. Ihr Board lässt sich weiter lesen, und die Personen darauf lassen sich weiter verschieben — aber niemand Neues kann hinzukommen.",
+  hrOpenedOn: (day: string) => `offen seit ${day}`,
+  hrClosedOn: (day: string) => `geschlossen ${day}`,
+  hrStatusDraft: "Entwurf",
+  hrStatusOpen: "Offen",
+  hrStatusClosed: "Geschlossen",
+  hrFieldRole: "Stelle",
+  hrFieldTeam: "Team",
+  hrFieldLocation: "Ort",
+  hrLocationHint: "Eine Stadt, ein Büro oder „remote“.",
+  hrFieldEmployment: "Anstellung",
+  hrKindPermanent: "Unbefristet",
+  hrKindFixedTerm: "Befristet",
+  hrKindPartTime: "Teilzeit",
+  hrKindApprentice: "Ausbildung",
+  hrKindContractor: "Selbstständig",
+  hrKindIntern: "Praktikum",
+  hrNoOpeningsTitle: "Noch keine Stelle aufgeschrieben",
+  hrNoOpeningsBody:
+    "Schreiben Sie die Stelle auf, die Sie besetzen wollen. Erfassen Sie die Bewerbungen, wie sie eintreffen, und schieben Sie die Personen über das Board, während Sie sie kennenlernen.",
+  hrStage: "Phase",
+  hrStageApplied: "Beworben",
+  hrStageReviewing: "In Prüfung",
+  hrStageInterview: "Gespräch",
+  hrStageOffer: "Angebot",
+  hrStageHired: "Eingestellt",
+  hrStageRejected: "Nicht berücksichtigt",
+  hrStageWithdrawn: "Zurückgezogen",
+  hrCandidate: "Bewerbung",
+  hrAddCandidate: "Bewerbung erfassen",
+  hrEditCandidate: "Angaben bearbeiten",
+  hrCandidateSubtitle:
+    "Was in der Bewerbung stand. Nichts hier wird von einer Maschine gelesen — kein Screening, kein Ranking, keine Punktzahl.",
+  hrFieldName: "Name",
+  hrFieldEmail: "E-Mail",
+  hrFieldPhone: "Telefon",
+  hrFieldSource: "Woher die Bewerbung kam",
+  hrSourceHint:
+    "Ein Jobportal, eine Empfehlung, eine Agentur — wie auch immer die Bewerbung Sie erreicht hat.",
+  hrAppliedOn: (moment: string) => `Beworben ${moment}`,
+  hrNotes: "Gesprächsnotizen",
+  hrNotesEmpty: "Noch nichts aufgeschrieben.",
+  hrNotePlaceholder: "Was im Raum gesagt wurde…",
+  hrAddNote: "Notiz hinzufügen",
+  hrCv: "Lebenslauf",
+  hrCvNone: "Kein Lebenslauf hinterlegt.",
+  hrCvDownload: "Lebenslauf herunterladen",
+  hrCvTrashed:
+    "Der hinterlegte Lebenslauf wurde in den HR-Papierkorb verschoben.",
+  hrCvFailed: "Diese Datei konnte nicht heruntergeladen werden.",
+  hrCvAttach: "Lebenslauf anhängen",
+  hrCvHint:
+    "Abgelegt im HR-Bereich, wo nur HR ihn öffnen kann. Nichts liest ihn — kein Screening, kein Ranking, keine Punktzahl.",
+  hrCvReplace: "Lebenslauf ersetzen",
+  hrCvOnFile: (fileName: string) =>
+    fileName === ""
+      ? "Ein Lebenslauf ist hinterlegt. Eine neue Datei ersetzt ihn; der ersetzte wandert in den HR-Papierkorb."
+      : `${fileName} ist hinterlegt. Eine neue Datei ersetzt ihn; der ersetzte wandert in den HR-Papierkorb.`,
+  hrCvRemove: "Lebenslauf von dieser Bewerbung entfernen",
+  hrCvUploadFailed:
+    "Diese Datei wurde nicht hochgeladen, also wurde nichts gespeichert. Versuchen Sie es erneut, oder speichern Sie die Angaben ohne sie.",
+  hrHired: "Die Stelle wurde angenommen",
+  hrHiredExplainer:
+    "Jemanden auf Eingestellt zu schieben hält fest, was geschehen ist. Die Person ins Verzeichnis zu schreiben ist ein eigener Schritt — er wird hier getan.",
+  hrHire: "Ins Verzeichnis aufnehmen",
+  hrHireSubmit: "Ins Verzeichnis aufnehmen",
+  hrHireSubtitle:
+    "Der Personalstammsatz und die Konditionen zum Start. Alles ist aus Bewerbung und Stelle vorausgefüllt — korrigieren Sie, was nicht stimmt.",
+  hrHireKnown: (name: string) =>
+    `${name} steht mit dieser Adresse bereits im Verzeichnis. Dieser Eintrag würde eine zweite Person mit derselben E-Mail anlegen.`,
+  hrHireKnownLeft: (name: string) =>
+    `${name} hatte diese Adresse und ist ausgeschieden. Kommt dieselbe Person zurück, ist ein neuer Eintrag hier richtig — der alte bleibt, wie er war.`,
+  hrHireNameHint:
+    "Aus dem Namen der Bewerbung aufgeteilt. Korrigieren Sie es, wenn die Teilung falsch war.",
+  hrHireEmailHint:
+    "Die dienstliche Adresse, falls schon bekannt. Sie kann später ergänzt werden.",
+  hrHireStartHint:
+    "Der Tag, an dem die Konditionen beginnen. Jedes Abwesenheitsguthaben wird von ihm an gezählt.",
+  hrHireNoKind: "Nicht angegeben",
+  hrHireNoAccount:
+    "Das schreibt einen Eintrag in Personen. Es erstellt weder Anmeldung noch Postfach — das tut eine Administratorin oder ein Administrator, und die Onboarding-Checkliste hat eine Aufgabe dafür.",
+  hrFieldGivenName: "Vorname",
+  hrFieldFamilyName: "Nachname",
+  hrFieldWorkEmail: "Dienstliche E-Mail",
+  hrFieldJobTitle: "Position",
+  hrFieldStartedOn: "Beginnt am",
+  hrRetention: "Wie lange wir das aufbewahren",
+  hrRetentionUntil: (day: string) => `Aufbewahrt bis ${day}.`,
+  hrRetentionExpired: "Frist verstrichen",
+  hrRetentionExplainer:
+    "Nichts wird automatisch gelöscht. Ist das Datum verstrichen, entscheidet hier jemand — und was geht, geht: die Angaben, jede Notiz und der Lebenslauf.",
+  hrFieldRetainUntil: "Aufbewahren bis",
+  hrRetainHint:
+    "Sechs Monate ab der Bewerbung, wenn Sie nichts anderes sagen. Nach diesem Datum kann der Eintrag gelöscht werden.",
+  hrErase: "Diesen Eintrag löschen",
+  hrEraseConfirm: (name: string) =>
+    `Alles über ${name} löschen? Die Angaben, jede Notiz und der Lebenslauf werden endgültig entfernt. Das lässt sich nicht rückgängig machen.`,
+  hrTabApprovals: "Freigaben",
+  hrQueueLeave: "Abwesenheit",
+  hrQueueExpense: "Ausgabe",
+  hrQueueTimesheet: "Woche",
+  hrPerson: "Person",
+  hrWhat: "Wartet auf Sie",
+  hrQueue: "Art",
+  hrFigure: "Betrag",
+  hrWaitingSince: "Eingereicht",
+  hrActions: "Entscheidung",
+  hrHiringControls: "Bewerbungsrunde",
+  hrLeaveControls: "Abwesenheitsfilter",
+  hrAwayControls: "Monat",
+  hrDirectoryControls: "Verzeichnisfilter",
+  hrLeaveTable: "Abwesenheitsanträge",
+  hrApprovalsTable: "Wartet auf eine Entscheidung",
+  hrDirectoryTable: "Personen",
+  hrApprove: "Genehmigen",
+  hrSendBack: "Zurückweisen",
+  hrSendBackTitle: "Das zurückweisen?",
+  hrSendBackBody: (person: string) =>
+    `${person} sieht das wieder, bearbeitbar, mit dem, was Sie hier schreiben. Sagen Sie, was zu korrigieren ist.`,
+  hrSendBackPlaceholder: "Was zu korrigieren ist",
+  hrWaitingCount: (count: number) =>
+    count === 1 ? "1 wartet" : `${count} warten`,
+  hrCountOf: (kind: string, count: number) => `${kind}: ${count}`,
+  hrWorkingDays: (days: number) => (days === 1 ? "1 Tag" : `${days} Tage`),
+  hrLeaveOf: (policy: string, from: string, to: string) =>
+    from === to ? `${policy}, ${from}` : `${policy}, ${from} – ${to}`,
+  hrApprovalsEmptyTitle: "Nichts wartet",
+  hrApprovalsEmptyBody:
+    "Abwesenheiten, Ausgaben und Stundenzettel-Wochen, die eingereicht werden, landen hier gemeinsam, Ältestes zuerst — damit niemand wartet, nur weil der eigene Antrag im Modul lag, das Sie zuletzt geöffnet haben.",
+  hrApprovalsNoneTitle: "Zu Ihnen kommt nichts zur Entscheidung",
+  hrApprovalsNoneBody:
+    "Hier warten Abwesenheiten, Ausgaben und Stundenzettel-Wochen auf die Person, die sie entscheidet. Sie sehen es, sobald jemand an Sie berichtet — oder wenn Sie die Bücher führen.",
+  hrApprovalsQueueFailed: (kinds: string) =>
+    `Ein Teil des Wartenden konnte nicht gelesen werden (${kinds}), diese Liste ist deshalb unvollständig. Alles Übrige wird angezeigt.`,
+  hrApprovalsWidgetLabel: "wartend",
+  hrApprovalsWidgetTitle:
+    "Abwesenheiten, Ausgaben und Wochen, die auf Ihre Entscheidung warten",
+  hrTabDirectory: "Verzeichnis",
+  hrDirectorySearch: "Personen suchen",
+  hrDirectoryViews: "Wie das Verzeichnis zu lesen ist",
+  hrViewPeople: "Personen",
+  hrViewOrg: "Organigramm",
+  hrIncludeLeavers: "Ausgeschiedene einbeziehen",
+  hrPeopleCount: (count: number) =>
+    count === 1 ? "1 Person" : `${count} Personen`,
+  hrShowingOf: (shown: number, total: number) => `${shown} von ${total}`,
+  hrContact: "Kontakt",
+  hrManager: "Berichtet an",
+  hrSince: "Hier seit",
+  hrYou: "Sie",
+  hrLeft: "Ausgeschieden",
+  hrShowInChart: "Im Organigramm zeigen",
+  hrReportsCount: (count: number) =>
+    count === 1 ? "1 unterstellte Person" : `${count} unterstellte Personen`,
+  hrDirectoryEmptyTitle: "Noch niemand steht im Verzeichnis",
+  hrDirectoryEmptyBody:
+    "Sobald HR die erste Person aufschreibt, finden hier alle ihre Kolleginnen und Kollegen — wer sie sind, wie man sie erreicht und an wen sie berichten.",
+  hrNoMatchTitle: (query: string) => `Niemand passt zu „${query}“`,
+  hrNoMatchBody:
+    "Gesucht wird in Namen, Positionen, Teams, E-Mail-Adressen und Telefonnummern, in beliebiger Reihenfolge. Versuchen Sie es mit einem Wort weniger.",
+  hrClearSearch: "Suche leeren",
+  hrTabLeave: "Meine Abwesenheiten",
+  hrTabAway: "Wer ist abwesend",
+  hrLeaveWhose: "Wessen Abwesenheit",
+  hrScopeMine: "Meine",
+  hrScopeTeam: "Mein Team",
+  hrScopeEveryone: "Alle",
+  hrLeaveShow: "Anzeigen",
+  hrShowEverything: "Alles",
+  hrShowWaiting: "Wartet auf Entscheidung",
+  hrShowBooked: "Eingetragen",
+  hrAskForLeave: "Abwesenheit beantragen",
+  hrOneDay: "1 Tag",
+  hrDaysOf: (days: string) => `${days} Tage`,
+  hrFactOf: (label: string, value: string) => `${label} ${value}`,
+  hrBalanceLeft: "übrig",
+  hrBalanceThisYear: "Dieses Jahr",
+  hrBalanceTaken: "Genommen",
+  hrBalanceBooked: "Eingetragen",
+  hrBalanceWaiting: "Ausstehend",
+  hrBalanceAsOf: (day: string) =>
+    `Berechnet am ${day}, nach Ihrem eigenen Arbeitszeitmodell.`,
+  hrUnpaid: "Unbezahlt",
+  hrNotDecided: "Erfasst, nicht entschieden",
+  hrLeaveKind: "Art",
+  hrLeaveWhen: "Wann",
+  hrLeaveDays: "Tage",
+  hrLeaveWhy: "Warum",
+  hrLeaveState: "Status",
+  hrLeaveBetween: (from: string, to: string) => `${from} – ${to}`,
+  hrHolidaysInside:
+    "In diese Tage fällt ein Feiertag; er wird nicht mitgezählt.",
+  hrLeaveRequested: "Ausstehend",
+  hrLeaveApproved: "Eingetragen",
+  hrLeaveRejected: "Nicht genehmigt",
+  hrLeaveWithdrawn: "Zurückgenommen",
+  hrLeaveCancelled: "Storniert",
+  hrWithdraw: "Zurücknehmen",
+  hrCancelLeave: "Stornieren",
+  hrLeaveEmptyTitle: "Sie haben noch keine Abwesenheit beantragt",
+  hrLeaveEmptyBody:
+    "Beantragen Sie hier einen Tag oder zwei Wochen. Sie sehen, was es Ihr Guthaben kostet, bevor jemand entscheidet — und wer an diesen Tagen schon abwesend ist.",
+  hrLeaveTeamEmptyTitle: "Niemand hat Abwesenheit beantragt",
+  hrLeaveTeamEmptyBody:
+    "Wenn jemand, der an Sie berichtet, freie Tage beantragt, landet das hier und in Ihren Freigaben — mit den Daten, was es das Guthaben kostet, und wer dann sonst noch abwesend ist.",
+  hrLeaveNoneShownTitle: "Nichts in diesem Status",
+  hrLeaveNoneShownBody:
+    "Es sind Abwesenheiten erfasst, aber keine davon im gewählten Status.",
+  hrAskSubtitle:
+    "Die Tage gehen vom Guthaben der gewählten Art ab, berechnet nach Ihrem eigenen Arbeitszeitmodell — eine Anzahl Tage tippen Sie nie.",
+  hrAskSubmit: "Beantragen",
+  hrPolicyRecordedHint:
+    "Diese Art wird erfasst, nicht entschieden: Sie ist eingetragen, sobald Sie sie beantragen.",
+  hrFieldFirstDay: "Erster freier Tag",
+  hrFieldLastDay: "Letzter freier Tag",
+  hrLastDayHint: "Der Tag, an dem Sie zurückkommen, gehört nicht dazu.",
+  hrRangeBackwards: "Der letzte Tag liegt vor dem ersten.",
+  hrAlsoAway: "Dann schon abwesend",
+  hrNobodyAway: "Sonst ist an diesen Tagen niemand abwesend.",
+  hrWhyHint:
+    "Optional. Nur wer entscheidet, liest es, und protokolliert wird es nie.",
+  hrAwayCalendar: "Wer abwesend ist, nach Tag",
+  hrPreviousMonth: "Der Monat davor",
+  hrNextMonth: "Der Monat danach",
+  hrThisMonth: "Dieser Monat",
+  hrAwayThisMonth: (count: number) =>
+    count === 1
+      ? "1 Person diesen Monat abwesend"
+      : `${count} Personen diesen Monat abwesend`,
+  hrMoreAway: (count: number) => `+${count} weitere`,
+  hrDayAway: (day: string, count: number) =>
+    count === 0 ? `${day}: niemand abwesend` : `${day}: ${count} abwesend`,
+  hrNobodyAwayTitle: (month: string) => `Im ${month} ist niemand abwesend`,
+  hrNobodyAwayBody:
+    "Eingetragene Abwesenheiten erscheinen hier für alle im Unternehmen, damit Sie sehen, wer fehlt, bevor Sie um jemanden herum planen. Feiertage sind ebenfalls markiert.",
+
+  // alo Kampagnen — die Zielgruppe und die Briefe. Die wichtigsten Wörter
+  // sind die, die benennen, wer NICHT angeschrieben wird, und warum.
+  campaignsTitle: "Zielgruppe",
+  campaignsSubtitle:
+    "Alle, die dieser Arbeitsbereich erreichen könnte — und alle, die er nicht erreichen darf, mit dem Grund.",
+  campaignsCountriesLabel: "Länder",
+  campaignsCountriesHint:
+    "Zweibuchstabige Codes, durch Kommas getrennt. Leer heißt überall.",
+  campaignsCountriesPlaceholder: "DE, AT",
+  campaignsPurchaseLabel: "Käufe",
+  campaignsPurchaseAny: "Egal",
+  campaignsPurchaseBought: "Hat gekauft",
+  campaignsPurchaseNotBought: "Hat nicht gekauft",
+  campaignsPeriodLabel: "In den letzten",
+  campaignsPeriodEver: "Jemals",
+  campaignsPeriodDays: (days: number) => `${days} Tagen`,
+  campaignsEveryone: "Alle",
+  campaignsSegmentsLabel: "Gespeicherte Fragen",
+  campaignsSaveSegment: "Diese Frage speichern",
+  campaignsSegmentNamePrompt: "Wie soll diese Frage heißen?",
+  campaignsSegmentNamePlaceholder: "Belgische Kunden",
+  campaignsDeleteSegment: "Löschen",
+  campaignsDeleteSegmentConfirm: (name: string) =>
+    `Die Frage „${name}“ löschen? Niemandes Einwilligung oder Abmeldung wird angerührt — nur die Frage geht.`,
+  campaignsTallyMailable: (mailable: number, matched: number) =>
+    `${mailable} von ${matched} Personen werden angeschrieben`,
+  campaignsTallyNobody:
+    "Niemand in diesem Arbeitsbereich passt zu dieser Frage.",
+  campaignsExcludedCount: (people: number, reason: string) =>
+    `${people} · ${reason}`,
+  campaignsWillBeMailed: "Werden angeschrieben",
+  campaignsReasonNoConsent: "Nie eingewilligt",
+  campaignsReasonUnsubscribe: "Abgemeldet",
+  campaignsReasonHardBounce: "Mail unzustellbar",
+  campaignsReasonComplaint: "Als Spam gemeldet",
+  campaignsReasonManual: "Bat uns aufzuhören",
+  campaignsTableLabel: "Personen, die diese Frage auswählt",
+  campaignsColPerson: "Person",
+  campaignsColCountry: "Land",
+  campaignsColKnownFrom: "Bekannt aus",
+  campaignsColStatus: "Status",
+  campaignsSourceBillingCustomer: "Kunde",
+  campaignsSourceCrmDeal: "Deal",
+  campaignsSourceSiteForm: "Website-Formular",
+  campaignsNoMatches: "Niemand passt zu dieser Frage.",
+  campaignsMore: "Mehr Personen anzeigen",
+  campaignsLoadFailed: "Die Zielgruppe konnte nicht gelesen werden.",
+  campaignsSegmentsFailed:
+    "Ihre gespeicherten Fragen konnten nicht gelesen werden.",
+  campaignsSaveFailed: "Diese Frage konnte nicht gespeichert werden.",
+  campaignsDeleteFailed: "Diese Frage konnte nicht entfernt werden.",
+  campaignsEmptyTitle: "Noch niemand zu erreichen",
+  campaignsEmptyBody:
+    "Personen erscheinen hier, sobald dieser Arbeitsbereich einen Kunden hat, einen Deal mit E-Mail-Adresse, oder jemanden, der ein Formular auf seiner Website ausgefüllt hat. Persönliche Adressbücher werden nie verwendet.",
+  campaignsNothingSentYet:
+    "Von diesem Bildschirm wird nichts gesendet. Kampagnenversand braucht eine eigene Adresse, getrennt von Ihrer alltäglichen Post — damit ein Newsletter nie beeinflussen kann, ob Ihre Rechnungen ankommen.",
+  campaignsViewsLabel: "Was ansehen",
+  campaignsTabAudience: "Zielgruppe",
+  campaignsTabLetters: "Briefe",
+  campaignsLettersTitle: "Briefe",
+  campaignsLettersSubtitle:
+    "Jeder Brief so, wie eine Person ihn tatsächlich erhält.",
+  campaignsLetterLabel: "Brief",
+  campaignsNoLettersTitle: "Noch keine Briefe",
+  campaignsNoLettersBody:
+    "Ein Brief wird im selben Editor geschrieben wie ein Dokument: Überschriften, Absätze, Tabellen und Code. Sobald einer existiert, erscheint er hier — gerendert genau so, wie er ankommt.",
+  campaignsShowAsLabel: "Anzeigen als",
+  campaignsShowAsHint:
+    "Beides ist echt. Bei der Hälfte einer Zielgruppe ist kein Name hinterlegt.",
+  campaignsShowAsRecipient: "Jemand, den Sie anschreiben können",
+  campaignsShowAsFallbacks: "Jemand ohne hinterlegte Angaben",
+  campaignsPartLabel: "Teil",
+  campaignsPartHint:
+    "Jeder Brief trägt beide. Manche Menschen — und jeder Filter — lesen die schlichte Fassung.",
+  campaignsPartHtml: "Formatiert",
+  campaignsPartText: "Nur Text",
+  campaignsPreviewFrameLabel: "Der Brief, wie er ankommt",
+  campaignsPreviewSubject: "Betreff",
+  campaignsPreviewPreheader: "Vorschautext",
+  campaignsPreviewNoPreheader:
+    "Keiner — Mailprogramme zeigen stattdessen die erste Zeile des Briefs.",
+  campaignsAgainstRecipient: (person: string) =>
+    `Das ist die Fassung, die ${person} erhält.`,
+  campaignsAgainstFallbacks:
+    "Das ist die Fassung für alle ohne hinterlegte Angaben — jeder personalisierte Wert unten ist Ihre eigene Ersatzformulierung.",
+  campaignsAgainstNobodyYet:
+    "Noch gibt es niemanden anzuschreiben; das ist deshalb die Fassung für jemanden ohne hinterlegte Angaben. Jeder personalisierte Wert unten ist Ihre eigene Ersatzformulierung.",
+  campaignsPreviewCaveat:
+    "Das ist die Meinung unseres Renderers, kein Beweis. Outlook unter Windows zeichnet Mail mit Words Engine, und jedes Programm weicht ab — legen Sie eine Testkopie in Ihre Entwürfe und lesen Sie sie dort, wo Ihre Empfänger es tun.",
+  campaignsTestDraft: "Testkopie in meine Entwürfe legen",
+  campaignsTestDraftDone: (address: string) =>
+    `Eine Kopie liegt in Ihren Entwürfen, adressiert an ${address}. Gesendet wurde nichts — öffnen Sie sie in Ihrem Mailprogramm, oder senden Sie sie an sich selbst, um zu sehen, wie ein echtes Programm sie zeichnet.`,
+  campaignsTestDraftFailed: "Diese Testkopie konnte nicht geschrieben werden.",
+  campaignsFieldsTitle: "Was aus den personalisierten Werten wurde",
+  campaignsColField: "Wert",
+  campaignsColPrinted: "Liest sich als",
+  campaignsColWhoseWords: "Wessen Worte",
+  campaignsFieldTheirs: "Aus dem Datensatz der Person",
+  campaignsFieldFallback: "Ihre Ersatzformulierung",
+  campaignsNoFields: "Dieser Brief sagt allen dasselbe.",
+  campaignsFieldFirstName: "Vorname",
+  campaignsFieldName: "Vollständiger Name",
+  campaignsFieldEmail: "E-Mail-Adresse",
+  campaignsFieldCountry: "Land",
+  campaignsVocabularyTitle: "Was Sie personalisieren können",
+  campaignsFieldExample: (field: string) => `{{${field}|Ihre Worte}}`,
+  campaignsVocabularyHint:
+    "Die Worte nach dem Strich liest, wer nichts hinterlegt hat. Sie sind nicht optional: Ein Wert ohne Ersatz ist der Ort, wo „Hallo ,“ herkommt.",
+  campaignsLettersFailed: "Ihre Briefe konnten nicht gelesen werden.",
+  campaignsPreviewFailed: "Dieser Brief konnte nicht gerendert werden.",
+  // Die Seite hinter einem Abmeldelink — der eine Bildschirm, den eine
+  // fremde Person liest, und sie kommt bereits verärgert an. Kein Wort
+  // nennt die Adresse; jeder Satz sagt genau, was ein Druck getan hat.
+  campaignUnsubscribeLoading: "Dieser Link wird geprüft…",
+  campaignUnsubscribeTitle: "Diese E-Mails beenden",
+  campaignUnsubscribeSubtitle: (topic: string) =>
+    `Diese Nachricht wurde als „${topic}“ gesendet. Sie können nur diese Art beenden — oder alles.`,
+  campaignUnsubscribeSubtitleUntopiced:
+    "Sie können den E-Mail-Empfang von diesem Arbeitsbereich beenden. Ein Druck genügt.",
+  campaignUnsubscribeStopTopic: (topic: string) =>
+    `Senden Sie mir „${topic}“ nicht mehr`,
+  campaignUnsubscribeStopAll: "Senden Sie mir gar nichts mehr",
+  campaignUnsubscribeAlreadyStopped:
+    "Diesem Arbeitsbereich wurde bereits gesagt, dass er Ihnen nicht mehr schreiben soll. Sie müssen nichts weiter tun.",
+  campaignUnsubscribeAlreadyDeclined: (topic: string) =>
+    `„${topic}“ haben Sie bereits beendet. Alles Übrige können Sie unten weiterhin beenden.`,
+  campaignUnsubscribeDoneTitle: "Erledigt",
+  campaignUnsubscribeLinkText: "Abmelden",
+  campaignUnsubscribeDoneAll:
+    "Dieser Arbeitsbereich wird Ihnen nicht mehr schreiben. Weiter ist nichts nötig.",
+  campaignUnsubscribeDoneTopic: (topic: string) =>
+    `„${topic}“ wird Ihnen nicht mehr gesendet.`,
+  campaignUnsubscribeDoneTopicNote:
+    "Andere E-Mail-Arten aus diesem Arbeitsbereich — Rechnungen und Antworten etwa — erreichen Sie weiterhin. Kommen Sie zu diesem Link zurück, um auch sie zu beenden.",
+  campaignUnsubscribeFinalNote:
+    "Von hier aus lässt sich das nicht rückgängig machen. Wenn Sie es sich anders überlegen, wenden Sie sich direkt an den Absender.",
+  campaignUnsubscribeNoAccountNote:
+    "Kein Konto und keine Anmeldung nötig. Diese Seite betrifft nur die Adresse, an die diese Nachricht ging.",
+  campaignUnsubscribeUnknownTitle: "Dieser Link funktioniert nicht mehr",
+  campaignUnsubscribeUnknownLink:
+    "Wir erkennen diesen Abmeldelink nicht. Falls Sie ihn aus einer E-Mail kopiert haben, öffnen Sie den Link direkt aus der E-Mail — oder antworten Sie dem Absender und bitten Sie ihn aufzuhören.",
+  campaignUnsubscribeFailed:
+    "Das ließ sich gerade nicht speichern. Bitte drücken Sie den Knopf noch einmal.",
 };
