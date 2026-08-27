@@ -16,7 +16,7 @@
 // date, and honouring an offer a few days late is a decision a tenant is
 // entitled to make — so "Lapsed" is a chip here, not a locked door.
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Eye, Palette, Pencil } from "lucide-react";
 
 import { RecordHistory } from "../audit";
@@ -49,7 +49,8 @@ export function QuoteEditor() {
   const navigate = useNavigate();
   const pickers = usePickers();
   const quoteStudio = useRef<QuoteContentStudioHandle>(null);
-  const [preview, setPreview] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const preview = searchParams.get("preview") === "1";
   const [issuer, setIssuer] = useState<BillingSettings | null>(null);
   const [quoteColumns, setQuoteColumns] = useState<QuoteColumns>(
     DEFAULT_QUOTE_COLUMNS,
@@ -57,9 +58,12 @@ export function QuoteEditor() {
 
   useEffect(() => {
     let active = true;
-    void api.settings().then((settings) => {
-      if (active && settings) setIssuer(settings);
-    }).catch(() => undefined);
+    void api
+      .settings()
+      .then((settings) => {
+        if (active && settings) setIssuer(settings);
+      })
+      .catch(() => undefined);
     return () => {
       active = false;
     };
@@ -305,7 +309,8 @@ export function QuoteEditor() {
                     : strings.quoteStudioCustomizeQuotation
               }
             >
-              <Palette size={15} aria-hidden="true" /> {strings.quoteStudioCustomizeQuotation}
+              <Palette size={15} aria-hidden="true" />{" "}
+              {strings.quoteStudioCustomizeQuotation}
             </button>
             <button
               type="button"
@@ -315,10 +320,17 @@ export function QuoteEditor() {
                   : styles.linkAction
               }
               aria-pressed={preview}
-              onClick={() => setPreview((value) => !value)}
+              onClick={() => {
+                const next = new URLSearchParams(searchParams);
+                if (preview) next.delete("preview");
+                else next.set("preview", "1");
+                setSearchParams(next, { replace: true });
+              }}
             >
               <Eye size={15} aria-hidden="true" />
-              {preview ? strings.billingExitPreview : strings.billingQuotationPreview}
+              {preview
+                ? strings.billingExitPreview
+                : strings.billingQuotationPreview}
             </button>
           </div>
         )

@@ -259,7 +259,9 @@ describe("the quote list", () => {
     reply("/billing/quotes", "GET", { quotes: [SENT] });
     ui("/billing/quotes");
 
-    expect((await screen.findAllByText("QUO-2026-00004")).length).toBeGreaterThan(0);
+    expect(
+      (await screen.findAllByText("QUO-2026-00004")).length,
+    ).toBeGreaterThan(0);
     const table = within(screen.getByRole("table"));
     expect(table.getByText("Acme GmbH")).toBeTruthy();
     // €226.88 is the server's gross; nothing here adds up the lines.
@@ -314,6 +316,62 @@ describe("the quote list", () => {
           call.method === "POST" && call.url.endsWith("/billing/quotes"),
       ),
     ).toBe(false);
+  });
+
+  test("a quotation can be opened directly in preview from its row actions", async () => {
+    reply("/billing/quotes", "GET", { quotes: [DRAFT] });
+    reply(`/billing/quotes/${DRAFT.id}`, "GET", {
+      quote: DRAFT,
+      invoiceId: null,
+    });
+    ui("/billing/quotes");
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.moreActions }),
+    );
+    fireEvent.click(
+      screen.getByRole("menuitem", {
+        name: strings.billingQuotationPreview,
+      }),
+    );
+
+    expect(
+      await screen.findByRole("button", { name: strings.billingExitPreview }),
+    ).toBeTruthy();
+  });
+
+  test("deleting a draft from its row actions asks first and removes only that row", async () => {
+    reply("/billing/quotes", "GET", { quotes: [DRAFT] });
+    reply(`/billing/quotes/${DRAFT.id}`, "DELETE", {});
+    ui("/billing/quotes");
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.moreActions }),
+    );
+    fireEvent.click(
+      screen.getByRole("menuitem", { name: strings.billingDeleteQuoteDraft }),
+    );
+    expect(
+      screen.getByText(strings.billingDeleteQuoteDraftConfirm),
+    ).toBeTruthy();
+
+    press(strings.billingDeleteQuoteDraft);
+    await waitFor(() =>
+      expect(
+        calls.some(
+          (call) =>
+            call.method === "DELETE" &&
+            call.url.includes(`/billing/quotes/${DRAFT.id}`),
+        ),
+      ).toBe(true),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("link", {
+          name: new RegExp(strings.billingDraftQuote),
+        }),
+      ).toBeNull(),
+    );
   });
 
   test("quotes show when they were created and last edited", async () => {
@@ -528,15 +586,16 @@ describe("the offer's transitions", () => {
       actions.getByRole("button", { name: strings.billingQuotationPreview }),
     );
     expect(
-      actions.getByRole("button", { name: strings.billingExitPreview }).getAttribute(
-        "aria-pressed",
-      ),
+      actions
+        .getByRole("button", { name: strings.billingExitPreview })
+        .getAttribute("aria-pressed"),
     ).toBe("true");
     expect(
-      (actions.getByRole("button", {
-        name: strings.quoteStudioCustomizeQuotation,
-      }) as HTMLButtonElement)
-        .disabled,
+      (
+        actions.getByRole("button", {
+          name: strings.quoteStudioCustomizeQuotation,
+        }) as HTMLButtonElement
+      ).disabled,
     ).toBe(true);
     expect((edit as HTMLButtonElement).disabled).toBe(true);
 
@@ -547,10 +606,11 @@ describe("the offer's transitions", () => {
       actions.getByRole("button", { name: strings.billingQuotationPreview }),
     ).toBeTruthy();
     expect(
-      (actions.getByRole("button", {
-        name: strings.quoteStudioCustomizeQuotation,
-      }) as HTMLButtonElement)
-        .disabled,
+      (
+        actions.getByRole("button", {
+          name: strings.quoteStudioCustomizeQuotation,
+        }) as HTMLButtonElement
+      ).disabled,
     ).toBe(false);
     expect((edit as HTMLButtonElement).disabled).toBe(false);
   });
@@ -604,10 +664,11 @@ describe("the offer's transitions", () => {
     // on a date, so this screen must not lock the door either.
     expect(screen.getByText(strings.billingQuoteLapsed)).toBeTruthy();
     expect(
-      (screen.getByRole("button", {
-        name: strings.quoteStudioCustomizeQuotation,
-      }) as HTMLButtonElement)
-        .disabled,
+      (
+        screen.getByRole("button", {
+          name: strings.quoteStudioCustomizeQuotation,
+        }) as HTMLButtonElement
+      ).disabled,
     ).toBe(true);
     expect(
       screen.queryByRole("button", { name: strings.billingSendQuote }),
@@ -670,7 +731,9 @@ describe("the offer's transitions", () => {
     // A transition carries no input at all.
     expect(lastWrite()?.body).toBeUndefined();
 
-    expect((await screen.findAllByText("QUO-2026-00004")).length).toBeGreaterThan(0);
+    expect(
+      (await screen.findAllByText("QUO-2026-00004")).length,
+    ).toBeGreaterThan(0);
     expect(screen.getByText(strings.billingQuoteSentNotice)).toBeTruthy();
     expect(screen.queryByLabelText(strings.billingColQty)).toBeNull();
   });
@@ -722,7 +785,9 @@ describe("the offer's transitions", () => {
     fireEvent.click(
       screen.getByRole("button", { name: strings.billingFromQuote }),
     );
-    expect((await screen.findAllByText("QUO-2026-00004")).length).toBeGreaterThan(0);
+    expect(
+      (await screen.findAllByText("QUO-2026-00004")).length,
+    ).toBeGreaterThan(0);
     expect(screen.getByText(strings.billingQuoteStatusAccepted)).toBeTruthy();
   });
 
@@ -849,39 +914,42 @@ describe("the quotation document preview", () => {
       strings.quoteStudioTemplateRetainerHeading,
       strings.quoteStudioTemplateRetainerTable,
     ],
-  ])("persists the %s template as a distinct quotation document", async (preset, heading, tableTitle) => {
-    const quoteId = `template-${preset}`;
-    const records = new Map<string, string>();
-    Object.defineProperty(window, "localStorage", {
-      configurable: true,
-      value: {
-        getItem: (key: string) => records.get(key) ?? null,
-        setItem: (key: string, value: string) => records.set(key, value),
-        removeItem: (key: string) => records.delete(key),
-        clear: () => records.clear(),
-        key: (index: number) => [...records.keys()][index] ?? null,
-        get length() {
-          return records.size;
+  ])(
+    "persists the %s template as a distinct quotation document",
+    async (preset, heading, tableTitle) => {
+      const quoteId = `template-${preset}`;
+      const records = new Map<string, string>();
+      Object.defineProperty(window, "localStorage", {
+        configurable: true,
+        value: {
+          getItem: (key: string) => records.get(key) ?? null,
+          setItem: (key: string, value: string) => records.set(key, value),
+          removeItem: (key: string) => records.delete(key),
+          clear: () => records.clear(),
+          key: (index: number) => [...records.keys()][index] ?? null,
+          get length() {
+            return records.size;
+          },
         },
-      },
-    });
-    await saveQuoteTemplateDesign(quoteId, preset);
+      });
+      await saveQuoteTemplateDesign(quoteId, preset);
 
-    render(
-      <QuoteContentStudio
-        quoteId={quoteId}
-        readOnly
-        preview
-        pricingTable={({ title }) => <p>{title}</p>}
-        tableSubtotal={() => null}
-        lineKeys={[]}
-      />,
-    );
+      render(
+        <QuoteContentStudio
+          quoteId={quoteId}
+          readOnly
+          preview
+          pricingTable={({ title }) => <p>{title}</p>}
+          tableSubtotal={() => null}
+          lineKeys={[]}
+        />,
+      );
 
-    expect(await screen.findByText(heading)).toBeTruthy();
-    expect(screen.getByText(tableTitle)).toBeTruthy();
-    localStorage.removeItem(`alo:quote-design:${quoteId}`);
-  });
+      expect(await screen.findByText(heading)).toBeTruthy();
+      expect(screen.getByText(tableTitle)).toBeTruthy();
+      localStorage.removeItem(`alo:quote-design:${quoteId}`);
+    },
+  );
 
   test("uses Billing Your details as the default quotation identity", async () => {
     render(
@@ -997,13 +1065,13 @@ describe("the quotation document preview", () => {
     ).toBeTruthy();
     expect(
       view.container.querySelector(
-        'ul li > span.bg-\\[var\\(--quote-bullet-marker\\)\\]',
+        "ul li > span.bg-\\[var\\(--quote-bullet-marker\\)\\]",
       ),
     ).toBeTruthy();
     expect(screen.getByText("1", { selector: "ol li > span" })).toBeTruthy();
     expect(
       view.container.querySelector(
-        'ol li > span.bg-\\[var\\(--quote-number-marker\\)\\]',
+        "ol li > span.bg-\\[var\\(--quote-number-marker\\)\\]",
       ),
     ).toBeTruthy();
     storage.removeItem(`alo:quote-design:${quoteId}`);

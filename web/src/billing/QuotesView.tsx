@@ -9,11 +9,12 @@
 // computed against its own date.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileSignature } from "lucide-react";
+import { Eye, FileSignature, MoreHorizontal, Trash2 } from "lucide-react";
 
 import {
   Button,
   Input,
+  Menu,
   Select,
   Spinner,
   Table,
@@ -21,6 +22,7 @@ import {
   Th,
   Toolbar,
   ToolbarSpacer,
+  useDialogs,
   cx,
 } from "../ds";
 import { strings, useLocale } from "../i18n";
@@ -71,6 +73,7 @@ export function QuotesView() {
   const api = useBillingApi();
   const locale = useLocale();
   const navigate = useNavigate();
+  const { confirm } = useDialogs();
   const [quotes, setQuotes] = useState<BillingQuoteSummary[]>([]);
   const [customers, setCustomers] = useState<BillingCustomer[]>([]);
   const [filter, setFilter] = useState<Filter>("all");
@@ -119,6 +122,27 @@ export function QuotesView() {
         new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
     );
   }, [quotes, names, search, filter]);
+
+  const deleteDraft = useCallback(
+    async (quote: BillingQuoteSummary) => {
+      if (quote.status !== "draft") return;
+      const accepted = await confirm({
+        title: strings.billingDeleteQuoteDraft,
+        message: strings.billingDeleteQuoteDraftConfirm,
+        confirmLabel: strings.billingDeleteQuoteDraft,
+        danger: true,
+      });
+      if (!accepted) return;
+      try {
+        await api.deleteQuote(quote.id);
+        setQuotes((current) => current.filter((item) => item.id !== quote.id));
+        setError(null);
+      } catch (err) {
+        setError(billingMessage(err, strings.billingActionFailed));
+      }
+    },
+    [api, confirm],
+  );
 
   return (
     <div className={styles.page}>
@@ -184,6 +208,9 @@ export function QuotesView() {
               <Th>{strings.billingColValidUntil}</Th>
               <Th>{strings.billingColStatus}</Th>
               <Th numeric>{strings.billingColTotal}</Th>
+              <Th className="w-14">
+                <span className="sr-only">{strings.billingColActions}</span>
+              </Th>
             </tr>
           </thead>
           <tbody>
@@ -196,7 +223,7 @@ export function QuotesView() {
                   names.get(quote.customerId) ?? strings.billingUnknownCustomer
                 }`}
                 className={cx(
-                  "cursor-pointer focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[-2px]",
+                  "group cursor-pointer focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[-2px]",
                   quote.status === "sent" && quote.expired && styles.overdueRow,
                 )}
                 onClick={() => void navigate(quote.id)}
@@ -256,6 +283,38 @@ export function QuotesView() {
                     quote.currency,
                   )}
                 </Td>
+                <td
+                  className="w-14 px-2 text-right"
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => event.stopPropagation()}
+                >
+                  <span className="inline-flex opacity-60 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                    <Menu
+                      label={strings.moreActions}
+                      icon={<MoreHorizontal size={18} />}
+                      items={[
+                        {
+                          key: "preview",
+                          label: strings.billingQuotationPreview,
+                          icon: <Eye />,
+                          onClick: () => void navigate(`${quote.id}?preview=1`),
+                        },
+                        ...(quote.status === "draft"
+                          ? [
+                              {
+                                key: "delete",
+                                label: strings.billingDeleteQuoteDraft,
+                                icon: <Trash2 />,
+                                danger: true,
+                                divider: true,
+                                onClick: () => void deleteDraft(quote),
+                              },
+                            ]
+                          : []),
+                      ]}
+                    />
+                  </span>
+                </td>
               </tr>
             ))}
           </tbody>
