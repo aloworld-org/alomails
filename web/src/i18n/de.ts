@@ -5052,4 +5052,1031 @@ export const de: Partial<Catalog> = {
     "Wir erkennen diesen Abmeldelink nicht. Falls Sie ihn aus einer E-Mail kopiert haben, öffnen Sie den Link direkt aus der E-Mail — oder antworten Sie dem Absender und bitten Sie ihn aufzuhören.",
   campaignUnsubscribeFailed:
     "Das ließ sich gerade nicht speichern. Bitte drücken Sie den Knopf noch einmal.",
+  // Sites (alo Sites, ADR 0036) — the builder/editor half: the site list,
+  // generation, templates, the page editor and palette, images, theme,
+  // languages, the blog desk, collaborators, the contact-form inbox, the
+  // assistant, analytics, the attention map, results, history, scheduled
+  // publishing and page passwords. The commerce half (catalog, shop,
+  // booking, tickets, orders, domains) ships in the next tranche.
+  sitesLoadFailed: "Ihre Websites konnten nicht geladen werden.",
+  sitesSiteLoadFailed: "Diese Website konnte nicht geladen werden.",
+  sitesSaveFailed: "Die Änderung konnte nicht gespeichert werden.",
+  sitesCheckFailed: "Die Adresse konnte nicht geprüft werden.",
+  sitesNewSite: "Neue Website",
+  sitesNoSitesTitle: "Noch keine Websites",
+  sitesNoSitesBody:
+    "Bauen Sie eine Website für Ihr Geschäft und veröffentlichen Sie sie unter ihrer eigenen Adresse.",
+  sitesColName: "Name",
+  sitesColAddress: "Adresse",
+  sitesColStatus: "Status",
+  sitesStatusDraft: "Entwurf",
+  sitesStatusLive: "Online",
+  sitesNewSiteTitle: "Neue Website",
+  sitesNewSiteSubtitle:
+    "Beginnen Sie mit einer Beschreibung, oder wählen Sie eine der fertigen Vorlagen.",
+  sitesStartingPoint: "Wie Sie anfangen",
+  sitesGenerateChoice: "Aus einer Beschreibung erzeugen",
+  sitesTemplateChoice: "Mit einer Vorlage beginnen",
+  sitesBusinessDescription: "Beschreiben Sie Ihr Geschäft",
+  sitesBusinessDescriptionHint:
+    "Sagen Sie, was Sie anbieten, für wen es ist und welchen Ton Sie wollen. Vor dem Veröffentlichen können Sie alles bearbeiten.",
+  sitesBusinessDescriptionPlaceholder:
+    "Eine Bäckerei im Viertel, die Sauerteigbrot und Festtagstorten für Familien aus der Nachbarschaft backt…",
+  sitesGenerateSite: "Website erzeugen",
+  sitesGenerating: "Ihr Entwurf wird vorbereitet…",
+  sitesCreatingSite: "Website wird angelegt…",
+  sitesGenerationFailed:
+    "Ihr Entwurf konnte nicht vorbereitet werden. Prüfen Sie die Servermeldung und versuchen Sie es erneut.",
+  sitesGenerationEmpty:
+    "Der erzeugte Entwurf enthielt keine Seite. Versuchen Sie eine ausführlichere Beschreibung.",
+  sitesGenerationUnavailable:
+    "Das Erzeugen ist für diesen Arbeitsbereich nicht eingerichtet. Beginnen Sie mit einer leeren Website oder wählen Sie unten eine Vorlage.",
+  sitesChooseTemplate: "Wählen Sie einen Ausgangspunkt",
+  sitesBlankTemplate: "Leere Website",
+  sitesBlankTemplateSummary:
+    "Eine leere Startseite. Jeden Abschnitt wählen Sie selbst.",
+  sitesTemplatePageCount: (count: number) =>
+    count === 1 ? "1 Seite" : `${count} Seiten`,
+  sitesTemplatesLoading: "Vorlagen werden geladen…",
+  sitesTemplatesLoadFailed:
+    "Die Vorlagen konnten nicht geladen werden. Sie können trotzdem mit einer leeren Website beginnen.",
+  sitesTemplatePreviewTitle: (name: string) => `Vorschau von ${name}`,
+  sitesTemplatePreviewPages: "Seiten in dieser Vorlage",
+  sitesTemplatePreviewLoading: "Vorschau wird geladen…",
+  sitesTemplatePreviewFailed:
+    "Diese Vorschau konnte nicht geladen werden. Sie können die Website trotzdem aus dieser Vorlage anlegen.",
+  sitesTemplatePreviewNote:
+    "Ein Bild der Seite. Wechseln Sie oben die Seite; jedes Wort und jeder Abschnitt gehört danach Ihnen.",
+  sitesBlankPreviewNote:
+    "Sie beginnen mit einer leeren Startseite und fügen die Abschnitte hinzu, die Sie wollen.",
+  sitesHomePageTitle: "Startseite",
+  sitesAiEditTitle: "Eine Seitenänderung beschreiben",
+  sitesAiEditBody:
+    "alo bereitet eine prüfbare Änderungsliste vor. Nichts ändert sich, bevor Sie zustimmen.",
+  sitesAiInstruction: "Seitenänderung",
+  sitesAiInstructionPlaceholder:
+    "Mach die Begrüßung wärmer und schiebe die Kundenstimmen über die Preise…",
+  sitesAiPropose: "Änderungen vorbereiten",
+  sitesAiPreparing: "Änderungen werden vorbereitet…",
+  sitesAiProposalTitle: "Vorgeschlagene Änderungen",
+  sitesAiProposalCount: (count: number) =>
+    count === 1
+      ? "1 vorgeschlagene Änderung"
+      : `${count} vorgeschlagene Änderungen`,
+  sitesAiPreviewHint:
+    "Vergleichen Sie die Seite vorher und nachher, und entscheiden Sie dann, was geschieht.",
+  sitesAiPreviewCompare: "Vorgeschlagene Seitenänderungen vergleichen",
+  sitesInlineTextHint:
+    "Klicken Sie in der Vorschau auf einen Text, um ihn dort zu bearbeiten. Eingabe speichert, Escape stellt ihn zurück.",
+  sitesInlineTextSaved: "Text aktualisiert.",
+  sitesInlineTextUndone: "Textänderung rückgängig gemacht.",
+  sitesInlineTextRedone: "Textänderung wiederhergestellt.",
+  sitesInlineTextStale:
+    "Dieser Text gehört zu einem Abschnitt, der inzwischen verschoben oder geändert wurde. Die Vorschau wurde aufgefrischt — versuchen Sie die Änderung erneut.",
+  sitesUndoEdit: "Letzte Änderung rückgängig machen",
+  sitesRedoEdit: "Letzte Änderung wiederherstellen",
+  sitesSectionDragHint:
+    "Ziehen Sie einen Abschnitt, um ihn zu verschieben — die Seite ordnet sich beim Ziehen neu. Mit der Tastatur: den Abschnitt fokussieren und Alt mit der Pfeiltaste nach oben oder unten halten.",
+  sitesSectionResizeHint:
+    "Manche Abschnitte können ihre Form ändern. Wählen Sie in der Liste eine Größe unter dem Abschnitt, oder fokussieren Sie ihn in der Vorschau und halten Sie Alt mit der Pfeiltaste nach links oder rechts.",
+  sitesLayoutOf: (control: string) => `${control} wählen`,
+  sitesSectionResized: (section: string, choice: string) =>
+    `${section} auf „${choice}“ gestellt.`,
+  sitesLayoutSplit: "Aufteilung",
+  sitesLayoutColumns: "Spalten",
+  sitesLayoutShape: "Form",
+  sitesLayoutSplitWideImage: "Bild breiter",
+  sitesLayoutSplitHalf: "Gleiche Hälften",
+  sitesLayoutSplitWideText: "Text breiter",
+  sitesLayoutColumnsTwo: "Zwei",
+  sitesLayoutColumnsThree: "Drei",
+  sitesLayoutColumnsFour: "Vier",
+  sitesLayoutShapeNatural: "Wie hochgeladen",
+  sitesLayoutShapeWide: "Breit",
+  sitesLayoutShapeSquare: "Quadratisch",
+  sitesLayoutShapeTall: "Hoch",
+  sitesSectionOnPage: (section: string, position: number, total: number) =>
+    `${section}, Abschnitt ${position} von ${total}. Ziehen Sie ihn, um ihn zu verschieben, oder halten Sie Alt und drücken Sie die Pfeiltaste nach oben oder unten.`,
+  sitesAiPreviewBefore: "Vorher",
+  sitesAiPreviewAfter: "Nachher",
+  sitesAiApprove: "Änderungen übernehmen",
+  sitesAiApplying: "Änderungen werden übernommen…",
+  sitesAiDiscard: "Verwerfen",
+  sitesAiEditFailed:
+    "Die Änderungsliste konnte nicht vorbereitet werden. Versuchen Sie es erneut oder bearbeiten Sie die Abschnitte direkt.",
+  sitesAiApplyFailed:
+    "Diese Änderungen konnten nicht übernommen werden. Prüfen Sie die Servermeldung und versuchen Sie es erneut.",
+  sitesAiAddChange: (section: string, position: number) =>
+    `${section} an Position ${position} einfügen`,
+  sitesAiRemoveChange: (section: string) => `${section} entfernen`,
+  sitesAiMoveChange: (section: string, position: number) =>
+    `${section} an Position ${position} verschieben`,
+  sitesAiSettingChange: (section: string) =>
+    `Eine Einstellung in ${section} ändern`,
+  sitesAiCopyChange: (section: string) => `Text in ${section} neu schreiben`,
+  sitesAiImproveCopy: "Diesen Text verbessern",
+  sitesAiCopyActions: "Textverbesserungen",
+  sitesAiRewrite: "Neu schreiben",
+  sitesAiShorter: "Kürzen",
+  sitesAiLonger: "Ausführlicher machen",
+  sitesAiTone: "Gewünschter Ton",
+  sitesAiTonePlaceholder: "Warm und direkt",
+  sitesAiUseTone: "Ton ändern",
+  sitesAiCopyBefore: "Bisheriger Text",
+  sitesAiCopyAfter: "Vorgeschlagener Text",
+  sitesAiCopyFailed:
+    "Diese Textänderung konnte nicht vorbereitet werden. Versuchen Sie es erneut oder bearbeiten Sie den Text direkt weiter.",
+  sitesFieldName: "Name der Website",
+  sitesFieldSubdomain: "Adresse",
+  sitesSubdomainHint:
+    "Kleinbuchstaben, Ziffern und Bindestriche, 3–40 Zeichen — daraus wird die Webadresse der Website.",
+  sitesSubdomainChecking: "Verfügbarkeit wird geprüft…",
+  sitesSubdomainAvailable: (subdomain: string) => `„${subdomain}“ ist frei.`,
+  sitesSubdomainTaken: (subdomain: string) =>
+    `„${subdomain}“ ist bereits vergeben.`,
+  sitesAddressAvailable: "Frei",
+  sitesAddressTaken: "Bereits vergeben",
+  sitesAddressNotChecked:
+    "Geben Sie eine gültige Adresse ein, um die Verfügbarkeit zu prüfen",
+  sitesNameRequired: "Geben Sie Ihrer Website einen Namen, um fortzufahren.",
+  sitesAddressRequired: "Geben Sie eine Adresse ein, um fortzufahren.",
+  sitesCreateSite: "Website anlegen",
+  sitesCancel: "Abbrechen",
+  sitesBack: "Alle Websites",
+  sitesCollaborators: "Mitwirkende",
+  sitesCollaboratorsHint:
+    "Laden Sie Personen ein, diese Website zu bearbeiten und zu veröffentlichen. Ihre E-Mails, Dateien und anderen Websites können sie nicht öffnen.",
+  sitesCollaboratorEmail: "E-Mail-Adresse",
+  sitesCollaboratorEmailPlaceholder: "mitwirkende@example.com",
+  sitesInviteCollaborator: "Zum Bearbeiten einladen",
+  sitesCollaboratorsLoading: "Mitwirkende werden geladen…",
+  sitesCollaboratorsLoadFailed:
+    "Die Mitwirkenden dieser Website konnten nicht geladen werden.",
+  sitesCollaboratorInviteFailed: "Die Einladung konnte nicht angelegt werden.",
+  sitesCollaboratorRevokeFailed: "Der Zugang konnte nicht entfernt werden.",
+  sitesCollaboratorCopyFailed:
+    "Der Einrichtungslink konnte nicht kopiert werden. Erstellen Sie einen neuen Link und versuchen Sie es erneut.",
+  sitesCollaboratorLinkReady: (email: string) =>
+    `Ein privater Einrichtungslink für ${email} liegt bereit. Kopieren Sie ihn und geben Sie ihn auf sicherem Weg weiter.`,
+  sitesCollaboratorAdded: (email: string) =>
+    `${email} kann diese Website jetzt bearbeiten.`,
+  sitesCollaboratorLinkCopied: "Einrichtungslink kopiert.",
+  sitesCollaboratorRevoked: (email: string) =>
+    `Der Zugang von ${email} wurde entfernt.`,
+  sitesUndoCollaboratorRevoke: "Rückgängig",
+  sitesNoCollaborators:
+    "Nur Sie können diese Website bearbeiten. Geben Sie oben eine E-Mail-Adresse ein, um die erste Person einzuladen.",
+  sitesCollaboratorPending: "Einladung offen",
+  sitesCollaboratorActive: "Kann bearbeiten und veröffentlichen",
+  sitesRefreshCollaboratorLink: "Neuer Einrichtungslink",
+  sitesCopyCollaboratorLink: "Einrichtungslink kopieren",
+  sitesRevokeCollaborator: "Zugang entfernen",
+  sitesInvitationHeading: "Dieser Website beitreten",
+  sitesInvitationSubtitle: (site: string) =>
+    `Sie sind eingeladen, ${site} zu bearbeiten und zu veröffentlichen.`,
+  sitesInvitationLoading: "Ihre Einladung wird geprüft…",
+  sitesInvitationLoadFailed:
+    "Diese Einladung ist abgelaufen oder wurde bereits verwendet. Bitten Sie die Person, der die Website gehört, um einen neuen Link.",
+  sitesInvitationPassword: "Passwort festlegen",
+  sitesInvitationPasswordHint: "Mindestens 8 Zeichen.",
+  sitesInvitationConfirmPassword: "Passwort bestätigen",
+  sitesInvitationPasswordMismatch: "Die Passwörter stimmen nicht überein.",
+  sitesInvitationAccept: "Website beitreten",
+  sitesInvitationAccepting: "Beitritt läuft…",
+  sitesInvitationAcceptFailed:
+    "Ihre Einladung konnte nicht angenommen werden.",
+  sitesInvitationDone: "Sie können jetzt bearbeiten",
+  sitesInvitationDoneBody: (email: string) =>
+    `Melden Sie sich als ${email} an. Sie sehen nur die Websites, die mit Ihnen geteilt wurden.`,
+  sitesInvitationSignIn: "Bei alo anmelden",
+  sitesPages: "Seiten",
+  sitesPageCount: (count: number) =>
+    `${count} ${count === 1 ? "Seite" : "Seiten"}`,
+  sitesSiteTools: "Website-Werkzeuge",
+  sitesSiteToolsHint: "Inhalte, Verkauf, Zahlen und Einstellungen",
+  sitesNewPage: "Neue Seite",
+  sitesNoPagesTitle: "Noch keine Seiten",
+  sitesNoPagesBody:
+    "Jede Website beginnt mit einer Startseite. Legen Sie eine an, um loszubauen.",
+  sitesColPage: "Seite",
+  sitesColPath: "Pfad",
+  sitesPosts: "Blogartikel",
+  sitesBackToWebsite: "Website",
+  sitesPostsLoadFailed: "Ihre Blogartikel konnten nicht geladen werden.",
+  sitesLoadingPosts: "Blogartikel werden geladen",
+  sitesWriteInDocs: "In alo Docs schreiben",
+  sitesOpeningDocs: "alo Docs wird geöffnet…",
+  sitesUntitledArticle: "Artikel ohne Titel",
+  sitesPostCreateFailed:
+    "Der Artikel konnte nicht angelegt werden. Versuchen Sie es erneut.",
+  sitesNoPostsTitle: "Noch keine Artikel",
+  sitesNoPostsBody:
+    "Beginnen Sie einen Artikel in alo Docs. Er bleibt privat, bis Sie ihn veröffentlichen.",
+  sitesColArticle: "Artikel",
+  sitesColUpdated: "Aktualisiert",
+  sitesColActions: "Aktionen",
+  sitesEditInDocs: "In alo Docs bearbeiten",
+  sitesPostStatusDraft: "Entwurf",
+  sitesPostStatusPublished: "Veröffentlicht",
+  sitesPublishArticle: "Veröffentlichen",
+  sitesPublishArticleTitle: "Artikel veröffentlichen",
+  sitesPublishArticleSubtitle:
+    "Legen Sie fest, wie der Artikel auf Ihrer öffentlichen Website erscheint.",
+  sitesEditArticleTitle: "Artikeldetails",
+  sitesEditArticleSubtitle:
+    "Ändern Sie, was Ihre Leserschaft auf Ihrer Website sieht.",
+  sitesEditArticleDetails: "Details bearbeiten",
+  sitesSaveArticle: "Änderungen speichern",
+  sitesPostSaveFailed:
+    "Die Artikeldetails konnten nicht gespeichert werden. Versuchen Sie es erneut.",
+  sitesPostUnpublishFailed:
+    "Der Artikel konnte nicht vom Netz genommen werden. Versuchen Sie es erneut.",
+  sitesUnpublishArticle: "Vom Netz nehmen",
+  sitesUnpublishingArticle: "Wird vom Netz genommen…",
+  sitesFieldPostTitle: "Artikeltitel",
+  sitesFieldPostSlug: "Webadresse",
+  sitesPostSlugHint: "Kleinbuchstaben, Ziffern und Bindestriche.",
+  sitesPostSlugPlaceholder: "mein-artikel",
+  sitesFieldPostExcerpt: "Zusammenfassung",
+  sitesPostExcerptHint:
+    "Eine kurze Einführung, gezeigt auf der Blogseite und im RSS-Feed.",
+  sitesFieldPostCover: "Titelbild",
+  sitesPostCoverHint: "Zu sehen auf der Blogseite und über dem Artikel.",
+  sitesPostNoCover: "Kein Titelbild",
+  sitesPostCoverAdded: "Titelbild hinzugefügt",
+  sitesAddPostCover: "Bild hinzufügen",
+  sitesReplacePostCover: "Bild ersetzen",
+  sitesRemovePostCover: "Entfernen",
+  sitesUploadingPostCover: "Wird hochgeladen…",
+  sitesPostCoverUploadFailed:
+    "Das Titelbild konnte nicht hochgeladen werden. Versuchen Sie es erneut.",
+  sitesHomeBadge: "Startseite",
+  sitesNewPageTitle: "Neue Seite",
+  sitesNewPageSubtitle:
+    "Eine Seite trägt die Abschnitte, die Sie auf ihr stapeln.",
+  sitesFieldPageTitle: "Titel",
+  sitesFieldSlug: "Pfad",
+  sitesLanguagesLabel: "Sprachen der Website",
+  sitesEditingLanguage: "Bearbeitungssprache",
+  sitesLanguages: "Sprachen",
+  sitesLanguagesHint:
+    "Fügen Sie die Sprachen hinzu, die Besucher wählen können, und sehen Sie genau, welche Seiten noch Übersetzung brauchen.",
+  sitesDefaultLanguage: "Standardsprache",
+  sitesAddLanguage: "Eine Sprache hinzufügen",
+  sitesLanguagePlaceholder: "Sprachcode, zum Beispiel fr",
+  sitesAddLanguageAction: "Sprache hinzufügen",
+  sitesLanguageDefaultBadge: "Standard",
+  sitesRemoveLanguage: (language: string) => `${language} entfernen`,
+  sitesLanguageSaveFailed:
+    "Die Sprachen der Website konnten nicht gespeichert werden. Prüfen Sie den Sprachcode und versuchen Sie es erneut.",
+  sitesTranslationReady: "Bereit",
+  sitesTranslationProgress: (translated: number, total: number) =>
+    `${translated} von ${total} Seiten übersetzt`,
+  sitesTranslationAllReady:
+    "Jede aktivierte Sprache ist bereit zur Veröffentlichung.",
+  sitesTranslationPublishHint: (count: number) =>
+    count === 1
+      ? "1 Übersetzung zeigt noch Inhalte der Ausgangssprache."
+      : `${count} Übersetzungen zeigen noch Inhalte der Ausgangssprache.`,
+  sitesContinueTranslating: "Weiter übersetzen",
+  sitesTranslationSaveFailed:
+    "Diese Übersetzung konnte nicht gespeichert werden. Korrigieren Sie die markierten Angaben und versuchen Sie es erneut.",
+  sitesTranslationMissingTitle: (locale: string) =>
+    `${locale} braucht eine Übersetzung`,
+  sitesTranslationMissingBody: (requested: string, source: string) =>
+    `Zur Orientierung sehen Sie die Fassung in ${source}. Kopieren Sie sie nach ${requested}, um mit dem Übersetzen zu beginnen, ohne die Ausgangsseite zu verändern.`,
+  sitesCopyTranslation: (source: string, target: string) =>
+    `${source} nach ${target} kopieren`,
+  sitesTranslationDetails: "Details der übersetzten Seite",
+  sitesTranslationDetailsHint: (locale: string) =>
+    `Titel, Pfad und Suchangaben hier sehen nur Besucher in ${locale}.`,
+  sitesSaveTranslation: "Übersetzungsdetails speichern",
+  sitesTranslateWholeSite: "Ganze Website übersetzen",
+  sitesWholeTranslationPreparing:
+    "Eine vollständige Übersetzung wird zur Prüfung vorbereitet…",
+  sitesWholeTranslationPrepareFailed:
+    "Die Übersetzung konnte nicht vorbereitet werden. Nichts hat sich geändert; übersetzen Sie Seiten von Hand oder versuchen Sie es erneut.",
+  sitesWholeTranslationApplyFailed:
+    "Die Übersetzung konnte nicht übernommen werden. Nichts hat sich geändert; bereiten Sie eine frische Prüfung vor und versuchen Sie es erneut.",
+  sitesWholeTranslationReview: (language: string) =>
+    `Die Übersetzung in ${language} prüfen`,
+  sitesWholeTranslationReviewHint:
+    "Vergleichen Sie jede Seite und jeden Artikel. Nichts wird gespeichert, bevor Sie diese Prüfung freigeben.",
+  sitesWholeTranslationApprove: "Übersetzung übernehmen",
+  sitesTranslationPageKind: "Seite",
+  sitesTranslationPostKind: "Artikel",
+  sitesSlugHint:
+    "Kleinbuchstaben, Ziffern und Bindestriche. Bei der Startseite bleibt das leer.",
+  sitesFieldHome: "Das ist die Startseite",
+  sitesCreatePage: "Seite anlegen",
+  sitesPageLoadFailed: "Diese Seite konnte nicht geladen werden.",
+  sitesBackToSite: "Alle Seiten",
+  sitesSections: "Abschnitte",
+  sitesAddSection: "Abschnitt hinzufügen",
+  sitesAddFirstSection: "Den ersten Abschnitt hinzufügen",
+  sitesNoSectionsTitle: "Noch nichts auf dieser Seite",
+  sitesNoSectionsBody:
+    "Stapeln Sie Abschnitte — einen Aufmacher, Ihre Leistungen, ein Kontaktformular — und die Seite entsteht.",
+  sitesPaletteTitle: "Einen Abschnitt hinzufügen",
+  sitesPaletteHint:
+    "Ziehen Sie einen Baustein auf die Seite — oder wählen Sie, wohin er kommt, und drücken Sie einen.",
+  sitesPalettePosition: "Wohin er kommt",
+  sitesPaletteAtTop: "Ganz oben",
+  sitesPaletteAtEnd: "Ans Ende",
+  sitesPaletteAfter: (section: string) => `Hinter „${section}“`,
+  sitesPaletteAdd: (section: string, position: string) =>
+    `${section} hinzufügen — ${position}`,
+  sitesPaletteDropHere: "Hier ablegen, um am Ende einzufügen",
+  sitesPaletteOwnContent: "Gezeigt mit Ihren eigenen Inhalten.",
+  sitesPalettePreviewTitle: (section: string) =>
+    `${section} auf Ihrer Website`,
+  sitesPaletteLoading:
+    "Diese Bausteine füllen sich mit Ihren eigenen Inhalten…",
+  sitesPaletteFailed:
+    "Ihre eigenen Inhalte konnten nicht geladen werden, daher öffnen diese Bausteine ein Formular.",
+  sitesPaletteOpensForm: "Öffnet ein Formular",
+  sitesPaletteDone: "Fertig mit Hinzufügen",
+  sitesPaletteNeedsWriting:
+    "Hier gibt es noch nichts von Ihnen zu zeigen — diesen Baustein schreiben Sie selbst. Beim Hinzufügen öffnet sich ein Formular.",
+  sitesPaletteNeedsPicture:
+    "Legen Sie ein Bild auf diese Website, und dieser Baustein füllt sich damit. Jetzt hinzugefügt, öffnet er ein Formular.",
+  sitesPaletteNeedsCatalog:
+    "Legen Sie zuerst einen Katalog an — dieser Baustein zeigt, was darin ist. Jetzt hinzugefügt, öffnet er ein Formular.",
+  sitesPaletteNeedsCollection:
+    "Verbinden Sie zuerst eine Sammlung — dieser Baustein zeigt ihre Zeilen. Jetzt hinzugefügt, öffnet er ein Formular.",
+  sitesPaletteNeedsBooking:
+    "Legen Sie zuerst etwas an, das man buchen kann — dieser Baustein bietet es an. Jetzt hinzugefügt, öffnet er ein Formular.",
+  sitesPaletteNeedsCode:
+    "Den Code in diesem Baustein schreiben Sie selbst. Beim Hinzufügen öffnet sich ein Formular.",
+  sitesAddSectionTitle: (section: string) => `${section} hinzufügen`,
+  sitesEditSectionTitle: (section: string) => `${section} bearbeiten`,
+  sitesSaveSection: "Abschnitt speichern",
+  sitesMoveUp: (section: string) => `${section} nach oben schieben`,
+  sitesMoveDown: (section: string) => `${section} nach unten schieben`,
+  sitesEditSection: (section: string) => `${section} bearbeiten`,
+  sitesDeleteSection: (section: string) => `${section} löschen`,
+  sitesSectionMoved: (section: string, position: number, total: number) =>
+    `${section} an Position ${position} von ${total} verschoben.`,
+  sitesSectionAdded: (section: string, position: number, total: number) =>
+    `${section} als Abschnitt ${position} von ${total} hinzugefügt.`,
+  sitesConfirmDelete: "Wirklich löschen?",
+  sitesPreview: "Vorschau",
+  sitesPreviewTitle: "Entwurfsvorschau",
+  sitesPreviewDesktop: "Bildschirmbreite",
+  sitesPreviewMobile: "Telefonbreite",
+  sitesPreviewFailed: "Die Vorschau konnte nicht geladen werden.",
+  sitesSeoAction: "Suche & Teilen",
+  sitesSeoTitle: "Suche & Teilen",
+  sitesSeoSubtitle:
+    "Legen Sie fest, wie diese Seite in Suchergebnissen und geteilten Links erscheint.",
+  sitesSeoPreview: "Vorschau des Suchergebnisses",
+  sitesSeoFieldTitle: "Suchtitel",
+  sitesSeoTitleHint:
+    "Leer lassen, um Seitentitel und Website-Namen zu verwenden.",
+  sitesSeoFieldDescription: "Beschreibung",
+  sitesSeoDescriptionHint:
+    "Eine kurze, nützliche Zusammenfassung für Suchergebnisse und geteilte Links.",
+  sitesSeoDescriptionDefault:
+    "Fügen Sie eine Beschreibung hinzu, damit man weiß, worum es auf dieser Seite geht.",
+  sitesSeoImageHint:
+    "Geteilte Links verwenden das erste Aufmacherbild der Seite. Gibt es keines, wird Ihr Website-Logo verwendet.",
+  sitesSeoSave: "Suchangaben speichern",
+  sitesSeoSaveFailed:
+    "Die Suchangaben konnten nicht gespeichert werden. Versuchen Sie es erneut.",
+  sitesSectionNav: "Navigationsleiste",
+  sitesSectionNavDesc: "Links quer über den Seitenkopf.",
+  sitesSectionHero: "Aufmacher",
+  sitesSectionHeroDesc: "Die große Schlagzeile am Anfang.",
+  sitesSectionFeatures: "Leistungen",
+  sitesSectionFeaturesDesc: "Ein Raster mit dem, was Sie anbieten.",
+  sitesSectionTextImage: "Text & Bild",
+  sitesSectionTextImageDesc: "Ein Absatz neben einem Bild.",
+  sitesSectionGallery: "Galerie",
+  sitesSectionGalleryDesc: "Eine Wand voller Bilder.",
+  sitesSectionTestimonials: "Kundenstimmen",
+  sitesSectionTestimonialsDesc: "Worte zufriedener Kundschaft.",
+  sitesSectionPricing: "Preise",
+  sitesSectionPricingDesc: "Ihre Pakete und ihre Preise.",
+  sitesSectionTeam: "Team",
+  sitesSectionTeamDesc: "Die Menschen hinter dem Geschäft.",
+  sitesSectionFaq: "FAQ",
+  sitesSectionFaqDesc: "Fragen, die gestellt werden — beantwortet.",
+  sitesSectionCta: "Handlungsaufruf",
+  sitesSectionCtaDesc: "Ein Banner, das um den Klick bittet.",
+  sitesSectionContactForm: "Kontaktformular",
+  sitesSectionContactFormDesc: "Besucher können Ihnen schreiben.",
+  sitesSectionFooter: "Fußzeile",
+  sitesSectionFooterDesc: "Die Zeile ganz unten auf der Seite.",
+  sitesCountLinks: (count: number) =>
+    count === 1 ? "1 Link" : `${count} Links`,
+  sitesCountImages: (count: number) =>
+    count === 1 ? "1 Bild" : `${count} Bilder`,
+  sitesCountEntries: (count: number) =>
+    count === 1 ? "1 Eintrag" : `${count} Einträge`,
+  sitesItemN: (position: number) => `Eintrag ${position}`,
+  sitesRemoveItem: "Eintrag entfernen",
+  sitesAddLink: "Link hinzufügen",
+  sitesAddEntry: "Eintrag hinzufügen",
+  sitesAddImage: "Bild hinzufügen",
+  sitesAddTier: "Paket hinzufügen",
+  sitesAddMember: "Person hinzufügen",
+  sitesAddQuestion: "Frage hinzufügen",
+  sitesFieldHeading: "Überschrift",
+  sitesFieldSubheading: "Unterzeile",
+  sitesFieldIntro: "Einleitung",
+  sitesFieldBody: "Text",
+  sitesFieldItemTitle: "Titel",
+  sitesFieldLinkLabel: "Linktext",
+  sitesFieldLinkHref: "Linkziel",
+  sitesFieldButton: "Knopf",
+  sitesFieldPrimaryButton: "Erster Knopf",
+  sitesFieldSecondaryButton: "Zweiter Knopf",
+  sitesFieldImage: "Bild",
+  sitesFieldPhoto: "Foto",
+  sitesFieldImageId: "Bild-ID",
+  sitesImageIdHint:
+    "Laden Sie ein Bild hoch, oder fügen Sie die Bild-ID eines früheren Uploads ein.",
+  sitesFieldImageAlt: "Bildbeschreibung",
+  sitesImageAltHint:
+    "Wird von Screenreadern vorgelesen. Sagen Sie, was das Bild zeigt; zeigt es nichts, worauf es ankommt, markieren Sie es unten als dekorativ.",
+  sitesImageAltMissing:
+    "Dieses Bild hat noch keine Beschreibung — sagen Sie, was es zeigt, oder markieren Sie es als dekorativ.",
+  sitesImageDecorative: "Dekorativ — Screenreader überspringen es",
+  sitesImageDecorativeHint:
+    "Nur für Bilder, die selbst nichts mitteilen, etwa ein Hintergrundmuster.",
+  sitesImageFrameHint:
+    "Ziehen Sie auf dem Bild, um zu wählen, was sichtbar bleibt. Mit der Tastatur: Pfeiltasten verschieben den Rahmen, Umschalt mit den Pfeiltasten ändert seine Größe.",
+  sitesImageFocalHint:
+    "Ziehen Sie die runde Markierung auf das, was im Blick bleiben muss, wenn ein Layout das Bild weiter beschneiden muss.",
+  sitesImageFrameAt: (
+    width: number,
+    height: number,
+    left: number,
+    top: number,
+  ) =>
+    `Sichtbarer Ausschnitt: ${width} % mal ${height} % des Bildes, ${left} % von links und ${top} % von oben`,
+  sitesImageFocalAt: (x: number, y: number) =>
+    `Fokuspunkt ${x} % von links, ${y} % von oben`,
+  sitesImageFrameWidth: "Breite",
+  sitesImageFrameHeight: "Höhe",
+  sitesImageFrameLeft: "Links",
+  sitesImageFrameTop: "Oben",
+  sitesImageWholePicture: "Das ganze Bild verwenden",
+  sitesImageWholePictureState: "Das ganze Bild ist zu sehen",
+  sitesImageCentreFocal: "Fokuspunkt in die Mitte",
+  sitesImageNoPreview:
+    "Dieses Bild kann hier nicht angezeigt werden. Die Zahlen darunter rahmen es trotzdem, und seine Beschreibung bleibt unberührt.",
+  sitesAiAltWrite: "Beschreibung vorschlagen",
+  sitesAiAltImprove: "Diese Beschreibung verbessern",
+  sitesAiAltProposed: "Vorgeschlagene Beschreibung",
+  sitesAiAltUnseen:
+    "Entworfen aus den Worten dieses Abschnitts — alo hat das Bild nicht gesehen. Prüfen Sie den Vorschlag am Bild, bevor Sie ihn übernehmen.",
+  sitesAiAltFailed: "Die Beschreibung konnte nicht entworfen werden.",
+  sitesFieldImageSide: "Bildseite",
+  sitesSideLeft: "Links",
+  sitesSideRight: "Rechts",
+  sitesFieldQuote: "Zitat",
+  sitesFieldAuthor: "Name",
+  sitesFieldRole: "Rolle",
+  sitesFieldTierName: "Paketname",
+  sitesFieldPrice: "Preis",
+  sitesFieldPeriod: "Abrechnungszeitraum",
+  sitesFieldTierDescription: "Beschreibung",
+  sitesFieldTierFeatures: "Was enthalten ist",
+  sitesTierFeaturesHint: "Eine Zeile je Punkt.",
+  sitesFieldHighlighted: "Dieses Paket hervorheben",
+  sitesFieldMemberName: "Name",
+  sitesFieldBio: "Kurzporträt",
+  sitesFieldQuestion: "Frage",
+  sitesFieldAnswer: "Antwort",
+  sitesFieldSuccessMessage: "Nachricht nach dem Absenden",
+  sitesFieldFooterText: "Fußzeilentext",
+  sitesContactFormHint:
+    "Das Formular steht bereits auf der Seite; das Absenden funktioniert, sobald es die Formulare gibt.",
+  sitesTheme: "Design",
+  sitesThemeTitle: "Design der Website",
+  sitesThemeSubtitle: "Wählen Sie einen Look; ergänzen Sie Logo und Favicon.",
+  sitesThemeApply: "Design übernehmen",
+  sitesThemeLoadFailed: "Die Design-Optionen konnten nicht geladen werden.",
+  sitesThemePresets: "Farben & Schrift",
+  sitesThemeLogo: "Logo",
+  sitesThemeLogoHint:
+    "Erscheint in der Navigationsleiste anstelle des Website-Namens.",
+  sitesThemeFavicon: "Favicon",
+  sitesThemeFaviconHint: "Das kleine Symbol, das Browser am Tab zeigen.",
+  sitesThemeUpload: "Bild hochladen",
+  sitesThemeReplace: "Bild ersetzen",
+  sitesThemeRemove: "Bild entfernen",
+  sitesThemeSet: "Bild hochgeladen",
+  sitesThemeNotSet: "Noch keines",
+  sitesUploadFailed: "Das Bild konnte nicht hochgeladen werden.",
+  sitesUploadImage: "Bild hochladen",
+  sitesPublish: "Veröffentlichen",
+  sitesPublishChanges: "Änderungen veröffentlichen",
+  sitesUnpublish: "Vom Netz nehmen",
+  sitesConfirmUnpublish: "Wirklich vom Netz nehmen?",
+  sitesLiveAtLabel: "Ihre Website ist online unter",
+  sitesGoesLiveAt: (address: string) =>
+    `Mit dem Veröffentlichen geht diese Website online unter ${address}.`,
+  sitesAddressPreview: (address: string) =>
+    `Ihre Website wird unter ${address} erreichbar sein.`,
+  sitesPublishFailed: "Die Website konnte nicht veröffentlicht werden.",
+  sitesUnpublishFailed:
+    "Die Website konnte nicht vom Netz genommen werden.",
+  sitesSubmissions: "Nachrichten",
+  sitesSubmissionsLoadFailed:
+    "Ihre Formularnachrichten konnten nicht geladen werden.",
+  sitesSubmissionSaveFailed:
+    "Diese Nachricht konnte nicht aktualisiert werden.",
+  sitesNoSubmissionsTitle: "Noch keine Nachrichten",
+  sitesNoSubmissionsBody:
+    "Setzen Sie ein Kontaktformular auf eine Seite. Neue Nachrichten von Besuchern erscheinen hier.",
+  sitesOpenPages: "Seiten öffnen",
+  sitesSubmissionList: "Nachrichten von Besuchern",
+  sitesSubmissionDetail: "Ausgewählte Nachricht",
+  sitesHandled: "Erledigt",
+  sitesNeedsReply: "Braucht Antwort",
+  sitesMarkHandled: "Als erledigt markieren",
+  sitesReopenSubmission: "Wieder öffnen",
+  sitesForm: "Formular",
+  sitesReceived: "Eingegangen",
+  sitesExportSubmissions: "Als CSV exportieren",
+  sitesExportingSubmissions: "Export wird vorbereitet…",
+  sitesSubmissionsExportFailed:
+    "Ihre Nachrichten konnten nicht exportiert werden. Versuchen Sie es erneut.",
+  sitesAssistant: "Assistent",
+  sitesAssistantTitle: "Website-Assistent",
+  sitesAssistantLoadFailed:
+    "Die Einstellungen des Assistenten konnten nicht geladen werden. Versuchen Sie es erneut.",
+  sitesAssistantSwitchTitle: "Der Assistent und sein Budget",
+  sitesAssistantSwitchHint:
+    "Ein Chat-Assistent auf Ihrer veröffentlichten Website, der Besucherfragen aus Ihren veröffentlichten Seiten beantwortet — und immer die Seite nennt, aus der eine Antwort stammt.",
+  sitesAssistantEnable:
+    "Besucherfragen auf der veröffentlichten Website beantworten",
+  sitesAssistantBudgetLabel: "Monatsbudget (€)",
+  sitesAssistantBudgetHint: (defaultBudget: string) =>
+    `Antworten kosten Geld. Erreichen die Antworten eines Monats dieses Budget, pausiert der Assistent, und Besucher werden stattdessen auf Ihr Kontaktformular verwiesen — Sie werden benachrichtigt. Lassen Sie das Feld leer, gilt ${defaultBudget}.`,
+  sitesAssistantBudgetNotANumber:
+    "Geben Sie das Monatsbudget als Zahl in Euro ein.",
+  sitesAssistantSpent: (spent: string, budget: string) =>
+    `${spent} von ${budget} in diesem Monat ausgegeben.`,
+  sitesAssistantCeilingHit:
+    "Das Budget dieses Monats ist aufgebraucht; der Assistent pausiert, und Besuchern wird Ihr Kontaktformular angeboten. Ein höheres Budget öffnet ihn sofort wieder.",
+  sitesAssistantSave: "Speichern",
+  sitesAssistantSaved: "Gespeichert.",
+  sitesAssistantSaveFailed:
+    "Die Einstellungen des Assistenten konnten nicht gespeichert werden. Versuchen Sie es erneut.",
+  sitesAssistantReadsTitle: "Was der Assistent liest",
+  sitesAssistantReadsRule:
+    "Was der Assistent lesen kann, kann jeder im Internet lesen — er beantwortet damit die Fragen Fremder.",
+  sitesAssistantReadsPublishedSite:
+    "Ihre veröffentlichte Website — jede Seite, die online ist",
+  sitesAssistantReadsPublishedPosts: "Ihre veröffentlichten Blogartikel",
+  sitesAssistantAlwaysRead: "wird immer gelesen",
+  sitesAssistantNoKnowledge:
+    "Noch keine Dokumente für den Assistenten veröffentlicht. Er antwortet allein aus Ihrer veröffentlichten Website.",
+  sitesAssistantAddedOn: (date: string) => `veröffentlicht am ${date}`,
+  sitesAssistantTrashed: "im Drive-Papierkorb — wird nicht mehr gelesen",
+  sitesAssistantWithdraw: (title: string) => `${title} zurückziehen`,
+  sitesAssistantWithdrawFailed:
+    "Das Dokument konnte nicht vom Assistenten zurückgezogen werden. Versuchen Sie es erneut.",
+  sitesAssistantInternetWarning:
+    "Jeder im Internet wird das lesen können.",
+  sitesAssistantPublishDocument:
+    "Ein Dokument für den Assistenten veröffentlichen…",
+  sitesAssistantPublishFailed:
+    "Das Dokument konnte nicht für den Assistenten veröffentlicht werden. Versuchen Sie es erneut.",
+  sitesAssistantPickerTitle: "Ein Dokument für den Assistenten veröffentlichen",
+  sitesAssistantPickerSubtitle:
+    "Wählen Sie ein lesbares Dokument — der Assistent beantwortet Besucherfragen daraus.",
+  sitesAssistantPickerConfirm: "Für den Assistenten veröffentlichen",
+  sitesAssistantPickerBack: "Zurück zum übergeordneten Ordner",
+  sitesAssistantPickerSearch: "In diesem Ordner suchen",
+  sitesAssistantPickerEmpty: "Nichts in diesem Ordner.",
+  sitesAssistantDidTitle: "Was der Assistent getan hat",
+  sitesAssistantDidHint:
+    "Jede Handlung des Assistenten in Ihrem Namen, mit dem verwendeten Fakt und der Seite, von der er stammt. Was Besucher getippt haben, wird nie gespeichert.",
+  sitesAssistantDidEmpty:
+    "Noch nichts. Beantwortet der Assistent eine Frage, bietet freie Zeiten an, bucht einen Termin oder speichert einen Lead, erscheint jede Handlung hier.",
+  sitesAssistantDidLoadFailed:
+    "Was der Assistent getan hat, konnte nicht geladen werden. Versuchen Sie es erneut.",
+  sitesAssistantDidAnswered: "Hat eine Frage beantwortet",
+  sitesAssistantDidAnsweredUsing: (pages: string) =>
+    `Hat eine Frage beantwortet — gestützt auf ${pages}`,
+  sitesAssistantDidRefused:
+    "Hat eine Frage abgelehnt, die sich aus Ihren veröffentlichten Seiten nicht beantworten ließ",
+  sitesAssistantDidBookingOffered: (service: string) =>
+    `Hat freie Zeiten für „${service}“ angeboten`,
+  sitesAssistantDidBooked: (service: string, when: string) =>
+    `Hat „${service}“ für ${when} gebucht — der Termin steht in Ihrem Kalender`,
+  sitesAssistantDidLeadOffered:
+    "Hat im Gespräch das Kontaktformular angeboten",
+  sitesAssistantDidLeadSaved:
+    "Hat einen neuen Lead auf Ihrem CRM-Board gespeichert",
+  sitesAssistantDidLeadKnown:
+    "Hat einem wiederkehrenden Kontakt gesagt, dass Sie ihn schon kennen — kein Duplikat wurde angelegt",
+  sitesAssistantDidTicketsOffered: (event: string) =>
+    `Hat Tickets für „${event}“ angeboten, zum Preis aus der eigenen Preisliste`,
+  sitesAssistantLookTitle: "Wie er aussieht und spricht",
+  sitesAssistantLookHint:
+    "Das Widget trägt bereits Design, Logo und Sprache Ihrer Website. Was Sie hier wählen, sind seine Worte und ein paar begrenzte Entscheidungen — Farbe bleibt innerhalb der eigenen Palette Ihrer Website.",
+  sitesAssistantBotNameLabel: "Name des Assistenten",
+  sitesAssistantBotNameHint:
+    "Oft bewusst nicht der Firmenname — „Fragen Sie Marie“ schlägt „Chatten Sie mit uns“.",
+  sitesAssistantAvatarLabel: "Avatar",
+  sitesAssistantAvatarHint:
+    "Ein kleines Foto im Kopf des Widgets. Ein Gesicht wirkt besser als ein Logo.",
+  sitesAssistantWelcomeLabel: "Begrüßung",
+  sitesAssistantWelcomeDefaultNote:
+    "Das ist die mitgelieferte Vorgabe, in der Sprache Ihrer Website — behalten Sie sie oder machen Sie sie zu Ihrer.",
+  sitesAssistantQuestionsLegend: "Vorgeschlagene Fragen",
+  sitesAssistantQuestionsHint:
+    "Bis zu drei Fragen zum Antippen, angeboten, bis Besucher ihre eigene stellen.",
+  sitesAssistantQuestionLabel: (n: number) => `Vorgeschlagene Frage ${n}`,
+  sitesAssistantSuggestFromSite: "Aus Ihrer Website vorschlagen",
+  sitesAssistantSuggestedApplied:
+    "Entworfen aus den eigenen Seiten Ihrer Website — bearbeiten Sie sie frei.",
+  sitesAssistantSuggestedNone:
+    "Noch nichts da, woraus sich etwas entwerfen ließe. Ein FAQ-, Preis-, Buchungs- oder Kontaktabschnitt auf Ihren Seiten gibt dem hier etwas an die Hand.",
+  sitesAssistantSuggestFailed:
+    "Ihre Seiten konnten nicht für Vorschläge gelesen werden. Versuchen Sie es erneut.",
+  sitesAssistantSuggestedPricing: "Was kostet es?",
+  sitesAssistantSuggestedBooking: "Kann ich einen Termin buchen?",
+  sitesAssistantSuggestedCatalog: "Was bieten Sie an?",
+  sitesAssistantSuggestedContact: "Wie erreiche ich Sie?",
+  sitesAssistantAppearanceSave: "Erscheinungsbild speichern",
+  sitesAssistantToneLegend: "Ton",
+  sitesAssistantToneFormal: "Förmlich",
+  sitesAssistantToneNeutral: "Neutral",
+  sitesAssistantToneWarm: "Warm",
+  sitesAssistantToneNoteLabel: "Notiz zum Tonfall",
+  sitesAssistantToneNoteHint:
+    "Wie Ihr Geschäft spricht — einfache Worte, kein Fachjargon, so etwas. Nur Stil: Was der Assistent sagen oder versprechen darf, kann das nie ändern.",
+  sitesAssistantCornerLegend: "Ecke des Startknopfs",
+  sitesAssistantCornerRight: "Unten rechts",
+  sitesAssistantCornerLeft: "Unten links",
+  sitesAssistantIconLegend: "Symbol des Startknopfs",
+  sitesAssistantIconChat: "Sprechblase",
+  sitesAssistantIconQuestion: "Fragezeichen",
+  sitesAssistantIconSparkle: "Funkeln",
+  sitesAssistantAccentLegend: "Farbe",
+  sitesAssistantAccentHint:
+    "Eine Wahl unter den Palettenrollen Ihrer eigenen Website — jede Möglichkeit bleibt gut lesbar.",
+  sitesAssistantAccentPrimary: "Markenfarbe",
+  sitesAssistantAccentText: "Tinte",
+  sitesAssistantAccentSurface: "Dezent",
+  sitesAssistantAutoOpenLabel: "Beim Laden der Seite von selbst öffnen",
+  sitesAssistantAutoOpenHint:
+    "Standardmäßig aus — ein ungebetenes Popup ist das, was alle hassen. Eingeschaltet öffnet es sich, ohne die Tastatur an sich zu reißen.",
+  sitesAssistantOfflineLabel: "Offline-Nachricht",
+  sitesAssistantOfflineHint:
+    "Zu sehen, wenn der Assistent nicht antworten kann — das Monatsbudget ist aufgebraucht, oder keine KI ist eingerichtet.",
+  sitesAssistantPreviewTitle: "Vorschau",
+  sitesAssistantPreviewHint:
+    "Das echte Widget im Design Ihrer Website, geöffnet gezeigt. Besucher sehen es zuerst geschlossen in seiner Ecke.",
+  sitesAssistantPreviewFrameTitle: "Vorschau des Assistenten-Widgets",
+  sitesAssistantPreviewFailed:
+    "Die Vorschau konnte nicht dargestellt werden.",
+  sitesAssistantA11yTitle: "Barrierefreiheit",
+  sitesAssistantA11yContrast: (ratio: string) =>
+    `Text auf der gewählten Farbe misst ${ratio}:1 — über der WCAG-AA-Marke von 4,5:1.`,
+  sitesAssistantA11yContrastGuarantee:
+    "Jede Farbwahl hier wird auf dem Server gegen Ihre Palette auf Kontrast geprüft — keine Möglichkeit kann eine unlesbare Kombination speichern.",
+  sitesAssistantA11yKeyboard:
+    "Das Widget ist ein beschrifteter Dialog: durchgehend mit der Tastatur bedienbar, Escape schließt es, und Antworten werden von Screenreadern angesagt, sobald sie eintreffen.",
+  sitesAssistantA11yAvatar:
+    "Der Avatar ist dekorativ und vor Screenreadern verborgen — angesagt wird der Name des Assistenten.",
+  sitesAnalytics: "Statistiken",
+  sitesAnalyticsLoadFailed:
+    "Ihre Website-Statistiken konnten nicht geladen werden. Versuchen Sie es erneut.",
+  sitesAnalyticsLoading: "Website-Statistiken werden geladen",
+  sitesAnalyticsPeriod: "Zeitraum der Statistiken",
+  sitesAnalyticsDays: (days: number) => `${days} Tage`,
+  sitesAnalyticsSummary: "Besuchsüberblick",
+  sitesAnalyticsVisits: "Besuche",
+  sitesAnalyticsVisitors: "Besucher pro Tag",
+  sitesAnalyticsOverTime: "Besuche im Zeitverlauf",
+  sitesAnalyticsChartLabel: "Tägliche Website-Besuche",
+  sitesAnalyticsDayLabel: (date: string, visits: number) =>
+    `${date}: ${visits} ${visits === 1 ? "Besuch" : "Besuche"}`,
+  sitesAnalyticsTopPages: "Meistbesuchte Seiten",
+  sitesAnalyticsTopReferrers: "Häufigste Verweise",
+  sitesAnalyticsDirect: "Direkt",
+  sitesAnalyticsPrivacyTitle: "Keine Cookies. Kein Banner.",
+  sitesAnalyticsPrivacyBody:
+    "Besuche werden anonym pro Tag gezählt. alo speichert keine Besucheradresse, kein Geräteprofil und keinen Browserverlauf.",
+  sitesAnalyticsPrivacyBeacon:
+    "Lesezeit und ausgehende Klicks meldet ein kleines Skript auf Ihren Seiten. Es trägt keinerlei Identität, daher lassen sich zwei Meldungen aus demselben Browser nicht verknüpfen.",
+  sitesAnalyticsEmptyTitle: "Noch keine Besuche",
+  sitesAnalyticsEmptyBody:
+    "Öffnen oder teilen Sie Ihre veröffentlichte Website. Ihre ersten Besuche erscheinen hier von selbst.",
+  sitesAnalyticsOpenSite: "Website online öffnen",
+  sitesAnalyticsGroupArrival: "Wie Sie gefunden wurden",
+  sitesAnalyticsGroupPages: "Was angesehen wurde",
+  sitesAnalyticsGroupReading: "Wie es gelesen wurde",
+  sitesAnalyticsShowAll: (count: number) => `Alle ${count} zeigen`,
+  sitesAnalyticsShowTop: (count: number) =>
+    `Nur die ersten ${count} zeigen`,
+  sitesAnalyticsReferrersNote:
+    "Die Website, von der aus ein Besucher einem Link folgte. Nur die Domain wird behalten, nie die Seite.",
+  sitesAnalyticsReferrersEmpty:
+    "Noch keine Verweise. Sie erscheinen, wenn eine andere Website auf Ihre verlinkt.",
+  sitesAnalyticsCampaigns: "Kampagnen",
+  sitesAnalyticsCampaignsNote:
+    "Gelesen aus utm_campaign an den Links, die Sie teilen — so unterscheiden Sie einen Newsletter von einem Plakat.",
+  sitesAnalyticsCampaignsEmpty:
+    "Noch keine Kampagnen. Hängen Sie ?utm_campaign=fruehjahrs-mailing an einen geteilten Link, und seine Besuche werden hier gezählt.",
+  sitesAnalyticsNoCampaign: "Ohne Kampagne",
+  sitesAnalyticsCountries: "Länder",
+  sitesAnalyticsCountriesNote:
+    "Bestimmt vom Netz vor Ihrer Website, nie aus einer gespeicherten Besucheradresse.",
+  sitesAnalyticsCountriesEmpty:
+    "Keine Länder gemeldet. Ihre Website wird ohne ein Netz ausgeliefert, das sie benennt — dieses Feld bleibt leer, und jede andere Zahl hier bleibt unberührt.",
+  sitesAnalyticsNotReported: "Nicht gemeldet",
+  sitesAnalyticsTopPagesNote:
+    "Die Seiten, die am häufigsten geöffnet wurden.",
+  sitesAnalyticsPagesEmpty:
+    "In diesem Zeitraum noch keine Seiten gezählt.",
+  sitesAnalyticsEntryPages: "Erste Seiten",
+  sitesAnalyticsEntryPagesNote:
+    "Die Seite, auf der der Tag eines Besuchers auf Ihrer Website begann.",
+  sitesAnalyticsExitPages: "Letzte Seiten",
+  sitesAnalyticsExitPagesNote:
+    "Die letzte an dem Tag gesehene Seite. Eine letzte Seite ist, wo jemand zu Ende gelesen hat — nicht unbedingt, wo jemand aufgab.",
+  sitesAnalyticsReadTime: "Lesezeit",
+  sitesAnalyticsReadTimeNote:
+    "Wie lange Seiten auf dem Bildschirm blieben, für die ganze Website statt je Seite. Gezählt werden nur Browser, die es melden — deshalb ergeben diese Zahlen in Summe nie Ihre Besuche.",
+  sitesAnalyticsReadTimeEmpty:
+    "Noch keine Lesezeiten. Sie kommen, sobald Besucher Ihre veröffentlichten Seiten in einem Browser öffnen, der sie meldet.",
+  sitesAnalyticsReadUnder10s: "Unter 10 Sekunden",
+  sitesAnalyticsRead10to30s: "10–30 Sekunden",
+  sitesAnalyticsRead30to60s: "30–60 Sekunden",
+  sitesAnalyticsRead1to3m: "1–3 Minuten",
+  sitesAnalyticsRead3to10m: "3–10 Minuten",
+  sitesAnalyticsReadOver10m: "Über 10 Minuten",
+  sitesAnalyticsOutbound: "Links nach draußen",
+  sitesAnalyticsOutboundNote:
+    "Domains, zu denen Besucher weitergezogen sind. Ab 200 Zielen an einem Tag wird der Rest zusammen gezählt.",
+  sitesAnalyticsOutboundEmpty:
+    "Noch keine ausgehenden Klicks. Gezählt wird, wenn ein Besucher einem Link auf eine andere Website folgt.",
+  sitesAnalyticsOutboundOther: "Weitere Domains",
+  sitesAnalyticsDevices: "Geräte",
+  sitesAnalyticsDevicesNote:
+    "Eine grobe Klasse aus dem, was der Browser über sich selbst sagt. Mehr davon wird nicht gespeichert.",
+  sitesAnalyticsDevicesEmpty:
+    "In diesem Zeitraum noch keine Geräte gezählt.",
+  sitesAnalyticsDevicePhone: "Telefon",
+  sitesAnalyticsDeviceTablet: "Tablet",
+  sitesAnalyticsDeviceDesktop: "Computer",
+  sitesAnalyticsDeviceBot: "Bots und Crawler",
+  sitesAnalyticsDeviceUnknown: "Nicht erkannt",
+  sitesHeatmap: "Aufmerksamkeitskarte",
+  sitesBackToAnalytics: "Zurück zu den Statistiken",
+  sitesHeatmapLoadFailed:
+    "Die Aufmerksamkeitskarte konnte nicht geladen werden. Versuchen Sie es erneut.",
+  sitesHeatmapLoading: "Aufmerksamkeitskarte wird geladen",
+  sitesHeatmapPage: "Seite",
+  sitesHeatmapPageOption: (path: string, events: number) =>
+    `${path} — ${events} gezählt`,
+  sitesHeatmapScreens: "Bildschirmgröße",
+  sitesHeatmapScreenTab: (screen: string, events: string) =>
+    `${screen} (${events})`,
+  sitesHeatmapPrivacyTitle: "Eine Form, keine Aufzeichnung.",
+  sitesHeatmapPrivacyBody:
+    "Klicks und Lesetiefe werden je Bereich der Seite gezählt, pro Tag. Es gibt keine Cursorspur, kein Session-Replay und nichts, was zwei Besuche derselben Person verbinden könnte.",
+  sitesHeatmapPrivacyShape:
+    "Gezählt werden nur Browser, die es melden, und höchstens zwanzig Klicks je Seitenaufruf. Lesen Sie das als: wohin die Aufmerksamkeit ging — nie als: wie viele Menschen etwas taten.",
+  sitesHeatmapEmptyTitle: "Noch nichts zu zeichnen",
+  sitesHeatmapEmptyBody:
+    "Klicks und Lesetiefe erscheinen hier, sobald Besucher Ihre veröffentlichten Seiten öffnen. Nichts muss eingeschaltet werden.",
+  sitesHeatmapClicks: "Wo geklickt wurde",
+  sitesHeatmapClicksNote:
+    "Die ganze Seite von oben bis unten, nicht ein Bildschirm voll. Ein dunkleres Feld ist ein Bereich, der öfter geklickt wurde.",
+  sitesHeatmapClicksLabel: (path: string, screen: string, clicks: number) =>
+    `Karte der Stellen, an denen ${clicks} Klicks auf ${path} landeten — Bildschirmgröße ${screen}`,
+  sitesHeatmapTop: "Anfang der Seite",
+  sitesHeatmapBottom: "Ende der Seite",
+  sitesHeatmapLegendQuiet: "Ruhiger",
+  sitesHeatmapLegendBusy: "Belebter",
+  sitesHeatmapLeft: "Links",
+  sitesHeatmapCentre: "Mitte",
+  sitesHeatmapRight: "Rechts",
+  sitesHeatmapSpot: (side: string, band: string) => `${side}, ${band}`,
+  sitesHeatmapDepthBand: (from: number, to: number) =>
+    `${from}–${to} % der Seitenhöhe`,
+  sitesHeatmapSpots: "Belebteste Bereiche",
+  sitesHeatmapSpotsNote:
+    "Dieselbe Karte in Worten, damit sie sich ohne die Farben lesen lässt.",
+  sitesHeatmapClicksEmpty:
+    "Auf dieser Seite wurde in dieser Bildschirmgröße nichts angeklickt.",
+  sitesHeatmapSpotsEmpty: "Noch nichts zu beschreiben.",
+  sitesHeatmapSpotsHeldBack:
+    "Zurückgehalten, bis genug Klicks gezählt sind, um etwas zu beschreiben.",
+  sitesHeatmapDepth: "Wie weit gelesen wurde",
+  sitesHeatmapDepthNote:
+    "Wie viele Lesende jedes Zehntel der Seite erreichten. Gezählt werden nur Browser, die es melden — in Summe ergibt das nie Ihre Besuche.",
+  sitesHeatmapDepthEmpty:
+    "In dieser Bildschirmgröße wurde hier keine Lesetiefe gezählt.",
+  sitesHeatmapTooFewTitle: "Zu wenig für eine Karte",
+  sitesHeatmapTooFewClicks: (collected: number, needed: number) =>
+    `${collected} von ${needed} Klicks in dieser Bildschirmgröße gezählt. Eine Karte aus einer Handvoll Klicks zeigt die Handvoll, nicht Ihre Besucher — darum bleibt sie zurückgehalten, bis es genug sind.`,
+  sitesHeatmapTooFewDepth: (collected: number, needed: number) =>
+    `${collected} von ${needed} Lesemeldungen in dieser Bildschirmgröße gezählt. Die Kurve erscheint, sobald genug da sind, dass sie etwas bedeutet.`,
+  sitesFunnel: "Ergebnisse",
+  sitesFunnelPeriod: "Zeitraum",
+  sitesFunnelLoading: "Ergebnisse werden geladen",
+  sitesFunnelLoadFailed:
+    "Die Ergebnisse konnten nicht geladen werden. Versuchen Sie es erneut.",
+  sitesFunnelDeniedTitle: "Nicht Teil Ihres Zugangs",
+  sitesFunnelDeniedFallback:
+    "Diese Seite liest alo CRM und alo Billing, die für dieses Konto nicht freigeschaltet sind.",
+  sitesFunnelDeniedWay:
+    "Alles andere an dieser Website — ihre Seiten, ihre Anfragen, ihre Besuche — bleibt Ihnen zum Arbeiten offen.",
+  sitesFunnelNoSourcesTitle: "Noch kein Kontaktformular",
+  sitesFunnelNoSourcesBody:
+    "Setzen Sie ein Kontaktformular auf eine Seite, und jede Anfrage daraus lässt sich vom ersten Seitenaufruf bis zur Rechnung verfolgen.",
+  sitesFunnelChain: "Vom Besuch zur Rechnung",
+  sitesFunnelStageViews: "Formular gesehen",
+  sitesFunnelStageStarts: "Zu tippen begonnen",
+  sitesFunnelStageSubmits: "Anfragen",
+  sitesFunnelStageLeads: "An den Vertrieb übergeben",
+  sitesFunnelStageWon: "Gewonnen",
+  sitesFunnelStageInvoices: "Rechnungen",
+  sitesFunnelFromBrowser: "Vom Browser gemeldet",
+  sitesFunnelFromRecord: "Beim Speichern gezählt",
+  sitesFunnelFloorNote:
+    "Die ersten beiden Schritte meldet der Browser der Besucher, und ein Browser, der nichts meldet, hat die Seite trotzdem gesehen. Alles ab der Anfrage wird gezählt, als der Datensatz geschrieben wurde. Lesen Sie diese Zahlen als Untergrenze: Eine Quote über diese Linie hinweg ist die kleinstmögliche, keine Messung.",
+  sitesFunnelMoney: "Das Geld dahinter",
+  sitesFunnelInvoiceRule:
+    "Rechnungen an den Kunden, der aus einer Anfrage wurde, gestellt nach der Übergabe.",
+  sitesFunnelMoneyEmpty:
+    "Aus dieser Website ist noch kein Deal entstanden.",
+  sitesFunnelOpen: "In Arbeit",
+  sitesFunnelWon: "Gewonnen",
+  sitesFunnelInvoiced: "In Rechnung gestellt",
+  sitesFunnelHidden: "Nicht gezeigt",
+  sitesFunnelBillingOff:
+    "Rechnungszahlen werden nicht gezeigt, weil alo Billing für dieses Konto nicht freigeschaltet ist. Das ist nicht dasselbe wie: Es wurde nichts in Rechnung gestellt.",
+  sitesFunnelCurrencies:
+    "Zwei Währungen sind zwei Zeilen und keine Summe: Eine Prognose hat kein Ausstellungsdatum, zu dem sich umrechnen ließe.",
+  sitesFunnelSources: "Je Kontaktformular",
+  sitesFunnelColSource: "Kontaktformular",
+  sitesFunnelColDeals: "Deals",
+  sitesFunnelDealsSummary: (open: number, won: number, lost: number) =>
+    `${open} offen · ${won} gewonnen · ${lost} verloren`,
+  sitesFunnelSumNote:
+    "Eine Rechnung, die von zwei Formularen aus erreichbar ist, zählt einmal für die Website und einmal unter jedem Formular — diese Spalten sind eine Lesart je Formular und addieren sich nicht zu den Summen darüber.",
+  sitesFunnelDeletedSource: "Gelöschtes Formular",
+  sitesFunnelChatSource: "Website-Assistent",
+  sitesHandoffSection: "Vertrieb",
+  sitesHandoffInvite:
+    "Machen Sie aus dieser Anfrage einen Deal auf Ihrem Vertriebsboard. Nichts auf diesem Bildschirm muss noch einmal getippt werden.",
+  sitesHandoffTitle: "Diese Anfrage an den Vertrieb geben",
+  sitesHandoffSubtitle:
+    "Legt einen Deal auf Ihrem Vertriebsboard an und verknüpft ihn mit dieser Anfrage.",
+  sitesHandoffSubmit: "An den Vertrieb geben",
+  sitesHandoffFrom: "Von",
+  sitesHandoffCarried:
+    "Name, Adresse und Nachricht reisen mit der Übergabe — Sie tippen sie nie neu.",
+  sitesHandoffTitleFor: (who: string) => `Website-Anfrage — ${who}`,
+  sitesHandoffBoard: "Board",
+  sitesHandoffColumn: "Spalte",
+  sitesHandoffCardTitle: "Deal",
+  sitesHandoffValue: "Erwarteter Wert",
+  sitesHandoffValueHint:
+    "Optional — was er Ihrer Einschätzung nach wert sein könnte.",
+  sitesHandoffCurrency: "Währung",
+  sitesHandoffCurrencyHint:
+    "Leer lassen für die Währung Ihres Arbeitsbereichs.",
+  sitesHandoffLoadingBoards: "Ihre Vertriebsboards werden geladen…",
+  sitesHandoffNoBoards:
+    "Es gibt noch kein Vertriebsboard, an das sich das geben ließe. Öffnen Sie alo CRM einmal, und Ihr erstes Board wird für Sie angelegt.",
+  sitesHandoffCrmDenied: "alo CRM ist für dieses Konto nicht freigeschaltet.",
+  sitesHandoffBoardsFailed:
+    "Ihre Vertriebsboards konnten nicht geladen werden. Versuchen Sie es erneut.",
+  sitesHandoffFailed:
+    "Diese Anfrage konnte nicht übergeben werden. Versuchen Sie es erneut.",
+  sitesInSales: "Im Vertrieb",
+  sitesLeadsLoadFailed:
+    "Die Vertriebsverknüpfungen dieses Posteingangs konnten nicht geladen werden.",
+  sitesLeadStanding: (state: string, value: string) => `${state} · ${value}`,
+  sitesLeadOpen: "In Arbeit",
+  sitesLeadWon: "Gewonnen",
+  sitesLeadLost: "Verloren",
+  sitesUnlinkLead: "Verknüpfung lösen",
+  sitesUnlinkLeadFailed:
+    "Die Verknüpfung konnte nicht gelöst werden. Der Deal selbst ist unberührt. Versuchen Sie es erneut.",
+  sitesHistory: "Versionsverlauf",
+  sitesHistorySubtitle:
+    "Jede Fassung dieser Website, die Sie veröffentlicht haben. Sehen Sie sich jede an, und stellen Sie eine mit einem Klick wieder online.",
+  sitesHistoryLoadFailed: "Der Versionsverlauf konnte nicht geladen werden.",
+  sitesHistoryVersions: "Veröffentlichte Fassungen",
+  sitesHistoryLiveNow: "Jetzt online",
+  sitesHistoryVersionOf: (date: string) => `Fassung vom ${date}`,
+  sitesHistoryPagesCount: (pages: number) =>
+    `${pages} ${pages === 1 ? "Seite" : "Seiten"}`,
+  sitesHistoryLanguages: (languages: string) => `Sprachen: ${languages}`,
+  sitesHistoryRestoredCopy: (date: string) =>
+    `Eine Kopie der Fassung vom ${date}`,
+  sitesHistoryRestore: "Diese Fassung wieder online stellen",
+  sitesHistoryRestoring: "Wird wieder online gestellt…",
+  sitesHistoryRestoreFailed:
+    "Diese Fassung konnte nicht wieder online gestellt werden.",
+  sitesHistoryRestored: (date: string) =>
+    `Die Fassung vom ${date} ist wieder online.`,
+  sitesHistoryUndo: "Rückgängig",
+  sitesHistoryUndone: (date: string) =>
+    `Zurück zur Fassung vom ${date}. Nichts ging verloren — jede Fassung ist noch da.`,
+  sitesHistoryPage: "Seite",
+  sitesHistoryPreviewLoadFailed:
+    "Diese Fassung konnte nicht angezeigt werden.",
+  sitesHistoryPreviewLoading: "Diese Fassung wird geladen",
+  sitesHistoryPreviewTitle: "Vorschau der veröffentlichten Fassung",
+  sitesHistoryDraftSafe:
+    "Ihre laufende Arbeit bleibt unberührt: Eine Fassung wieder online zu stellen ändert nie, woran Sie gerade bauen.",
+  sitesHistoryIfRestored: "Wenn Sie diese Fassung wieder online stellen",
+  sitesHistoryIdentical: "Das ist genau, was jetzt online ist.",
+  sitesHistoryThemeChange: "Das Aussehen der Website würde sich ändern.",
+  sitesHistoryLanguagesBack: (languages: string) =>
+    `Diese Sprachen kämen zurück: ${languages}`,
+  sitesHistoryLanguagesGone: (languages: string) =>
+    `Diese Sprachen fielen weg: ${languages}`,
+  sitesHistoryPageBack: (page: string) => `${page} käme zurück`,
+  sitesHistoryPageGone: (page: string) => `${page} fiele weg`,
+  sitesHistoryPageChanged: (page: string) => `${page} würde sich ändern`,
+  sitesHistoryUnchangedPages: (pages: number) =>
+    pages === 1 ? "1 Seite bleibt gleich" : `${pages} Seiten bleiben gleich`,
+  sitesHistoryEmptyTitle: "Noch nichts veröffentlicht",
+  sitesHistoryEmptyBody:
+    "Veröffentlichen Sie diese Website einmal, und jede veröffentlichte Fassung bleibt hier — zum Zurückblicken, und um sie wieder online zu stellen.",
+  sitesScheduleTitle: "Zu einem gewählten Zeitpunkt veröffentlichen",
+  sitesScheduleHint:
+    "Wählen Sie Datum und Uhrzeit, und diese Website geht von selbst online. Sie müssen nicht dabei sein, wenn es geschieht.",
+  sitesScheduleLoading: "Es wird geprüft, was geplant ist",
+  sitesScheduleLoadFailed:
+    "Die geplante Veröffentlichung konnte nicht geladen werden.",
+  sitesScheduleOpen: "Veröffentlichung planen",
+  sitesScheduleChange: "Den Zeitpunkt ändern",
+  sitesScheduleWhen: "Datum und Uhrzeit",
+  sitesScheduleGoesLive: (moment: string) => `Geht online am ${moment}.`,
+  sitesScheduleTimeZone: (zone: string) =>
+    `Das ist Ihre eigene Zeit (${zone}) — nicht die des Servers.`,
+  sitesScheduleSave: "Veröffentlichung planen",
+  sitesScheduleMove: "Auf diesen Zeitpunkt verschieben",
+  sitesScheduleSaving: "Wird gespeichert…",
+  sitesScheduleMissingMoment: "Wählen Sie zuerst Datum und Uhrzeit.",
+  sitesScheduleSaveFailed: "Diese Website konnte nicht eingeplant werden.",
+  sitesSchedulePending: (moment: string) =>
+    `Diese Website veröffentlicht sich am ${moment} von selbst. Alles, was Sie bis dahin speichern, geht mit ihr online.`,
+  sitesSchedulePublishingNow: "Diese Website wird gerade veröffentlicht.",
+  sitesScheduleCancel: "Absagen",
+  sitesScheduleCancelling: "Wird abgesagt…",
+  sitesScheduleCancelFailed:
+    "Die geplante Veröffentlichung konnte nicht abgesagt werden.",
+  sitesScheduleCancelled: (moment: string) =>
+    `Abgesagt. Diese Website veröffentlicht sich am ${moment} nicht, und an dem, was online ist, hat sich nichts geändert.`,
+  sitesScheduleDone: (moment: string) =>
+    `Diese Website hat sich am ${moment} von selbst veröffentlicht.`,
+  sitesScheduleFailed: (moment: string, reason: string) =>
+    `Diese Website konnte am ${moment} nicht veröffentlichen: ${reason}`,
+  sitesPagePasswordTitle: "Wer diese Seite öffnen kann",
+  sitesPagePasswordLoading: "Es wird geprüft, wer diese Seite öffnen kann",
+  sitesPagePasswordLoadFailed:
+    "Ob diese Seite nach einem Passwort fragt, konnte nicht geprüft werden.",
+  sitesPagePasswordUnknown:
+    "Ob diese Seite Besucher nach einem Passwort fragt, ist gerade nicht bekannt.",
+  sitesPagePasswordPublic: "Jeder im Internet kann diese Seite öffnen.",
+  sitesPagePasswordPublicHint:
+    "Geben Sie ihr ein Passwort, und nur die Menschen, denen Sie es geben, können sie lesen. Der Rest dieser Website bleibt öffentlich.",
+  sitesPagePasswordProtected: (moment: string) =>
+    `Nur wer das Passwort hat, kann diese Seite öffnen — festgelegt am ${moment}.`,
+  sitesPagePasswordProtectedUndated:
+    "Nur wer das Passwort hat, kann diese Seite öffnen.",
+  sitesPagePasswordProtectedHint:
+    "Alle anderen sehen einen Sperrbildschirm, der nichts von der Seite trägt, nicht einmal ihren Titel. Das Passwort öffnet sie für den Rest des Tages.",
+  sitesPagePasswordEveryLanguage:
+    "Das gilt für die Seite in jeder Sprache, in der sie veröffentlicht ist.",
+  sitesPagePasswordProtect: "Diese Seite schützen",
+  sitesPagePasswordChange: "Das Passwort ändern",
+  sitesPagePasswordField: "Passwort",
+  sitesPagePasswordFieldHint:
+    "Niemand kann es Ihnen später vorlesen, auch wir nicht — ein vergessenes Passwort wird ersetzt, nicht wiederhergestellt.",
+  sitesPagePasswordEffective:
+    "Es wirkt sofort. Sie müssen die Website nicht neu veröffentlichen.",
+  sitesPagePasswordShow: "Anzeigen",
+  sitesPagePasswordHide: "Verbergen",
+  sitesPagePasswordSaving: "Wird gespeichert…",
+  sitesPagePasswordMissing: "Tippen Sie zuerst ein Passwort.",
+  sitesPagePasswordSaveFailed: "Diese Seite konnte nicht geschützt werden.",
+  sitesPagePasswordSaved:
+    "Gespeichert. Besucher brauchen ab jetzt dieses Passwort, und wer die Seite mit dem alten geöffnet hat, wird neu gefragt.",
+  sitesPagePasswordRemove: "Das Passwort entfernen",
+  sitesPagePasswordRemoveConfirm: "Ja, öffentlich machen",
+  sitesPagePasswordRemoveFailed:
+    "Das Passwort konnte nicht entfernt werden.",
+  sitesPagePasswordRemoved:
+    "Das Passwort ist weg. Jeder im Internet kann diese Seite wieder öffnen.",
+  sitesPagePasswordPreviewNote:
+    "Besucher werden zuerst nach dem Passwort gefragt. Diese Vorschau zeigt die Seite, wie jemand mit Passwort sie sieht.",
+  sitesPagePasswordBadge: "Passwort",
 };

@@ -48,13 +48,13 @@ describe("catalog fallback", () => {
       expect(en).toHaveProperty(key);
     }
     // German is deliberately partial while M4.1 ships it module by module:
-    // an untranslated surface (here: sites, the last one) must read as
-    // English, not blank.
-    expect(catalog.sitesNewSite).toBe(en.sitesNewSite);
+    // an untranslated surface (here: the Sites commerce half, the last one)
+    // must read as English, not blank.
+    expect(catalog.sitesNewCatalog).toBe(en.sitesNewCatalog);
   });
 });
 
-describe("German ships complete modules (M4.1, tranches 1–7: mail + Docs/Drive + Chat/Meet + admin/control + Billing/CRM/Insights + Projects/Finance + Inventory/HR/Campaigns/Base + the agent tail)", () => {
+describe("German ships complete modules (M4.1, tranches 1–8: mail + Docs/Drive + Chat/Meet + admin/control + Billing/CRM/Insights + Projects/Finance + Inventory/HR/Campaigns/Base + the agent tail + the Sites builder half)", () => {
   /** The sections `de.ts` claims to cover, by key prefix. The catalog is
    *  allowed to be partial across *modules* — the fallback shows English —
    *  but never inside one: a reading pane that mixes German buttons with
@@ -77,16 +77,20 @@ describe("German ships complete modules (M4.1, tranches 1–7: mail + Docs/Drive
    *  `campaign` singular prefix), the Drive Base family, and the whole
    *  `agent` family — the assistant's mail/calendar/chat/Drive cards were
    *  the last agent keys out, so the anchored agentApprove/agentDiscard
-   *  singletons widened to the plain prefix. Only `sites` remains. */
+   *  singletons widened to the plain prefix. Tranche 8 adds the Sites
+   *  builder half — everything under `sites` except the commerce families
+   *  (catalog, shop, booking, tickets, collections, custom code, orders,
+   *  domains and their palette/new/empty strays), which the negative
+   *  lookahead holds back for the final tranche. */
   const SHIPPED_PREFIXES =
-    /^(agenda|task|mail|compose|flag|folder|filter|spam|snooze|unsubscribe|appPassword|delegate|sharing|shared|categor|transfer|contact|import|signup|reset|settings|brand|home|module|rsvp|error|twoFactor|recovery|doc|drive|sheet|office|picker|search|ai|eq|spec|tb|ref|block|heading|para|table|chart|code|insert|font|size|align|text|style|highlight|strikethrough|bullet|numbered|horizontal|clear|close|cancel|chat|meet|admin|audit|control|domain|group|invite|overview|provider|security|tenant|user|dkim|kind|access|billing|crm|insights|projects|finance|inventory|hr|campaign|base|agent|add$|save$|deleteLabel$|aloDesc$|anthropicDesc$|openaiDesc$|mistralDesc$|ollamaDesc$|customDesc$|builtInTag$|connectTitle$|configureTitle$|removeRecipient$|recipientCount$|archiveUnavailable$)/;
+    /^(agenda|task|mail|compose|flag|folder|filter|spam|snooze|unsubscribe|appPassword|delegate|sharing|shared|categor|transfer|contact|import|signup|reset|settings|brand|home|module|rsvp|error|twoFactor|recovery|doc|drive|sheet|office|picker|search|ai|eq|spec|tb|ref|block|heading|para|table|chart|code|insert|font|size|align|text|style|highlight|strikethrough|bullet|numbered|horizontal|clear|close|cancel|chat|meet|admin|audit|control|domain|group|invite|overview|provider|security|tenant|user|dkim|kind|access|billing|crm|insights|projects|finance|inventory|hr|campaign|base|agent|sites(?!Booking|Catalog|Collection|Commerce|Connect|Custom|Domain|Order|Shop|Ticket|AssistantSuggestedShop|AssistantSuggestedTickets|NewBooking|NewCatalog|NewTicketEvent|NoOrders|NoTicketEvents|SectionBooking|SectionCatalog|SectionCollection|SectionCustomCode|SectionShop|SectionTickets)|add$|save$|deleteLabel$|aloDesc$|anthropicDesc$|openaiDesc$|mistralDesc$|ollamaDesc$|customDesc$|builtInTag$|connectTitle$|configureTitle$|removeRecipient$|recipientCount$|archiveUnavailable$)/;
   const shippedKeys = Object.keys(en).filter((key) =>
     SHIPPED_PREFIXES.test(key),
   );
 
   test("the key list is the real shipped surface, not an empty filter", () => {
-    expect(shippedKeys.length).toBeGreaterThan(3700);
-    expect(Object.keys(de).length).toBeGreaterThan(3800);
+    expect(shippedKeys.length).toBeGreaterThan(4400);
+    expect(Object.keys(de).length).toBeGreaterThan(4500);
   });
 
   test("every shipped-module string exists in German", () => {
@@ -280,6 +284,39 @@ describe("German ships complete modules (M4.1, tranches 1–7: mail + Docs/Drive
     expect(catalog.campaignUnsubscribeLinkText).toBe("Abmelden");
     expect(catalog.campaignUnsubscribeStopAll).toBe(
       "Senden Sie mir gar nichts mehr",
+    );
+    // Tranche 8: the Sites builder half. Live is Online (the web word a
+    // visitor uses), unpublishing says what it does, and the section the
+    // funnel shares with CRM keeps CRM's own word for a deal.
+    expect(catalog.sitesStatusLive).toBe("Online");
+    expect(catalog.sitesUnpublish).toBe("Vom Netz nehmen");
+    expect(catalog.sitesSectionHero).toBe("Aufmacher");
+    expect(catalog.sitesSectionTestimonials).toBe("Kundenstimmen");
+    expect(catalog.sitesFunnelColDeals).toBe(catalog.crmDealsTable);
+    // The palette's position words keep their German capitalization: the
+    // English template lowercases its position, which would turn „Ans Ende“
+    // into „ans ende“ — the German template must not.
+    expect(
+      catalog.sitesPaletteAdd(catalog.sitesSectionHero, catalog.sitesPaletteAtEnd),
+    ).toBe("Aufmacher hinzufügen — Ans Ende");
+    // A published version is a Fassung named by its date, in both branches.
+    expect(catalog.sitesHistoryVersionOf("12. Mai 2026")).toBe(
+      "Fassung vom 12. Mai 2026",
+    );
+    expect(catalog.sitesHistoryUnchangedPages(1)).toBe("1 Seite bleibt gleich");
+    expect(catalog.sitesHistoryUnchangedPages(3)).toBe(
+      "3 Seiten bleiben gleich",
+    );
+    // Percentages take the DIN space, as everywhere else in German alo.
+    expect(catalog.sitesImageFocalAt(30, 40)).toBe(
+      "Fokuspunkt 30 % von links, 40 % von oben",
+    );
+    // Plural branches across the builder surface.
+    expect(catalog.sitesCountEntries(1)).toBe("1 Eintrag");
+    expect(catalog.sitesCountEntries(4)).toBe("4 Einträge");
+    expect(catalog.sitesTranslationPublishHint(1)).toContain("1 Übersetzung zeigt");
+    expect(catalog.sitesTranslationPublishHint(2)).toContain(
+      "2 Übersetzungen zeigen",
     );
   });
 
