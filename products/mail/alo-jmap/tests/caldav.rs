@@ -561,6 +561,207 @@ async fn read_only_shared_calendar_refuses_writes_with_403() {
     assert!(body.contains("Moved offsite"), "{body}");
 }
 
+/// `free-busy-query` (RFC 4791 §7.10) answers a `VFREEBUSY` for the window:
+/// overlapping events merge into one busy period, a recurring series
+/// contributes its expanded instances, an event outside the window is absent,
+/// and the body carries times only — no `SUMMARY` line exists in the reply.
+#[tokio::test]
+async fn free_busy_query_reports_merged_busy_time_only() {
+    let h = harness("caldav-fb").await;
+    let uid = &h.account_id;
+    let cal = format!("/dav/calendars/{uid}/default/");
+
+    // The collection advertises the report.
+    let (_s, _h, xml) = dav(&h, "PROPFIND", &cal, Some("0"), "").await;
+    assert!(xml.contains("free-busy-query"), "advertised: {xml}");
+
+    // Two overlapping June 10 meetings, a weekly series (June 3/10/17), and a
+    // December event outside the window.
+    for (id, summary, start, end) in [
+        (
+            "board",
+            "Board prep",
+            "20260610T090000Z",
+            "20260610T100000Z",
+        ),
+        (
+            "prep",
+            "Prep overlap",
+            "20260610T093000Z",
+            "20260610T103000Z",
+        ),
+        ("dec", "Year-end", "20261215T140000Z", "20261215T150000Z"),
+    ] {
+        let uid_full = format!("{id}-{uid}");
+        let (status, ..) = dav(
+            &h,
+            "PUT",
+            &format!("{cal}{uid_full}.ics"),
+            None,
+            &ics(&uid_full, summary, start, end),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED);
+    }
+    let wk = format!("wk-{uid}");
+    let series = format!(
+        "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//caldav//EN\r\n\
+         BEGIN:VEVENT\r\nUID:{wk}\r\nDTSTAMP:20260101T000000Z\r\n\
+         DTSTART:20260603T080000Z\r\nDTEND:20260603T083000Z\r\n\
+         RRULE:FREQ=WEEKLY;COUNT=3\r\n\
+         SUMMARY:Standup\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+    );
+    let (status, ..) = dav(&h, "PUT", &format!("{cal}{wk}.ics"), None, &series).await;
+    assert_eq!(status, StatusCode::CREATED);
+
+    let query = "<c:free-busy-query xmlns:c=\"urn:ietf:params:xml:ns:caldav\">\
+         <c:time-range start=\"20260601T000000Z\" end=\"20260701T000000Z\"/>\
+         </c:free-busy-query>";
+    let (status, headers, body) = dav(&h, "REPORT", &cal, None, query).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        headers.get("content-type").unwrap().to_str().unwrap(),
+        "text/calendar; charset=utf-8"
+    );
+    assert!(body.contains("BEGIN:VFREEBUSY"), "{body}");
+    assert!(body.contains("DTSTART:20260601T000000Z"), "{body}");
+    // The overlap merges into one period; the series expands per instance.
+    assert!(
+        body.contains("FREEBUSY;FBTYPE=BUSY:20260610T090000Z/20260610T103000Z"),
+        "overlap merged: {body}"
+    );
+    for day in ["20260603", "20260610", "20260617"] {
+        assert!(
+            body.contains(&format!("FREEBUSY;FBTYPE=BUSY:{day}T080000Z/{day}T083000Z")),
+            "weekly instance {day}: {body}"
+        );
+    }
+    assert!(!body.contains("202612"), "outside the window: {body}");
+    // Busy/free only: no titles, no SUMMARY property at all.
+    for leak in ["SUMMARY", "Board prep", "Prep overlap", "Standup"] {
+        assert!(!body.contains(leak), "{leak} leaked: {body}");
+    }
+
+    // No time-range → nothing to answer → 400.
+    let bare = "<c:free-busy-query xmlns:c=\"urn:ietf:params:xml:ns:caldav\"/>";
+    let (status, ..) = dav(&h, "REPORT", &cal, None, bare).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+/// The mandated cross-account proof: free/busy exposes busy/free ONLY. A
+/// viewer on a shared calendar gets the busy period but never the title; an
+/// unshared personal calendar is unprobeable (404); a foreign tenant gets 404
+/// through every path shape.
+#[tokio::test]
+async fn free_busy_never_leaks_titles_across_accounts() {
+    let a = harness("caldav-fb-share").await;
+    let ua = &a.account_id;
+
+    let mate_email = format!("fbviewer-{}@example.test", a.tenant);
+    let mate = a.ts.create_user(&mate_email).await.unwrap();
+    a.identity
+        .set_password(&a.tenant, &mate, &mate_email, "s3cret-pw")
+        .await
+        .unwrap();
+
+    // A's team calendar carries a sensitively-titled meeting, shared read-only;
+    // A's personal calendar carries another secret that is never shared.
+    let team = a
+        .acc
+        .create_calendar("Leadership", Some("#264653"))
+        .await
+        .unwrap();
+    let e = format!("salary-{ua}");
+    let (status, ..) = dav(
+        &a,
+        "PUT",
+        &format!("/dav/calendars/{ua}/{}/{e}.ics", team.as_str()),
+        None,
+        &ics(&e, "Salary talk", "20260610T090000Z", "20260610T100000Z"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let p = format!("private-{ua}");
+    let (status, ..) = dav(
+        &a,
+        "PUT",
+        &format!("/dav/calendars/{ua}/default/{p}.ics"),
+        None,
+        &ics(&p, "Dismissal 1:1", "20260611T090000Z", "20260611T100000Z"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    a.acc
+        .grant_calendar(&team, "user", mate.as_str(), "viewer")
+        .await
+        .unwrap();
+
+    let query = "<c:free-busy-query xmlns:c=\"urn:ietf:params:xml:ns:caldav\">\
+         <c:time-range start=\"20260601T000000Z\" end=\"20260701T000000Z\"/>\
+         </c:free-busy-query>";
+
+    // The viewer sees WHEN the shared calendar is busy — and nothing of WHAT.
+    let mu = mate.to_string();
+    let (status, _h, body) = dav_as(
+        &a,
+        &mate_email,
+        "REPORT",
+        &format!("/dav/calendars/{mu}/{}/", team.as_str()),
+        None,
+        query,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(
+        body.contains("FREEBUSY;FBTYPE=BUSY:20260610T090000Z/20260610T100000Z"),
+        "busy period present: {body}"
+    );
+    for leak in ["SUMMARY", "Salary", "Dismissal"] {
+        assert!(!body.contains(leak), "{leak} leaked to the viewer: {body}");
+    }
+
+    // A's personal calendar was never shared: the id is unprobeable.
+    let (status, _h, body) = dav_as(
+        &a,
+        &mate_email,
+        "REPORT",
+        &format!("/dav/calendars/{mu}/cal_personal_{ua}/"),
+        None,
+        query,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "unshared calendar probed");
+    assert!(
+        !body.contains("FREEBUSY"),
+        "no spans for the unshared: {body}"
+    );
+
+    // A foreign tenant: A's own path 404s on the user segment, and the team
+    // calendar id under the foreign user's path is invisible.
+    let b = harness_on(std::sync::Arc::clone(&a.store), "caldav-fb-foreign").await;
+    let (status, _h, body) = dav_as(
+        &a,
+        &b.email,
+        "REPORT",
+        &format!("/dav/calendars/{ua}/{}/", team.as_str()),
+        None,
+        query,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert!(!body.contains("FREEBUSY;"), "{body}");
+    let (status, _h, body) = dav(
+        &b,
+        "REPORT",
+        &format!("/dav/calendars/{}/{}/", b.account_id, team.as_str()),
+        None,
+        query,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "foreign calendar id probed");
+    assert!(!body.contains("FREEBUSY;"), "{body}");
+}
+
 #[tokio::test]
 async fn recurring_series_syncs_zoned_and_time_range_expands() {
     let h = harness("caldav-dst").await;

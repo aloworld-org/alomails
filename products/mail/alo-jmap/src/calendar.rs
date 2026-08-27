@@ -986,25 +986,12 @@ pub async fn free_busy(
             .events_in_range(from, to)
             .await
             .map_err(|_| Problem::server_error())?;
-        let mut spans: Vec<(OffsetDateTime, OffsetDateTime)> = events
+        let busy: Vec<Value> = alo_store::merged_busy_spans(&events, from, to)
             .iter()
-            .map(|e| (e.starts_at.max(from), e.ends_at.min(to)))
-            .filter(|(s, e)| e > s)
-            .collect();
-        spans.sort_by_key(|(s, _)| *s);
-        let mut merged: Vec<(OffsetDateTime, OffsetDateTime)> = Vec::new();
-        for (s, e) in spans {
-            match merged.last_mut() {
-                Some(last) if s <= last.1 => last.1 = last.1.max(e),
-                _ => merged.push((s, e)),
-            }
-        }
-        let busy: Vec<Value> = merged
-            .iter()
-            .map(|(s, e)| {
+            .map(|span| {
                 json!({
-                    "start": s.format(&Rfc3339).unwrap_or_default(),
-                    "end": e.format(&Rfc3339).unwrap_or_default(),
+                    "start": span.from.format(&Rfc3339).unwrap_or_default(),
+                    "end": span.to.format(&Rfc3339).unwrap_or_default(),
                 })
             })
             .collect();

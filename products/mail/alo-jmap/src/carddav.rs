@@ -358,6 +358,7 @@ async fn calendar_response(acc: &AccountStore, uid: &str, cal: &Calendar) -> Str
            <d:supported-report><d:report><d:sync-collection/></d:report></d:supported-report>\
            <d:supported-report><d:report><cal:calendar-multiget/></d:report></d:supported-report>\
            <d:supported-report><d:report><cal:calendar-query/></d:report></d:supported-report>\
+           <d:supported-report><d:report><cal:free-busy-query/></d:report></d:supported-report>\
          </d:supported-report-set>",
     );
     response(&href, &props)
@@ -442,6 +443,9 @@ async fn report_events(acc: &AccountStore, uid: &str, coll: &str, text: &str) ->
     if text.contains("sync-collection") {
         return cal_sync_collection(acc, uid, coll, text).await;
     }
+    if text.contains("free-busy-query") {
+        return free_busy_query(acc, uid, coll, text).await;
+    }
     // calendar-multiget (explicit hrefs), or a calendar-query — which we answer
     // by its <C:time-range> when present, else the whole collection.
     let hrefs = extract_hrefs(text);
@@ -525,6 +529,62 @@ async fn cal_sync_collection(acc: &AccountStore, uid: &str, coll: &str, body: &s
          <d:multistatus {NS}>{responses}<d:sync-token>{token}</d:sync-token></d:multistatus>"
     );
     xml_response(StatusCode::MULTI_STATUS, xml)
+}
+
+/// `free-busy-query` REPORT (RFC 4791 §7.10): the collection's busy time in
+/// the requested window, answered as an RFC 5545 §3.6.4 `VFREEBUSY` — merged
+/// spans, clamped to the window, and nothing else. The store's one expansion
+/// function supplies the instances (recurrence, moved occurrences, EXDATEs all
+/// honoured), and the serializer has no field for event detail, so a viewer of
+/// a shared calendar learns *when*, never *what*.
+async fn free_busy_query(acc: &AccountStore, uid: &str, coll: &str, body: &str) -> Response {
+    // The report carries exactly one time-range (RFC 4791 §9.11); without a
+    // parseable one there is no window to answer.
+    let Some((from, to)) = extract_time_range(body) else {
+        return status(StatusCode::BAD_REQUEST);
+    };
+    if to <= from {
+        return status(StatusCode::BAD_REQUEST);
+    }
+    let cal_id = resolve_collection(uid, coll);
+    // The collection must be a calendar the caller can see — an unshared or
+    // foreign calendar id stays unprobeable (404), exactly as PROPFIND.
+    if !acc
+        .calendars()
+        .await
+        .unwrap_or_default()
+        .iter()
+        .any(|c| c.id.as_str() == cal_id)
+    {
+        return status(StatusCode::NOT_FOUND);
+    }
+    // events_in_range materializes per-occurrence instances (overrides in
+    // place, cancelled ones absent) across the account's visible calendars;
+    // keep this collection's, then reduce to spans.
+    let events = match acc.events_in_range(from, to).await {
+        Ok(e) => e,
+        Err(_) => return status(StatusCode::INTERNAL_SERVER_ERROR),
+    };
+    let on_calendar: Vec<CalendarEvent> = events
+        .into_iter()
+        .filter(|e| e.calendar_id.as_str() == cal_id)
+        .collect();
+    let busy = alo_store::merged_busy_spans(&on_calendar, from, to);
+    let ics = ical::to_vfreebusy(
+        &format!("freebusy-{cal_id}"),
+        from,
+        to,
+        &busy,
+        OffsetDateTime::now_utc(),
+    );
+    // The response is the iCalendar object itself (RFC 4791 §7.10), not a
+    // multistatus.
+    let mut resp = (StatusCode::OK, ics).into_response();
+    resp.headers_mut().insert(
+        header::CONTENT_TYPE,
+        header::HeaderValue::from_static("text/calendar; charset=utf-8"),
+    );
+    resp
 }
 
 async fn sync_collection(acc: &AccountStore, uid: &str, body: &str) -> Response {

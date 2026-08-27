@@ -8,6 +8,7 @@
 
 use time::{Date, Month, OffsetDateTime, Time, UtcOffset};
 
+use crate::calendar_availability::CalendarBusySpan;
 use crate::id::{CalendarId, EventId};
 use crate::model::CalendarEvent;
 
@@ -68,6 +69,42 @@ pub fn to_imip(event: &CalendarEvent, organizer: &str, method: &str) -> String {
         Some(organizer),
         OffsetDateTime::now_utc(),
     ));
+    lines.push("END:VCALENDAR".to_owned());
+    fold_join(&lines)
+}
+
+/// Serialize a free/busy answer as a `VCALENDAR` holding one `VFREEBUSY`
+/// (RFC 5545 §3.6.4): the queried window as `DTSTART`/`DTEND` and one
+/// `FREEBUSY;FBTYPE=BUSY` period per span, all UTC. The component has no
+/// field for a title, location, or description — busy time is the whole of
+/// what this function can say, whatever the caller feeds it. `dtstamp` is
+/// caller-supplied for the same reason as [`to_ics_at`]: pinned, the output
+/// is a pure function of its inputs.
+pub fn to_vfreebusy(
+    uid: &str,
+    from: OffsetDateTime,
+    to: OffsetDateTime,
+    busy: &[CalendarBusySpan],
+    dtstamp: OffsetDateTime,
+) -> String {
+    let mut lines = vec![
+        "BEGIN:VCALENDAR".to_owned(),
+        "VERSION:2.0".to_owned(),
+        format!("PRODID:{PRODID}"),
+        "BEGIN:VFREEBUSY".to_owned(),
+        format!("UID:{uid}"),
+        format!("DTSTAMP:{}", fmt_utc(dtstamp)),
+        format!("DTSTART:{}", fmt_utc(from)),
+        format!("DTEND:{}", fmt_utc(to)),
+    ];
+    for span in busy {
+        lines.push(format!(
+            "FREEBUSY;FBTYPE=BUSY:{}/{}",
+            fmt_utc(span.from),
+            fmt_utc(span.to)
+        ));
+    }
+    lines.push("END:VFREEBUSY".to_owned());
     lines.push("END:VCALENDAR".to_owned());
     fold_join(&lines)
 }
@@ -720,6 +757,44 @@ fn unfold(text: &str) -> String {
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn vfreebusy_is_busy_periods_and_nothing_else() {
+        let at = |d: u8, h: u8| {
+            OffsetDateTime::new_utc(
+                Date::from_calendar_date(2026, time::Month::June, d).unwrap(),
+                Time::from_hms(h, 0, 0).unwrap(),
+            )
+        };
+        let stamp = OffsetDateTime::new_utc(
+            Date::from_calendar_date(2026, time::Month::January, 1).unwrap(),
+            Time::from_hms(0, 0, 0).unwrap(),
+        );
+        let busy = [
+            CalendarBusySpan {
+                from: at(10, 9),
+                to: at(10, 11),
+            },
+            CalendarBusySpan {
+                from: at(11, 14),
+                to: at(11, 15),
+            },
+        ];
+        let ics = to_vfreebusy("fb-1", at(1, 0), at(30, 0), &busy, stamp);
+        assert_eq!(
+            ics,
+            "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//alo//calendar//EN\r\n\
+             BEGIN:VFREEBUSY\r\nUID:fb-1\r\nDTSTAMP:20260101T000000Z\r\n\
+             DTSTART:20260601T000000Z\r\nDTEND:20260630T000000Z\r\n\
+             FREEBUSY;FBTYPE=BUSY:20260610T090000Z/20260610T110000Z\r\n\
+             FREEBUSY;FBTYPE=BUSY:20260611T140000Z/20260611T150000Z\r\n\
+             END:VFREEBUSY\r\nEND:VCALENDAR\r\n"
+        );
+        // An empty window is a valid VFREEBUSY with no periods.
+        let free = to_vfreebusy("fb-2", at(1, 0), at(30, 0), &[], stamp);
+        assert!(free.contains("BEGIN:VFREEBUSY"));
+        assert!(!free.contains("FREEBUSY;"));
+    }
 
     #[test]
     fn timed_event_round_trips() {

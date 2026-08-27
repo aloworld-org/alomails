@@ -345,7 +345,7 @@ pub use billing_vat_report::{VatPeriod, VatPeriodBase, VatPeriodCurrency, VatPer
 #[cfg(feature = "garage")]
 pub use blob::GarageConfig;
 pub use blob::{BlobStore, ShareStream};
-pub use calendar_availability::{CalendarAvailability, CalendarBusySpan};
+pub use calendar_availability::{CalendarAvailability, CalendarBusySpan, merged_busy_spans};
 pub use campaign_audience::{
     AUDIENCE_PAGE_MAX, AudienceMember, AudiencePage, AudienceSource, CampaignRecipient,
     normalise_address,
