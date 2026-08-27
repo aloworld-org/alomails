@@ -1128,4 +1128,50 @@ describe("the quotation document preview", () => {
     });
     localStorage.removeItem(`alo:quote-design:${quoteId}`);
   });
+
+  test("keeps divider width samples equally long and distinguishes them by thickness", async () => {
+    const quoteId = "divider-width-controls";
+    localStorage.setItem(
+      `alo:quote-design:${quoteId}`,
+      JSON.stringify({
+        blocks: [
+          {
+            id: "custom-divider",
+            kind: "divider",
+            style: "solid",
+            thickness: "fine",
+            width: 100,
+            color: "#E76F51",
+          },
+        ],
+      }),
+    );
+
+    render(
+      <QuoteContentStudio
+        quoteId={quoteId}
+        readOnly={false}
+        preview={false}
+        pricingTable={() => null}
+        tableSubtotal={() => null}
+        lineKeys={[]}
+      />,
+    );
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: strings.quoteStudioDividerSettings,
+      }),
+    );
+
+    const expectedHeights = ["h-px", "h-0.5", "h-[3px]", "h-1"] as const;
+    [25, 50, 75, 100].forEach((width, index) => {
+      const choice = screen.getByRole("button", { name: `${width}%` });
+      const sample = choice.querySelector("span.w-full.rounded-full");
+      expect(sample?.classList.contains("w-full")).toBe(true);
+      expect(sample?.classList.contains(expectedHeights[index]!)).toBe(true);
+    });
+
+    localStorage.removeItem(`alo:quote-design:${quoteId}`);
+  });
 });
