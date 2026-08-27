@@ -53,7 +53,7 @@ describe("catalog fallback", () => {
   });
 });
 
-describe("German ships complete modules (M4.1, tranches 1–2: mail + Docs/Drive)", () => {
+describe("German ships complete modules (M4.1, tranches 1–3: mail + Docs/Drive + Chat/Meet)", () => {
   /** The sections `de.ts` claims to cover, by key prefix. The catalog is
    *  allowed to be partial across *modules* — the fallback shows English —
    *  but never inside one: a reading pane that mixes German buttons with
@@ -61,16 +61,19 @@ describe("German ships complete modules (M4.1, tranches 1–2: mail + Docs/Drive
    *  in any of these families must land with German in the same change.
    *  Tranche 1 is the mail daily-driver surface; tranche 2 adds Docs (block
    *  editor, technical authoring, formatting toolbar), Drive + Spaces,
-   *  Sheets, the Office embed, the search overlay and the Drive picker. */
+   *  Sheets, the Office embed, the search overlay and the Drive picker;
+   *  tranche 3 adds Chat and Meet plus the exact-match generics those two
+   *  surfaces are first to use (anchored with `$` so they claim one key,
+   *  not a family). */
   const SHIPPED_PREFIXES =
-    /^(agenda|task|mail|compose|flag|folder|filter|spam|snooze|unsubscribe|appPassword|delegate|sharing|shared|categor|transfer|contact|import|signup|reset|settings|brand|home|module|rsvp|error|twoFactor|recovery|doc|drive|sheet|office|picker|search|ai|eq|spec|tb|ref|block|heading|para|table|chart|code|insert|font|size|align|text|style|highlight|strikethrough|bullet|numbered|horizontal|clear|close|cancel)/;
+    /^(agenda|task|mail|compose|flag|folder|filter|spam|snooze|unsubscribe|appPassword|delegate|sharing|shared|categor|transfer|contact|import|signup|reset|settings|brand|home|module|rsvp|error|twoFactor|recovery|doc|drive|sheet|office|picker|search|ai|eq|spec|tb|ref|block|heading|para|table|chart|code|insert|font|size|align|text|style|highlight|strikethrough|bullet|numbered|horizontal|clear|close|cancel|chat|meet|add$|save$|deleteLabel$|agentApprove$|agentDiscard$)/;
   const shippedKeys = Object.keys(en).filter((key) =>
     SHIPPED_PREFIXES.test(key),
   );
 
   test("the key list is the real shipped surface, not an empty filter", () => {
-    expect(shippedKeys.length).toBeGreaterThan(1000);
-    expect(Object.keys(de).length).toBeGreaterThan(1100);
+    expect(shippedKeys.length).toBeGreaterThan(1400);
+    expect(Object.keys(de).length).toBeGreaterThan(1600);
   });
 
   test("every shipped-module string exists in German", () => {
@@ -122,6 +125,25 @@ describe("German ships complete modules (M4.1, tranches 1–2: mail + Docs/Drive
     expect(catalog.driveSelected(5)).toBe("5 Elemente ausgewählt");
     expect(catalog.searchKind("task")).toBe("Aufgabe");
     expect(catalog.searchKind("doc")).toBe("Doc");
+    // Tranche 3: Chat/Meet, in both plural branches, incl. the two-argument
+    // agent record and the consent count whose verb changes number.
+    expect(catalog.chatSend).toBe("Senden");
+    expect(catalog.meetLeave).toBe("Verlassen");
+    expect(catalog.chatReplies(1)).toBe("1 Antwort");
+    expect(catalog.chatReplies(3)).toBe("3 Antworten");
+    expect(catalog.chatMentionsYou(1)).toBe("1 Nachricht erwähnt Sie");
+    expect(catalog.chatMentionsYou(2)).toBe("2 Nachrichten erwähnen Sie");
+    expect(catalog.meetLiveCount(1)).toBe("1 Meeting");
+    expect(catalog.meetLiveCount(2)).toBe("2 Meetings");
+    expect(catalog.meetConsentCount(1)).toBe("1 hat zugestimmt");
+    expect(catalog.meetConsentCount(3)).toBe("3 haben zugestimmt");
+    expect(catalog.chatAgentRecord(1, 0)).toBe("1 Antwort");
+    expect(catalog.chatAgentRecord(2, 1)).toBe(
+      "2 Antworten · 1 Aktion genehmigt",
+    );
+    // The button that opens the calendar module says what the module is
+    // called in German — Kalender, matching moduleAgenda — not "Agenda".
+    expect(catalog.meetOpenAgenda).toBe("Kalender öffnen");
   });
 
   test("the spam-banner fallback declines correctly in both sentences", () => {
