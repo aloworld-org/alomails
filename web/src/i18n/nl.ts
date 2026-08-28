@@ -6074,6 +6074,8 @@ export const nl: Partial<Catalog> = {
   taskCreate: "Taak aanmaken",
   taskCreateAnother: "Nog een taak aanmaken",
   taskCreateFirst: "Maak uw eerste taak aan",
+  taskShowProjects: "Projecten tonen",
+  taskHideProjects: "Projecten verbergen",
   taskCreateLabel: "Aanmaken",
   taskDownload: "Downloaden",
   taskEmptyBody: "Alles is klaar. Begin met het aanmaken van uw eerste taak.",

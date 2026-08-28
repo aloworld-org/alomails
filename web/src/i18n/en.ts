@@ -386,6 +386,8 @@ export const en = {
   taskEmptyTitle: "No tasks yet 👋",
   taskEmptyBody: "You're all set. Start by creating your first task.",
   taskCreateFirst: "Create your first task",
+  taskShowProjects: "Show projects",
+  taskHideProjects: "Hide projects",
   taskNewTaskPrompt: "Name for the new task",
   taskNewSubtitle: "Create a task and stay organized.",
   taskNamePlaceholder: "e.g. Design landing page",

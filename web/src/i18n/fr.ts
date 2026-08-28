@@ -6134,6 +6134,8 @@ export const fr: Partial<Catalog> = {
   taskCreate: "Créer une tâche",
   taskCreateAnother: "Créer une autre tâche",
   taskCreateFirst: "Créez votre première tâche",
+  taskShowProjects: "Afficher les projets",
+  taskHideProjects: "Masquer les projets",
   taskCreateLabel: "Créer",
   taskDownload: "Télécharger",
   taskEmptyBody: "Tout est prêt. Commencez par créer votre première tâche.",

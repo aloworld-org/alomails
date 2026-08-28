@@ -15,6 +15,8 @@ import {
   LayoutDashboard,
   LayoutGrid,
   List,
+  PanelLeftClose,
+  PanelLeftOpen,
   Paperclip,
   Plus,
   Search,
@@ -30,7 +32,7 @@ import {
   type TaskDepEdgeDto,
   type TaskProject,
 } from "../jmap";
-import { Spinner } from "../ds";
+import { IconButton, Spinner, useIsMobile } from "../ds";
 import { useAuth } from "../auth";
 import { BoardView } from "./BoardView";
 import { ListView } from "./ListView";
@@ -127,6 +129,12 @@ export function TasksModule({
     dueDate?: string;
   } | null>(null);
 
+  // Phone layout (the MailModule folder-drawer pattern): the project sidebar
+  // becomes an off-canvas drawer, toggled from the header, closed by picking
+  // a destination or tapping the backdrop. Desktop keeps the static column.
+  const isMobile = useIsMobile();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   // Projects links here with a stable project id. Keep the query in the URL so
   // refreshes and shared links reopen the same task workspace.
   useEffect(() => {
@@ -151,6 +159,7 @@ export function TasksModule({
   }, [searchParams, workspaceView]);
 
   function openProject(id: string) {
+    setSidebarOpen(false);
     if (projectId !== undefined || projectsContext) {
       navigate(`/projects/${encodeURIComponent(id)}/overview`);
       return;
@@ -314,13 +323,29 @@ export function TasksModule({
         : (engagement?.name ?? activeProject?.name ?? strings.moduleTasks);
 
   return (
-    <div className="flex h-full min-h-0 bg-app">
-      {projectId === undefined && (
-        <aside className="flex w-60 shrink-0 flex-col gap-4 overflow-y-auto border-r border-default bg-sunken p-4 max-md:w-52 max-sm:hidden">
+    <div className="relative flex h-full min-h-0 bg-app">
+      {projectId === undefined && isMobile && sidebarOpen && (
+        <div
+          className="absolute inset-0 z-[calc(var(--z-overlay)-1)] bg-overlay"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+      {projectId === undefined && (!isMobile || sidebarOpen) && (
+        <aside
+          className={
+            isMobile
+              ? "absolute inset-y-0 left-0 z-[var(--z-overlay)] flex w-[min(82vw,20rem)] flex-col gap-4 overflow-y-auto border-r border-default bg-sunken p-4 shadow-lg"
+              : "flex w-60 shrink-0 flex-col gap-4 overflow-y-auto border-r border-default bg-sunken p-4 max-md:w-52 max-sm:hidden"
+          }
+        >
           <button
             type="button"
             className={`flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-primary !no-underline transition-colors hover:bg-raised hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${mode.type === "plate" ? "bg-selected font-medium" : ""}`}
-            onClick={() => setMode({ type: "plate" })}
+            onClick={() => {
+              setMode({ type: "plate" });
+              setSidebarOpen(false);
+            }}
           >
             <Sun size={16} />{" "}
             {projectsContext ? strings.projectsTabMyWork : strings.taskMyPlate}
@@ -331,6 +356,7 @@ export function TasksModule({
             onClick={() => {
               void loadProposals();
               setMode({ type: "proposals" });
+              setSidebarOpen(false);
             }}
           >
             <Sparkles size={16} /> {strings.taskProposals}
@@ -380,6 +406,18 @@ export function TasksModule({
       <section className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center gap-6 border-b border-subtle bg-surface px-7 py-6 max-lg:flex-wrap max-sm:px-4 max-sm:py-5">
           <div className="flex min-w-0 flex-1 items-center gap-4">
+            {projectId === undefined && isMobile && (
+              <IconButton
+                size="sm"
+                label={
+                  sidebarOpen
+                    ? strings.taskHideProjects
+                    : strings.taskShowProjects
+                }
+                icon={sidebarOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
+                onClick={() => setSidebarOpen((open) => !open)}
+              />
+            )}
             {projectId !== undefined && (
               <button
                 type="button"

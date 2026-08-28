@@ -457,6 +457,8 @@ export const de: Partial<Catalog> = {
   taskEmptyTitle: "Noch keine Aufgaben 👋",
   taskEmptyBody: "Alles bereit. Legen Sie Ihre erste Aufgabe an.",
   taskCreateFirst: "Erste Aufgabe erstellen",
+  taskShowProjects: "Projekte einblenden",
+  taskHideProjects: "Projekte ausblenden",
   taskNewTaskPrompt: "Name der neuen Aufgabe",
   taskNewSubtitle: "Erstellen Sie eine Aufgabe und behalten Sie den Überblick.",
   taskNamePlaceholder: "z. B. Landingpage gestalten",
