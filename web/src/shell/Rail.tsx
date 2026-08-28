@@ -58,7 +58,7 @@ export function Rail({ onAskAi, className }: RailProps) {
 
       <ul className={styles.modules}>
         {home !== undefined && (
-          <li>
+          <li className="mb-3 max-md:mb-0 max-md:mr-3">
             <NavLink
               to={home.path}
               className={({ isActive }) =>
