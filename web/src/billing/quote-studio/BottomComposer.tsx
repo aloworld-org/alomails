@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlignLeft,
   ImagePlus,
@@ -14,7 +14,7 @@ import {
   X,
 } from "lucide-react";
 
-import { cx } from "../../ds";
+import { IconButton, Modal, cx } from "../../ds";
 import { strings } from "../../i18n";
 import { AddButton } from "./AddButton";
 
@@ -36,10 +36,25 @@ interface BottomComposerProps {
 export function BottomComposer({ index, onAdd, onImage }: BottomComposerProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const add = (kind: InsertKind, ordered = false) => {
-    onAdd(index, kind, ordered);
+  const searchRef = useRef<HTMLInputElement>(null);
+  // Stable, because the modal re-arms its Escape/focus handling whenever its
+  // `onClose` identity changes.
+  const close = useCallback(() => {
     setOpen(false);
     setQuery("");
+  }, []);
+  // The modal gives opening focus to its first control, which is the close
+  // button in its header. In a picker the first thing you do is type, so the
+  // search box claims focus one frame later — after the modal's own effect has
+  // run, which is why this cannot simply be `autoFocus` on the input.
+  useEffect(() => {
+    if (!open) return;
+    const frame = requestAnimationFrame(() => searchRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [open]);
+  const add = (kind: InsertKind, ordered = false) => {
+    onAdd(index, kind, ordered);
+    close();
   };
   const options: Array<{
     label: string;
@@ -60,8 +75,7 @@ export function BottomComposer({ index, onAdd, onImage }: BottomComposerProps) {
       Icon: ImagePlus,
       action: () => {
         onImage(index);
-        setOpen(false);
-        setQuery("");
+        close();
       },
     },
     { label: strings.quoteStudioPricingTable, help: strings.quoteStudioPricingTableHelp, category: "tables", Icon: Table2, action: () => add("pricing") },
@@ -100,38 +114,40 @@ export function BottomComposer({ index, onAdd, onImage }: BottomComposerProps) {
         <span className="h-px flex-1 bg-[var(--quote-table-header)]" aria-hidden="true" />
       </div>
       {open && (
-        <div className="mt-2 w-full max-w-2xl rounded-2xl border border-default bg-surface shadow-xl">
-          <div className="p-5 pb-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="font-semibold text-primary">{strings.quoteStudioAddToQuotation}</h3>
-                <p className="mt-0.5 text-sm text-secondary">{strings.quoteStudioAddToQuotationHelp}</p>
-              </div>
-              <button
-                type="button"
-                className="rounded-lg p-2 text-secondary hover:bg-accent-soft hover:text-accent"
-                aria-label={strings.quoteStudioCloseBlockPicker}
-                onClick={() => setOpen(false)}
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-            <label className="mt-4 flex min-h-11 items-center gap-3 rounded-xl border border-default bg-surface px-3 text-secondary transition-colors focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/10">
-              <Search className="size-4 shrink-0" aria-hidden="true" />
-              <input
-                autoFocus
-                className="min-w-0 flex-1 appearance-none !border-0 bg-transparent !p-0 text-sm text-primary !shadow-none !outline-none !ring-0 placeholder:text-tertiary focus:!border-0 focus:!outline-none focus:!ring-0"
-                value={query}
-                placeholder={strings.quoteStudioSearchBlocks}
-                aria-label={strings.quoteStudioSearchBlocksA11y}
-                onChange={(event) => setQuery(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Escape") setOpen(false);
-                }}
-              />
-            </label>
-          </div>
-          <div className="max-h-[min(65vh,40rem)] overflow-y-auto border-t border-default px-5">
+        // A dialog, not a panel in the document. Rendered inline, the picker
+        // pushed everything below it down by its own height, grew the
+        // document while the user was reading it, and scrolled inside a page
+        // that was also scrolling — two scrollbars for one list. The design
+        // system's modal takes it out of the flow entirely: a fixed overlay,
+        // the page underneath untouched, Escape and the backdrop to dismiss,
+        // focus trapped inside. `tall` fixes the panel's height so the block
+        // list scrolls within it and the search box never moves under the
+        // pointer as results change.
+        <Modal
+          title={strings.quoteStudioAddToQuotation}
+          onClose={close}
+          tall
+          actions={
+            <IconButton
+              label={strings.quoteStudioCloseBlockPicker}
+              icon={<X />}
+              onClick={close}
+            />
+          }
+        >
+          <p className="m-0 text-sm text-secondary">{strings.quoteStudioAddToQuotationHelp}</p>
+          <label className="flex min-h-11 items-center gap-3 rounded-xl border border-default bg-surface px-3 text-secondary transition-colors focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/10">
+            <Search className="size-4 shrink-0" aria-hidden="true" />
+            <input
+              ref={searchRef}
+              className="min-w-0 flex-1 appearance-none !border-0 bg-transparent !p-0 text-sm text-primary !shadow-none !outline-none !ring-0 placeholder:text-tertiary focus:!border-0 focus:!outline-none focus:!ring-0"
+              value={query}
+              placeholder={strings.quoteStudioSearchBlocks}
+              aria-label={strings.quoteStudioSearchBlocksA11y}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
+          <div className="min-h-0 flex-1 overflow-y-auto border-t border-default">
             {(normalizedQuery === "" ? categories : (["results"] as const)).map((section, sectionIndex) => {
               const sectionOptions = section === "results" ? visibleOptions : visibleOptions.filter((option) => option.category === section);
               if (sectionOptions.length === 0) return null;
@@ -147,14 +163,14 @@ export function BottomComposer({ index, onAdd, onImage }: BottomComposerProps) {
                 </section>
               );
             })}
+            {visibleOptions.length === 0 && (
+              <div className="py-8 text-center">
+                <p className="text-sm font-semibold text-primary">{strings.quoteStudioNoMatchingBlocks}</p>
+                <p className="mt-1 text-xs text-secondary">{strings.quoteStudioTryAnotherName}</p>
+              </div>
+            )}
           </div>
-          {visibleOptions.length === 0 && (
-            <div className="border-t border-default px-5 py-8 text-center">
-              <p className="text-sm font-semibold text-primary">{strings.quoteStudioNoMatchingBlocks}</p>
-              <p className="mt-1 text-xs text-secondary">{strings.quoteStudioTryAnotherName}</p>
-            </div>
-          )}
-        </div>
+        </Modal>
       )}
     </div>
   );
