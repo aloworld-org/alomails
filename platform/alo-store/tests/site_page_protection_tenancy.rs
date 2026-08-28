@@ -14,7 +14,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::site_page_protection::{SITE_PAGE_PASSWORD_MAX_CHARS, SITE_PAGE_PASSWORD_MIN_CHARS};
 use alo_store::{BlobStore, SiteId, SitePageId, SitePublicStore, StoreError};

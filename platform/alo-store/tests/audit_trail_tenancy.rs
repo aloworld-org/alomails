@@ -16,11 +16,9 @@
 //! Runs against the real Postgres from compose (see `tests/common`).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use alo_store::{Store, TenantId, UserId};
 
-use common::test_store;
+use crate::common::test_store;
 
 /// A tenant with one user, and the ids to act as them.
 async fn a_tenant(store: &Store, tag: &str) -> (TenantId, UserId, String) {

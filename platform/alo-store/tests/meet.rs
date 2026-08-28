@@ -1,7 +1,7 @@
 //! Meetings: who may see one, who may join, and what the media engine is told.
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::{ChannelVisibility, MeetingId, NewMeeting};
 use time::OffsetDateTime;

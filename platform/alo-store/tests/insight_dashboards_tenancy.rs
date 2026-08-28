@@ -11,7 +11,7 @@
 //! Runs against the real Postgres from compose (see `tests/common`).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::insight_dashboards::{DASHBOARD_NAME_MAX_CHARS, DASHBOARDS_PER_TENANT_MAX};
 use alo_store::insight_tiles::{TILE_SPAN_MAX, TILES_PER_DASHBOARD_MAX};

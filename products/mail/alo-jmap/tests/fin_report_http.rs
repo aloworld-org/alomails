@@ -10,8 +10,6 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use std::sync::Arc;
 
 use alo_store::{
@@ -24,7 +22,7 @@ use serde_json::Value;
 use time::{Date, Month};
 use tower::ServiceExt;
 
-use common::{Harness, harness, harness_on, send};
+use crate::common::{Harness, harness, harness_on, send};
 
 // ---- request helpers ---------------------------------------------------------
 

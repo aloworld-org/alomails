@@ -20,7 +20,7 @@
 //! Runs against the real Postgres from compose (see `tests/common`).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::billing_invoices::InvoiceStatus;
 use alo_store::inv_locations::{Location, LocationKind, LocationSeed};

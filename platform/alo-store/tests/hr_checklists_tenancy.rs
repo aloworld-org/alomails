@@ -22,7 +22,7 @@
 //! Runs against the real Postgres from compose (see `tests/common`).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::hr_checklists::{TEMPLATE_STEPS_MAX, resolve_owner};
 use alo_store::{

@@ -2,9 +2,7 @@
 //! highlighted (`<mark>`) in the subject and preview of each requested email.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
-use common::{api, harness};
+use crate::common::{api, harness};
 use serde_json::{Value, json};
 
 fn call(account_id: &str, method: &str, mut args: Value) -> Value {

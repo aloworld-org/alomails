@@ -5,6 +5,10 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish.workspace = true
+# Integration tests are consolidated into a handful of suite binaries (the
+# [[test]] targets below); autodiscovery would build every tests/*.rs as its
+# own crate root beside them.
+autotests = false
 build = "build.rs"
 
 [dependencies]
@@ -83,3 +87,27 @@ serde_json = { workspace = true }
 
 [lints]
 workspace = true
+
+# One binary per test area instead of one per file: ~110 per-file binaries
+# took most of an hour to relink after any crate change. The suite roots
+# declare the same files as modules; nothing about the tests themselves
+# changed.
+[[test]]
+name = "agents_http_suite"
+path = "tests/agents_http_suite.rs"
+
+[[test]]
+name = "billing_http_suite"
+path = "tests/billing_http_suite.rs"
+
+[[test]]
+name = "business_http_suite"
+path = "tests/business_http_suite.rs"
+
+[[test]]
+name = "mail_http_suite"
+path = "tests/mail_http_suite.rs"
+
+[[test]]
+name = "sites_http_suite"
+path = "tests/sites_http_suite.rs"

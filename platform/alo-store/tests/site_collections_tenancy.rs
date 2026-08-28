@@ -2,7 +2,7 @@
 
 #![allow(clippy::unwrap_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::{
     BaseTableId, DriveLocation, SiteCollectionFieldMapping, SiteCollectionInput, SiteId, StoreError,

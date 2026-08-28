@@ -8,7 +8,7 @@
 //! Postgres from compose.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::{
     AccountStore, BlobId, ChannelVisibility, MailboxId, MemberRole, Message, MessageId, Page, SEEN,

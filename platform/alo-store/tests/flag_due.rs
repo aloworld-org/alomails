@@ -1,10 +1,8 @@
 //! Flag follow-up due-date: set, read back, clear, and per-account isolation.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
+use crate::common::{fresh_account, tenant_fixture, test_store};
 use alo_store::StoreError;
-use common::{fresh_account, tenant_fixture, test_store};
 
 #[tokio::test]
 async fn set_read_and_clear_due() {

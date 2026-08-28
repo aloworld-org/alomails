@@ -5,11 +5,9 @@
 //! tests, not here (no external server in the harness).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
+use crate::common::{api, harness, send};
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use common::{api, harness, send};
 use serde_json::{Value, json};
 
 /// POST a JSON body to a route with the harness's bearer token.

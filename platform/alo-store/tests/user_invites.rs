@@ -16,13 +16,11 @@
 //! Runs against the real Postgres from compose (see `tests/common`).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use alo_store::{Store, TenantId, UserId};
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 
-use common::{database_url, test_store};
+use crate::common::{database_url, test_store};
 
 /// A raw pool beside the store, for reading rows the store has no public read
 /// for — the credential and the recovery address this feature installs. The

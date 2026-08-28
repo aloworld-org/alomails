@@ -4,10 +4,8 @@
 //! guarantee that destroying a category strips its tag from messages.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
+use crate::common::{api, harness};
 use axum::http::StatusCode;
-use common::{api, harness};
 use serde_json::{Map, Value, json};
 
 const USING: [&str; 3] = [

@@ -2,11 +2,11 @@
 //! message), Email/get surfaces alo:flagDue, and clearing removes it.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
+use crate::common::{api, harness, send};
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use common::{api, harness, send};
 use serde_json::{Value, json};
 
 async fn post_json(app: &axum::Router, token: &str, uri: &str, body: Value) -> (StatusCode, Value) {

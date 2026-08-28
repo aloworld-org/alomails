@@ -20,7 +20,7 @@
 //! Runs against the real Postgres from compose (see `tests/common`).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::{
     ConsentSource, MessageId, NewCampaignConsent, NewCustomer, NewSuppression, SuppressionReason,
@@ -30,7 +30,7 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use serde_json::{Value, json};
 
-use common::{Harness, harness, send};
+use crate::common::{Harness, harness, send};
 
 fn request(method: &str, uri: &str, token: Option<&str>) -> Request<Body> {
     let mut builder = Request::builder().method(method).uri(uri);

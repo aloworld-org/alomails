@@ -11,8 +11,6 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use std::sync::Arc;
 
 use axum::Router;
@@ -21,7 +19,7 @@ use axum::http::{Request, StatusCode, header};
 use serde_json::{Value, json};
 use tower::ServiceExt;
 
-use common::{Harness, harness, harness_on, send};
+use crate::common::{Harness, harness, harness_on, send};
 
 async fn post(app: &Router, token: &str, uri: &str, body: Value) -> (StatusCode, Value) {
     let req = Request::builder()

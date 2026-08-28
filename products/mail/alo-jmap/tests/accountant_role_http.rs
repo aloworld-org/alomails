@@ -26,15 +26,13 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use alo_store::TenantRole;
 use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use serde_json::{Value, json};
 
-use common::{Harness, harness, harness_on, send};
+use crate::common::{Harness, harness, harness_on, send};
 
 // ---- request helpers ---------------------------------------------------------
 

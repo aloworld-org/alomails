@@ -23,14 +23,12 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use serde_json::{Value, json};
 
-use common::{harness, harness_on, send};
+use crate::common::{harness, harness_on, send};
 
 fn with_json(method: &str, uri: &str, token: &str, body: Value) -> Request<Body> {
     Request::builder()

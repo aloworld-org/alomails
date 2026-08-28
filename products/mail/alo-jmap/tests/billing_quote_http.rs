@@ -12,7 +12,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use axum::Router;
 use axum::body::Body;
@@ -22,7 +22,7 @@ use sqlx::postgres::PgPoolOptions;
 use time::format_description::well_known::Iso8601;
 use time::{Duration, OffsetDateTime};
 
-use common::{database_url, harness, send};
+use crate::common::{database_url, harness, send};
 
 // ---- request helpers ---------------------------------------------------------
 

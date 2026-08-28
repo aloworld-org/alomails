@@ -8,12 +8,10 @@
 //! real router over Postgres, mirroring `carddav.rs`.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
+use crate::common::{Harness, harness, harness_on};
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use base64::Engine;
-use common::{Harness, harness, harness_on};
 
 fn basic(email: &str) -> String {
     let raw = format!("{email}:s3cret-pw");

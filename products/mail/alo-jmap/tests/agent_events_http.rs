@@ -9,8 +9,6 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use std::time::{Duration, Instant};
 
 use axum::Router;
@@ -20,8 +18,8 @@ use serde_json::{Value, json};
 
 use alo_store::AgentProduct;
 
-use common::model::{says, scripted_model, use_model, wants};
-use common::{Harness, harness, harness_on, send};
+use crate::common::model::{says, scripted_model, use_model, wants};
+use crate::common::{Harness, harness, harness_on, send};
 
 async fn post(app: &Router, token: &str, uri: &str, body: Value) -> (StatusCode, Value) {
     let req = Request::builder()

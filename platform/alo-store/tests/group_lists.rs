@@ -8,10 +8,8 @@
 //! Runs against the real Postgres from compose (see `tests/common`).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
+use crate::common::test_store;
 use alo_store::{GroupId, Store, StoreError, TenantStore, UserId};
-use common::test_store;
 
 /// A tenant with one user, behind the tenant door.
 async fn tenant(store: &Store, tag: &str) -> (TenantStore, UserId, String) {

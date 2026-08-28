@@ -29,8 +29,6 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use std::time::{Duration, Instant};
 
 use axum::Router;
@@ -38,9 +36,9 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use serde_json::{Value, json};
 
+use crate::common::model::{Seen, says, scripted_model, use_model, wants};
+use crate::common::{Harness, harness, send};
 use alo_store::{AgentProduct, Contact, ContactField, ContactId, MailboxId, MessageId};
-use common::model::{Seen, says, scripted_model, use_model, wants};
-use common::{Harness, harness, send};
 
 // ---- request helpers ---------------------------------------------------------
 

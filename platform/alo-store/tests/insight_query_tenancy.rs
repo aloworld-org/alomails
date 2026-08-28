@@ -17,7 +17,7 @@
 //! other, so one dataset's January can never land beside another's.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::insight_series::{ALL_GROUP, OTHER_BUCKET, TOTAL_BUCKET};
 use alo_store::{

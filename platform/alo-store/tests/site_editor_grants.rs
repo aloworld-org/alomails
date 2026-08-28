@@ -2,11 +2,9 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use alo_store::{SiteEditorInviteOutcome, StoreError, TenantRole};
 
-use common::test_store;
+use crate::common::test_store;
 
 fn subdomain(tag: &str, tenant: &alo_store::TenantId) -> String {
     let salt: String = tenant

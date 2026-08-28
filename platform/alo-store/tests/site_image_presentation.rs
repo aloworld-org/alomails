@@ -13,7 +13,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::{SiteId, StoreError};
 use serde_json::{Value, json};

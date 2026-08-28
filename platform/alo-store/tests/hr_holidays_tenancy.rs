@@ -19,7 +19,7 @@
 //!   refused rather than folded as if that country had no holidays.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::billing_settings::NewBillingSettings;
 use alo_store::hr_employments::{FULL_TIME_PATTERN, NewEmployment};

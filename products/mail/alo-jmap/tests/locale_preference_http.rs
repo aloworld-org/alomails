@@ -10,13 +10,13 @@
 //! another tenant.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use std::sync::Arc;
 
+use crate::common::{get, harness, harness_on, post_raw, send};
 use axum::body::Body;
 use axum::http::Request;
-use common::{get, harness, harness_on, post_raw, send};
 use serde_json::{Value, json};
 
 #[tokio::test]

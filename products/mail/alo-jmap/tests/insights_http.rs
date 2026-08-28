@@ -13,7 +13,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use axum::Router;
 use axum::body::Body;
@@ -22,7 +22,7 @@ use serde_json::{Value, json};
 use sqlx::postgres::PgPoolOptions;
 use time::OffsetDateTime;
 
-use common::{database_url, harness, send};
+use crate::common::{database_url, harness, send};
 
 // ---- request helpers ---------------------------------------------------------
 

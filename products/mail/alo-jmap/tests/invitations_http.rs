@@ -11,7 +11,7 @@
 //! far end of the wire.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use std::sync::Arc;
 
@@ -27,7 +27,7 @@ use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpListener;
 use tokio::sync::mpsc;
 
-use common::send;
+use crate::common::send;
 
 const NL: u8 = 10;
 const DOT: u8 = 46;

@@ -12,8 +12,6 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use std::sync::Arc;
 
 use alo_jmap::sites::SiteDomainTxtLookup;
@@ -27,7 +25,7 @@ use serde_json::{Value, json};
 use time::OffsetDateTime;
 use time::macros::datetime;
 
-use common::{Harness, harness, harness_on, send};
+use crate::common::{Harness, harness, harness_on, send};
 
 /// The custom-domain TXT boundary, which this surface never uses: a bought
 /// name needs no ownership proof, because alo registered it.

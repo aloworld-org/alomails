@@ -4,14 +4,12 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use std::collections::BTreeSet;
 
 use alo_store::{Section, SiteTemplate, check_template, site_template, site_templates};
 use serde_json::Value;
 
-use common::test_store;
+use crate::common::test_store;
 
 /// The same bytes the crate embeds, read here so the test can compare what the
 /// file declares against what the loader offers.

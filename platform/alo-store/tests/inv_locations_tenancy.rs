@@ -10,7 +10,7 @@
 //! Runs against the real Postgres from compose (see `tests/common`).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::inv_locations::{LocationKind, LocationSeed, NewLocation, VIRTUAL_KINDS};
 use alo_store::{AccountStore, InvLocationId, Store, StoreError, TenantId};

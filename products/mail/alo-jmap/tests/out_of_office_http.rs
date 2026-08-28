@@ -10,9 +10,9 @@
 //! comes back a day out or replies for a day too long.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
-use common::{get, harness, post_raw};
+use crate::common::{get, harness, post_raw};
 use serde_json::{Value, json};
 
 #[tokio::test]

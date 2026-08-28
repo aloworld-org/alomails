@@ -11,7 +11,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use std::sync::Arc;
 
@@ -27,7 +27,7 @@ use alo_store::{
     normalize_order_contact,
 };
 
-use common::{Harness, harness_on, harness_with_blobs, send};
+use crate::common::{Harness, harness_on, harness_with_blobs, send};
 
 // ---- driving the router ------------------------------------------------------
 

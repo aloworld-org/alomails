@@ -5,14 +5,12 @@
 //! controller capturing what arrives on the wire.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use crate::common::{api, call, database_url, test_identity};
 use alo_jmap::junk_learn::JunkLearner;
 use alo_jmap::state::AppState;
-use common::{api, call, database_url, test_identity};
 use serde_json::json;
 
 /// The learn calls the mock controller has seen: `(path, body)`.

@@ -2,11 +2,9 @@
 //! references, flags, and /changes. Against real Postgres.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
+use crate::common::{api, call, harness, send};
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use common::{api, call, harness, send};
 use serde_json::{Map, Value, json};
 
 fn obj(pairs: Vec<(String, Value)>) -> Value {

@@ -3,11 +3,11 @@
 //! credentials yet) and must not echo caller markup into the document.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
+use crate::common::harness;
 use axum::body::{Body, to_bytes};
 use axum::http::{Request, StatusCode};
-use common::harness;
 use tower::ServiceExt;
 
 /// Sends a request through the router and returns (status, content-type, body).

@@ -10,11 +10,12 @@
 //!   never content. A 410 from the service deletes the subscription.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use crate::common::{get, harness, harness_on, send};
 use alo_jmap::push::StateChangeMsg;
 use alo_jmap::push_notify::WebPush;
 use alo_jmap::web_push::VapidKeys;
@@ -23,7 +24,6 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use base64::Engine as _;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-use common::{get, harness, harness_on, send};
 use ring::{aead, agreement, hkdf, rand, signature};
 use serde_json::{Value, json};
 

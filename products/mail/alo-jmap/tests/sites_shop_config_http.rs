@@ -10,15 +10,13 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use serde_json::{Value, json};
 
-use common::model::{scripted_model, use_model};
-use common::{Harness, harness, send};
+use crate::common::model::{scripted_model, use_model};
+use crate::common::{Harness, harness, send};
 
 /// The ADR 0041 example the valid fixture was drafted from: every stated
 /// amount the envelope may carry (€25, €19,50, €60, €5) is in this sentence.

@@ -29,8 +29,6 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
@@ -46,7 +44,7 @@ use sqlx::postgres::PgPoolOptions;
 use time::{Duration, OffsetDateTime};
 use tower::ServiceExt;
 
-use common::{Harness, database_url, harness, harness_on, send};
+use crate::common::{Harness, database_url, harness, harness_on, send};
 
 /// The apex the public service serves under (`SITES_DOMAIN` in production).
 const APEX: &str = "sites.test";

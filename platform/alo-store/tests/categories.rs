@@ -4,10 +4,8 @@
 //! touches another's).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
+use crate::common::{fresh_account, tenant_fixture, test_store};
 use alo_store::{StoreError, category_keyword};
-use common::{fresh_account, tenant_fixture, test_store};
 
 #[tokio::test]
 async fn create_list_and_unique_name() {

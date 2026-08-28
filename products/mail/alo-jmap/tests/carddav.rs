@@ -6,12 +6,10 @@
 //! address objects). Driven through the real router over Postgres.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
+use crate::common::{Harness, harness};
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use base64::Engine;
-use common::{Harness, harness};
 
 fn basic(email: &str) -> String {
     let raw = format!("{email}:s3cret-pw");

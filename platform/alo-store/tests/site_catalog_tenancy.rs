@@ -3,7 +3,7 @@
 
 #![allow(clippy::unwrap_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::{
     BlobId, DriveLocation, SITE_CATALOG_IMAGE_ALT_MAX_CHARS, SiteCatalogAvailability,

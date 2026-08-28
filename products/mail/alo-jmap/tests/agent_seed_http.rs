@@ -16,8 +16,6 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use std::time::{Duration, Instant};
 
 use axum::Router;
@@ -25,9 +23,9 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use serde_json::{Value, json};
 
+use crate::common::model::{says, scripted_model, use_model};
+use crate::common::{Harness, harness, send};
 use alo_store::{ALL_AGENT_PRODUCTS, AppModule};
-use common::model::{says, scripted_model, use_model};
-use common::{Harness, harness, send};
 
 async fn get(app: &Router, token: &str, uri: &str) -> (StatusCode, Value) {
     let req = Request::builder()

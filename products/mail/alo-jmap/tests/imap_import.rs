@@ -4,8 +4,9 @@
 //! validation and the SSRF refusal of a private/loopback host.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
+use crate::common::{harness, send};
 use alo_jmap::imap_import::{
     FetchedFlags, FetchedMessage, FolderTarget, ImportOutcome, RawFolder, import_folders,
     import_messages,
@@ -13,7 +14,6 @@ use alo_jmap::imap_import::{
 use alo_store::Page;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use common::{harness, send};
 
 fn msg(id: &str, subject: &str) -> Vec<u8> {
     format!(

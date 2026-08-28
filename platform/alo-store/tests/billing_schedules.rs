@@ -18,7 +18,7 @@
 //! Runs against the real Postgres from compose (see `tests/common`).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::billing_schedules::{SCHEDULE_MAX_PER_RUN, ScheduleRun};
 use alo_store::{

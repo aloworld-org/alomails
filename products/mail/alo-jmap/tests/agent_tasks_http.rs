@@ -30,7 +30,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use std::time::{Duration as Wait, Instant};
 
@@ -40,9 +40,9 @@ use axum::http::{Request, StatusCode};
 use serde_json::{Value, json};
 use time::{Date, Duration, OffsetDateTime, Time};
 
+use crate::common::model::{Seen, says, scripted_model, use_model, wants};
+use crate::common::{Harness, harness, send};
 use alo_store::{AccountStore, AgentProduct, NewTask, ProjectId, TaskId, UserId};
-use common::model::{Seen, says, scripted_model, use_model, wants};
-use common::{Harness, harness, send};
 
 // ---- request helpers ---------------------------------------------------------
 

@@ -11,8 +11,6 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -26,7 +24,7 @@ use serde_json::{Value, json};
 use sqlx::postgres::PgPoolOptions;
 use tower::ServiceExt;
 
-use common::{Harness, database_url, harness, harness_on, harness_with_blobs, send};
+use crate::common::{Harness, database_url, harness, harness_on, harness_with_blobs, send};
 
 struct FakeSiteDomainDns {
     answers: HashMap<String, Vec<String>>,

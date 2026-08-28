@@ -7,8 +7,6 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use std::sync::{Arc, Mutex};
 
 use alo_sites::serve::{AppState as PublicAppState, app as public_app};
@@ -21,7 +19,7 @@ use sqlx::postgres::PgPoolOptions;
 use tokio::time::{Duration, sleep};
 use tower::ServiceExt;
 
-use common::{Harness, database_url, harness, harness_on, send};
+use crate::common::{Harness, database_url, harness, harness_on, send};
 
 type Seen = Arc<Mutex<Vec<Value>>>;
 

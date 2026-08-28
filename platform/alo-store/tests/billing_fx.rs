@@ -9,7 +9,7 @@
 //! Runs against the real Postgres from compose (see `tests/common`).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::billing_fx::{IDENTITY_RATE_MICRO, parse_rate};
 use alo_store::billing_fx_rates::{FxRateSource, MAX_RATE_AGE_DAYS};

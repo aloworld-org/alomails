@@ -14,8 +14,6 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, LazyLock};
 
@@ -36,7 +34,7 @@ use time::macros::datetime;
 
 use tokio::sync::{Mutex, MutexGuard};
 
-use common::{Harness, harness, harness_on, send};
+use crate::common::{Harness, harness, harness_on, send};
 
 /// The registration sweep claims paid purchases across every tenant — that is
 /// what a sweep is — so two tests sweeping at once take each other's rows.

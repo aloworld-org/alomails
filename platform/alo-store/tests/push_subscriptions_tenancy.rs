@@ -5,7 +5,7 @@
 //! the key material is opaque text, which is exactly what the store holds.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::{PUSH_SUBSCRIPTIONS_MAX, StoreError, TenantId, UserId};
 

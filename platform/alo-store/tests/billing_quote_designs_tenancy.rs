@@ -8,7 +8,7 @@
 //! Runs against the real Postgres from compose (see `tests/common`).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::billing_quote_designs::QUOTE_DESIGN_MAX_BYTES;
 use alo_store::{

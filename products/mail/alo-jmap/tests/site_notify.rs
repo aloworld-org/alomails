@@ -6,8 +6,6 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use std::sync::Arc;
 
 use alo_sites::serve::{AppState as PublicAppState, app as public_app};
@@ -21,7 +19,7 @@ use serde_json::{Value, json};
 use sqlx::postgres::PgPoolOptions;
 use tower::ServiceExt;
 
-use common::{database_url, harness, harness_on, send};
+use crate::common::{database_url, harness, harness_on, send};
 
 async fn post(app: &Router, token: &str, path: &str, body: Value) -> (StatusCode, Value) {
     let request = Request::builder()

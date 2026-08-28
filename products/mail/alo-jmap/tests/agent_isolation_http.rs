@@ -26,8 +26,6 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -37,11 +35,11 @@ use axum::http::{Request, StatusCode};
 use serde_json::{Value, json};
 use time::{Date, Month, Time};
 
+use crate::common::model::{says, scripted_model, use_model, wants};
+use crate::common::{Harness, harness, harness_on, send};
 use alo_store::{
     AccountStore, AgentProduct, CalendarEvent, ChannelVisibility, ChatAgentId, EventId, MessageId,
 };
-use common::model::{says, scripted_model, use_model, wants};
-use common::{Harness, harness, harness_on, send};
 
 // ---- the words every test files in two places --------------------------------
 

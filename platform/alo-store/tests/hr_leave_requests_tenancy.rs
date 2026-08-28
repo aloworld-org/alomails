@@ -22,7 +22,7 @@
 //!   kind, and never on a day that person does not work.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::hr_employments::{FULL_TIME_PATTERN, NewEmployment};
 use alo_store::hr_leave_math::{Accrual, LeaveYear};

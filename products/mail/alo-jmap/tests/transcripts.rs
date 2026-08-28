@@ -7,12 +7,10 @@
 //! tests and splices the output into `docs/interop.md`.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use std::net::SocketAddr;
 
+use crate::common::{Harness, harness};
 use base64::Engine;
-use common::{Harness, harness};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 

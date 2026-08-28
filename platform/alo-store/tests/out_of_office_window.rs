@@ -8,7 +8,7 @@
 //! and the reply is decided.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::OutboundAction;
 use time::{Duration, OffsetDateTime};

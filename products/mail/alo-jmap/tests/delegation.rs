@@ -5,11 +5,9 @@
 //! can share their own mailbox self-service.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
+use crate::common::{api, harness};
 use axum::body::{Body, to_bytes};
 use axum::http::{Request, StatusCode};
-use common::{api, harness};
 use serde_json::{Value, json};
 use tower::ServiceExt;
 

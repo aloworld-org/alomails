@@ -2,12 +2,10 @@
 
 #![allow(clippy::unwrap_used)]
 
-mod common;
-
 use alo_store::{NewGeneratedSite, NewGeneratedSitePage, SectionsEnvelope, SiteTheme, StoreError};
 use serde_json::json;
 
-use common::test_store;
+use crate::common::test_store;
 
 fn proposal(subdomain: String) -> NewGeneratedSite {
     NewGeneratedSite {

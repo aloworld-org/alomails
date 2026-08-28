@@ -30,7 +30,7 @@
 //! Runs against the real Postgres from compose (see `tests/common`).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::hr_applicants::{APPLICANT_RETENTION_MONTHS, default_retain_until};
 use alo_store::hr_openings::{NewOpening, OpeningStatus};

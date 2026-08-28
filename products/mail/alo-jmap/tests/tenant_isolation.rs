@@ -3,14 +3,14 @@
 //! notFound/empty — never B's data, never a 500. Against real Postgres.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use std::sync::Arc;
 
+use crate::common::{api, call, harness, send};
 use alo_store::{BlobStore, Store};
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use common::{api, call, harness, send};
 use serde_json::{Map, Value, json};
 use sqlx::postgres::PgPoolOptions;
 

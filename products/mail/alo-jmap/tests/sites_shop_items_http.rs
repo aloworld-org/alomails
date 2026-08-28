@@ -10,8 +10,6 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use std::sync::Arc;
 
 use axum::Router;
@@ -23,7 +21,7 @@ use alo_store::inv_locations::{LocationKind, LocationSeed};
 use alo_store::inv_moves::{MoveReason, NewMove};
 use alo_store::{BillingProductId, NewProduct};
 
-use common::{Harness, get, harness, harness_on, send};
+use crate::common::{Harness, get, harness, harness_on, send};
 
 /// A subdomain unique to this harness run — the namespace is global.
 fn sub(tag: &str, h: &Harness) -> String {

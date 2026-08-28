@@ -10,8 +10,6 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use alo_store::{DriveLocation, NewDriveFile, UserId};
 use axum::Router;
 use axum::body::Body;
@@ -19,7 +17,7 @@ use axum::http::{Request, StatusCode};
 use bytes::Bytes;
 use serde_json::{Value, json};
 
-use common::{Harness, get, harness, harness_on, send};
+use crate::common::{Harness, get, harness, harness_on, send};
 
 async fn request(
     app: &Router,

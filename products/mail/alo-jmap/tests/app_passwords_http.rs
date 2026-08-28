@@ -10,14 +10,14 @@
 //! identity seam underneath can say.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use std::sync::Arc;
 
+use crate::common::{get, harness, harness_on, send};
 use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use common::{get, harness, harness_on, send};
 use serde_json::{Value, json};
 
 /// POSTs JSON to `path` with the given bearer token.

@@ -34,8 +34,6 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -44,9 +42,9 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use serde_json::{Value, json};
 
+use crate::common::model::{Seen, says, scripted_model, use_model, wants};
+use crate::common::{Harness, harness, harness_on, send};
 use alo_store::{AgentProduct, SectionsEnvelope, SiteId, SitePageId, SiteStatus};
-use common::model::{Seen, says, scripted_model, use_model, wants};
-use common::{Harness, harness, harness_on, send};
 
 // ---- request helpers ---------------------------------------------------------
 

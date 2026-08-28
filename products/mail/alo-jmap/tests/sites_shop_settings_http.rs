@@ -9,8 +9,6 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use std::sync::Arc;
 
 use axum::Router;
@@ -18,7 +16,7 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use serde_json::{Value, json};
 
-use common::{Harness, get, harness, harness_on, send};
+use crate::common::{Harness, get, harness, harness_on, send};
 
 /// A subdomain unique to this harness run — the namespace is global.
 fn sub(tag: &str, h: &Harness) -> String {

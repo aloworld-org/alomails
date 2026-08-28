@@ -4,17 +4,15 @@
 //! refusal + attempt cap on a wrong one), driven through the real router.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::common::{harness, send};
 use alo_identity::{Identity, secret};
 use alo_store::Store;
 use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use common::{harness, send};
 
 fn reset_app(store: Arc<Store>, identity: Identity, domains: Vec<String>) -> Router {
     use alo_jmap::push::PushHub;

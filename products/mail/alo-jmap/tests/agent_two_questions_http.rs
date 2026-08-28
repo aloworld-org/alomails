@@ -32,8 +32,6 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use std::time::{Duration, Instant};
 
 use axum::Router;
@@ -41,14 +39,14 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use serde_json::{Value, json};
 
+use crate::common::model::{Seen, says, scripted_model, use_model, wants};
+use crate::common::{Harness, harness, send};
 use alo_store::inv_locations::{Location, LocationKind, LocationSeed};
 use alo_store::inv_moves::{MoveReason, NewMove};
 use alo_store::inv_reorder::NewReorderRule;
 use alo_store::{
     AgentProduct, Contact, ContactField, ContactId, InvLocationId, MessageId, NewProduct,
 };
-use common::model::{Seen, says, scripted_model, use_model, wants};
-use common::{Harness, harness, send};
 
 // ---- request helpers ---------------------------------------------------------
 

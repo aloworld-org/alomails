@@ -24,7 +24,7 @@
 //! Runs against the real Postgres from compose (see `tests/common`).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::{
     ANOMALY_DUPLICATE, ANOMALY_MISSING_RECURRING, ANOMALY_UNUSUAL_AMOUNT, AccountStore, Anomaly,

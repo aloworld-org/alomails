@@ -10,7 +10,7 @@
 //! Runs against the real Postgres from compose (see `tests/common`).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::crm_pipelines::{PIPELINE_DESCRIPTION_MAX_CHARS, PIPELINE_NAME_MAX_CHARS};
 use alo_store::crm_stages::{STAGE_NAME_MAX_CHARS, STAGES_PER_PIPELINE_MAX};

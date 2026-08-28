@@ -4,10 +4,8 @@
 //! tenant so it can NEVER authorize across tenants.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
+use crate::common::test_store;
 use alo_store::StoreError;
-use common::test_store;
 
 #[tokio::test]
 async fn grant_levels_and_revoke() {

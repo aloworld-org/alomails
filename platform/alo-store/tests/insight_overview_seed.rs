@@ -12,7 +12,7 @@
 //! Runs against the real Postgres from compose (see `tests/common`).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::insight_overview::{BUSINESS_OVERVIEW, GALLERY, OverviewCaption, OverviewSeed};
 use alo_store::{

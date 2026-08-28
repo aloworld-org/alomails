@@ -17,7 +17,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use axum::Router;
 use axum::body::Body;
@@ -26,8 +26,8 @@ use base64::Engine;
 use base64::engine::general_purpose::STANDARD as B64;
 use serde_json::{Value, json};
 
+use crate::common::{Harness, harness, send};
 use alo_store::{AccountStore, MessageId};
-use common::{Harness, harness, send};
 
 // ---- request helpers ---------------------------------------------------------
 

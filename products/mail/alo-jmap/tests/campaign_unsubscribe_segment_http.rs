@@ -32,8 +32,6 @@
 //! Runs against the real Postgres from compose (see `tests/common`).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use std::sync::Arc;
 
 use axum::Router;
@@ -46,7 +44,7 @@ use alo_store::{
     SegmentConditions,
 };
 
-use common::{Harness, harness, harness_on, send};
+use crate::common::{Harness, harness, harness_on, send};
 
 // ---- request helpers ---------------------------------------------------------
 

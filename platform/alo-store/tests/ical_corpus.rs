@@ -17,10 +17,8 @@
 //! times are read as UTC — documented in `docs/interop.md`, pinned here.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
+use crate::common::{fresh_account, test_store};
 use alo_store::{AccountStore, EventId, ical};
-use common::{fresh_account, test_store};
 use time::{Date, Month, OffsetDateTime, Time};
 
 /// The pinned serialization instant for every canonical form below.

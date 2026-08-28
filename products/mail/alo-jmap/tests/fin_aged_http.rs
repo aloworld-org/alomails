@@ -16,7 +16,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use std::sync::Arc;
 
@@ -32,7 +32,7 @@ use sqlx::postgres::PgPoolOptions;
 use time::{Date, Duration};
 use tower::ServiceExt;
 
-use common::{Harness, harness, harness_on, send};
+use crate::common::{Harness, harness, harness_on, send};
 
 // ---- request helpers ---------------------------------------------------------
 

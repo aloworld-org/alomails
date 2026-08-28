@@ -10,7 +10,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::{
     SiteCollectionId, SiteId, SitePublishId, SiteStatus, SiteVersionChange, StoreError,

@@ -4,9 +4,7 @@
 //! first's scripts).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
-use common::*;
+use crate::common::*;
 use serde_json::{Value, json};
 
 const SIEVE: &str = "urn:ietf:params:jmap:sieve";

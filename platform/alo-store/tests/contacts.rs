@@ -4,11 +4,9 @@
 //! sees or touches another's.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
+use crate::common::{fresh_account, test_store};
 use alo_store::vcard;
 use alo_store::{Contact, ContactField, ContactId, StoreError};
-use common::{fresh_account, test_store};
 
 fn sample(name: &str, email: &str) -> Contact {
     Contact {

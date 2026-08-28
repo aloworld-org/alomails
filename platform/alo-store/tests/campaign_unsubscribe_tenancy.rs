@@ -24,7 +24,7 @@
 //! Runs against the real Postgres from compose (see `tests/common`).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::{
     NewUnsubscribeToken, Store, StoreError, TenantId, TenantStore, UNSUBSCRIBE_SEND_REF_MAX,

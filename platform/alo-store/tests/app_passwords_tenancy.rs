@@ -7,7 +7,7 @@
 //! the hash is an opaque string, which is exactly what the store holds.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::{APP_PASSWORDS_MAX, StoreError, TenantId, UserId};
 

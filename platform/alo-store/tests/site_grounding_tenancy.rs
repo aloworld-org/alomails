@@ -9,7 +9,7 @@
 
 #![allow(clippy::unwrap_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::{
     DriveLocation, GroundingCitation, GroundingDocument, NewDriveFile, NewSitePost,

@@ -21,8 +21,6 @@
 //! Runs against the real Postgres from compose (see `tests/common`).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -32,7 +30,7 @@ use alo_store::{
     AudiencePage, ConsentSource, NewCampaignConsent, NewCustomer, NewUnsubscribeToken,
 };
 
-use common::{Harness, harness, harness_on, send};
+use crate::common::{Harness, harness, harness_on, send};
 
 // ---- request helpers ---------------------------------------------------------
 

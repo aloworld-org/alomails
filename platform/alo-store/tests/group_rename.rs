@@ -2,10 +2,8 @@
 //! absent group id is NotFound (never silently succeeds).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
+use crate::common::test_store;
 use alo_store::{GroupId, StoreError};
-use common::test_store;
 
 #[tokio::test]
 async fn rename_sticks_and_scopes_to_tenant() {

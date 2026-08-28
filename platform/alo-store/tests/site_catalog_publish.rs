@@ -3,7 +3,7 @@
 
 #![allow(clippy::unwrap_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::{
     SiteCatalogAvailability, SiteCatalogCategoryInput, SiteCatalogInput, SiteCatalogItemInput,

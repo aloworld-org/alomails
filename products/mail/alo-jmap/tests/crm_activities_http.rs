@@ -10,14 +10,12 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use serde_json::{Value, json};
 
-use common::{Harness, harness, send};
+use crate::common::{Harness, harness, send};
 
 // ---- request helpers ---------------------------------------------------------
 

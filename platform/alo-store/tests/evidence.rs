@@ -6,7 +6,7 @@
 //! Run: `cargo test -p alo-store --test evidence -- --ignored --nocapture`
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::Page;
 

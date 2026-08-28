@@ -6,14 +6,12 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use alo_store::{BlobStore, Page, SitePublicStore};
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as B64;
 use sqlx::postgres::PgPoolOptions;
 
-use common::{database_url, harness, harness_on};
+use crate::common::{database_url, harness, harness_on};
 
 /// Splits a raw RFC 5322 message into (headers, base64-decoded body text).
 fn open_message(raw: &[u8]) -> (String, String) {

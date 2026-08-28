@@ -4,9 +4,7 @@
 //! account (tenant isolation) and that export→import round-trips.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
-use common::{Harness, api, get_text, harness, post_raw};
+use crate::common::{Harness, api, get_text, harness, post_raw};
 use serde_json::{Value, json};
 
 const CONTACTS_USING: [&str; 2] = ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:contacts"];

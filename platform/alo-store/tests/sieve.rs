@@ -4,7 +4,7 @@
 //! cross-account isolation of both script CRUD and execution.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::{OutboundAction, Page, StoreError};
 

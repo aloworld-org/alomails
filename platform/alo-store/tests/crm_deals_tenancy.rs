@@ -12,7 +12,7 @@
 //! Runs against the real Postgres from compose (see `tests/common`).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use alo_store::crm_deals::{
     DEAL_EMAIL_MAX_CHARS, DEAL_PARTY_MAX_CHARS, DEAL_SOURCE_MAX_CHARS, DEAL_TITLE_MAX_CHARS,

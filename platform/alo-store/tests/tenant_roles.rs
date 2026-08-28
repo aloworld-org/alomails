@@ -17,11 +17,9 @@
 //! Runs against the real Postgres from compose (see `tests/common`).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use alo_store::{Store, StoreError, TenantId, TenantRole, UserId};
 
-use common::test_store;
+use crate::common::test_store;
 
 fn assert_not_found<T: std::fmt::Debug>(result: Result<T, StoreError>) {
     match result {

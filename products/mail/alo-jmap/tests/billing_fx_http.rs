@@ -11,7 +11,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
 use axum::Router;
 use axum::body::Body;
@@ -20,7 +20,7 @@ use serde_json::{Value, json};
 use time::format_description::well_known::Iso8601;
 use time::{Duration, OffsetDateTime};
 
-use common::{harness, send};
+use crate::common::{harness, send};
 
 // ---- request helpers ---------------------------------------------------------
 

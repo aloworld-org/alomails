@@ -4,9 +4,9 @@
 //! another's contacts — and the compose-autocomplete tie-in.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
+use crate::common;
 
-use common::{Harness, api, harness};
+use crate::common::{Harness, api, harness};
 use serde_json::{Value, json};
 
 const CONTACTS_USING: [&str; 2] = ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:contacts"];
