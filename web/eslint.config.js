@@ -19,4 +19,11 @@ export default tseslint.config(
       globals: globals.node,
     },
   },
+  {
+    // The offline shell runs inside a service worker, not the page runtime.
+    files: ["public/sw.js"],
+    languageOptions: {
+      globals: globals.serviceworker,
+    },
+  },
 );
