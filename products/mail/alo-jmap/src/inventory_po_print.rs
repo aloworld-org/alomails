@@ -161,6 +161,7 @@ impl PrintableOrder {
             // there is no rate to freeze and nothing to restate (B1.21).
             restated: None,
             issuer: &self.issuer,
+            content: None,
         }
     }
 

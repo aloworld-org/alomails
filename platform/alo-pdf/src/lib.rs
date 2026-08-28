@@ -2,8 +2,9 @@
 //!
 //! Enough of the format to produce a **business document**: pages of text,
 //! rules, filled and stroked boxes, in the fourteen fonts every PDF reader is
-//! required to have. No images, no transparency, no forms, no scripting —
-//! none of which belongs on an invoice.
+//! required to have, and JPEG pictures placed as they are ([`image`]) — a
+//! quotation carries a product photo. No transparency, no forms, no
+//! scripting — none of which belongs on an invoice.
 //!
 //! It is in `platform/` because a PDF is not a billing concept. Billing is the
 //! first caller (`alo-jmap/src/billing_pdf.rs`, wave B1), and Drive exports and
@@ -62,6 +63,7 @@ pub mod canvas;
 pub mod color;
 pub mod encoding;
 pub mod font;
+pub mod image;
 pub mod metrics;
 pub mod text;
 pub mod writer;
@@ -70,6 +72,7 @@ pub use attachment::{Attachment, Relationship};
 pub use canvas::{Canvas, Rect};
 pub use color::Color;
 pub use font::Font;
+pub use image::{ImageError, ImageFit, JpegImage};
 pub use text::{Align, TextStyle};
 pub use writer::{Pdf, PdfDate};
 

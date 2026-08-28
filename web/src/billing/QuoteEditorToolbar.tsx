@@ -1,4 +1,4 @@
-import { Eye, Palette, Pencil } from "lucide-react";
+import { Eye, FileDown, Palette, Pencil } from "lucide-react";
 
 import { strings } from "../i18n";
 import styles from "./billingStyles";
@@ -7,9 +7,14 @@ type Props = {
   creatingRevision: boolean;
   draft: boolean;
   preview: boolean;
+  /** Fetching the PDF right now; the button waits rather than double-firing. */
+  downloading: boolean;
   onCustomize: () => void;
   onEdit: () => void;
   onTogglePreview: () => void;
+  /** Saves the offer as the PDF the customer receives — `undefined` until the
+   *  offer exists on the server. */
+  onDownloadPdf: (() => void) | undefined;
 };
 
 const activeClassName =
@@ -19,9 +24,11 @@ export function QuoteEditorToolbar({
   creatingRevision,
   draft,
   preview,
+  downloading,
   onCustomize,
   onEdit,
   onTogglePreview,
+  onDownloadPdf,
 }: Props) {
   return (
     <div className="flex items-center gap-2">
@@ -70,6 +77,16 @@ export function QuoteEditorToolbar({
         {preview
           ? strings.billingExitPreview
           : strings.billingQuotationPreview}
+      </button>
+      <button
+        type="button"
+        className={styles.linkAction}
+        onClick={onDownloadPdf}
+        disabled={onDownloadPdf === undefined || downloading}
+        aria-busy={downloading}
+      >
+        <FileDown size={15} aria-hidden="true" />
+        {strings.billingDownloadPdf}
       </button>
     </div>
   );

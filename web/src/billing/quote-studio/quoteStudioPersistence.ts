@@ -1,4 +1,13 @@
-import { strings } from "../../i18n";
+// Where a quotation's design lives: on the server, with the quote.
+//
+// The studio used to keep its layout in the browser that composed it
+// (IndexedDB, and before that localStorage), which meant the printed document
+// carried none of it. The design is now a record of the quote
+// (`PUT /billing/quotes/{id}/design`), read by the print and the PDF. This
+// module is the one place the studio loads and saves it, and the one place the
+// old browser copies are still read — once, to move them to the server — so
+// nobody who designed a quotation last month loses that work.
+import type { BillingApi } from "../api";
 import type { QuoteStudioDesign } from "./QuoteStudioDesign";
 import {
   EMPTY_QUOTE_STUDIO_DESIGN,
@@ -9,10 +18,15 @@ import {
   type QuoteTemplatePreset,
 } from "./quoteStudioTemplates";
 
-const DESIGN_STORE = "quote-designs";
-const DESIGN_DATABASE = "alo-quote-assets";
+const LEGACY_STORE = "quote-designs";
+const LEGACY_DATABASE = "alo-quote-assets";
 
-function legacyQuoteDesign(key: string): QuoteStudioDesign | null {
+/** The key both browser stores used for a quote. */
+function legacyKey(quoteId: string): string {
+  return `alo:quote-design:${quoteId}`;
+}
+
+function legacyLocalDesign(key: string): QuoteStudioDesign | null {
   try {
     const raw = localStorage.getItem(key);
     if (raw === null) return null;
@@ -24,31 +38,28 @@ function legacyQuoteDesign(key: string): QuoteStudioDesign | null {
   }
 }
 
-function openQuoteDesignDatabase(): Promise<IDBDatabase> {
+function openLegacyDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DESIGN_DATABASE, 1);
+    const request = indexedDB.open(LEGACY_DATABASE, 1);
     request.onupgradeneeded = () => {
-      if (!request.result.objectStoreNames.contains(DESIGN_STORE))
-        request.result.createObjectStore(DESIGN_STORE);
+      if (!request.result.objectStoreNames.contains(LEGACY_STORE))
+        request.result.createObjectStore(LEGACY_STORE);
     };
     request.onsuccess = () => resolve(request.result);
-    request.onerror = () =>
-      reject(
-        request.error ?? new Error(strings.quoteStudioDesignDatabaseError),
-      );
+    request.onerror = () => reject(request.error ?? new Error("indexeddb"));
   });
 }
 
-export async function loadQuoteStudioDesign(
+async function legacyIndexedDesign(
   key: string,
-): Promise<QuoteStudioDesign> {
+): Promise<QuoteStudioDesign | null> {
   try {
-    const database = await openQuoteDesignDatabase();
+    const database = await openLegacyDatabase();
     const saved = await new Promise<Partial<QuoteStudioDesign> | undefined>(
       (resolve, reject) => {
         const request = database
-          .transaction(DESIGN_STORE, "readonly")
-          .objectStore(DESIGN_STORE)
+          .transaction(LEGACY_STORE, "readonly")
+          .objectStore(LEGACY_STORE)
           .get(key);
         request.onsuccess = () =>
           resolve(request.result as Partial<QuoteStudioDesign> | undefined);
@@ -56,44 +67,93 @@ export async function loadQuoteStudioDesign(
       },
     );
     database.close();
-    if (saved !== undefined) return normalizeSavedQuoteDesign(saved);
+    return saved === undefined ? null : normalizeSavedQuoteDesign(saved);
   } catch {
-    // Fall through to the small legacy record when IndexedDB is unavailable.
+    return null;
   }
-  return legacyQuoteDesign(key) ?? EMPTY_QUOTE_STUDIO_DESIGN;
 }
 
-export async function saveQuoteStudioDesign(
-  key: string,
+/** Forgets the browser copies once the server holds the design. */
+async function forgetLegacy(key: string): Promise<void> {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // Nothing to forget, or no storage at all.
+  }
+  try {
+    const database = await openLegacyDatabase();
+    await new Promise<void>((resolve) => {
+      const transaction = database.transaction(LEGACY_STORE, "readwrite");
+      transaction.objectStore(LEGACY_STORE).delete(key);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => resolve();
+      transaction.onabort = () => resolve();
+    });
+    database.close();
+  } catch {
+    // The database is gone or unavailable; there is nothing left to forget.
+  }
+}
+
+/** A design saved by this browser before designs lived on the server. */
+async function legacyDesign(quoteId: string): Promise<QuoteStudioDesign | null> {
+  const key = legacyKey(quoteId);
+  return (await legacyIndexedDesign(key)) ?? legacyLocalDesign(key);
+}
+
+/**
+ * The quote's design from the server. A quote never designed there starts
+ * from what this browser saved for it, if anything — moved to the server on
+ * the spot, so the printed document carries it from now on — and otherwise
+ * from the blank design.
+ *
+ * Never rejects: a design must always load, or the quotation cannot be
+ * edited. If the server cannot be reached, the browser copy or the blank
+ * design is what the studio gets, and the next save reports the failure.
+ */
+export async function loadQuoteStudioDesign(
+  api: BillingApi,
+  quoteId: string,
+): Promise<QuoteStudioDesign> {
+  let stored: unknown = null;
+  let reachable = true;
+  try {
+    stored = (await api.quoteDesign(quoteId)).design;
+  } catch {
+    reachable = false;
+  }
+  if (stored !== null && typeof stored === "object") {
+    return normalizeSavedQuoteDesign(stored as Partial<QuoteStudioDesign>);
+  }
+  const legacy = await legacyDesign(quoteId);
+  if (legacy === null) return EMPTY_QUOTE_STUDIO_DESIGN;
+  if (reachable) {
+    try {
+      await api.saveQuoteDesign(quoteId, legacy);
+      await forgetLegacy(legacyKey(quoteId));
+    } catch {
+      // A frozen (sent) offer refuses the write; the browser copy stays as
+      // the only record, and the studio shows it read-only anyway.
+    }
+  }
+  return legacy;
+}
+
+/** Replaces the quote's design on the server. Rejects with the server's
+ *  answer — a sent offer refuses (`409`), an oversized design refuses. */
+export function saveQuoteStudioDesign(
+  api: BillingApi,
+  quoteId: string,
   design: QuoteStudioDesign,
 ): Promise<void> {
-  const database = await openQuoteDesignDatabase();
-  await new Promise<void>((resolve, reject) => {
-    const transaction = database.transaction(DESIGN_STORE, "readwrite");
-    transaction.objectStore(DESIGN_STORE).put(design, key);
-    transaction.oncomplete = () => resolve();
-    transaction.onerror = () =>
-      reject(
-        transaction.error ?? new Error(strings.quoteStudioDesignSaveError),
-      );
-    transaction.onabort = () =>
-      reject(
-        transaction.error ?? new Error(strings.quoteStudioDesignSaveCancelled),
-      );
-  });
-  database.close();
-  localStorage.removeItem(key);
+  return api.saveQuoteDesign(quoteId, design);
 }
 
-export async function saveQuoteTemplateDesign(
+/** Starts a fresh quote from one of the studio's templates. */
+export function saveQuoteTemplateDesign(
+  api: BillingApi,
   quoteId: string,
   preset: QuoteTemplatePreset,
 ): Promise<void> {
-  const key = `alo:quote-design:${quoteId}`;
-  const design = createQuoteTemplateDesign(preset);
-  try {
-    await saveQuoteStudioDesign(key, design);
-  } catch {
-    localStorage.setItem(key, JSON.stringify(design));
-  }
+  return saveQuoteStudioDesign(api, quoteId, createQuoteTemplateDesign(preset));
 }

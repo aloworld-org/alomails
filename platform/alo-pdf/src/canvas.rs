@@ -16,6 +16,7 @@
 
 use crate::color::Color;
 use crate::encoding;
+use crate::image::{ImageFit, JpegImage};
 use crate::text::{Align, TextStyle};
 
 /// A4 portrait, the paper every European invoice is written on.
@@ -31,6 +32,9 @@ pub struct Canvas {
     height: f64,
     /// The content stream so far.
     ops: String,
+    /// The pictures placed on this page, in the order the stream names them
+    /// (`/Im1`, `/Im2`, …).
+    images: Vec<JpegImage>,
 }
 
 impl Canvas {
@@ -41,6 +45,7 @@ impl Canvas {
             width,
             height,
             ops: String::new(),
+            images: Vec::new(),
         }
     }
 
@@ -183,9 +188,54 @@ impl Canvas {
         path
     }
 
-    /// The content stream this canvas has accumulated.
-    pub(crate) fn content(&self) -> &str {
+    /// Places a picture in `frame`, scaled per `fit` and centred.
+    ///
+    /// The frame is also the clip: with [`ImageFit::Cover`] the picture is
+    /// scaled up until it fills the frame and the overflow is cut off at the
+    /// frame's edges, never drawn over the text beside it.
+    pub fn image(&mut self, image: &JpegImage, frame: Rect, fit: ImageFit) {
+        if frame.width <= 0.0 || frame.height <= 0.0 {
+            return;
+        }
+        let aspect = image.aspect();
+        let wider_than_frame = aspect >= frame.width / frame.height;
+        let (width, height) = match (fit, wider_than_frame) {
+            (ImageFit::Contain, true) | (ImageFit::Cover, false) => {
+                (frame.width, frame.width / aspect)
+            }
+            (ImageFit::Contain, false) | (ImageFit::Cover, true) => {
+                (frame.height * aspect, frame.height)
+            }
+        };
+        let x = frame.x + (frame.width - width) / 2.0;
+        let y = frame.y + (frame.height - height) / 2.0;
+        self.images.push(image.clone());
+        let name = self.images.len();
+        // `q … Q` keeps the clip and the transform to this one picture.
+        self.ops.push_str(&format!(
+            "q\n{} {} {} {} re W n\n{} 0 0 {} {} {} cm\n/Im{name} Do\nQ\n",
+            num(frame.x),
+            num(self.flip(frame.y + frame.height)),
+            num(frame.width),
+            num(frame.height),
+            num(width),
+            num(height),
+            num(x),
+            num(self.flip(y + height)),
+        ));
+    }
+
+    /// The content stream this canvas has accumulated — the operators as
+    /// they will be written, which is what a caller's test reads.
+    #[must_use]
+    pub fn content(&self) -> &str {
         &self.ops
+    }
+
+    /// The pictures the stream names, `/Im1` first.
+    #[must_use]
+    pub fn images(&self) -> &[JpegImage] {
+        &self.images
     }
 }
 
@@ -231,6 +281,8 @@ fn num(value: f64) -> String {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
     use crate::font::Font;
     use crate::mm;
@@ -327,6 +379,45 @@ mod tests {
         let mut page = Canvas::new(200.0, 100.0);
         page.box_filled(rect, 1000.0, Color::BLACK);
         assert_eq!(page.content().matches(" c\n").count(), 4);
+    }
+
+    #[test]
+    fn a_picture_is_scaled_into_its_frame_and_clipped_to_it() {
+        let image = JpegImage::new(crate::image::tests::skeleton(400, 200, 3)).unwrap();
+        let frame = Rect {
+            x: 10.0,
+            y: 20.0,
+            width: 100.0,
+            height: 100.0,
+        };
+        // Contain: a 2:1 picture in a square frame is 100 wide, 50 tall,
+        // centred 25 down from the frame's top.
+        let mut page = Canvas::new(200.0, 300.0);
+        page.image(&image, frame, ImageFit::Contain);
+        let content = page.content();
+        assert!(content.contains("/Im1 Do"), "content was {content}");
+        assert!(
+            content.contains("100 0 0 50 10 "),
+            "contain scales to width: {content}"
+        );
+        // The clip is the frame in PDF space: bottom-left (10, 300−120).
+        assert!(content.contains("10 180 100 100 re W n"), "clip: {content}");
+        assert_eq!(page.images().len(), 1);
+
+        // Cover: the same picture fills the height (100 tall → 200 wide) and
+        // is centred, so it starts 50 left of the frame; the clip trims it.
+        let mut page = Canvas::new(200.0, 300.0);
+        page.image(&image, frame, ImageFit::Cover);
+        assert!(
+            page.content().contains("200 0 0 100 -40 "),
+            "cover: {}",
+            page.content()
+        );
+
+        // A second picture is /Im2.
+        page.image(&image, frame, ImageFit::Cover);
+        assert!(page.content().contains("/Im2 Do"));
+        assert_eq!(page.images().len(), 2);
     }
 
     #[test]

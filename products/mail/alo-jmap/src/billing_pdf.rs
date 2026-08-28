@@ -31,22 +31,24 @@ use crate::billing_einvoice::EInvoice;
 use crate::billing_print::{
     PrintDocument, Strings, amount, date, document_heading, monogram, quantity, rate, rate_sentence,
 };
+use crate::quote_design::ColumnVisibility;
+use crate::quote_design_pdf;
 
 // ---- the palette, quoted from the print stylesheet ---------------------------
 
 /// Body text, rules and the total — the document's near-black.
-const INK: Color = Color::rgb8(0x16, 0x18, 0x1d);
+pub(crate) const INK: Color = Color::rgb8(0x16, 0x18, 0x1d);
 /// Secondary text: an address under a name, a label beside a figure.
-const MUTED: Color = Color::rgb8(0x4a, 0x4f, 0x58);
+pub(crate) const MUTED: Color = Color::rgb8(0x4a, 0x4f, 0x58);
 /// The small-caps labels and the footer.
-const FAINT: Color = Color::rgb8(0x6b, 0x72, 0x80);
+pub(crate) const FAINT: Color = Color::rgb8(0x6b, 0x72, 0x80);
 /// The hairline under a table row.
-const HAIRLINE: Color = Color::rgb8(0xdc, 0xdf, 0xe5);
+pub(crate) const HAIRLINE: Color = Color::rgb8(0xdc, 0xdf, 0xe5);
 
 // ---- the sheet ---------------------------------------------------------------
 
 /// Top margin, matching the `@page` rule the print stylesheet sets.
-const MARGIN_TOP: f64 = 16.0;
+pub(crate) const MARGIN_TOP: f64 = 16.0;
 /// Left and right margins.
 const MARGIN_SIDE: f64 = 15.0;
 /// Bottom margin — where the flow stops and a new page begins.
@@ -56,16 +58,16 @@ const PAGE_WIDTH: f64 = 210.0;
 /// A4 height in millimetres.
 const PAGE_HEIGHT: f64 = 297.0;
 /// Width of the text column.
-const COLUMN_WIDTH: f64 = PAGE_WIDTH - 2.0 * MARGIN_SIDE;
+pub(crate) const COLUMN_WIDTH: f64 = PAGE_WIDTH - 2.0 * MARGIN_SIDE;
 
 /// Body size in points.
-const BODY: f64 = 9.5;
+pub(crate) const BODY: f64 = 9.5;
 /// Body line height — the stylesheet's 1.45.
-const LEADING: f64 = BODY * 1.45;
+pub(crate) const LEADING: f64 = BODY * 1.45;
 /// Size of the small-caps labels and of the footer.
-const SMALL: f64 = 8.0;
+pub(crate) const SMALL: f64 = 8.0;
 /// Line height for [`SMALL`].
-const SMALL_LEADING: f64 = SMALL * 1.4;
+pub(crate) const SMALL_LEADING: f64 = SMALL * 1.4;
 
 /// Where a line of `size` must start for its capitals to sit centred in a box.
 ///
@@ -79,18 +81,18 @@ fn cap_centred(box_top: f64, box_height: f64, size: f64) -> f64 {
 
 /// The document being laid out: the pages finished so far, the page being
 /// written, and how far down it the flow has reached.
-struct Sheet {
+pub(crate) struct Sheet {
     /// Pages already closed.
     done: Vec<Canvas>,
     /// The page being written.
-    page: Canvas,
+    pub(crate) page: Canvas,
     /// Top of the next block, in points from the top of the page.
-    y: f64,
+    pub(crate) y: f64,
 }
 
 impl Sheet {
     /// A fresh document with one blank page.
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             done: Vec::new(),
             page: Canvas::a4(),
@@ -99,22 +101,27 @@ impl Sheet {
     }
 
     /// Left edge of the text column.
-    fn left(&self) -> f64 {
+    pub(crate) fn left(&self) -> f64 {
         mm(MARGIN_SIDE)
     }
 
     /// Right edge of the text column.
-    fn right(&self) -> f64 {
+    pub(crate) fn right(&self) -> f64 {
         mm(PAGE_WIDTH - MARGIN_SIDE)
     }
 
     /// The lowest point a block may reach before it belongs on a new page.
-    fn floor(&self) -> f64 {
+    pub(crate) fn floor(&self) -> f64 {
         mm(PAGE_HEIGHT - MARGIN_BOTTOM)
     }
 
+    /// How many pages the sheet holds so far, the one being written included.
+    pub(crate) fn page_count(&self) -> usize {
+        self.done.len() + 1
+    }
+
     /// Starts a new page.
-    fn break_page(&mut self) {
+    pub(crate) fn break_page(&mut self) {
         let finished = std::mem::replace(&mut self.page, Canvas::a4());
         self.done.push(finished);
         self.y = mm(MARGIN_TOP);
@@ -127,7 +134,7 @@ impl Sheet {
     /// A block taller than a whole page is *not* moved to an empty page it
     /// would overflow anyway: it starts where it is. Nothing a document
     /// actually contains is that tall, because the table paginates row by row.
-    fn ensure(&mut self, height: f64) -> bool {
+    pub(crate) fn ensure(&mut self, height: f64) -> bool {
         if self.y + height <= self.floor() || self.y <= mm(MARGIN_TOP) {
             return false;
         }
@@ -136,13 +143,20 @@ impl Sheet {
     }
 
     /// Draws one line of text and advances the flow by `leading`.
-    fn line(&mut self, x: f64, align: Align, style: &TextStyle, text: &str, leading: f64) {
+    pub(crate) fn line(
+        &mut self,
+        x: f64,
+        align: Align,
+        style: &TextStyle,
+        text: &str,
+        leading: f64,
+    ) {
         self.page.text(x, self.y, align, style, text);
         self.y += leading;
     }
 
     /// Draws wrapped text across the whole column, advancing the flow.
-    fn paragraph(&mut self, style: &TextStyle, text: &str, leading: f64) {
+    pub(crate) fn paragraph(&mut self, style: &TextStyle, text: &str, leading: f64) {
         let left = self.left();
         for line in style.wrap(text, mm(COLUMN_WIDTH)) {
             self.line(left, Align::Left, style, &line, leading);
@@ -150,7 +164,7 @@ impl Sheet {
     }
 
     /// Draws a rule across the column at the flow's current position.
-    fn rule(&mut self, thickness: f64, color: Color) {
+    pub(crate) fn rule(&mut self, thickness: f64, color: Color) {
         let (x, y) = (self.left(), self.y);
         self.page.rule(x, y, mm(COLUMN_WIDTH), thickness, color);
     }
@@ -247,8 +261,19 @@ pub fn render_hybrid(
     layout.header(&heading);
     layout.banner();
     layout.parties();
+    // A quotation's designed content sits around its price table exactly as
+    // the studio placed it: what came before the table, then the table and
+    // its totals, then the rest (`crate::quote_design_pdf`).
+    if let Some(design) = doc.content {
+        let (before, _) = design.around_pricing();
+        quote_design_pdf::draw(&mut layout.sheet, before, &design.colors);
+    }
     layout.lines();
     layout.totals();
+    if let Some(design) = doc.content {
+        let (_, after) = design.around_pricing();
+        quote_design_pdf::draw(&mut layout.sheet, after, &design.colors);
+    }
     layout.payment();
     layout.note();
     layout.footer();
@@ -338,17 +363,17 @@ struct Layout<'a> {
 }
 
 /// Body text.
-fn body_style() -> TextStyle {
+pub(crate) fn body_style() -> TextStyle {
     TextStyle::new(Font::Regular, BODY).inked(INK)
 }
 
 /// Secondary body text — an address, a label beside a figure.
-fn muted_style() -> TextStyle {
+pub(crate) fn muted_style() -> TextStyle {
     body_style().inked(MUTED)
 }
 
 /// A small-caps section label (`Bill to`, `Payment`).
-fn label_style() -> TextStyle {
+pub(crate) fn label_style() -> TextStyle {
     TextStyle::new(Font::Regular, SMALL)
         .inked(FAINT)
         .tracked(0.6)
@@ -534,7 +559,7 @@ impl Layout<'_> {
 
     /// The table of what was sold, paginating row by row.
     fn lines(&mut self) {
-        let columns = Columns::new(self.sheet.left(), self.sheet.right());
+        let columns = Columns::new(self.sheet.left(), self.sheet.right(), self.visibility());
         self.column_headings(&columns);
 
         let lines = self.doc.lines;
@@ -567,7 +592,7 @@ impl Layout<'_> {
                     text,
                 );
             }
-            let unit = if line.unit.is_empty() {
+            let unit = if line.unit.is_empty() || !columns.unit {
                 String::new()
             } else {
                 format!(" {}", line.unit)
@@ -582,6 +607,8 @@ impl Layout<'_> {
                 (columns.net, amount(line.net_cents(), self.s)),
             ];
             for (x, text) in figures {
+                // A hidden column has no edge to align on.
+                let Some(x) = x else { continue };
                 self.sheet
                     .page
                     .text(x - mm(CELL_PADDING), top, Align::Right, &body, &text);
@@ -589,6 +616,14 @@ impl Layout<'_> {
             self.sheet.y += height;
             self.sheet.rule(mm(0.2), HAIRLINE);
         }
+    }
+
+    /// Which price-table columns the document prints — the studio's choice on
+    /// a designed quotation, everything on any other document.
+    fn visibility(&self) -> ColumnVisibility {
+        self.doc
+            .content
+            .map_or_else(ColumnVisibility::default, |design| design.columns)
     }
 
     /// The heading row of the table, and the rule under it.
@@ -606,6 +641,7 @@ impl Layout<'_> {
             .page
             .text(columns.description, top, Align::Left, &style, &description);
         for (x, text) in headings {
+            let Some(x) = x else { continue };
             self.sheet.page.text(
                 x - mm(CELL_PADDING),
                 top,
@@ -842,25 +878,25 @@ impl Layout<'_> {
     }
 }
 
-/// Width of the four numeric columns together — net 26, VAT 16, unit price 26,
-/// quantity 22 — which is what the description has to stay clear of.
-const FIGURE_COLUMNS: f64 = 90.0;
 /// Padding inside a table cell, on each side.
 const CELL_PADDING: f64 = 2.0;
 
 /// Where each column of the table of lines sits.
 ///
-/// The four numeric columns are named by their **right** edge, because that is
-/// what a column of figures lines up on; the description takes what is left.
+/// The numeric columns are named by their **right** edge, because that is
+/// what a column of figures lines up on, and a column the design hides has
+/// no edge at all (`None`): the description takes what is left.
 struct Columns {
     /// Right edge of the line's net amount.
-    net: f64,
+    net: Option<f64>,
     /// Right edge of the VAT rate.
-    vat: f64,
+    vat: Option<f64>,
     /// Right edge of the unit price.
-    unit_price: f64,
+    unit_price: Option<f64>,
     /// Right edge of the quantity.
-    quantity: f64,
+    quantity: Option<f64>,
+    /// Whether the unit label is printed beside the quantity.
+    unit: bool,
     /// Left edge of the description.
     description: f64,
     /// How wide a description may be before it wraps.
@@ -868,18 +904,37 @@ struct Columns {
 }
 
 impl Columns {
-    /// The column geometry for a text column between `left` and `right`.
-    fn new(left: f64, right: f64) -> Self {
+    /// The column geometry for a text column between `left` and `right`,
+    /// with the hidden columns' room given to the description.
+    ///
+    /// Right to left, the widths are net 26, VAT 16, unit price 26 and
+    /// quantity 22 mm — the print stylesheet's proportions.
+    fn new(left: f64, right: f64, visible: ColumnVisibility) -> Self {
+        let mut edge = right;
+        let mut place = |shown: bool, width_mm: f64| -> Option<f64> {
+            if !shown {
+                return None;
+            }
+            let at = edge;
+            edge -= mm(width_mm);
+            Some(at)
+        };
+        let net = place(visible.net, 26.0);
+        let vat = place(visible.vat, 16.0);
+        let unit_price = place(visible.unit_price, 26.0);
+        let quantity = place(visible.quantity, 22.0);
+        let figures = right - edge;
         Self {
-            net: right,
-            vat: right - mm(26.0),
-            unit_price: right - mm(42.0),
-            quantity: right - mm(68.0),
+            net,
+            vat,
+            unit_price,
+            quantity,
+            unit: visible.unit,
             description: left,
             // Wide enough to fill the cell, and never a millimetre wider: a
             // description that ran under the quantity beside it would print
             // two numbers on top of each other.
-            description_width: mm(COLUMN_WIDTH - FIGURE_COLUMNS - 2.0 * CELL_PADDING),
+            description_width: mm(COLUMN_WIDTH) - figures - 2.0 * mm(CELL_PADDING),
         }
     }
 }
@@ -1001,6 +1056,7 @@ mod tests {
             totals,
             restated: None,
             issuer,
+            content: None,
         }
     }
 

@@ -363,6 +363,37 @@ export class BillingApi {
     ).then((r) => ({ quote: r.quote, invoiceId: r.invoiceId ?? null }));
   }
 
+  /** The studio's design of an offer, whole — the server keeps it as saved —
+   *  or `null` for an offer nobody designed yet. */
+  quoteDesign(id: string): Promise<{ design: unknown; updatedAt: string | null }> {
+    return this.#read<{ design?: unknown; updatedAt?: string | null }>(
+      `/billing/quotes/${encodeURIComponent(id)}/design`,
+    ).then((r) => ({ design: r.design ?? null, updatedAt: r.updatedAt ?? null }));
+  }
+
+  /** Replaces the design of a **draft** offer. A sent offer answers `409`:
+   *  the paper the customer holds is frozen, its presentation with it. */
+  saveQuoteDesign(id: string, design: unknown): Promise<void> {
+    return this.#write<{ design: unknown }>(
+      "PUT",
+      `/billing/quotes/${encodeURIComponent(id)}/design`,
+      design,
+    ).then(() => undefined);
+  }
+
+  /** The offer as the PDF file the customer receives, with the name the
+   *  server gave it. Fetched rather than linked, like `documentHtml`. */
+  async quotePdf(id: string): Promise<{ blob: Blob; fileName: string }> {
+    const res = await this.#send(
+      `/billing/quotes/${encodeURIComponent(id)}/pdf${langQuery()}`,
+      { method: "GET" },
+    );
+    if (!res.ok) throw new BillingError(res.status, await problemDetail(res));
+    const disposition = res.headers.get("content-disposition") ?? "";
+    const named = /filename="([^"]+)"/.exec(disposition);
+    return { blob: await res.blob(), fileName: named?.[1] ?? "quote.pdf" };
+  }
+
   /** Raises a **draft** offer. Only `customerId` is required; the currency and
    *  the validity fall back to the customer's and the server's defaults. */
   createQuote(draft: QuoteDraft): Promise<BillingQuote> {

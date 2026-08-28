@@ -46,8 +46,12 @@ use alo_store::{AccountStore, BillingCustomerId, BillingProductId, BillingQuoteI
 
 use crate::billing::{iso, iso_date, map_store_err, parse_body};
 use crate::billing_document::{LineBody, today, with_body, with_totals};
+use time::OffsetDateTime;
+
+use crate::billing_pdf as pdf;
 use crate::billing_print::{self as print, Banner, DocumentKind, PrintDocument, PrintQuery};
 use crate::error::Problem;
+use crate::quote_design::QuoteDesign;
 use crate::state::{AppState, authenticate};
 
 /// The header of an offer as JSON, with the derived `expired` flag.
@@ -545,19 +549,92 @@ pub async fn expire_quote(
     Ok(Json(json!({ "quote": document_json(&document, today()) })))
 }
 
+/// An offer loaded with everything its printed forms need: the document,
+/// the two parties, and the design the studio saved for it.
+///
+/// One loader for `/print` and `/pdf`, so the page and the file are built
+/// from the same facts — the **same** [`PrintDocument`] rendered two ways
+/// (`docs/design/billing.md`, B1.17).
+pub struct PrintableQuote {
+    document: QuoteDocument,
+    lines: Vec<Line>,
+    customer: alo_store::Customer,
+    issuer: alo_store::BillingSettings,
+    design: Option<QuoteDesign>,
+}
+
+impl PrintableQuote {
+    /// Loads one of the tenant's offers with its parties and design, or fails
+    /// with the `404` an id from another tenant gets.
+    pub async fn load(acc: &AccountStore, id: &BillingQuoteId) -> Result<Self, Problem> {
+        let document = load(acc, id).await?;
+        let (customer, issuer) = print::parties(acc, &document.quote.customer_id).await?;
+        let design = acc
+            .billing_quote_design(id)
+            .await
+            .map_err(map_store_err)?
+            .map(|record| QuoteDesign::parse(&record.design));
+        // The printed document is the offer as the customer reads it: a
+        // description, a quantity, a price. Which of our catalog items a line
+        // happens to be is our bookkeeping and belongs on no printed page.
+        let lines = document.lines.iter().map(|l| l.line.clone()).collect();
+        Ok(Self {
+            document,
+            lines,
+            customer,
+            issuer,
+            design,
+        })
+    }
+
+    /// The document as the renderers take it.
+    ///
+    /// The same page an invoice prints on, with an offer's words: its two dates
+    /// are the day it was made and the day it stands until, and it says plainly
+    /// that nothing is payable on it — a document that merely omitted the bank
+    /// details would read as one that forgot them.
+    ///
+    /// **"Past its date" is not "closed".** The banner is driven by the offer's
+    /// *status*, never by [`Quote::is_expired`]: a lapsed offer that nobody has
+    /// answered is still open, and the store will still accept it
+    /// (`docs/design/billing.md`). The validity date is on the page for the
+    /// customer to read.
+    #[must_use]
+    pub fn as_document(&self) -> PrintDocument<'_> {
+        let quote = &self.document.quote;
+        PrintDocument {
+            kind: DocumentKind::Quote,
+            banner: match quote.status {
+                QuoteStatus::Draft => Some(Banner::Draft),
+                QuoteStatus::Declined | QuoteStatus::Expired => Some(Banner::Closed),
+                // An accepted offer is a record of what was agreed, not a spent
+                // document: it prints as it was sent.
+                QuoteStatus::Sent | QuoteStatus::Accepted => None,
+            },
+            number: quote.number.as_deref(),
+            primary_date: quote.sent_date,
+            secondary_date: quote.valid_until,
+            reference: &quote.reference,
+            note: &quote.note,
+            currency: &quote.currency,
+            payment_terms_days: None,
+            credits_number: None,
+            party: print::Party::customer(&self.customer),
+            lines: &self.lines,
+            totals: &self.document.totals,
+            // An offer is not a tax point: nothing is chargeable on it, so there is
+            // no rate to freeze and nothing to restate (B1.21). It is converted, if
+            // at all, on the invoice the acceptance raises.
+            restated: None,
+            issuer: &self.issuer,
+            content: self.design.as_ref(),
+        }
+    }
+}
+
 /// `GET /billing/quotes/{id}/print[?lang=]` → the printable offer as one
-/// self-contained HTML page ([`crate::billing_print`]).
-///
-/// The same page an invoice prints on, with an offer's words: its two dates
-/// are the day it was made and the day it stands until, and it says plainly
-/// that nothing is payable on it — a document that merely omitted the bank
-/// details would read as one that forgot them.
-///
-/// **"Past its date" is not "closed".** The banner is driven by the offer's
-/// *status*, never by [`Quote::is_expired`]: a lapsed offer that nobody has
-/// answered is still open, and the store will still accept it
-/// (`docs/design/billing.md`). The validity date is on the page for the
-/// customer to read.
+/// self-contained HTML page ([`crate::billing_print`]), its designed content
+/// included ([`PrintableQuote::as_document`]).
 pub async fn print_quote(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -565,44 +642,28 @@ pub async fn print_quote(
     Query(query): Query<PrintQuery>,
 ) -> Result<Response, Problem> {
     let account = authenticate(&state, &headers).await?;
-    let document = load(&account.acc, &BillingQuoteId::new(id)).await?;
-    let quote = &document.quote;
-    let (customer, issuer) = print::parties(&account.acc, &quote.customer_id).await?;
-
-    let printed = PrintDocument {
-        kind: DocumentKind::Quote,
-        banner: match quote.status {
-            QuoteStatus::Draft => Some(Banner::Draft),
-            QuoteStatus::Declined | QuoteStatus::Expired => Some(Banner::Closed),
-            // An accepted offer is a record of what was agreed, not a spent
-            // document: it prints as it was sent.
-            QuoteStatus::Sent | QuoteStatus::Accepted => None,
-        },
-        number: quote.number.as_deref(),
-        primary_date: quote.sent_date,
-        secondary_date: quote.valid_until,
-        reference: &quote.reference,
-        note: &quote.note,
-        currency: &quote.currency,
-        payment_terms_days: None,
-        credits_number: None,
-        party: print::Party::customer(&customer),
-        // The printed document is the offer as the customer reads it: a
-        // description, a quantity, a price. Which of our catalog items a line
-        // happens to be is our bookkeeping and belongs on no printed page.
-        lines: &document
-            .lines
-            .iter()
-            .map(|l| l.line.clone())
-            .collect::<Vec<_>>(),
-        totals: &document.totals,
-        // An offer is not a tax point: nothing is chargeable on it, so there is
-        // no rate to freeze and nothing to restate (B1.21). It is converted, if
-        // at all, on the invoice the acceptance raises.
-        restated: None,
-        issuer: &issuer,
-    };
+    let printable = PrintableQuote::load(&account.acc, &BillingQuoteId::new(id)).await?;
+    let printed = printable.as_document();
     Ok(print::response(print::render(&printed, query.strings())))
+}
+
+/// `GET /billing/quotes/{id}/pdf[?lang=]` → the offer as a PDF file
+/// ([`crate::billing_pdf`]) — the **same** document the page is rendered
+/// from, laid out a second way, with the studio's content and pictures set on
+/// the sheet ([`crate::quote_design_pdf`]). Served as an attachment named by
+/// the document's own heading, exactly as an invoice's PDF is.
+pub async fn pdf_quote(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Query(query): Query<PrintQuery>,
+) -> Result<Response, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let printable = PrintableQuote::load(&account.acc, &BillingQuoteId::new(id)).await?;
+    let printed = printable.as_document();
+    let strings = query.strings();
+    let bytes = pdf::render(&printed, strings, pdf::stamp(OffsetDateTime::now_utc()));
+    Ok(pdf::response(bytes, &pdf::file_name(&printed, strings)))
 }
 
 #[cfg(test)]

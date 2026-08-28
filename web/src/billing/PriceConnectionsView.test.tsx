@@ -84,8 +84,11 @@ describe("price connections", () => {
 
     fireEvent.click(within(dialog).getByLabelText("Prices to share"));
     const selectedPricesOption = within(dialog).getByRole("option", { name: /Choose products/ });
-    expect(selectedPricesOption.className).toContain("hover:!bg-accent-soft");
-    expect(selectedPricesOption.className).toContain("hover:!text-accent");
+    // The picker's own rule: the fill follows the pointer, the accent marks
+    // the chosen value — so an option is never lit twice.
+    fireEvent.mouseEnter(selectedPricesOption);
+    expect(selectedPricesOption.className).toContain("!bg-raised");
+    expect(selectedPricesOption.className).not.toContain("!text-accent");
     fireEvent.click(selectedPricesOption);
     fireEvent.click(within(dialog).getByRole("button", { name: /Managed hosting/ }));
 

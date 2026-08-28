@@ -7351,6 +7351,8 @@ export const fr: Partial<Catalog> = {
   quoteStudioBulletListColumns: "Colonnes de la liste à puces",
   quoteStudioParagraphColumns: "Colonnes du paragraphe",
   quoteStudioQuoteColumns: "Colonnes de la citation",
+  billingDownloadPdf: "Télécharger le PDF",
+  billingDownloadPdfFailed: "Le PDF n'a pas pu être téléchargé.",
   quoteStudioListStyle: "Style de liste",
   quoteStudioNumberingStyle: "Style de numérotation",
   quoteStudioBulletStyle: "Style de puces",

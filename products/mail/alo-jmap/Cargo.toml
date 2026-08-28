@@ -62,6 +62,10 @@ rustls-pki-types = { workspace = true }
 webpki-roots = "0.26"
 # MIME parsing for inbound bodies + attachments (Email/get, download).
 mail-parser = { workspace = true }
+# A quotation's pictures made placeable in its PDF (quote_design_images):
+# PNG/WebP decoded and written as JPEG, the one format alo-pdf places. The
+# same decoder Sites already trusts for its image derivatives.
+image = { workspace = true }
 
 [dev-dependencies]
 # The one place a suite learns which database it may use: it refuses

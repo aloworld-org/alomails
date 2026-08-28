@@ -7384,6 +7384,8 @@ export const de: Partial<Catalog> = {
   quoteStudioBulletListColumns: "Spalten der Aufzählung",
   quoteStudioParagraphColumns: "Spalten des Absatzes",
   quoteStudioQuoteColumns: "Spalten des Zitats",
+  billingDownloadPdf: "PDF herunterladen",
+  billingDownloadPdfFailed: "Die PDF konnte nicht heruntergeladen werden.",
   quoteStudioListStyle: "Listenstil",
   quoteStudioNumberingStyle: "Nummerierungsstil",
   quoteStudioBulletStyle: "Aufzählungsstil",

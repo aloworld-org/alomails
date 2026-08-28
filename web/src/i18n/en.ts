@@ -7426,6 +7426,8 @@ export const en = {
   quoteStudioBulletListColumns: "Bullet list columns",
   quoteStudioParagraphColumns: "Paragraph columns",
   quoteStudioQuoteColumns: "Quote columns",
+  billingDownloadPdf: "Download PDF",
+  billingDownloadPdfFailed: "The PDF could not be downloaded.",
   quoteStudioListStyle: "List style",
   quoteStudioNumberingStyle: "Numbering style",
   quoteStudioBulletStyle: "Bullet style",

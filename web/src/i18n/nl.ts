@@ -7274,6 +7274,8 @@ export const nl: Partial<Catalog> = {
   quoteStudioBulletListColumns: "Kolommen voor opsomming",
   quoteStudioParagraphColumns: "Kolommen voor alinea",
   quoteStudioQuoteColumns: "Kolommen voor citaat",
+  billingDownloadPdf: "PDF downloaden",
+  billingDownloadPdfFailed: "De PDF kon niet worden gedownload.",
   quoteStudioListStyle: "Lijststijl",
   quoteStudioNumberingStyle: "Nummeringsstijl",
   quoteStudioBulletStyle: "Opsommingsstijl",

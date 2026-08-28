@@ -170,6 +170,7 @@ fn the_everyday_invoice() {
         totals: &totals,
         restated: None,
         issuer: &issuer,
+        content: None,
     };
     let xml = render(&doc);
     // The figures the store computed, on the wire the standard reads them off.
@@ -217,6 +218,7 @@ fn two_rates_two_categories_and_a_line_with_a_paragraph() {
         totals: &totals,
         restated: None,
         issuer: &issuer,
+        content: None,
     };
     let xml = render(&doc);
     // Three rates, three breakdown groups, ascending — and the 0 % one is
@@ -254,6 +256,7 @@ fn the_credit_note_runs_in_credit_direction() {
         totals: &totals,
         restated: None,
         issuer: &issuer,
+        content: None,
     };
     let xml = render(&doc);
     assert!(xml.contains("<ram:TypeCode>381</ram:TypeCode>"));
@@ -296,6 +299,7 @@ fn a_document_in_another_currency_states_its_vat_twice() {
             rate_date: day(2026, 8, 7),
         }),
         issuer: &issuer,
+        content: None,
     };
     let xml = render(&doc);
     assert!(xml.contains("<ram:TaxTotalAmount currencyID=\"USD\">252.00</ram:TaxTotalAmount>"));

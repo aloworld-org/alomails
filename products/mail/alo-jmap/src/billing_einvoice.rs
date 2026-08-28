@@ -641,6 +641,7 @@ mod tests {
             totals,
             restated: None,
             issuer,
+            content: None,
         }
     }
 

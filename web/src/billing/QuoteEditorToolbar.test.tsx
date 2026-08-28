@@ -11,14 +11,17 @@ describe("QuoteEditorToolbar", () => {
     const onEdit = vi.fn();
     const onCustomize = vi.fn();
     const onTogglePreview = vi.fn();
+    const onDownloadPdf = vi.fn();
     render(
       <QuoteEditorToolbar
         creatingRevision={false}
         draft
         preview={false}
+        downloading={false}
         onEdit={onEdit}
         onCustomize={onCustomize}
         onTogglePreview={onTogglePreview}
+        onDownloadPdf={onDownloadPdf}
       />,
     );
 
@@ -27,10 +30,47 @@ describe("QuoteEditorToolbar", () => {
     fireEvent.click(edit);
     fireEvent.click(screen.getByRole("button", { name: strings.quoteStudioCustomizeQuotation }));
     fireEvent.click(screen.getByRole("button", { name: strings.billingQuotationPreview }));
+    fireEvent.click(screen.getByRole("button", { name: strings.billingDownloadPdf }));
 
     expect(onEdit).toHaveBeenCalledOnce();
     expect(onCustomize).toHaveBeenCalledOnce();
     expect(onTogglePreview).toHaveBeenCalledOnce();
+    expect(onDownloadPdf).toHaveBeenCalledOnce();
+  });
+
+  test("waits for a PDF that is being fetched, and offers none for an unsaved offer", () => {
+    render(
+      <QuoteEditorToolbar
+        creatingRevision={false}
+        draft
+        preview={false}
+        downloading
+        onEdit={vi.fn()}
+        onCustomize={vi.fn()}
+        onTogglePreview={vi.fn()}
+        onDownloadPdf={vi.fn()}
+      />,
+    );
+    const download = screen.getByRole("button", { name: strings.billingDownloadPdf }) as HTMLButtonElement;
+    expect(download.disabled).toBe(true);
+    expect(download.getAttribute("aria-busy")).toBe("true");
+    cleanup();
+
+    render(
+      <QuoteEditorToolbar
+        creatingRevision={false}
+        draft
+        preview={false}
+        downloading={false}
+        onEdit={vi.fn()}
+        onCustomize={vi.fn()}
+        onTogglePreview={vi.fn()}
+        onDownloadPdf={undefined}
+      />,
+    );
+    expect(
+      (screen.getByRole("button", { name: strings.billingDownloadPdf }) as HTMLButtonElement).disabled,
+    ).toBe(true);
   });
 
   test("keeps revision actions visible but disabled while a revision is created", () => {
@@ -39,9 +79,11 @@ describe("QuoteEditorToolbar", () => {
         creatingRevision
         draft={false}
         preview={false}
+        downloading={false}
         onEdit={vi.fn()}
         onCustomize={vi.fn()}
         onTogglePreview={vi.fn()}
+        onDownloadPdf={vi.fn()}
       />,
     );
 

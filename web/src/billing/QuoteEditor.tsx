@@ -4,8 +4,9 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { RecordHistory } from "../audit";
 import { useDialogs } from "../ds";
 import { strings, useLocale } from "../i18n";
-import { useBillingApi } from "./api";
+import { billingMessage, useBillingApi } from "./api";
 import { formatDocumentDate } from "./dates";
+import { saveFile } from "./saveFile";
 import type { DocumentAction } from "./DocumentActions";
 import { DocumentEditor } from "./DocumentEditor";
 import type { DocumentHeader, DocumentPatch } from "./documentDraft";
@@ -31,7 +32,7 @@ export function QuoteEditor() {
   const locale = useLocale();
   const navigate = useNavigate();
   const pickers = usePickers();
-  const { confirm } = useDialogs();
+  const { alert, confirm } = useDialogs();
   const quoteStudio = useRef<QuoteContentStudioHandle>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const preview = searchParams.get("preview") === "1";
@@ -40,6 +41,24 @@ export function QuoteEditor() {
     DEFAULT_QUOTE_COLUMNS,
   );
   const [creatingRevision, setCreatingRevision] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  /** The offer as the PDF the customer receives — the server's rendering,
+   *  designed content included — offered to the browser's own save. */
+  const downloadPdf = useCallback(async () => {
+    if (id === undefined) return;
+    setDownloadingPdf(true);
+    try {
+      const { blob, fileName } = await api.quotePdf(id);
+      saveFile(blob, fileName);
+    } catch (error) {
+      await alert({
+        message: billingMessage(error, strings.billingDownloadPdfFailed),
+      });
+    } finally {
+      setDownloadingPdf(false);
+    }
+  }, [alert, api, id]);
 
   useEffect(() => {
     let active = true;
@@ -298,6 +317,8 @@ export function QuoteEditor() {
             creatingRevision={creatingRevision}
             draft={quote.status === "draft"}
             preview={preview}
+            downloading={downloadingPdf}
+            onDownloadPdf={id === undefined ? undefined : () => void downloadPdf()}
             onCustomize={customizeQuote}
             onEdit={editDraft}
             onTogglePreview={() => {
@@ -377,7 +398,7 @@ export function QuoteEditor() {
           creationTemplate === "retainer"
             ? creationTemplate
             : "blank";
-        void saveQuoteTemplateDesign(created.id, preset)
+        void saveQuoteTemplateDesign(api, created.id, preset)
           .catch(() => undefined)
           .finally(() => void navigate(`../${created.id}`, { replace: true }));
       }}

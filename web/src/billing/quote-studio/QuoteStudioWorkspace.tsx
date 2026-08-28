@@ -26,6 +26,7 @@ import {
   cx,
 } from "../../ds";
 import { strings, useLocale } from "../../i18n";
+import { useBillingApi } from "../api";
 import {
   QuoteTableOptionsProvider,
   type QuoteLineContent,
@@ -128,10 +129,13 @@ export const QuoteStudioWorkspace = forwardRef<
   ref,
 ) {
   const locale = useLocale();
-  const storageKey = `alo:quote-design:${quoteId}`;
+  const api = useBillingApi();
   const [design, setDesign] = useState<Design>(EMPTY_QUOTE_STUDIO_DESIGN);
   const [ready, setReady] = useState(false);
   const [saveError, setSaveError] = useState("");
+  // What the server holds, serialised — so loading a design does not save it
+  // straight back, and a read-only (sent) offer is never written to.
+  const persisted = useRef("");
   const [customizeMode, setCustomizeMode] = useState<
     "header" | "document" | null
   >(null);
@@ -165,40 +169,44 @@ export const QuoteStudioWorkspace = forwardRef<
         target?.focus({ preventScroll: true });
       },
       copyTo: (nextQuoteId) =>
-        saveQuoteStudioDesign(`alo:quote-design:${nextQuoteId}`, design),
+        saveQuoteStudioDesign(api, nextQuoteId, design),
     }),
-    [design],
+    [api, design],
   );
 
   useEffect(() => {
     let current = true;
     setReady(false);
-    void loadQuoteStudioDesign(storageKey).then((saved) => {
+    void loadQuoteStudioDesign(api, quoteId).then((saved) => {
       if (!current) return;
+      persisted.current = JSON.stringify(saved);
       setDesign(saved);
       setReady(true);
     });
     return () => {
       current = false;
     };
-  }, [storageKey]);
+  }, [api, quoteId]);
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || readOnly) return;
+    const serialized = JSON.stringify(design);
+    if (serialized === persisted.current) return;
     let current = true;
     const timeout = window.setTimeout(() => {
-      void saveQuoteStudioDesign(storageKey, design)
+      void saveQuoteStudioDesign(api, quoteId, design)
         .then(() => {
+          persisted.current = serialized;
           if (current) setSaveError("");
         })
         .catch(() => {
           if (current) setSaveError(strings.quoteStudioDesignSaveRetry);
         });
-    }, 200);
+    }, 400);
     return () => {
       current = false;
       window.clearTimeout(timeout);
     };
-  }, [design, ready, storageKey]);
+  }, [api, design, quoteId, ready, readOnly]);
   useEffect(() => {
     const document = root.current?.closest("article");
     if (!(document instanceof HTMLElement)) return;

@@ -43,6 +43,7 @@ pub mod billing_invoices;
 pub mod billing_line;
 pub mod billing_payments;
 pub mod billing_products;
+pub mod billing_quote_designs;
 pub mod billing_quote_lines;
 pub mod billing_quotes;
 pub mod billing_schedules;
@@ -330,6 +331,7 @@ pub use billing_invoices::{Invoice, InvoiceDocument, InvoiceStatus, InvoiceSumma
 pub use billing_line::{Line, NewLine};
 pub use billing_payments::{NewPayment, Payment, PaymentState, Settlement};
 pub use billing_products::{NewProduct, Product};
+pub use billing_quote_designs::{QUOTE_DESIGN_MAX_BYTES, QuoteDesignRecord};
 pub use billing_quotes::{
     NewQuote, Quote, QuoteAcceptance, QuoteDocument, QuoteStatus, QuoteSummary,
 };

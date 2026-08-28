@@ -21,10 +21,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { DialogProvider } from "../ds";
 import { strings } from "../i18n";
 import { BillingModule } from "./BillingModule";
-import {
-  QuoteContentStudio,
-  saveQuoteTemplateDesign,
-} from "./QuoteContentStudio";
+import { QuoteContentStudio } from "./QuoteContentStudio";
+import { createQuoteTemplateDesign } from "./quote-studio/quoteStudioTemplates";
 import type {
   BillingCustomer,
   BillingInvoice,
@@ -235,8 +233,13 @@ function ui(path: string) {
   );
 }
 
+/** The last write to the offer itself. The studio saves the quote's design
+ *  to its own route as it changes; those writes are the design's, not the
+ *  document's, and are proven by the design suite. */
 function lastWrite(): Call | undefined {
-  return calls.filter((c) => c.method !== "GET").at(-1);
+  return calls
+    .filter((c) => c.method !== "GET" && !c.url.includes("/design"))
+    .at(-1);
 }
 
 /** Answers the confirmation dialog, whose confirm button carries the same
@@ -931,21 +934,12 @@ describe("the quotation document preview", () => {
     "persists the %s template as a distinct quotation document",
     async (preset, heading, tableTitle) => {
       const quoteId = `template-${preset}`;
-      const records = new Map<string, string>();
-      Object.defineProperty(window, "localStorage", {
-        configurable: true,
-        value: {
-          getItem: (key: string) => records.get(key) ?? null,
-          setItem: (key: string, value: string) => records.set(key, value),
-          removeItem: (key: string) => records.delete(key),
-          clear: () => records.clear(),
-          key: (index: number) => [...records.keys()][index] ?? null,
-          get length() {
-            return records.size;
-          },
-        },
+      // The design lives with the quote on the server: the studio reads it
+      // from there, exactly as the template save wrote it.
+      reply(`/billing/quotes/${quoteId}/design`, "GET", {
+        design: createQuoteTemplateDesign(preset),
+        updatedAt: "2026-08-28T09:00:00Z",
       });
-      await saveQuoteTemplateDesign(quoteId, preset);
 
       render(
         <QuoteContentStudio
@@ -960,7 +954,6 @@ describe("the quotation document preview", () => {
 
       expect(await screen.findByText(heading)).toBeTruthy();
       expect(screen.getByText(tableTitle)).toBeTruthy();
-      localStorage.removeItem(`alo:quote-design:${quoteId}`);
     },
   );
 
@@ -1073,18 +1066,20 @@ describe("the quotation document preview", () => {
     expect(screen.getByText("Alo Manufacturing")).toBeTruthy();
     expect(screen.getByText(/12 Market Street/)).toBeTruthy();
     expect(screen.getByText("sales@example.com")).toBeTruthy();
+    // Markers are text in the design's marker colours: a round bullet and a
+    // plain "1." (`ListBlockContent`), so every scheme's marker fits.
     expect(
       view.container.querySelector('ul li > span[aria-hidden="true"]'),
     ).toBeTruthy();
     expect(
       view.container.querySelector(
-        "ul li > span.bg-\\[var\\(--quote-bullet-marker\\)\\]",
+        "ul li > span.text-\\[var\\(--quote-bullet-marker\\)\\]",
       ),
     ).toBeTruthy();
-    expect(screen.getByText("1", { selector: "ol li > span" })).toBeTruthy();
+    expect(screen.getByText("1.", { selector: "ol li > span" })).toBeTruthy();
     expect(
       view.container.querySelector(
-        "ol li > span.bg-\\[var\\(--quote-number-marker\\)\\]",
+        "ol li > span.text-\\[var\\(--quote-number-marker\\)\\]",
       ),
     ).toBeTruthy();
     storage.removeItem(`alo:quote-design:${quoteId}`);

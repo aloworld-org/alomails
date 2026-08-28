@@ -156,8 +156,11 @@ impl Pdf {
         // Everything after the pages, numbered before anything is written: the
         // catalogue is object 1 and has to name objects that do not exist yet.
         let after_pages = FIRST_PAGE_OBJECT + self.pages.len() * 2;
-        let metadata_object = self.metadata.as_ref().map(|_| after_pages);
-        let first_attachment = after_pages + usize::from(self.metadata.is_some());
+        // The pictures follow the pages: one object each, in page order.
+        let image_count: usize = self.pages.iter().map(|page| page.images().len()).sum();
+        let after_images = after_pages + image_count;
+        let metadata_object = self.metadata.as_ref().map(|_| after_images);
+        let first_attachment = after_images + usize::from(self.metadata.is_some());
         let object_count = first_attachment + self.attachments.len() * 2;
         let mut offsets = vec![0usize; object_count];
 
@@ -218,22 +221,43 @@ impl Pdf {
             .enumerate()
             .map(|(index, font)| format!("/{} {} 0 R ", font.resource(), FIRST_FONT + index * 2))
             .collect::<String>();
+        let mut next_image = after_pages;
         for (index, page) in self.pages.iter().enumerate() {
             let page_object = FIRST_PAGE_OBJECT + index * 2;
             let content_object = page_object + 1;
+            // The page's pictures, named as its content stream names them.
+            let xobjects: String = (0..page.images().len())
+                .map(|i| format!("/Im{} {} 0 R ", i + 1, next_image + i))
+                .collect();
+            let xobject_entry = if xobjects.is_empty() {
+                String::new()
+            } else {
+                format!(" /XObject << {} >>", xobjects.trim_end())
+            };
             push_object(
                 &mut out,
                 &mut offsets,
                 page_object,
                 &format!(
                     "<< /Type /Page /Parent {PAGES} 0 R /MediaBox [0 0 {:.4} {:.4}] \
-                     /Resources << /Font << {} >> >> /Contents {content_object} 0 R >>",
+                     /Resources << /Font << {} >>{xobject_entry} >> \
+                     /Contents {content_object} 0 R >>",
                     page.width(),
                     page.height(),
                     resources.trim_end(),
                 ),
             );
             push_stream(&mut out, &mut offsets, content_object, page.content());
+            for image in page.images() {
+                push_binary_stream(
+                    &mut out,
+                    &mut offsets,
+                    next_image,
+                    &image.dictionary(),
+                    image.bytes(),
+                );
+                next_image += 1;
+            }
         }
 
         if let (Some(number), Some(xmp)) = (metadata_object, self.metadata.as_ref()) {

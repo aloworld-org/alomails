@@ -46,6 +46,8 @@ use alo_store::{AccountStore, BillingCustomerId, Customer, Line};
 
 use crate::billing::map_store_err;
 use crate::error::Problem;
+use crate::quote_design::{ColumnVisibility, QuoteDesign};
+use crate::quote_design_print::{DESIGN_STYLE, render_blocks};
 
 /// Which document this is, which decides its title, the meaning of its two
 /// dates and whether it talks about payment at all.
@@ -188,6 +190,10 @@ pub struct PrintDocument<'a> {
     pub restated: Option<Restated>,
     /// Who the document is from.
     pub issuer: &'a BillingSettings,
+    /// The designed content around the price table — a quotation's studio
+    /// blocks, colours and column choices ([`crate::quote_design`]); `None`
+    /// on a document that has no design, which prints as it always did.
+    pub content: Option<&'a QuoteDesign>,
 }
 
 /// Every word the printed document says, in one language.
@@ -545,7 +551,7 @@ pub fn strings_for(tag: &str) -> &'static Strings {
 /// Escapes all five of `&<>"'` regardless of position: the renderer puts text
 /// into attributes as well as elements, and one escaper that is safe
 /// everywhere is worth more than two that have to be chosen between.
-fn esc(value: &str) -> String {
+pub(crate) fn esc(value: &str) -> String {
     let mut out = String::with_capacity(value.len());
     for c in value.chars() {
         match c {
@@ -954,32 +960,88 @@ pub fn render(doc: &PrintDocument<'_>, s: &Strings) -> String {
         }
     );
 
+    // A designed quotation may hide columns of the table; every other
+    // document prints them all. A hidden column is absent from the heading
+    // row and from every line, so the description takes its room.
+    let visible = doc
+        .content
+        .map_or_else(ColumnVisibility::default, |design| design.columns);
+    let cell = |shown: bool, html: String| if shown { html } else { String::new() };
     let lines = if doc.lines.is_empty() {
         format!(
-            "<tr><td colspan=\"5\" class=\"empty\">{}</td></tr>",
+            "<tr><td colspan=\"{}\" class=\"empty\">{}</td></tr>",
+            visible.numeric_count() + 1,
             esc(s.no_lines)
         )
     } else {
         doc.lines
             .iter()
             .map(|l| {
+                let unit = if l.unit.is_empty() || !visible.unit {
+                    String::new()
+                } else {
+                    format!(" <span class=\"unit\">{}</span>", esc(&l.unit))
+                };
                 format!(
-                    "<tr><td>{}</td><td class=\"num\">{}{}</td><td class=\"num\">{}</td>\
-                     <td class=\"num\">{}</td><td class=\"num\">{}</td></tr>",
+                    "<tr><td>{}</td>{}{}{}{}</tr>",
                     esc(&l.description),
-                    esc(&quantity(l.qty_milli, s)),
-                    if l.unit.is_empty() {
-                        String::new()
-                    } else {
-                        format!(" <span class=\"unit\">{}</span>", esc(&l.unit))
-                    },
-                    esc(&amount(l.unit_price_cents, s)),
-                    esc(&rate(l.vat_rate_bp, s)),
-                    esc(&amount(l.net_cents(), s)),
+                    cell(
+                        visible.quantity,
+                        format!(
+                            "<td class=\"num\">{}{unit}</td>",
+                            esc(&quantity(l.qty_milli, s))
+                        )
+                    ),
+                    cell(
+                        visible.unit_price,
+                        format!(
+                            "<td class=\"num\">{}</td>",
+                            esc(&amount(l.unit_price_cents, s))
+                        )
+                    ),
+                    cell(
+                        visible.vat,
+                        format!("<td class=\"num\">{}</td>", esc(&rate(l.vat_rate_bp, s)))
+                    ),
+                    cell(
+                        visible.net,
+                        format!("<td class=\"num\">{}</td>", esc(&amount(l.net_cents(), s)))
+                    ),
                 )
             })
             .collect()
     };
+    let headings = format!(
+        "<th>{}</th>{}{}{}{}",
+        esc(s.description),
+        cell(
+            visible.quantity,
+            format!("<th class=\"num\">{}</th>", esc(s.quantity))
+        ),
+        cell(
+            visible.unit_price,
+            format!("<th class=\"num\">{}</th>", esc(s.unit_price))
+        ),
+        cell(
+            visible.vat,
+            format!("<th class=\"num\">{}</th>", esc(s.vat_rate))
+        ),
+        cell(
+            visible.net,
+            format!("<th class=\"num\">{}</th>", esc(s.line_net))
+        ),
+    );
+    // The designed content around the table, in the order the studio placed
+    // it: what came before the price table, and what came after its totals.
+    let (before, after) = doc
+        .content
+        .map_or((String::new(), String::new()), |design| {
+            let (before, after) = design.around_pricing();
+            (
+                render_blocks(before, &design.colors),
+                render_blocks(after, &design.colors),
+            )
+        });
 
     let currency = esc(doc.currency);
     let mut totals = format!(
@@ -1062,29 +1124,24 @@ pub fn render(doc: &PrintDocument<'_>, s: &Strings) -> String {
     format!(
         "<!doctype html>\n<html lang=\"{lang}\">\n<head>\n<meta charset=\"utf-8\">\n\
          <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n\
-         <title>{heading_title}</title>\n<style>{STYLE}</style>\n</head>\n\
+         <title>{heading_title}</title>\n<style>{STYLE}{DESIGN_STYLE}</style>\n</head>\n\
          <body>\n<main class=\"sheet\">\n\
          <header class=\"head\"><div class=\"issuer\">{issuer_block}</div>\
          <div class=\"title-block\"><h1>{heading_html}</h1>\
          <table class=\"meta\"><tbody>{meta}</tbody></table></div></header>\n\
          {banner}\n\
          <section class=\"parties\"><div class=\"party\">{party_block}</div></section>\n\
-         <table class=\"lines\"><thead><tr><th>{c_desc}</th><th class=\"num\">{c_qty}</th>\
-         <th class=\"num\">{c_price}</th><th class=\"num\">{c_vat}</th>\
-         <th class=\"num\">{c_net}</th></tr></thead><tbody>{lines}</tbody></table>\n\
+         {before}\
+         <table class=\"lines\"><thead><tr>{headings}</tr></thead><tbody>{lines}</tbody></table>\n\
          <table class=\"totals\"><tbody>{totals}</tbody></table>\n\
          {restated}\n\
+         {after}\
          {payment}{note}\n\
          <footer class=\"foot\">{footer}</footer>\n\
          </main>\n</body>\n</html>\n",
         lang = esc(s.lang),
         heading_title = esc(&heading),
         heading_html = esc(&heading),
-        c_desc = esc(s.description),
-        c_qty = esc(s.quantity),
-        c_price = esc(s.unit_price),
-        c_vat = esc(s.vat_rate),
-        c_net = esc(s.line_net),
     )
 }
 
@@ -1332,6 +1389,7 @@ mod tests {
             totals,
             restated: None,
             issuer,
+            content: None,
         }
     }
 
@@ -1731,6 +1789,7 @@ mod tests {
             totals,
             restated: None,
             issuer,
+            content: None,
         }
     }
 

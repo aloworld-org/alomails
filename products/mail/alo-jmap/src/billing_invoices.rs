@@ -867,6 +867,7 @@ impl Printable {
                     rate_date: fx.rate_date,
                 }),
             issuer: &self.issuer,
+            content: None,
         }
     }
 }

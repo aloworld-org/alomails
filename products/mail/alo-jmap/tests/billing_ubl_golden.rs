@@ -191,6 +191,7 @@ fn the_everyday_invoice() {
         totals: &totals,
         restated: None,
         issuer: &issuer,
+        content: None,
     };
     let xml = render(&doc);
     // The same figures `billing_cii_golden` pins, on the wire UBL reads them
@@ -255,6 +256,7 @@ fn three_rates_two_categories_and_a_leitweg_id() {
         totals: &totals,
         restated: None,
         issuer: &issuer,
+        content: None,
     };
     let xml = render(&doc);
     assert!(xml.contains("<cbc:BuyerReference>04011000-12345-06</cbc:BuyerReference>"));
@@ -302,6 +304,7 @@ fn the_credit_note_is_written_in_the_credit_note_schema() {
         totals: &totals,
         restated: None,
         issuer: &issuer,
+        content: None,
     };
     let xml = render(&doc);
     // Not a code on an invoice — a different root schema, a different line
@@ -351,6 +354,7 @@ fn a_document_in_another_currency_states_its_vat_in_a_second_total() {
             rate_date: day(2026, 8, 7),
         }),
         issuer: &issuer,
+        content: None,
     };
     let xml = render(&doc);
     assert!(xml.contains("<cbc:DocumentCurrencyCode>USD</cbc:DocumentCurrencyCode>"));

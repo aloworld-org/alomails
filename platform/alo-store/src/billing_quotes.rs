@@ -473,7 +473,7 @@ impl AccountStore {
     /// # Errors
     /// [`StoreError::NotFound`] when the id is absent or another tenant's;
     /// [`StoreError::Db`] on failure.
-    async fn quote_status(&self, id: &BillingQuoteId) -> Result<QuoteStatus> {
+    pub(crate) async fn quote_status(&self, id: &BillingQuoteId) -> Result<QuoteStatus> {
         let stored: Option<String> = sqlx::query_scalar(
             "SELECT status FROM billing_quotes WHERE tenant_id = $1 AND id = $2",
         )
