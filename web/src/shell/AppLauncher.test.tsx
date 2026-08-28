@@ -47,6 +47,8 @@ describe("AppLauncher", () => {
 
     const trigger = screen.getByRole("button", { name: strings.appLauncher });
     expect(trigger.querySelectorAll("circle")).toHaveLength(9);
+    expect(trigger.className).toContain("text-on-rail-muted");
+    expect(trigger.className).toContain("hover:text-on-rail");
   });
 
   test("shows favorites once and keeps the remaining catalogue quiet", () => {

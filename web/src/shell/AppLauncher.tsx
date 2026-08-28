@@ -45,8 +45,8 @@ export function AppLauncher({ apps, favoriteModules }: AppLauncherProps) {
     <li ref={triggerRef} className="w-full">
       <button
         type="button"
-        className={`flex w-full flex-col items-center gap-[3px] rounded-[var(--radius-lg)] px-0 py-2 text-[var(--text-on-rail-muted)] transition-colors duration-150 hover:bg-[var(--bg-rail-hover)] hover:text-[var(--text-on-rail)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#E76F51]/20 ${
-          open ? "bg-[var(--bg-rail-active)] text-[var(--text-on-rail)]" : ""
+        className={`flex w-full flex-col items-center gap-[3px] rounded-xl px-0 py-2 text-on-rail-muted transition-colors duration-150 hover:bg-rail-hover hover:text-on-rail focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#E76F51]/20 ${
+          open ? "bg-rail-active text-on-rail" : ""
         }`}
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
