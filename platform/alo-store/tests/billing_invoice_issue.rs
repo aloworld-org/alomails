@@ -62,6 +62,7 @@ async fn tenant_with_customer(
         .await
         .unwrap();
     let account = store.for_account(tenant.clone(), user);
+    common::seed_default_chart(&account).await;
     let customer = account
         .create_billing_customer(&NewCustomer {
             name: format!("Customer {tag}"),
@@ -573,4 +574,66 @@ async fn a_save_that_races_the_real_issue_loses_cleanly() {
     assert_eq!(after.invoice.status, InvoiceStatus::Issued);
 
     store.delete_tenant(&tenant).await.unwrap();
+}
+
+/// **B7.01, at the issue.** Issuing books the document into the journal in the
+/// same transaction; voiding takes it back with a reversal; and issuing while
+/// the period the entry would land in is closed is refused whole — no number
+/// drawn, no half-entry, the document still a draft.
+#[tokio::test]
+async fn issuing_books_voiding_reverses_and_a_closed_period_refuses_whole() {
+    let store = common::test_store().await;
+    let (a, _tenant, customer) = tenant_with_customer(&store, "books").await;
+    let pool = raw_pool().await;
+    let today = today(&pool).await;
+
+    // Issue books, in the same act.
+    let first = draft_with_a_line(&a, &customer).await;
+    let issued = a.issue_billing_invoice(&first).await.unwrap();
+    let entry = a
+        .fin_invoice_entry(&first)
+        .await
+        .unwrap()
+        .expect("the journal learned about the document as it was issued");
+    let booked = a.fin_journal_entry(&entry).await.unwrap().unwrap();
+    assert_eq!(
+        booked.entry.entry_date,
+        issued.invoice.issue_date.unwrap(),
+        "booked at the document's date"
+    );
+
+    // Void reverses — the entry stays, its mirror lands beside it.
+    a.void_billing_invoice(&first).await.unwrap();
+    let entries = a.fin_entries(None, None, 10).await.unwrap();
+    assert_eq!(entries.len(), 2, "the issue entry and its reversal");
+    let trial = a.fin_trial_balance(None, None).await.unwrap();
+    assert!(
+        trial.accounts.iter().all(|row| row.balance_cents == 0),
+        "a voided document leaves every account where it started"
+    );
+
+    // A closed period refuses the whole issue and burns no number.
+    let period = a
+        .create_fin_period(today.replace_day(1).unwrap(), today)
+        .await
+        .unwrap();
+    a.close_fin_period(&period.id, "trial close").await.unwrap();
+    let second = draft_with_a_line(&a, &customer).await;
+    let refusal = assert_conflict(a.issue_billing_invoice(&second).await);
+    assert!(refusal.contains("closed"), "{refusal}");
+    let document = a.billing_invoice(&second).await.unwrap().unwrap();
+    assert_eq!(document.invoice.status, InvoiceStatus::Draft);
+    assert_eq!(document.invoice.number, None, "no number was spent on it");
+
+    // Reopened, the same draft issues with the next number of the series —
+    // nothing was burned by the refusal.
+    a.reopen_fin_period(&period.id, "trial reopen")
+        .await
+        .unwrap();
+    let document = a.issue_billing_invoice(&second).await.unwrap();
+    assert_eq!(
+        document.invoice.number.as_deref(),
+        Some(document_number(INVOICE_NUMBER_PREFIX, today.year(), 2).as_str()),
+        "the second number, not the third"
+    );
 }

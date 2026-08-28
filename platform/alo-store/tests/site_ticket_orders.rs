@@ -83,6 +83,7 @@ async fn venue(tag: &str) -> Venue {
         .await
         .unwrap();
     let account = store.for_account(tenant, user);
+    common::seed_default_chart(&account).await;
     let site = account.create_site("Venue", &subdomain(tag)).await.unwrap();
     let product = account
         .create_billing_product(&alo_store::NewProduct {

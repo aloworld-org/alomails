@@ -123,6 +123,7 @@ fn ids(body: &Value, key: &str) -> Vec<String> {
 #[tokio::test]
 async fn the_draft_to_issue_to_credit_arc_runs_on_the_wire() {
     let h = harness("bill-inv-arc").await;
+    common::seed_default_chart(&h.acc).await;
     let customer = a_customer(&h.app, &h.token).await;
 
     // --- raise a draft, header and lines in one body -------------------------
@@ -398,6 +399,7 @@ async fn the_draft_to_issue_to_credit_arc_runs_on_the_wire() {
 #[tokio::test]
 async fn a_refused_request_writes_nothing_and_says_what_is_wrong() {
     let h = harness("bill-inv-refuse").await;
+    common::seed_default_chart(&h.acc).await;
     let customer = a_customer(&h.app, &h.token).await;
 
     // A body that names no customer is a 422 about the field — never the 404
@@ -547,6 +549,7 @@ async fn a_refused_request_writes_nothing_and_says_what_is_wrong() {
 #[tokio::test]
 async fn every_route_needs_a_token_and_an_id_that_exists() {
     let h = harness("bill-inv-guards").await;
+    common::seed_default_chart(&h.acc).await;
     let routes: Vec<(&str, String)> = vec![
         ("GET", "/billing/invoices".to_owned()),
         ("POST", "/billing/invoices".to_owned()),
@@ -587,6 +590,7 @@ async fn every_route_needs_a_token_and_an_id_that_exists() {
 #[tokio::test]
 async fn only_an_issued_document_past_its_date_is_flagged_overdue() {
     let h = harness("bill-inv-overdue").await;
+    common::seed_default_chart(&h.acc).await;
     let customer = a_customer(&h.app, &h.token).await;
     let id = created_id(
         "invoice",
@@ -675,7 +679,9 @@ async fn only_an_issued_document_past_its_date_is_flagged_overdue() {
 #[tokio::test]
 async fn another_tenants_document_is_invisible_and_untouchable_on_every_route() {
     let a = harness("bill-inv-tenant-a").await;
+    common::seed_default_chart(&a.acc).await;
     let b = harness("bill-inv-tenant-b").await;
+    common::seed_default_chart(&b.acc).await;
 
     // B's own issued document, raised through B's door.
     let b_customer = a_customer(&b.app, &b.token).await;

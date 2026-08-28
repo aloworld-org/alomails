@@ -223,6 +223,7 @@ fn invented_measure() -> String {
 #[tokio::test]
 async fn a_question_becomes_a_proposal_a_person_pins() {
     let h = harness("insights-ask-arc").await;
+    common::seed_default_chart(&h.acc).await;
     let net = an_issued_invoice(&h, 25_000).await;
     let (base, seen) = scripted_model(vec![good_reply()]).await;
     use_model(&h, &base).await;
@@ -285,6 +286,7 @@ async fn a_question_becomes_a_proposal_a_person_pins() {
 #[tokio::test]
 async fn a_refused_spec_earns_exactly_one_repair_turn_carrying_the_refusal() {
     let h = harness("insights-ask-repair").await;
+    common::seed_default_chart(&h.acc).await;
     an_issued_invoice(&h, 10_000).await;
     let (base, seen) = scripted_model(vec![invented_measure(), good_reply()]).await;
     use_model(&h, &base).await;
@@ -310,6 +312,7 @@ async fn a_refused_spec_earns_exactly_one_repair_turn_carrying_the_refusal() {
 #[tokio::test]
 async fn a_model_that_cannot_be_corrected_refuses_and_pins_nothing() {
     let h = harness("insights-ask-refusal").await;
+    common::seed_default_chart(&h.acc).await;
     let (base, seen) = scripted_model(vec![invented_measure()]).await;
     use_model(&h, &base).await;
 
@@ -333,6 +336,7 @@ async fn a_model_that_cannot_be_corrected_refuses_and_pins_nothing() {
 #[tokio::test]
 async fn a_model_that_says_it_cannot_chart_the_question_is_believed_at_once() {
     let h = harness("insights-ask-cannot").await;
+    common::seed_default_chart(&h.acc).await;
     let (base, seen) = scripted_model(vec![
         r#"{"error":"That is not a question about this data."}"#.to_owned(),
     ])
@@ -356,6 +360,7 @@ async fn a_model_that_says_it_cannot_chart_the_question_is_believed_at_once() {
 #[tokio::test]
 async fn a_tenant_without_a_model_is_told_so_and_the_rest_of_insights_still_works() {
     let h = harness("insights-ask-off").await;
+    common::seed_default_chart(&h.acc).await;
 
     let (status, body) = ask(&h, "revenue by month").await;
     assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE, "{body}");
@@ -373,6 +378,7 @@ async fn a_tenant_without_a_model_is_told_so_and_the_rest_of_insights_still_work
 #[tokio::test]
 async fn a_question_that_is_missing_or_too_long_never_reaches_a_model() {
     let h = harness("insights-ask-bounds").await;
+    common::seed_default_chart(&h.acc).await;
     let (base, seen) = scripted_model(vec![good_reply()]).await;
     use_model(&h, &base).await;
 
@@ -402,6 +408,7 @@ async fn a_question_that_is_missing_or_too_long_never_reaches_a_model() {
 #[tokio::test]
 async fn the_ask_refuses_an_unauthenticated_caller() {
     let h = harness("insights-ask-401").await;
+    common::seed_default_chart(&h.acc).await;
     let (base, seen) = scripted_model(vec![good_reply()]).await;
     use_model(&h, &base).await;
 

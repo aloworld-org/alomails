@@ -44,7 +44,9 @@ async fn tenant(store: &Store, tag: &str) -> (AccountStore, TenantStore) {
     let tenant: TenantId = store.create_tenant(&format!("cseg-{tag}")).await.unwrap();
     let ts = store.for_tenant(tenant.clone());
     let user = ts.create_user(&format!("{tag}@cseg.test")).await.unwrap();
-    (store.for_account(tenant, user), ts)
+    let account = store.for_account(tenant, user);
+    common::seed_default_chart(&account).await;
+    (account, ts)
 }
 
 /// A direct pool, for the one piece of setup no API offers: an invoice issued

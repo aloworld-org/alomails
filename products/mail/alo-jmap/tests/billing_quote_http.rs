@@ -138,6 +138,7 @@ async fn a_sent_quote(app: &Router, token: &str, customer: &str) -> String {
 #[tokio::test]
 async fn the_draft_to_sent_to_accepted_arc_yields_the_invoice_on_the_wire() {
     let h = harness("bill-quo-arc").await;
+    common::seed_default_chart(&h.acc).await;
     let customer = a_customer(&h.app, &h.token).await;
 
     // --- raise a draft offer, header and lines in one body -------------------
@@ -366,6 +367,7 @@ async fn the_draft_to_sent_to_accepted_arc_yields_the_invoice_on_the_wire() {
 #[tokio::test]
 async fn a_refused_request_writes_nothing_and_says_what_is_wrong() {
     let h = harness("bill-quo-refuse").await;
+    common::seed_default_chart(&h.acc).await;
     let customer = a_customer(&h.app, &h.token).await;
 
     // A body naming no customer is about the field, not a 404 about an id it
@@ -495,6 +497,7 @@ async fn a_refused_request_writes_nothing_and_says_what_is_wrong() {
 #[tokio::test]
 async fn every_route_needs_a_token_and_an_id_that_exists() {
     let h = harness("bill-quo-guards").await;
+    common::seed_default_chart(&h.acc).await;
 
     // No token: the guard runs before anything is looked up, so an
     // unauthenticated caller learns nothing about which ids exist.
@@ -533,6 +536,7 @@ async fn every_route_needs_a_token_and_an_id_that_exists() {
 #[tokio::test]
 async fn a_lapsed_offer_reads_as_lapsed_and_may_still_be_accepted() {
     let h = harness("bill-quo-lapsed").await;
+    common::seed_default_chart(&h.acc).await;
     let customer = a_customer(&h.app, &h.token).await;
     let id = a_sent_quote(&h.app, &h.token, &customer).await;
 
@@ -584,6 +588,7 @@ async fn a_lapsed_offer_reads_as_lapsed_and_may_still_be_accepted() {
 #[tokio::test]
 async fn an_offer_is_answered_once_and_only_an_accepted_one_is_billed() {
     let h = harness("bill-quo-answers").await;
+    common::seed_default_chart(&h.acc).await;
     let customer = a_customer(&h.app, &h.token).await;
 
     let accepted = a_sent_quote(&h.app, &h.token, &customer).await;
@@ -683,7 +688,9 @@ async fn an_offer_is_answered_once_and_only_an_accepted_one_is_billed() {
 #[tokio::test]
 async fn another_tenants_offer_is_invisible_and_untouchable_on_every_route() {
     let a = harness("bill-quo-tenant-a").await;
+    common::seed_default_chart(&a.acc).await;
     let b = harness("bill-quo-tenant-b").await;
+    common::seed_default_chart(&b.acc).await;
     let customer_b = a_customer(&b.app, &b.token).await;
     let quote_b = a_sent_quote(&b.app, &b.token, &customer_b).await;
 

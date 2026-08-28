@@ -75,6 +75,7 @@ use crate::billing_sequence::{
 use crate::billing_settings::base_currency_in;
 use crate::billing_totals::{LineFigures, Totals, totals};
 use crate::error::{Result, StoreError};
+use crate::fin_journal::{EntrySource, SourceEvent, SourceKind, reversal_entry};
 use crate::id::{BillingCustomerId, BillingInvoiceId, BillingQuoteId, BillingScheduleId};
 use crate::time_invoice::release_billed_hours;
 
@@ -712,19 +713,47 @@ impl AccountStore {
     /// # Errors
     /// [`StoreError::Db`] on failure.
     pub async fn billing_invoice(&self, id: &BillingInvoiceId) -> Result<Option<InvoiceDocument>> {
+        let mut conn = self.pool.acquire().await.map_err(StoreError::Db)?;
+        self.billing_invoice_with(&mut conn, id).await
+    }
+
+    /// [`AccountStore::billing_invoice`], inside a transaction the caller owns.
+    ///
+    /// The booking layer has to read the document **as the transaction sees
+    /// it** — an issue that has just stamped the number and frozen the rate
+    /// books that document, not the draft the pool would still show
+    /// ([`crate::fin_booking`]).
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub(crate) async fn billing_invoice_in(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        id: &BillingInvoiceId,
+    ) -> Result<Option<InvoiceDocument>> {
+        self.billing_invoice_with(tx, id).await
+    }
+
+    /// The one loading path behind the two doors above: the row, its lines, and
+    /// the money received, read through whichever connection the caller holds.
+    async fn billing_invoice_with(
+        &self,
+        conn: &mut sqlx::PgConnection,
+        id: &BillingInvoiceId,
+    ) -> Result<Option<InvoiceDocument>> {
         let Some(row) = sqlx::query_as::<_, InvoiceRow>(&format!(
             "SELECT {INVOICE_COLS} FROM billing_invoices WHERE tenant_id = $1 AND id = $2"
         ))
         .bind(self.tenant.as_str())
         .bind(id.as_str())
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *conn)
         .await
         .map_err(StoreError::Db)?
         else {
             return Ok(None);
         };
         let lines = INVOICE_LINES
-            .read(&self.pool, self.tenant.as_str(), id.as_str())
+            .read(&mut *conn, self.tenant.as_str(), id.as_str())
             .await?;
         let figures: Vec<LineFigures> = lines.iter().map(Line::figures).collect();
         // The money received, read here rather than by a second call: every
@@ -737,7 +766,7 @@ impl AccountStore {
         )
         .bind(self.tenant.as_str())
         .bind(id.as_str())
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *conn)
         .await
         .map_err(StoreError::Db)?;
         Ok(Some(InvoiceDocument {
@@ -1039,11 +1068,21 @@ impl AccountStore {
     /// for its currency, because an invoice that cannot state its VAT in the
     /// member state's currency is legally incomplete.
     ///
+    /// Issuing also **books the document** ([`AccountStore::book_issue_in`],
+    /// B7.01): the entry that puts the receivable, the revenue and the output
+    /// tax into the journal is written inside this same transaction, so a
+    /// document and its books can never disagree about whether it happened. A
+    /// booking refusal — a chart with no account for a role the rule needs, an
+    /// issue date inside a closed period — therefore fails the issue whole,
+    /// and the number is given back.
+    ///
     /// # Errors
     /// [`StoreError::NotFound`] when the invoice is absent or another
-    /// tenant's; [`StoreError::Conflict`] when it is not a draft;
-    /// [`StoreError::Validation`] when it has no lines, or when no exchange rate
-    /// is available for its currency; [`StoreError::Db`] on failure.
+    /// tenant's; [`StoreError::Conflict`] when it is not a draft, or when its
+    /// issue date falls in a closed period (B4.10);
+    /// [`StoreError::Validation`] when it has no lines, when no exchange rate
+    /// is available for its currency, or when the chart of accounts cannot
+    /// answer a role the posting rule needs; [`StoreError::Db`] on failure.
     pub async fn issue_billing_invoice(&self, id: &BillingInvoiceId) -> Result<InvoiceDocument> {
         let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
         // The lock also hands back the terms this document was raised with —
@@ -1117,9 +1156,22 @@ impl AccountStore {
         .execute(&mut *tx)
         .await
         .map_err(StoreError::Db)?;
+
+        // The books learn about the document in the same act that makes it
+        // real (`docs/design/finance.md`, "the posting happens inside the
+        // document's own transaction"; B7.01). The document is re-read under
+        // this transaction so the entry books the number, dates and rate just
+        // stamped — and if the booking refuses (a chart missing a role, a
+        // closed period), the whole issue rolls back and the drawn number
+        // returns to the sequence.
+        let document = self
+            .billing_invoice_in(&mut tx, id)
+            .await?
+            .ok_or(StoreError::NotFound)?;
+        self.book_issue_in(&mut tx, &document, &base).await?;
         tx.commit().await.map_err(StoreError::Db)?;
 
-        self.billing_invoice(id).await?.ok_or(StoreError::NotFound)
+        Ok(document)
     }
 
     /// The exchange-rate snapshot the document being issued is frozen with.
@@ -1200,8 +1252,10 @@ impl AccountStore {
     /// # Errors
     /// [`StoreError::NotFound`] when the invoice is absent or another
     /// tenant's; [`StoreError::Conflict`] when it is not issued (a draft is
-    /// deleted, a paid document is credited) or when payments have been
-    /// recorded against it; [`StoreError::Db`] on failure.
+    /// deleted, a paid document is credited), when payments have been
+    /// recorded against it, or when its issue entry lies in a closed period
+    /// (the reversal that takes it back cannot be written there);
+    /// [`StoreError::Db`] on failure.
     pub async fn void_billing_invoice(&self, id: &BillingInvoiceId) -> Result<InvoiceDocument> {
         let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
         self.lock_invoice(&mut tx, id)
@@ -1235,6 +1289,32 @@ impl AccountStore {
         .execute(&mut *tx)
         .await
         .map_err(StoreError::Db)?;
+
+        // A booked document that stops being owed is corrected in the books,
+        // never erased from them: the issue entry stays, and a reversal dated
+        // the document's own issue date takes it back (`fin_rules`' words — "a
+        // void one is booked by its issue entry and reversed by its void
+        // entry"; B7.01) — so the period the document was booked into nets to
+        // zero, as befits a document that never left the building. When that
+        // period has since been closed the reversal is refused and the void
+        // fails whole, which is the honest answer: a document a filed report
+        // counted is corrected with a credit note. A document from before the
+        // books opened has no entry and voids as it always did.
+        if let Some(entry_id) = self.fin_invoice_entry_in(&mut tx, id).await? {
+            let issued = self
+                .fin_journal_entry(&entry_id)
+                .await?
+                .ok_or(StoreError::NotFound)?;
+            let reversal = reversal_entry(
+                &issued,
+                Some(EntrySource {
+                    kind: SourceKind::Invoice,
+                    id: id.as_str().to_owned(),
+                    event: SourceEvent::Void,
+                }),
+            );
+            self.post_fin_entry_in(&mut tx, &reversal).await?;
+        }
         tx.commit().await.map_err(StoreError::Db)?;
 
         self.billing_invoice(id).await?.ok_or(StoreError::NotFound)

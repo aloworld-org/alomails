@@ -134,6 +134,7 @@ impl Shop {
             .await
             .unwrap();
         let account = store.for_account(tenant, user);
+        common::seed_default_chart(&account).await;
         let seeded = account
             .inv_locations_or_seed(&seed_names(), false)
             .await

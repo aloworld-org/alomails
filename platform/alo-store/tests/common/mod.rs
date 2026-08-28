@@ -103,3 +103,26 @@ pub async fn tenant_fixture(store: &Store, tag: &str) -> Fixture {
         message,
     }
 }
+
+/// Seeds the default chart of accounts for `account`'s tenant, with plain
+/// per-code test names.
+///
+/// Issuing a document **books it** in the same transaction (B7.01), so any
+/// test that issues an invoice, records a payment or confirms a bank match
+/// needs a chart the booking can resolve its roles against — exactly the
+/// setup step a real tenant performs by opening the Accounts screen once.
+pub async fn seed_default_chart(account: &AccountStore) {
+    let seed = alo_store::ChartSeed {
+        names: alo_store::CHART
+            .iter()
+            .map(|entry| alo_store::ChartName {
+                code: entry.code.to_owned(),
+                name: format!("Account {}", entry.code),
+            })
+            .collect(),
+    };
+    account
+        .fin_accounts_or_seed(&seed, false)
+        .await
+        .expect("seed the default chart");
+}

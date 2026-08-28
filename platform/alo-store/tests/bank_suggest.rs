@@ -70,7 +70,9 @@ async fn tenant(store: &Store, tag: &str) -> AccountStore {
         .create_user(&format!("{tag}@suggesting.test"))
         .await
         .unwrap();
-    store.for_account(tenant, user)
+    let account = store.for_account(tenant, user);
+    common::seed_default_chart(&account).await;
+    account
 }
 
 async fn customer(account: &AccountStore, name: &str) -> BillingCustomerId {

@@ -315,6 +315,7 @@ fn payments_by_method(from: &str, to: &str) -> Value {
 #[tokio::test]
 async fn the_insights_agent_answers_from_the_numbers_with_no_button_in_between() {
     let h = harness("agent-a24-answer").await;
+    common::seed_default_chart(&h.acc).await;
     let customer = a_customer(&h, "Acme GmbH").await;
     let (_, net) = an_issued_invoice(&h, &customer, 100_000).await;
     assert_eq!(net, 100_000, "the invoice underneath");
@@ -467,6 +468,7 @@ async fn the_insights_agent_answers_from_the_numbers_with_no_button_in_between()
 #[tokio::test]
 async fn the_insights_agent_explains_a_change_biggest_movement_first() {
     let h = harness("agent-a24-change").await;
+    common::seed_default_chart(&h.acc).await;
     let customer = a_customer(&h, "Acme GmbH").await;
     let (invoice, _) = an_issued_invoice(&h, &customer, 100_000).await;
     a_payment(&h, &invoice, 40_000, "2026-05-10", "transfer").await;
@@ -567,6 +569,7 @@ async fn the_insights_agent_explains_a_change_biggest_movement_first() {
 #[tokio::test]
 async fn a_report_waits_for_a_tap_and_lands_as_an_ordinary_board() {
     let h = harness("agent-a24-report").await;
+    common::seed_default_chart(&h.acc).await;
     let customer = a_customer(&h, "Acme GmbH").await;
     an_issued_invoice(&h, &customer, 100_000).await;
 
@@ -695,6 +698,7 @@ async fn a_report_waits_for_a_tap_and_lands_as_an_ordinary_board() {
 #[tokio::test]
 async fn a_question_the_catalog_cannot_answer_is_refused_by_name_and_pins_nothing() {
     let h = harness("agent-a24-refusals").await;
+    common::seed_default_chart(&h.acc).await;
     let customer = a_customer(&h, "Acme GmbH").await;
     an_issued_invoice(&h, &customer, 100_000).await;
 
@@ -794,7 +798,9 @@ async fn a_question_the_catalog_cannot_answer_is_refused_by_name_and_pins_nothin
 #[tokio::test]
 async fn the_figures_are_the_askers_tenants_and_nobody_elses() {
     let a = harness("agent-a24-iso-a").await;
+    common::seed_default_chart(&a.acc).await;
     let b = harness("agent-a24-iso-b").await;
+    common::seed_default_chart(&b.acc).await;
     let customer_a = a_customer(&a, "Acme GmbH").await;
     an_issued_invoice(&a, &customer_a, 100_000).await;
     let customer_b = a_customer(&b, "Beta BV").await;

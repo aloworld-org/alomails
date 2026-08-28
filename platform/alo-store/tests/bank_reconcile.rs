@@ -278,8 +278,8 @@ async fn a_quoted_number_and_the_exact_amount_become_a_payment_and_two_entries()
         .await
         .unwrap();
     assert!(
-        confirmed.invoice_booked_now,
-        "nothing else books an issue yet, so the confirmation does"
+        !confirmed.invoice_booked_now,
+        "the issue itself booked the document (B7.01); the confirmation found it there"
     );
     assert_eq!(confirmed.matched.amount_cents, GROSS_CENTS);
     assert_eq!(
@@ -341,7 +341,7 @@ async fn an_invoice_already_in_the_books_is_not_booked_a_second_time() {
     let (acc, _) = tenant_with_chart(&store, "booked").await;
     let customer = customer(&acc, "booked").await;
     let (invoice, number, issued_on) = issued_invoice(&acc, &customer).await;
-    let issue_entry = acc.post_invoice_issue(&invoice).await.unwrap();
+    let issue_entry = acc.fin_invoice_entry(&invoice).await.unwrap().unwrap();
 
     let lines = stage(&acc, &[(issued_on, GROSS_CENTS, number)]).await;
     let confirmed = acc
@@ -359,9 +359,8 @@ async fn the_rest_of_a_partly_paid_document_is_what_an_exact_match_moves() {
     let (acc, _) = tenant_with_chart(&store, "partial").await;
     let customer = customer(&acc, "partial").await;
     let (invoice, number, issued_on) = issued_invoice(&acc, &customer).await;
-    acc.post_invoice_issue(&invoice).await.unwrap();
 
-    // €300.00 arrived by hand first, and was booked.
+    // €300.00 arrived by hand first — recording it books it (B7.01).
     let deposit = acc
         .record_billing_payment(
             &invoice,
@@ -374,7 +373,7 @@ async fn the_rest_of_a_partly_paid_document_is_what_an_exact_match_moves() {
         )
         .await
         .unwrap();
-    acc.post_payment_settle(&invoice, &deposit).await.unwrap();
+    assert!(acc.fin_payment_entry(&deposit).await.unwrap().is_some());
 
     let rest = GROSS_CENTS - 30_000;
     let lines = stage(
@@ -458,9 +457,9 @@ async fn money_recorded_in_the_meantime_refuses_the_confirmation_and_writes_noth
         BankLineStatus::Unmatched
     );
     assert_eq!(
-        acc.fin_invoice_entry(&invoice).await.unwrap(),
-        None,
-        "a refused confirmation books nothing at all"
+        acc.fin_entries(None, None, 10).await.unwrap().len(),
+        2,
+        "the issue's entry and the keyed payment's settlement (B7.01) — the          refused confirmation added nothing beside them"
     );
 }
 
@@ -548,13 +547,19 @@ async fn what_the_exact_stage_will_not_confirm() {
         );
     }
     assert_eq!(acc.billing_payments(&invoice).await.unwrap().len(), 0);
-    assert!(acc.fin_entries(None, None, 100).await.unwrap().is_empty());
+    assert_eq!(
+        acc.fin_entries(None, None, 100).await.unwrap().len(),
+        1,
+        "only the issue's own entry — no refusal booked anything"
+    );
 }
 
 #[tokio::test]
-async fn a_chart_without_a_receivable_account_refuses_by_naming_the_role() {
+async fn a_chart_missing_a_role_refuses_by_naming_the_role() {
     let store = common::test_store().await;
     // No chart at all: this tenant has never opened the Accounts screen.
+    // Since B7.01 the refusal reaches them at the ISSUE, not at the match —
+    // an invoice that cannot be booked is not issued in the first place.
     let tenant = store.create_tenant("reconcile-chartless").await.unwrap();
     let user = store
         .for_tenant(tenant.clone())
@@ -562,9 +567,31 @@ async fn a_chart_without_a_receivable_account_refuses_by_naming_the_role() {
         .await
         .unwrap();
     let acc = store.for_account(tenant, user);
-
     let customer = customer(&acc, "chartless").await;
+    let draft = acc
+        .create_billing_invoice(&NewInvoice::for_customer(customer.clone()))
+        .await
+        .unwrap();
+    acc.set_billing_invoice_lines(&draft, &lines())
+        .await
+        .unwrap();
+    let refusal = match acc.issue_billing_invoice(&draft).await {
+        Err(StoreError::Validation(message)) => message,
+        other => panic!("expected a validation refusal, got {other:?}"),
+    };
+    assert!(refusal.contains("'ar'"), "{refusal}");
+    assert!(refusal.contains("Accounts screen"), "{refusal}");
+
+    // A chart that opened and then lost a role refuses the CONFIRMATION the
+    // same way: the settlement needs somewhere for the money to land.
+    common::seed_default_chart(&acc).await;
     let (invoice, number, issued_on) = issued_invoice(&acc, &customer).await;
+    let bank = acc
+        .fin_account_for_role(AccountRole::Bank)
+        .await
+        .unwrap()
+        .unwrap();
+    acc.set_fin_account_active(&bank.id, false).await.unwrap();
     let lines = stage(&acc, &[(issued_on, GROSS_CENTS, number)]).await;
 
     let message = refused(
@@ -572,7 +599,7 @@ async fn a_chart_without_a_receivable_account_refuses_by_naming_the_role() {
             .await,
         "Accounts screen",
     );
-    assert!(message.contains("'ar'"), "{message}");
+    assert!(message.contains("'bank'"), "{message}");
     assert_eq!(
         acc.billing_payments(&invoice).await.unwrap().len(),
         0,
@@ -656,12 +683,14 @@ async fn two_tenants_holding_the_same_statement_and_the_same_number_never_meet()
             .status,
         InvoiceStatus::Issued
     );
-    assert!(
-        theirs
-            .fin_entries(None, None, 100)
-            .await
-            .unwrap()
-            .is_empty()
+    assert_eq!(
+        theirs.fin_entries(None, None, 100).await.unwrap().len(),
+        1,
+        "their journal holds their own issue entry and nothing of ours"
     );
-    assert_eq!(receivable(&theirs).await, (0, 0));
+    assert_eq!(
+        receivable(&theirs).await,
+        (GROSS_CENTS, GROSS_CENTS),
+        "their receivable stands exactly as their issue booked it"
+    );
 }

@@ -75,11 +75,9 @@ async fn tenant_with_user(store: &Store, tag: &str) -> (AccountStore, TenantId, 
         .create_user(&format!("{tag}@hours.test"))
         .await
         .unwrap();
-    (
-        store.for_account(tenant.clone(), user.clone()),
-        tenant,
-        user,
-    )
+    let account = store.for_account(tenant.clone(), user.clone());
+    common::seed_default_chart(&account).await;
+    (account, tenant, user)
 }
 
 /// A customer of this tenant.

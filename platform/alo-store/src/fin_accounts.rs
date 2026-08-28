@@ -644,13 +644,32 @@ impl AccountStore {
     /// # Errors
     /// [`StoreError::Db`] on failure.
     pub async fn fin_account_for_role(&self, role: AccountRole) -> Result<Option<Account>> {
+        self.fin_account_for_role_on(&self.pool, role).await
+    }
+
+    /// [`AccountStore::fin_account_for_role`] against any executor.
+    ///
+    /// A booking that runs inside a document's own transaction ([`crate::fin_booking`])
+    /// resolves its roles **there**, so the accounts it posts to are the ones
+    /// that transaction can actually see.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub(crate) async fn fin_account_for_role_on<'e, E>(
+        &self,
+        executor: E,
+        role: AccountRole,
+    ) -> Result<Option<Account>>
+    where
+        E: sqlx::Executor<'e, Database = sqlx::Postgres>,
+    {
         let row = sqlx::query_as::<_, AccountRow>(&format!(
             "SELECT {ACCOUNT_COLS} FROM fin_accounts \
              WHERE tenant_id = $1 AND role = $2 AND active"
         ))
         .bind(self.tenant.as_str())
         .bind(role.as_str())
-        .fetch_optional(&self.pool)
+        .fetch_optional(executor)
         .await
         .map_err(StoreError::Db)?;
         row.map(AccountRow::into_account).transpose()

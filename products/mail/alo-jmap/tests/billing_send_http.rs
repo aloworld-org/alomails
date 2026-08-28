@@ -139,6 +139,7 @@ async fn ready(
     customer_email: &str,
 ) -> (Harness, String, String) {
     let h = harness(tag).await;
+    common::seed_default_chart(&h.acc).await;
     let (status, body) = patch(
         &h.app,
         &h.token,
@@ -260,6 +261,7 @@ async fn role_count(acc: &AccountStore, role: &str) -> Option<i64> {
 #[tokio::test]
 async fn the_route_needs_a_token_and_an_id_that_exists() {
     let h = harness("bill-send-guards").await;
+    common::seed_default_chart(&h.acc).await;
 
     let (status, _) = send(
         &h.app,
@@ -283,6 +285,7 @@ async fn the_route_needs_a_token_and_an_id_that_exists() {
 #[tokio::test]
 async fn a_document_the_customer_should_not_see_is_refused_by_state() {
     let h = harness("bill-send-state").await;
+    common::seed_default_chart(&h.acc).await;
     let customer = a_customer(&h.app, &h.token, "Kunde GmbH", Some("k@kunde.test")).await;
 
     // A draft carries no number and prints a DRAFT banner.
@@ -329,6 +332,7 @@ async fn a_document_the_customer_should_not_see_is_refused_by_state() {
 #[tokio::test]
 async fn a_customer_with_no_address_is_a_422_naming_the_reason() {
     let h = harness("bill-send-no-addr").await;
+    common::seed_default_chart(&h.acc).await;
     let customer = a_customer(&h.app, &h.token, "Kunde GmbH", None).await;
     let (invoice, _) = an_issued_invoice(&h, &customer, "Consulting").await;
 

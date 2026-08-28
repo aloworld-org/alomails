@@ -43,7 +43,20 @@ async fn account(store: &Store, tag: &str) -> AccountStore {
         .create_user(&format!("{tag}-{tenant}@example.test"))
         .await
         .unwrap();
-    store.for_account(tenant, user)
+    let account = store.for_account(tenant, user);
+    // Issuing books the document (B7.01), so the counted-revenue setups below
+    // need a chart the booking can resolve its roles against.
+    let seed = alo_store::ChartSeed {
+        names: alo_store::CHART
+            .iter()
+            .map(|entry| alo_store::ChartName {
+                code: entry.code.to_owned(),
+                name: format!("Account {}", entry.code),
+            })
+            .collect(),
+    };
+    account.fin_accounts_or_seed(&seed, false).await.unwrap();
+    account
 }
 
 /// A published site with one contact form — the conversion point everything

@@ -222,6 +222,7 @@ async fn approved_bill(acc: &AccountStore, supplier: &str, number: &str, issue: 
 /// asked for.
 async fn owing(tag: &str) -> (Harness, Date) {
     let h = harness(tag).await;
+    common::seed_default_chart(&h.acc).await;
     h.ts.set_admin(&h.user, true).await.unwrap();
     debts(&h.acc).await;
     (h, today().await + Duration::days(100))
@@ -338,6 +339,7 @@ async fn an_ageing_reads_the_same_on_both_representations() {
 #[tokio::test]
 async fn an_ageing_is_not_read_by_a_member_who_is_not_an_admin() {
     let h = harness("agedclerk").await;
+    common::seed_default_chart(&h.acc).await;
     debts(&h.acc).await;
     let on = today().await + Duration::days(100);
 
@@ -359,6 +361,7 @@ async fn an_ageing_is_not_read_by_a_member_who_is_not_an_admin() {
 #[tokio::test]
 async fn no_token_reads_nothing_on_either_route() {
     let h = harness("agednoauth").await;
+    common::seed_default_chart(&h.acc).await;
     let on = today().await;
     for uri in [receivable(on), receivable_csv(on)] {
         let (status, _) = send(&h.app, request(&uri, None)).await;
@@ -417,6 +420,7 @@ async fn the_day_and_the_side_are_always_stated_and_never_guessed_at() {
 #[tokio::test]
 async fn the_payable_side_is_its_own_report_over_its_own_documents() {
     let h = harness("agedpay").await;
+    common::seed_default_chart(&h.acc).await;
     h.ts.set_admin(&h.user, true).await.unwrap();
     let on = today().await;
     debts(&h.acc).await;
@@ -476,6 +480,7 @@ async fn one_tenants_debts_are_no_part_of_anothers_on_either_route() {
     let (ours, on) = owing("agedours").await;
     // A second tenant on the same store, with ten times the debts.
     let theirs = harness_on(Arc::clone(&ours.store), "agedtheirs").await;
+    common::seed_default_chart(&theirs.acc).await;
     theirs.ts.set_admin(&theirs.user, true).await.unwrap();
     let big = customer(&theirs.acc, "Theirs BV").await;
     issued(&theirs.acc, &big, 100, 14).await;

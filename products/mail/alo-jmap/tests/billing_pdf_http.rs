@@ -197,6 +197,7 @@ async fn an_issued_invoice(h: &Harness, customer: &str, description: &str) -> (S
 #[tokio::test]
 async fn the_route_needs_a_token_and_an_id_that_exists() {
     let h = harness("bill-pdf-guards").await;
+    common::seed_default_chart(&h.acc).await;
 
     // The auth guard runs before anything is looked up, so an unauthenticated
     // caller learns nothing about which ids exist.
@@ -218,6 +219,7 @@ async fn the_route_needs_a_token_and_an_id_that_exists() {
 #[tokio::test]
 async fn an_issued_invoice_downloads_as_a_pdf_a_reader_can_open() {
     let h = harness("bill-pdf-issued").await;
+    common::seed_default_chart(&h.acc).await;
     let (status, body) = patch(
         &h.app,
         &h.token,
@@ -274,6 +276,7 @@ async fn a_draft_downloads_too_and_says_it_is_one() {
     // A draft has no number, so it must not print one — and the file it saves
     // as must not pretend to name a document that does not legally exist.
     let h = harness("bill-pdf-draft").await;
+    common::seed_default_chart(&h.acc).await;
     patch(
         &h.app,
         &h.token,
@@ -304,6 +307,7 @@ async fn a_draft_downloads_too_and_says_it_is_one() {
 #[tokio::test]
 async fn a_credit_note_is_titled_as_one_and_carries_no_bank_account() {
     let h = harness("bill-pdf-credit").await;
+    common::seed_default_chart(&h.acc).await;
     patch(
         &h.app,
         &h.token,
@@ -345,6 +349,7 @@ async fn a_credit_note_is_titled_as_one_and_carries_no_bank_account() {
 #[tokio::test]
 async fn the_language_of_the_file_is_a_preference_and_never_a_refusal() {
     let h = harness("bill-pdf-lang").await;
+    common::seed_default_chart(&h.acc).await;
     let customer = a_customer(&h.app, &h.token, "Kunde GmbH").await;
     let (invoice, _) = an_issued_invoice(&h, &customer, "Consulting").await;
     // A language we ship writes the file in it; anything else — an unknown
@@ -376,7 +381,9 @@ async fn the_language_of_the_file_is_a_preference_and_never_a_refusal() {
 #[tokio::test]
 async fn neither_a_document_nor_an_identity_ever_crosses_a_tenant() {
     let a = harness("bill-pdf-a").await;
+    common::seed_default_chart(&a.acc).await;
     let b = harness("bill-pdf-b").await;
+    common::seed_default_chart(&b.acc).await;
 
     // B states an identity nobody else could plausibly have, and raises a
     // document with an equally distinctive line.
@@ -473,6 +480,7 @@ async fn the_file_and_the_page_say_the_same_thing() {
     // The reason the PDF is a second renderer over one model rather than a
     // conversion: whatever a customer is shown on screen is what they receive.
     let h = harness("bill-pdf-agree").await;
+    common::seed_default_chart(&h.acc).await;
     patch(
         &h.app,
         &h.token,

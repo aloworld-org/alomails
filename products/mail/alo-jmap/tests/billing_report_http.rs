@@ -153,6 +153,7 @@ fn rows(body: &str) -> Vec<&str> {
 #[tokio::test]
 async fn a_periods_summary_answers_the_same_figures_as_json_and_as_a_file() {
     let h = harness("bill-vat-arc").await;
+    common::seed_default_chart(&h.acc).await;
     let customer = a_customer(&h.app, &h.token, "Acme GmbH").await;
 
     // Today's documents: two invoices across two rates, then a credit note
@@ -389,6 +390,7 @@ async fn a_periods_summary_answers_the_same_figures_as_json_and_as_a_file() {
 #[tokio::test]
 async fn a_period_is_always_stated_and_never_guessed_at() {
     let h = harness("bill-vat-guards").await;
+    common::seed_default_chart(&h.acc).await;
 
     for query in [
         String::new(),
@@ -451,7 +453,9 @@ async fn a_period_is_always_stated_and_never_guessed_at() {
 #[tokio::test]
 async fn another_tenants_turnover_never_appears_in_a_report() {
     let a = harness("bill-vat-tenant-a").await;
+    common::seed_default_chart(&a.acc).await;
     let b = harness("bill-vat-tenant-b").await;
+    common::seed_default_chart(&b.acc).await;
 
     // B bills something today, through B's own door.
     let b_customer = a_customer(&b.app, &b.token, "B GmbH").await;

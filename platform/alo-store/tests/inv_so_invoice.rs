@@ -86,6 +86,7 @@ impl Selling {
             .await
             .unwrap();
         let door = store.for_account(tenant.clone(), user);
+        common::seed_default_chart(&door).await;
         let seeded = door
             .inv_locations_or_seed(&seed_names(), false)
             .await

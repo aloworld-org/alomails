@@ -190,6 +190,7 @@ fn only_figure(body: &Value) -> i64 {
 #[tokio::test]
 async fn the_board_tile_and_answer_arc_runs_on_the_wire() {
     let h = harness("insights-arc").await;
+    common::seed_default_chart(&h.acc).await;
 
     // A tenant's first read is handed the Business overview (BI1.06) and
     // nothing else; the rest of this arc is about the boards a person makes.
@@ -393,6 +394,7 @@ async fn the_board_tile_and_answer_arc_runs_on_the_wire() {
 #[tokio::test]
 async fn a_first_visit_answers_with_the_business_overview_and_live_numbers() {
     let h = harness("insights-seed").await;
+    common::seed_default_chart(&h.acc).await;
     let net = an_issued_invoice(&h.app, &h.token, "Acme GmbH", 12_500).await;
 
     // --- one board, nobody asked for it, and it is in French ----------------
@@ -470,6 +472,7 @@ async fn a_first_visit_answers_with_the_business_overview_and_live_numbers() {
 #[tokio::test]
 async fn the_gallery_offers_questions_that_answer_and_pin_like_any_other() {
     let h = harness("insights-gallery").await;
+    common::seed_default_chart(&h.acc).await;
 
     let (status, body) = get(&h.app, &h.token, "/insights/gallery").await;
     assert_eq!(status, StatusCode::OK, "{body}");
@@ -533,6 +536,7 @@ async fn the_gallery_offers_questions_that_answer_and_pin_like_any_other() {
 #[tokio::test]
 async fn every_insights_route_refuses_an_unauthenticated_caller() {
     let h = harness("insights-401").await;
+    common::seed_default_chart(&h.acc).await;
     let board = a_board(&h.app, &h.token, "Cash").await;
     let tile = a_tile(&h.app, &h.token, &board, "Revenue", revenue_total()).await;
 
@@ -607,6 +611,7 @@ async fn every_insights_route_refuses_an_unauthenticated_caller() {
 #[tokio::test]
 async fn a_question_outside_the_catalog_is_a_named_422_and_never_an_empty_chart() {
     let h = harness("insights-422").await;
+    common::seed_default_chart(&h.acc).await;
     let board = a_board(&h.app, &h.token, "Cash").await;
 
     // Every one of these is a spec a builder UI — or a model on its one repair
@@ -774,6 +779,7 @@ async fn a_question_outside_the_catalog_is_a_named_422_and_never_an_empty_chart(
 #[tokio::test]
 async fn a_tile_from_the_future_still_renders_and_says_why_it_cannot_answer() {
     let h = harness("insights-future").await;
+    common::seed_default_chart(&h.acc).await;
     let board = a_board(&h.app, &h.token, "Cash").await;
     let ok = a_tile(&h.app, &h.token, &board, "Revenue", revenue_total()).await;
     let future = a_tile(&h.app, &h.token, &board, "Later", revenue_by_month()).await;
@@ -864,7 +870,9 @@ async fn a_tile_from_the_future_still_renders_and_says_why_it_cannot_answer() {
 #[tokio::test]
 async fn another_tenants_board_tile_and_figures_are_out_of_reach_on_every_route() {
     let a = harness("insights-tenant-a").await;
+    common::seed_default_chart(&a.acc).await;
     let b = harness("insights-tenant-b").await;
+    common::seed_default_chart(&b.acc).await;
 
     // Two tenants, different books: A billed 25 000, B billed 90 000.
     let a_net = an_issued_invoice(&a.app, &a.token, "Acme GmbH", 12_500).await;

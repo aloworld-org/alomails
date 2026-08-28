@@ -197,6 +197,7 @@ async fn issue(h: &Harness, id: &str) -> String {
 /// A tenant that can issue an XRechnung, with one issued invoice.
 async fn a_complete_tenant(tag: &str) -> (Harness, String, String) {
     let h = harness(tag).await;
+    common::seed_default_chart(&h.acc).await;
     let (status, body) = patch(
         &h.app,
         &h.token,
@@ -221,6 +222,7 @@ async fn a_complete_tenant(tag: &str) -> (Harness, String, String) {
 #[tokio::test]
 async fn the_route_needs_a_token_and_an_id_that_exists() {
     let h = harness("bill-ubl-guards").await;
+    common::seed_default_chart(&h.acc).await;
 
     let anonymous = fetch(&h.app, None, "/billing/invoices/no-such-id/xrechnung.xml").await;
     assert_eq!(anonymous.status, StatusCode::UNAUTHORIZED);
@@ -267,6 +269,7 @@ async fn the_german_rules_refuse_what_the_european_ones_allow() {
     // an invoice with no customer reference: a valid Factur-X, and not an
     // XRechnung.
     let h = harness("bill-ubl-de-rules").await;
+    common::seed_default_chart(&h.acc).await;
     let (status, body) = patch(
         &h.app,
         &h.token,
@@ -353,6 +356,7 @@ async fn an_issuer_who_has_not_stated_its_own_details_is_told_both_rule_sets_at_
     // naming every rule it breaks, European and German, so the details are
     // filled in once rather than twice.
     let h = harness("bill-ubl-incomplete").await;
+    common::seed_default_chart(&h.acc).await;
     let customer = a_customer(&h.app, &h.token, "Kunde GmbH").await;
     let invoice = a_draft(&h, &customer, "Consulting", "PO-9").await;
     issue(&h, &invoice).await;
@@ -485,6 +489,7 @@ async fn a_credit_note_is_a_credit_note_document_and_not_an_invoice_with_a_code(
 async fn no_byte_of_another_tenants_document_reaches_an_e_invoice() {
     let (a, a_invoice, _) = a_complete_tenant("bill-ubl-a").await;
     let b = harness("bill-ubl-b").await;
+    common::seed_default_chart(&b.acc).await;
 
     // B states an identity nobody else could plausibly have.
     let (status, body) = patch(

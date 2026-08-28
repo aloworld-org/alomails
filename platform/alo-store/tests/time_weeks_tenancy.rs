@@ -80,7 +80,9 @@ async fn tenant_with_user(store: &Store, tag: &str) -> (AccountStore, TenantId) 
         .create_user(&format!("{tag}@weeks.test"))
         .await
         .unwrap();
-    (store.for_account(tenant.clone(), user), tenant)
+    let account = store.for_account(tenant.clone(), user);
+    common::seed_default_chart(&account).await;
+    (account, tenant)
 }
 
 /// A second user of an existing tenant, on their own account door.

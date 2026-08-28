@@ -137,6 +137,7 @@ async fn a_draft(
 #[tokio::test]
 async fn rates_are_written_and_read_back_as_the_decimals_they_were_published_as() {
     let h = harness("bill-fx-rates").await;
+    common::seed_default_chart(&h.acc).await;
 
     // Nothing at all without a token, on every route.
     for (status, _) in [
@@ -226,6 +227,7 @@ async fn rates_are_written_and_read_back_as_the_decimals_they_were_published_as(
 #[tokio::test]
 async fn a_published_file_imports_whole_or_not_at_all() {
     let h = harness("bill-fx-import").await;
+    common::seed_default_chart(&h.acc).await;
 
     let (status, body) = post_csv(
         &h.app,
@@ -307,6 +309,7 @@ async fn a_published_file_imports_whole_or_not_at_all() {
 #[tokio::test]
 async fn a_dollar_invoice_stores_its_rate_and_the_vat_report_converts_it() {
     let h = harness("bill-fx-arc").await;
+    common::seed_default_chart(&h.acc).await;
     let customer = a_customer(&h.app, &h.token, "Acme Inc", "USD").await;
 
     // 1 × $500.00 at 21 %: net 50 000, VAT 10 500, gross 60 500.
@@ -411,7 +414,9 @@ async fn a_dollar_invoice_stores_its_rate_and_the_vat_report_converts_it() {
 #[tokio::test]
 async fn the_accounting_currency_is_a_setting_and_it_is_the_tenants_own() {
     let a = harness("bill-fx-base-a").await;
+    common::seed_default_chart(&a.acc).await;
     let b = harness("bill-fx-base-b").await;
+    common::seed_default_chart(&b.acc).await;
 
     // Unstated, a tenant keeps books in euro — never a blank.
     let (status, body) = get(&a.app, Some(&a.token), "/billing/settings").await;

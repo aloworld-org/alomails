@@ -136,7 +136,10 @@ async fn booked_invoice(
         .unwrap();
     let document = account.issue_billing_invoice(&id).await.unwrap();
     assert_eq!(document.totals.gross_cents, GROSS_CENTS);
-    account.post_invoice_issue(&id).await.unwrap();
+    assert!(
+        account.fin_invoice_entry(&id).await.unwrap().is_some(),
+        "issuing books the document in the same transaction (B7.01)"
+    );
     (id, document.invoice.issue_date.unwrap())
 }
 
@@ -245,17 +248,11 @@ async fn booking_a_credit_note_writes_the_mirror_of_the_original() {
     let original_entry = account.fin_invoice_entry(&invoice).await.unwrap().unwrap();
 
     let credit = issued_credit_note(&account, &invoice, None).await;
-    assert_eq!(
-        account.fin_invoice_entry(&credit).await.unwrap(),
-        None,
-        "issuing a credit note does not book it — the wiring lands with the periods (B4.10)"
-    );
-    let entry_id = account.post_credit_note_issue(&credit).await.unwrap();
-    assert_eq!(
-        account.fin_invoice_entry(&credit).await.unwrap().as_ref(),
-        Some(&entry_id),
-        "and the credit note now names its entry"
-    );
+    let entry_id = account
+        .fin_invoice_entry(&credit)
+        .await
+        .unwrap()
+        .expect("issuing a credit note books the mirror in the same transaction (B7.01)");
 
     let booked = account
         .fin_journal_entry(&entry_id)
@@ -353,7 +350,7 @@ async fn a_partial_credit_note_leaves_the_uncredited_part_standing() {
         }]),
     )
     .await;
-    let entry_id = account.post_credit_note_issue(&credit).await.unwrap();
+    let entry_id = account.fin_invoice_entry(&credit).await.unwrap().unwrap();
 
     let ar = role_account(&account, AccountRole::Ar).await;
     let revenue = role_account(&account, AccountRole::Revenue).await;
@@ -445,7 +442,7 @@ async fn a_foreign_currency_credit_note_mirrors_in_both_columns() {
         Some(1_088_000),
         "a credit note inherits its original's rate rather than taking today's"
     );
-    let entry_id = account.post_credit_note_issue(&credit).await.unwrap();
+    let entry_id = account.fin_invoice_entry(&credit).await.unwrap().unwrap();
     assert_eq!(
         rows(&account, &entry_id).await[0].2,
         -120_128,
@@ -479,40 +476,59 @@ async fn a_foreign_currency_credit_note_mirrors_in_both_columns() {
     assert!(account.fin_unbalanced_entries().await.unwrap().is_empty());
 }
 
-/// A credit note books once, never before the invoice it corrects, and never
-/// through the rule that does not own it.
+/// A credit note books once, never through the rule that does not own it —
+/// and a pre-wiring original with no entry is **backfilled** the moment its
+/// credit note issues, so the mirror never leaves a customer owing a negative.
 #[tokio::test]
-async fn a_credit_note_books_once_and_never_before_its_original() {
+async fn a_credit_note_books_once_and_backfills_a_pre_wiring_original() {
     let store = common::test_store().await;
-    let (account, _tenant) = tenant_with_chart(&store, "once").await;
+    let (account, tenant) = tenant_with_chart(&store, "once").await;
     let customer = customer(&account, "once", "EUR").await;
 
-    // An issued but unbooked invoice: its credit note has no receivable to
-    // mirror, and booking one anyway would leave the customer owing a negative.
-    let unbooked = account
-        .create_billing_invoice(&NewInvoice::for_customer(customer.clone()))
+    // A pre-wiring original: issued and booked, then its journal removed with
+    // test-only surgery (the product itself can no longer produce this state).
+    let (older, older_day) = booked_invoice(&account, &customer).await;
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(1)
+        .connect(&common::database_url())
         .await
         .unwrap();
-    account
-        .set_billing_invoice_lines(&unbooked, &lines())
+    for table in ["fin_postings", "fin_entries"] {
+        sqlx::query(&format!("DELETE FROM {table} WHERE tenant_id = $1"))
+            .bind(tenant.as_str())
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
+    assert_eq!(account.fin_invoice_entry(&older).await.unwrap(), None);
+
+    let early = issued_credit_note(&account, &older, None).await;
+    let older_entry = account
+        .fin_invoice_entry(&older)
         .await
-        .unwrap();
-    account.issue_billing_invoice(&unbooked).await.unwrap();
-    let early = issued_credit_note(&account, &unbooked, None).await;
-    assert!(
-        assert_conflict(account.post_credit_note_issue(&early).await)
-            .contains("not in the books yet")
+        .unwrap()
+        .expect("issuing the credit note backfilled its original first");
+    assert_eq!(
+        account
+            .fin_journal_entry(&older_entry)
+            .await
+            .unwrap()
+            .unwrap()
+            .entry
+            .entry_date,
+        older_day,
+        "the backfilled issue books at the original's own date"
     );
-    assert_eq!(account.fin_invoice_entry(&early).await.unwrap(), None);
+    assert!(account.fin_invoice_entry(&early).await.unwrap().is_some());
     assert_eq!(
         balance(&account, &role_account(&account, AccountRole::Ar).await.id).await,
         0,
-        "and nothing of it reached the books"
+        "and the pair still sums to nothing"
     );
 
     let (invoice, _issued_on) = booked_invoice(&account, &customer).await;
     let credit = issued_credit_note(&account, &invoice, None).await;
-    let entry_id = account.post_credit_note_issue(&credit).await.unwrap();
+    let entry_id = account.fin_invoice_entry(&credit).await.unwrap().unwrap();
     let written = rows(&account, &entry_id).await;
 
     assert!(
@@ -553,7 +569,11 @@ async fn another_tenants_credit_note_cannot_be_booked() {
     let their_customer = customer(&theirs, "theirs", "EUR").await;
     let (their_invoice, _their_day) = booked_invoice(&theirs, &their_customer).await;
     let their_credit = issued_credit_note(&theirs, &their_invoice, None).await;
-    let their_entry = theirs.post_credit_note_issue(&their_credit).await.unwrap();
+    let their_entry = theirs
+        .fin_invoice_entry(&their_credit)
+        .await
+        .unwrap()
+        .unwrap();
     let their_rows = rows(&theirs, &their_entry).await;
 
     assert_not_found(ours.post_credit_note_issue(&their_credit).await);
@@ -580,6 +600,6 @@ async fn another_tenants_credit_note_cannot_be_booked() {
     let our_customer = customer(&ours, "ours", "EUR").await;
     let (our_invoice, _our_day) = booked_invoice(&ours, &our_customer).await;
     let our_credit = issued_credit_note(&ours, &our_invoice, None).await;
-    ours.post_credit_note_issue(&our_credit).await.unwrap();
+    assert!(ours.fin_invoice_entry(&our_credit).await.unwrap().is_some());
     assert_eq!(rows(&theirs, &their_entry).await, their_rows);
 }

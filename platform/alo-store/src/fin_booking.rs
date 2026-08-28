@@ -23,22 +23,25 @@
 //!   [`AccountStore::fin_invoice_entry`] is the question a caller asks when it
 //!   would rather look than catch.
 //!
-//! **What is deliberately not here yet:** the call from
-//! [`AccountStore::issue_billing_invoice`] (which issues credit notes too) and
-//! [`AccountStore::record_billing_payment`] themselves, and the *un*-booking
-//! that [`AccountStore::delete_billing_payment`] will need (a booked payment
-//! that is removed has to be reversed, not forgotten — a reversal entry, which
-//! `fin_journal` already supports). The note is explicit that a
-//! document and its entry share one transaction, and that a posting failure
-//! fails the document — which means issuing an invoice starts to depend on the
-//! tenant having a chart and on the day their books opened (B4.10's periods and
-//! the backfill). Wiring it before those exist would make every tenant's first
-//! invoice fail on a chart they have never visited. Until then this is the
-//! function the backfill and the finance routes call, and it is the same
-//! function the issue path will call inside its own transaction.
+//! **The document paths call this layer in-process** (B7.01): issuing a
+//! document — invoice or credit note — books it inside the issue's own
+//! transaction ([`AccountStore::book_issue_in`], called by
+//! [`AccountStore::issue_billing_invoice`]), recording a payment books its
+//! settlement the same way ([`AccountStore::book_payment_in`], called by
+//! [`AccountStore::record_billing_payment`]), and the corrections un-book:
+//! voiding posts a reversal of the issue entry, deleting a booked payment posts
+//! a reversal of its settlement. A posting failure fails the document — an
+//! issue that cannot book rolls back whole and burns no number — and a document
+//! from before this wiring is **backfilled** the moment something needs its
+//! entry (a payment, a credit note, a bank match), at the document's own issue
+//! date, exactly as [`crate::bank_reconcile`] has always done. The public
+//! `post_*` doors below remain for the finance routes and read as an explicit
+//! backfill; calling one on a document the wiring already booked is the
+//! `Conflict` the idempotency key exists to give.
 
 use crate::account::AccountStore;
 use crate::billing_fx::FxSnapshot;
+use crate::billing_invoices::InvoiceDocument;
 use crate::billing_payments::Payment;
 use crate::error::{Result, StoreError};
 use crate::fin_accounts::AccountRole;
@@ -60,13 +63,180 @@ impl AccountStore {
         self.fin_account_for_role(role)
             .await?
             .map(|account| account.id)
-            .ok_or_else(|| {
-                StoreError::Validation(format!(
-                    "this chart of accounts has no active account for the role '{}'; \
-                     set one on the Accounts screen before booking documents",
-                    role.as_str()
-                ))
-            })
+            .ok_or_else(|| missing_role(role))
+    }
+
+    /// [`AccountStore::fin_account_required`], inside a transaction the caller
+    /// owns — the form the document paths use, so the chart a booking resolves
+    /// against is the one its own transaction sees.
+    ///
+    /// # Errors
+    /// [`AccountStore::fin_account_required`]'s.
+    async fn fin_account_required_in(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        role: AccountRole,
+    ) -> Result<FinAccountId> {
+        self.fin_account_for_role_on(&mut **tx, role)
+            .await?
+            .map(|account| account.id)
+            .ok_or_else(|| missing_role(role))
+    }
+
+    /// The three sales-side roles resolved together, inside the caller's
+    /// transaction — every issue-shaped booking needs exactly this set.
+    async fn invoice_accounts_in(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    ) -> Result<InvoiceAccounts> {
+        Ok(InvoiceAccounts {
+            ar: self.fin_account_required_in(tx, AccountRole::Ar).await?,
+            revenue: self
+                .fin_account_required_in(tx, AccountRole::Revenue)
+                .await?,
+            vat_output: self
+                .fin_account_required_in(tx, AccountRole::VatOutput)
+                .await?,
+        })
+    }
+
+    /// **Books an issued document inside the transaction that issued it** —
+    /// the B7.01 wiring of `docs/design/finance.md`'s rule that "the posting
+    /// happens inside the document's own transaction".
+    ///
+    /// The document is read by the caller *after* its issue `UPDATE`, so the
+    /// entry books the number, dates and frozen rate that transaction is about
+    /// to commit. An ordinary invoice books the invoice rule; a credit note
+    /// books the mirror, naming the original's entry — and when the original
+    /// predates this wiring and is not in the books, its issue entry is
+    /// **backfilled first**, at the original's own issue date, exactly as a
+    /// confirmed bank match has always done ([`crate::bank_reconcile`]).
+    ///
+    /// Any refusal here fails the whole issue: the caller's transaction rolls
+    /// back, the drawn number returns to the sequence, and the document stays
+    /// a draft.
+    ///
+    /// # Errors
+    /// [`StoreError::Validation`] when the chart is missing a role or the
+    /// document cannot be restated into the accounting currency;
+    /// [`StoreError::Conflict`] when the entry's date falls in a closed period,
+    /// or the document event is somehow already posted; [`StoreError::NotFound`]
+    /// when a credit note's original has vanished; [`StoreError::Db`] on
+    /// failure.
+    pub(crate) async fn book_issue_in(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        document: &InvoiceDocument,
+        base_currency: &str,
+    ) -> Result<FinEntryId> {
+        let accounts = self.invoice_accounts_in(tx).await?;
+        if document.invoice.is_credit_note {
+            let original_id = credit_note_original(document)?.clone();
+            let reverses = match self.fin_invoice_entry_in(tx, &original_id).await? {
+                Some(entry) => entry,
+                None => {
+                    let original = self
+                        .billing_invoice_in(tx, &original_id)
+                        .await?
+                        .ok_or(StoreError::NotFound)?;
+                    let entry = invoice_issue_entry(&original, base_currency, &accounts)?;
+                    self.post_fin_entry_in(tx, &entry).await?
+                }
+            };
+            let entry = credit_note_entry(document, base_currency, &accounts, &reverses)?;
+            self.post_fin_entry_in(tx, &entry).await
+        } else {
+            let entry = invoice_issue_entry(document, base_currency, &accounts)?;
+            self.post_fin_entry_in(tx, &entry).await
+        }
+    }
+
+    /// **Books a recorded payment inside the transaction that recorded it** —
+    /// the settlement leg of the B7.01 wiring, called by
+    /// [`AccountStore::record_billing_payment`] after the row is written.
+    ///
+    /// The document is read inside the transaction, so the payment sequence the
+    /// relief telescopes over includes the row just inserted. An invoice from
+    /// before this wiring is backfilled first, like everywhere else.
+    ///
+    /// # Errors
+    /// [`StoreError::Validation`] when the chart is missing a role, no
+    /// reference rate covers the day the money arrived, or the document cannot
+    /// be restated; [`StoreError::Conflict`] when the entry's date falls in a
+    /// closed period; [`StoreError::NotFound`] when the document or payment has
+    /// vanished; [`StoreError::Db`] on failure.
+    pub(crate) async fn book_payment_in(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        invoice_id: &BillingInvoiceId,
+        payment_id: &BillingPaymentId,
+    ) -> Result<FinEntryId> {
+        let document = self
+            .billing_invoice_in(tx, invoice_id)
+            .await?
+            .ok_or(StoreError::NotFound)?;
+        let base_currency =
+            crate::billing_settings::base_currency_in(tx, self.tenant.as_str()).await?;
+
+        if self.fin_invoice_entry_in(tx, invoice_id).await?.is_none() {
+            self.book_issue_in(tx, &document, &base_currency).await?;
+        }
+
+        let payments = self.billing_payments_on(&mut **tx, invoice_id).await?;
+        let (payment, paid_before_cents) =
+            crate::billing_payments::payment_in_sequence(payments, payment_id)?;
+        let settled_at = self
+            .settlement_rate_in(
+                tx,
+                &document.invoice.currency,
+                &base_currency,
+                payment.paid_on,
+            )
+            .await?;
+        let accounts = PaymentAccounts {
+            settled_into: self
+                .fin_account_required_in(tx, payment_settlement_role(&payment.method))
+                .await?,
+            ar: self.fin_account_required_in(tx, AccountRole::Ar).await?,
+            fx_diff: if settlement_needs_exchange_account(&document, &base_currency) {
+                Some(
+                    self.fin_account_required_in(tx, AccountRole::FxDiff)
+                        .await?,
+                )
+            } else {
+                None
+            },
+        };
+        let entry = payment_settle_entry(
+            &payment,
+            &document,
+            paid_before_cents,
+            &base_currency,
+            &settled_at,
+            &accounts,
+        )?;
+        self.post_fin_entry_in(tx, &entry).await
+    }
+
+    /// [`AccountStore::fin_invoice_entry`], inside a transaction the caller
+    /// owns.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub(crate) async fn fin_invoice_entry_in(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        id: &BillingInvoiceId,
+    ) -> Result<Option<FinEntryId>> {
+        self.fin_entry_for_source_on(
+            &mut **tx,
+            &EntrySource {
+                kind: SourceKind::Invoice,
+                id: id.as_str().to_owned(),
+                event: SourceEvent::Issue,
+            },
+        )
+        .await
     }
 
     /// **Books an issued invoice**: the receivable against the revenue and the
@@ -289,22 +459,46 @@ impl AccountStore {
         // inside the transaction that freezes a rate onto a document; nothing
         // here freezes anything, so it is opened and rolled back.
         let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
-        let snapshot = crate::billing_fx_rates::snapshot_at(
-            &mut tx,
-            self.tenant.as_str(),
-            base_currency,
-            currency,
-            on,
-        )
-        .await
-        .map_err(|error| match error {
-            StoreError::Validation(_) => StoreError::Validation(format!(
-                "no reference rate covers {on} for {currency}; import the rates for that day \
-                 before booking this payment"
-            )),
-            other => other,
-        });
+        let snapshot = self
+            .settlement_rate_in(&mut tx, currency, base_currency, on)
+            .await;
         tx.rollback().await.map_err(StoreError::Db)?;
         snapshot
     }
+
+    /// [`AccountStore::settlement_rate`], inside a transaction the caller owns
+    /// — the form [`AccountStore::book_payment_in`] uses.
+    ///
+    /// # Errors
+    /// Exactly [`AccountStore::settlement_rate`]'s.
+    async fn settlement_rate_in(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        currency: &str,
+        base_currency: &str,
+        on: time::Date,
+    ) -> Result<FxSnapshot> {
+        if currency == base_currency {
+            return Ok(FxSnapshot::identity(base_currency, on));
+        }
+        crate::billing_fx_rates::snapshot_at(tx, self.tenant.as_str(), base_currency, currency, on)
+            .await
+            .map_err(|error| match error {
+                StoreError::Validation(_) => StoreError::Validation(format!(
+                    "no reference rate covers {on} for {currency}; import the rates for that day \
+                     before booking this payment"
+                )),
+                other => other,
+            })
+    }
+}
+
+/// The refusal a chart that cannot answer a role gets, worded once for the
+/// pool door and the in-transaction door alike.
+fn missing_role(role: AccountRole) -> StoreError {
+    StoreError::Validation(format!(
+        "this chart of accounts has no active account for the role '{}'; \
+         set one on the Accounts screen before booking documents",
+        role.as_str()
+    ))
 }

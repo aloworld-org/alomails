@@ -43,8 +43,10 @@ async fn workspace(store: &Store, tag: &str) -> Workspace {
         .create_user(&format!("{tag}@insights.test"))
         .await
         .unwrap();
+    let account = store.for_account(tenant.clone(), user.clone());
+    common::seed_default_chart(&account).await;
     Workspace {
-        store: store.for_account(tenant.clone(), user.clone()),
+        store: account,
         tenant,
         user,
     }

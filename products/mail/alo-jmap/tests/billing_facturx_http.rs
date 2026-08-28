@@ -203,6 +203,7 @@ async fn issue(h: &Harness, id: &str) -> String {
 /// A tenant that has stated its identity, with one issued invoice.
 async fn a_complete_tenant(tag: &str) -> (Harness, String, String) {
     let h = harness(tag).await;
+    common::seed_default_chart(&h.acc).await;
     let (status, body) = patch(
         &h.app,
         &h.token,
@@ -226,6 +227,7 @@ async fn a_complete_tenant(tag: &str) -> (Harness, String, String) {
 #[tokio::test]
 async fn the_route_needs_a_token_and_an_id_that_exists() {
     let h = harness("bill-fx-guards").await;
+    common::seed_default_chart(&h.acc).await;
 
     let anonymous = fetch(&h.app, None, "/billing/invoices/no-such-id/facturx.xml").await;
     assert_eq!(anonymous.status, StatusCode::UNAUTHORIZED);
@@ -302,6 +304,7 @@ async fn an_issuer_who_has_not_stated_its_own_details_is_told_which_rules() {
     // A tenant that has never opened the billing settings: the paper still
     // prints, and the e-invoice names every rule that stops it existing.
     let h = harness("bill-fx-incomplete").await;
+    common::seed_default_chart(&h.acc).await;
     let customer = a_customer(&h.app, &h.token, "Kunde GmbH").await;
     let invoice = a_draft(&h, &customer, "Consulting").await;
     issue(&h, &invoice).await;
@@ -450,6 +453,7 @@ async fn a_credit_note_is_a_381_that_names_what_it_corrects() {
 async fn no_byte_of_another_tenants_document_reaches_an_e_invoice() {
     let (a, a_invoice, _) = a_complete_tenant("bill-fx-a").await;
     let b = harness("bill-fx-b").await;
+    common::seed_default_chart(&b.acc).await;
 
     // B states an identity nobody else could plausibly have.
     let (status, body) = patch(

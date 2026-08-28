@@ -52,6 +52,7 @@ async fn tenant_with_customer(store: &Store, tag: &str) -> (AccountStore, Billin
         .await
         .unwrap();
     let account = store.for_account(tenant, user);
+    common::seed_default_chart(&account).await;
     let customer = account
         .create_billing_customer(&NewCustomer {
             name: format!("Customer {tag}"),

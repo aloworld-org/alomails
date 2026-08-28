@@ -181,6 +181,7 @@ async fn an_issued_invoice(h: &Harness, customer: &str, description: &str) -> (S
 #[tokio::test]
 async fn every_new_route_needs_a_token_and_an_id_that_exists() {
     let h = harness("bill-print-guards").await;
+    common::seed_default_chart(&h.acc).await;
     let routes: Vec<(&str, &str)> = vec![
         ("GET", "/billing/settings"),
         ("PATCH", "/billing/settings"),
@@ -211,6 +212,7 @@ async fn every_new_route_needs_a_token_and_an_id_that_exists() {
 #[tokio::test]
 async fn a_printed_page_carries_the_headers_that_keep_it_self_contained() {
     let h = harness("bill-print-headers").await;
+    common::seed_default_chart(&h.acc).await;
     patch(
         &h.app,
         &h.token,
@@ -255,7 +257,9 @@ async fn a_printed_page_carries_the_headers_that_keep_it_self_contained() {
 #[tokio::test]
 async fn neither_the_identity_nor_the_paper_ever_crosses_a_tenant() {
     let a = harness("bill-print-a").await;
+    common::seed_default_chart(&a.acc).await;
     let b = harness("bill-print-b").await;
+    common::seed_default_chart(&b.acc).await;
 
     // B states an identity nobody else could plausibly have, and raises a
     // document with an equally distinctive line.
@@ -351,6 +355,7 @@ async fn neither_the_identity_nor_the_paper_ever_crosses_a_tenant() {
 #[tokio::test]
 async fn the_identity_is_created_by_its_first_save_and_merged_afterwards() {
     let h = harness("bill-print-settings").await;
+    common::seed_default_chart(&h.acc).await;
 
     // Never saved: the blanks, and it says so — never a 404 for a record with
     // exactly one row per tenant.
@@ -446,6 +451,7 @@ async fn the_identity_is_created_by_its_first_save_and_merged_afterwards() {
 #[tokio::test]
 async fn a_document_prints_as_what_it_actually_is() {
     let h = harness("bill-print-states").await;
+    common::seed_default_chart(&h.acc).await;
     patch(
         &h.app,
         &h.token,
@@ -614,6 +620,7 @@ fn escaped(value: &str) -> String {
 #[tokio::test]
 async fn nothing_a_user_can_type_becomes_markup() {
     let h = harness("bill-print-escaping").await;
+    common::seed_default_chart(&h.acc).await;
 
     // Every free-text field of both records and of the document — twenty of
     // them. The page has one escaper; this is what proves it is on all twenty

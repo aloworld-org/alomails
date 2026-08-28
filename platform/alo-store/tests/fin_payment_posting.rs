@@ -137,7 +137,10 @@ async fn booked_invoice(
         .unwrap();
     let document = account.issue_billing_invoice(&id).await.unwrap();
     assert_eq!(document.totals.gross_cents, GROSS_CENTS);
-    account.post_invoice_issue(&id).await.unwrap();
+    assert!(
+        account.fin_invoice_entry(&id).await.unwrap().is_some(),
+        "issuing books the document in the same transaction (B7.01)"
+    );
     (id, document.invoice.issue_date.unwrap())
 }
 
@@ -222,20 +225,11 @@ async fn booking_a_payment_writes_the_money_where_it_landed() {
     let (invoice, issued_on) = booked_invoice(&account, &customer).await;
     let payment = pay(&account, &invoice, GROSS_CENTS, "bank transfer", issued_on).await;
 
-    assert_eq!(
-        account.fin_payment_entry(&payment).await.unwrap(),
-        None,
-        "recording a payment does not book it — the wiring lands with the periods (B4.10)"
-    );
     let entry_id = account
-        .post_payment_settle(&invoice, &payment)
+        .fin_payment_entry(&payment)
         .await
-        .unwrap();
-    assert_eq!(
-        account.fin_payment_entry(&payment).await.unwrap().as_ref(),
-        Some(&entry_id),
-        "and the payment now names its entry"
-    );
+        .unwrap()
+        .expect("recording books the settlement in the same transaction (B7.01)");
 
     let booked = account
         .fin_journal_entry(&entry_id)
@@ -293,8 +287,7 @@ async fn partial_payments_leave_exactly_what_is_still_owed() {
     let ar = role_account(&account, AccountRole::Ar).await;
     let cash = role_account(&account, AccountRole::Cash).await;
 
-    let first = pay(&account, &invoice, 30_000, "cash", issued_on).await;
-    account.post_payment_settle(&invoice, &first).await.unwrap();
+    let _first = pay(&account, &invoice, 30_000, "cash", issued_on).await;
     assert_eq!(
         balance(&account, &ar.id).await,
         100_700,
@@ -321,11 +314,7 @@ async fn partial_payments_leave_exactly_what_is_still_owed() {
     let document = account.billing_invoice(&invoice).await.unwrap().unwrap();
     assert_eq!(document.settlement().state, PaymentState::PartiallyPaid);
 
-    let second = pay(&account, &invoice, 100_700, "bank transfer", issued_on).await;
-    account
-        .post_payment_settle(&invoice, &second)
-        .await
-        .unwrap();
+    let _second = pay(&account, &invoice, 100_700, "bank transfer", issued_on).await;
     assert_eq!(
         balance(&account, &ar.id).await,
         0,
@@ -389,7 +378,7 @@ async fn a_foreign_currency_settlement_posts_the_exchange_difference() {
     );
 
     let first = pay(&account, &invoice, 50_000, "bank transfer", early).await;
-    let first_entry = account.post_payment_settle(&invoice, &first).await.unwrap();
+    let first_entry = account.fin_payment_entry(&first).await.unwrap().unwrap();
     assert_eq!(
         rows(&account, &first_entry).await,
         vec![
@@ -405,10 +394,7 @@ async fn a_foreign_currency_settlement_posts_the_exchange_difference() {
     );
 
     let second = pay(&account, &invoice, 80_700, "bank transfer", late).await;
-    let second_entry = account
-        .post_payment_settle(&invoice, &second)
-        .await
-        .unwrap();
+    let second_entry = account.fin_payment_entry(&second).await.unwrap().unwrap();
     assert_eq!(
         rows(&account, &second_entry).await,
         vec![
@@ -454,43 +440,17 @@ async fn a_foreign_currency_settlement_posts_the_exchange_difference() {
 }
 
 /// A retry, a double-click and a re-run of a backfill all hit the idempotency
-/// key; and a payment refuses to book before the document it settles does,
-/// rather than leaving a receivable nobody ever put there.
+/// key: recording booked the payment once, and the explicit door answers a
+/// typed conflict afterwards.
 #[tokio::test]
 async fn a_payment_books_once_and_never_before_its_invoice() {
     let store = common::test_store().await;
     let (account, _tenant) = tenant_with_chart(&store, "once").await;
     let customer = customer(&account, "once", "EUR").await;
 
-    // An issued but unbooked invoice: its payment has no receivable to relieve.
-    let unbooked = account
-        .create_billing_invoice(&NewInvoice::for_customer(customer.clone()))
-        .await
-        .unwrap();
-    account
-        .set_billing_invoice_lines(&unbooked, &lines())
-        .await
-        .unwrap();
-    let issued_on = account
-        .issue_billing_invoice(&unbooked)
-        .await
-        .unwrap()
-        .invoice
-        .issue_date
-        .unwrap();
-    let early = pay(&account, &unbooked, 1_000, "card", issued_on).await;
-    assert!(
-        assert_conflict(account.post_payment_settle(&unbooked, &early).await)
-            .contains("not in the books yet")
-    );
-    assert_eq!(account.fin_payment_entry(&early).await.unwrap(), None);
-
     let (invoice, issued_on) = booked_invoice(&account, &customer).await;
     let payment = pay(&account, &invoice, 40_000, "bank transfer", issued_on).await;
-    let entry_id = account
-        .post_payment_settle(&invoice, &payment)
-        .await
-        .unwrap();
+    let entry_id = account.fin_payment_entry(&payment).await.unwrap().unwrap();
     let written = rows(&account, &entry_id).await;
 
     assert!(
@@ -535,8 +495,9 @@ async fn another_tenants_payment_cannot_be_booked() {
     )
     .await;
     let their_entry = theirs
-        .post_payment_settle(&their_invoice, &their_payment)
+        .fin_payment_entry(&their_payment)
         .await
+        .unwrap()
         .unwrap();
     let their_rows = rows(&theirs, &their_entry).await;
 
@@ -567,8 +528,72 @@ async fn another_tenants_payment_cannot_be_booked() {
     let our_customer = customer(&ours, "ours", "EUR").await;
     let (our_invoice, our_day) = booked_invoice(&ours, &our_customer).await;
     let our_payment = pay(&ours, &our_invoice, 10_000, "bank transfer", our_day).await;
-    ours.post_payment_settle(&our_invoice, &our_payment)
+    assert!(
+        ours.fin_payment_entry(&our_payment)
+            .await
+            .unwrap()
+            .is_some()
+    );
+    assert_eq!(rows(&theirs, &their_entry).await, their_rows);
+}
+
+/// **The backfill.** A tenant who invoiced before the B7.01 wiring holds
+/// issued documents with no entry. The moment money is recorded against one,
+/// the issue entry is written first — at the document's own issue date — and
+/// the settlement second, in the same transaction: the exact behaviour a
+/// confirmed bank match has always had. (The pre-wiring state is manufactured
+/// with test-only surgery on the journal, because the product itself can no
+/// longer produce it.)
+#[tokio::test]
+async fn a_pre_wiring_invoice_is_backfilled_when_money_arrives() {
+    let store = common::test_store().await;
+    let (account, tenant) = tenant_with_chart(&store, "backfill").await;
+    let customer = customer(&account, "backfill", "EUR").await;
+    let (invoice, issued_on) = booked_invoice(&account, &customer).await;
+
+    // Surgery: make the tenant look pre-wiring by removing the issue entry.
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(1)
+        .connect(&common::database_url())
         .await
         .unwrap();
-    assert_eq!(rows(&theirs, &their_entry).await, their_rows);
+    for table in ["fin_postings", "fin_entries"] {
+        sqlx::query(&format!("DELETE FROM {table} WHERE tenant_id = $1"))
+            .bind(tenant.as_str())
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
+    assert_eq!(account.fin_invoice_entry(&invoice).await.unwrap(), None);
+
+    let payment = pay(&account, &invoice, 30_000, "bank transfer", issued_on).await;
+    let issue_entry = account
+        .fin_invoice_entry(&invoice)
+        .await
+        .unwrap()
+        .expect("the recording backfilled the invoice's own issue entry");
+    let settle_entry = account
+        .fin_payment_entry(&payment)
+        .await
+        .unwrap()
+        .expect("and booked the settlement beside it");
+    assert_ne!(issue_entry, settle_entry);
+    assert_eq!(
+        account
+            .fin_journal_entry(&issue_entry)
+            .await
+            .unwrap()
+            .unwrap()
+            .entry
+            .entry_date,
+        issued_on,
+        "the backfilled issue books at the document's own date"
+    );
+    let ar = role_account(&account, AccountRole::Ar).await;
+    assert_eq!(
+        balance(&account, &ar.id).await,
+        GROSS_CENTS - 30_000,
+        "the books owe exactly what billing says is outstanding"
+    );
+    assert!(account.fin_unbalanced_entries().await.unwrap().is_empty());
 }

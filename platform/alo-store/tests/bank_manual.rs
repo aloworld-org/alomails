@@ -249,8 +249,8 @@ async fn a_person_picks_the_document_the_payer_never_named() {
         .await
         .unwrap();
     assert!(
-        confirmed.invoice_booked_now,
-        "nothing else books an issue yet, so the pick does"
+        !confirmed.invoice_booked_now,
+        "the issue itself booked the document (B7.01); the pick found it there"
     );
     assert_eq!(confirmed.matched.amount_cents, GROSS_CENTS);
     assert_eq!(
@@ -348,9 +348,10 @@ async fn more_than_is_owed_is_refused_and_so_is_an_amount_the_bank_did_not_state
         "money leaving",
     );
 
-    // Nothing was written by any of them.
+    // Nothing was written by any of them: no payment, and the receivable
+    // stands exactly as the issue booked it (B7.01).
     assert!(acc.billing_payments(&invoice).await.unwrap().is_empty());
-    assert_eq!(receivable(&acc).await, (0, 0));
+    assert_eq!(receivable(&acc).await, (GROSS_CENTS, GROSS_CENTS));
     for line in &lines {
         assert_eq!(
             acc.bank_line(line).await.unwrap().unwrap().status,
@@ -556,8 +557,9 @@ async fn a_line_nobody_has_to_book_leaves_the_pile_with_its_reason() {
         .unwrap();
     assert_eq!(open.len(), 1);
 
-    // Nothing was booked by dismissing it.
-    assert_eq!(receivable(&acc).await, (0, 0));
+    // Nothing was booked by dismissing it: the receivable is still exactly
+    // what the issue booked (B7.01).
+    assert_eq!(receivable(&acc).await, (GROSS_CENTS, GROSS_CENTS));
     refused(
         acc.match_bank_line(&lines[1], &invoice, -450, None).await,
         "not ours to book",
@@ -646,8 +648,8 @@ async fn two_tenants_holding_the_same_statement_never_reach_each_others_lines() 
     assert_eq!(receivable(&ours).await, (0, 0));
     assert_eq!(
         receivable(&theirs).await,
-        (0, 0),
-        "their invoice was never booked, so their receivable is untouched"
+        (GROSS_CENTS, GROSS_CENTS),
+        "their receivable stands exactly as their own issue booked it"
     );
     assert_eq!(
         theirs

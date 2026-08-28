@@ -187,17 +187,11 @@ async fn booking_an_issued_invoice_writes_the_golden_entry() {
     let (account, _tenant, customer) = tenant_with_chart(&store, "golden").await;
     let (id, document) = issued_invoice(&account, &customer).await;
 
-    assert_eq!(
-        account.fin_invoice_entry(&id).await.unwrap(),
-        None,
-        "issuing does not book — the wiring lands with the periods (B4.10)"
-    );
-    let entry_id = account.post_invoice_issue(&id).await.unwrap();
-    assert_eq!(
-        account.fin_invoice_entry(&id).await.unwrap().as_ref(),
-        Some(&entry_id),
-        "and the document now names its entry"
-    );
+    let entry_id = account
+        .fin_invoice_entry(&id)
+        .await
+        .unwrap()
+        .expect("issuing books the document in the same transaction (B7.01)");
 
     let booked = account
         .fin_journal_entry(&entry_id)
@@ -270,7 +264,7 @@ async fn the_ledger_holds_exactly_what_billing_computed() {
     let store = common::test_store().await;
     let (account, _tenant, customer) = tenant_with_chart(&store, "p3").await;
     let (id, document) = issued_invoice(&account, &customer).await;
-    let entry_id = account.post_invoice_issue(&id).await.unwrap();
+    let entry_id = account.fin_invoice_entry(&id).await.unwrap().unwrap();
 
     let expected = expected_totals();
     assert_eq!(
@@ -331,8 +325,10 @@ async fn booking_the_same_invoice_twice_changes_nothing() {
     let (account, _tenant, customer) = tenant_with_chart(&store, "twice").await;
     let (id, _) = issued_invoice(&account, &customer).await;
 
-    let entry_id = account.post_invoice_issue(&id).await.unwrap();
+    let entry_id = account.fin_invoice_entry(&id).await.unwrap().unwrap();
     let before = rows(&account, &entry_id).await;
+    // The explicit door is now the retry/backfill path, and it answers a
+    // typed conflict for a document the issue already booked.
     let message = assert_conflict(account.post_invoice_issue(&id).await);
     assert!(message.contains("already posted"), "{message}");
 
@@ -364,6 +360,14 @@ async fn a_draft_a_void_and_a_credit_note_are_refused() {
         assert_conflict(account.post_invoice_issue(&draft).await).contains("draft"),
         "a draft is an intention"
     );
+    assert!(
+        account
+            .fin_entries(None, None, 100)
+            .await
+            .unwrap()
+            .is_empty(),
+        "a refused draft books nothing"
+    );
 
     let (voided, _) = issued_invoice(&account, &customer).await;
     account.void_billing_invoice(&voided).await.unwrap();
@@ -373,16 +377,14 @@ async fn a_draft_a_void_and_a_credit_note_are_refused() {
     let credit = account.create_billing_credit_note(&original).await.unwrap();
     assert!(
         assert_conflict(account.post_invoice_issue(&credit).await).contains("credit note"),
-        "the credit-note rule arrives with B4.04c"
+        "a credit note is the credit-note rule's document"
     );
 
-    assert!(
-        account
-            .fin_entries(None, None, 100)
-            .await
-            .unwrap()
-            .is_empty(),
-        "nothing was booked by any of the three refusals"
+    assert_eq!(
+        account.fin_entries(None, None, 100).await.unwrap().len(),
+        3,
+        "the journal holds the two issues and the void's reversal, and the \
+         refusals added nothing beside them"
     );
 }
 
@@ -390,14 +392,21 @@ async fn a_draft_a_void_and_a_credit_note_are_refused() {
 /// role — never a silent posting to suspense, which is discovered at the year
 /// end by somebody who cannot remember the invoice.
 #[tokio::test]
-async fn a_chart_missing_a_role_refuses_the_document() {
+async fn a_chart_missing_a_role_refuses_the_issue_and_burns_no_number() {
     let store = common::test_store().await;
     let (account, _tenant, customer) = tenant_with_chart(&store, "norole").await;
-    let (id, _) = issued_invoice(&account, &customer).await;
-
     let ar = role_account(&account, AccountRole::Ar).await;
     account.set_fin_account_active(&ar.id, false).await.unwrap();
-    let message = assert_validation(account.post_invoice_issue(&id).await);
+
+    let draft = account
+        .create_billing_invoice(&NewInvoice::for_customer(customer.clone()))
+        .await
+        .unwrap();
+    account
+        .set_billing_invoice_lines(&draft, &lines())
+        .await
+        .unwrap();
+    let message = assert_validation(account.issue_billing_invoice(&draft).await);
     assert!(
         message.contains("'ar'"),
         "the refusal names the role: {message}"
@@ -408,13 +417,26 @@ async fn a_chart_missing_a_role_refuses_the_document() {
             .await
             .unwrap()
             .is_empty(),
-        "a refused rule writes no half-entry"
+        "a refused issue writes no half-entry"
     );
+    let document = account.billing_invoice(&draft).await.unwrap().unwrap();
+    assert_eq!(
+        document.invoice.status,
+        alo_store::InvoiceStatus::Draft,
+        "and the document is still a draft"
+    );
+    assert_eq!(document.invoice.number, None);
 
-    // Reactivated, the same document books — the refusal was about the chart,
-    // not about the invoice.
+    // Reactivated, the same document issues — with the FIRST number of the
+    // series: the refused issue gave its drawn number back.
     account.set_fin_account_active(&ar.id, true).await.unwrap();
-    account.post_invoice_issue(&id).await.unwrap();
+    let document = account.issue_billing_invoice(&draft).await.unwrap();
+    let number = document.invoice.number.unwrap();
+    assert!(
+        number.ends_with("-00001"),
+        "the refusal burned no number: {number}"
+    );
+    assert!(account.fin_invoice_entry(&draft).await.unwrap().is_some());
 }
 
 /// **Law 1.** Another tenant's invoice id is a `NotFound` through this handle —
@@ -427,7 +449,11 @@ async fn another_tenants_invoice_can_never_be_booked() {
     let (ours, _t2, our_customer) = tenant_with_chart(&store, "b").await;
 
     let (their_invoice, _) = issued_invoice(&theirs, &their_customer).await;
-    let their_entry = theirs.post_invoice_issue(&their_invoice).await.unwrap();
+    let their_entry = theirs
+        .fin_invoice_entry(&their_invoice)
+        .await
+        .unwrap()
+        .unwrap();
     let their_rows = rows(&theirs, &their_entry).await;
 
     assert_not_found(ours.post_invoice_issue(&their_invoice).await);
@@ -466,7 +492,12 @@ async fn another_tenants_invoice_can_never_be_booked() {
 
     // Ours books normally afterwards, and theirs is untouched by all of it.
     let (our_invoice, _) = issued_invoice(&ours, &our_customer).await;
-    ours.post_invoice_issue(&our_invoice).await.unwrap();
+    assert!(
+        ours.fin_invoice_entry(&our_invoice)
+            .await
+            .unwrap()
+            .is_some()
+    );
     assert_eq!(rows(&theirs, &their_entry).await, their_rows);
 }
 
@@ -503,7 +534,7 @@ async fn a_foreign_currency_invoice_books_at_its_frozen_rate() {
 
     let (id, document) = issued_invoice(&account, &customer).await;
     assert_eq!(document.invoice.currency, "USD");
-    let entry_id = account.post_invoice_issue(&id).await.unwrap();
+    let entry_id = account.fin_invoice_entry(&id).await.unwrap().unwrap();
     let postings = account.fin_entry_postings(&entry_id).await.unwrap();
 
     let printed = restated_into("EUR", document.invoice.fx.as_ref(), &document.totals)

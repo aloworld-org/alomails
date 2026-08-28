@@ -114,7 +114,10 @@ async fn booked_invoice(
         .unwrap();
     account.set_billing_invoice_lines(&id, lines).await.unwrap();
     let document = account.issue_billing_invoice(&id).await.unwrap();
-    account.post_invoice_issue(&id).await.unwrap();
+    assert!(
+        account.fin_invoice_entry(&id).await.unwrap().is_some(),
+        "issuing books the document in the same transaction (B7.01)"
+    );
     (id, document.invoice.issue_date.unwrap())
 }
 
@@ -123,7 +126,7 @@ async fn booked_invoice(
 async fn booked_credit_note(account: &AccountStore, original: &BillingInvoiceId) {
     let id = account.create_billing_credit_note(original).await.unwrap();
     account.issue_billing_invoice(&id).await.unwrap();
-    account.post_credit_note_issue(&id).await.unwrap();
+    assert!(account.fin_invoice_entry(&id).await.unwrap().is_some());
 }
 
 /// **The seeded books**, scaled by `times` so a second tenant's are

@@ -41,6 +41,7 @@ use crate::billing_invoices::InvoiceStatus;
 use crate::billing_line::{INVOICE_LINES, Line};
 use crate::billing_totals::{LineFigures, totals};
 use crate::error::{Result, StoreError};
+use crate::fin_journal::{EntrySource, SourceEvent, SourceKind, reversal_entry};
 use crate::id::{BillingInvoiceId, BillingPaymentId};
 
 /// How the money arrived: "bank transfer", "SEPA direct debit", "card", "cash".
@@ -287,12 +288,21 @@ impl AccountStore {
     /// payment. A date *before* the issue date is allowed — a deposit taken in
     /// advance is real, and the document it settles is raised afterwards.
     ///
+    /// Recording also **books the settlement** ([`AccountStore::book_payment_in`],
+    /// B7.01) inside the same transaction — the money where it landed, against
+    /// the receivable it relieves — backfilling the invoice's own issue entry
+    /// first when the document predates the wiring. A booking refusal fails
+    /// the recording whole.
+    ///
     /// # Errors
     /// [`StoreError::NotFound`] when the invoice is absent or another tenant's;
-    /// [`StoreError::Conflict`] when it is a draft, void, or a credit note;
+    /// [`StoreError::Conflict`] when it is a draft, void, or a credit note, or
+    /// when the payment's date falls in a closed period (B4.10);
     /// [`StoreError::Validation`] when the amount is not positive, is beyond
-    /// [`PAYMENT_MAX_CENTS`], the date is in the future, or a text field breaks
-    /// its bound; [`StoreError::Db`] on failure.
+    /// [`PAYMENT_MAX_CENTS`], the date is in the future, a text field breaks
+    /// its bound, the chart of accounts cannot answer a role the posting rule
+    /// needs, or no reference rate covers the day a foreign-currency payment
+    /// arrived; [`StoreError::Db`] on failure.
     pub async fn record_billing_payment(
         &self,
         invoice_id: &BillingInvoiceId,
@@ -302,6 +312,14 @@ impl AccountStore {
         let id = self
             .record_billing_payment_in(&mut tx, invoice_id, input)
             .await?;
+        // The books learn about the money in the same act that records it
+        // (`docs/design/finance.md`; B7.01): the settlement entry is posted
+        // inside this transaction, and an invoice from before the wiring is
+        // backfilled first. A booking refusal rolls the payment back whole.
+        // The bank-reconciliation path calls `record_billing_payment_in`
+        // directly and books for itself, which is why the wiring lives here on
+        // the public door and not inside it.
+        self.book_payment_in(&mut tx, invoice_id, &id).await?;
         tx.commit().await.map_err(StoreError::Db)?;
         Ok(id)
     }
@@ -391,15 +409,61 @@ impl AccountStore {
     /// another document (or another tenant) is a `NotFound` rather than a
     /// deletion somewhere unexpected.
     ///
+    /// A payment the wiring booked (B7.01) is **reversed, not forgotten**: the
+    /// settlement entry stays and a mirror entry takes it back, in this same
+    /// transaction — the exact act unmatching a bank line performs
+    /// ([`crate::bank_unmatch`]), for the exact reason: the books are the one
+    /// place where what happened stays visible even when it was wrong. And for
+    /// the same cumulative-relief arithmetic, only the **newest** payment on a
+    /// document can be taken back while booked — reliefs telescope, and
+    /// removing one from the middle would leave every later entry computed
+    /// against a prefix that no longer exists.
+    ///
     /// # Errors
     /// [`StoreError::NotFound`] when the invoice or the payment is absent or
-    /// another tenant's; [`StoreError::Db`] on failure.
+    /// another tenant's; [`StoreError::Conflict`] when a later payment has to
+    /// be taken back first, or the reversal would land in a closed period;
+    /// [`StoreError::Db`] on failure.
     pub async fn delete_billing_payment(
         &self,
         invoice_id: &BillingInvoiceId,
         payment_id: &BillingPaymentId,
     ) -> Result<()> {
+        // The entry and its postings are immutable once written, so reading
+        // them before the transaction opens reads exactly what reading them
+        // inside it would (`bank_unmatch` takes the same view).
+        let booked = match self.fin_payment_entry(payment_id).await? {
+            Some(entry_id) => self.fin_journal_entry(&entry_id).await?,
+            None => None,
+        };
+
         let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
+        if let Some(settlement) = &booked {
+            // Under the invoice's lock — the same lock every payment path
+            // takes first — so the "newest payment" answered below cannot
+            // change before the delete that relies on it.
+            self.lock_invoice_for_payment(&mut tx, invoice_id).await?;
+            let payments = self.billing_payments_on(&mut *tx, invoice_id).await?;
+            if !payments.iter().any(|payment| &payment.id == payment_id) {
+                return Err(StoreError::NotFound);
+            }
+            if payments.first().map(|payment| &payment.id) != Some(payment_id) {
+                return Err(StoreError::Conflict(
+                    "another payment was recorded against that invoice after this one; take \
+                     that one back first"
+                        .to_owned(),
+                ));
+            }
+            let reversal = reversal_entry(
+                settlement,
+                Some(EntrySource {
+                    kind: SourceKind::Payment,
+                    id: payment_id.as_str().to_owned(),
+                    event: SourceEvent::Void,
+                }),
+            );
+            self.post_fin_entry_in(&mut tx, &reversal).await?;
+        }
         self.delete_billing_payment_in(&mut tx, invoice_id, payment_id)
             .await?;
         tx.commit().await.map_err(StoreError::Db)?;

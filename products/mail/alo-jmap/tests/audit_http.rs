@@ -165,6 +165,7 @@ async fn a_deal(h: &Harness) -> String {
 #[tokio::test]
 async fn every_act_on_an_invoice_writes_exactly_one_entry() {
     let h = harness("audit-arc").await;
+    common::seed_default_chart(&h.acc).await;
     let customer = a_customer(&h).await;
     let invoice = an_invoice(&h, &customer).await;
     let entity = format!("billing.invoice:{invoice}");
@@ -239,6 +240,7 @@ async fn every_act_on_an_invoice_writes_exactly_one_entry() {
 #[tokio::test]
 async fn a_history_is_the_records_own_and_nobody_elses() {
     let h = harness("audit-scope").await;
+    common::seed_default_chart(&h.acc).await;
     let customer = a_customer(&h).await;
     let entity = format!("billing.customer:{customer}");
 
@@ -279,6 +281,7 @@ async fn a_history_is_the_records_own_and_nobody_elses() {
 #[tokio::test]
 async fn a_deal_keeps_the_same_trail() {
     let h = harness("audit-crm").await;
+    common::seed_default_chart(&h.acc).await;
     let deal = a_deal(&h).await;
     let entity = format!("crm.deal:{deal}");
 
@@ -336,6 +339,7 @@ async fn a_deal_keeps_the_same_trail() {
 #[tokio::test]
 async fn reads_and_refused_writes_are_not_recorded() {
     let h = harness("audit-quiet").await;
+    common::seed_default_chart(&h.acc).await;
     let customer = a_customer(&h).await;
     let invoice = an_invoice(&h, &customer).await;
     let entity = format!("billing.invoice:{invoice}");
@@ -404,6 +408,7 @@ async fn reads_and_refused_writes_are_not_recorded() {
 #[tokio::test]
 async fn the_import_dry_run_is_not_an_act() {
     let h = harness("audit-preview").await;
+    common::seed_default_chart(&h.acc).await;
     let (status, body) = get(&h.app, &h.token, "/crm/pipelines").await;
     assert_eq!(status, StatusCode::OK, "{body}");
     let pipeline = body["pipelines"][0]["id"].as_str().unwrap().to_owned();
@@ -464,6 +469,7 @@ async fn the_import_dry_run_is_not_an_act() {
 #[tokio::test]
 async fn the_history_needs_a_token_and_a_record() {
     let h = harness("audit-guards").await;
+    common::seed_default_chart(&h.acc).await;
     let anonymous = Request::builder()
         .uri("/audit?entity=billing.invoice:whatever")
         .body(Body::empty())
@@ -499,7 +505,9 @@ async fn the_history_needs_a_token_and_a_record() {
 #[tokio::test]
 async fn another_tenants_record_has_no_history_here() {
     let a = harness("audit-ten-a").await;
+    common::seed_default_chart(&a.acc).await;
     let b = harness("audit-ten-b").await;
+    common::seed_default_chart(&b.acc).await;
     let customer = a_customer(&a).await;
     let invoice = an_invoice(&a, &customer).await;
     let entity = format!("billing.invoice:{invoice}");
@@ -538,6 +546,7 @@ async fn another_tenants_record_has_no_history_here() {
 #[tokio::test]
 async fn the_history_is_paged_newest_first() {
     let h = harness("audit-limit").await;
+    common::seed_default_chart(&h.acc).await;
     let customer = a_customer(&h).await;
     for city in ["Hamburg", "Bremen", "Kiel"] {
         let (status, body) = patch(
