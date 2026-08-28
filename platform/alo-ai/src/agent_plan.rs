@@ -111,12 +111,36 @@ fn roster(agents: &[PlanAgent<'_>]) -> String {
     let mut out = String::new();
     for agent in agents {
         out.push_str(&format!(
-            "- @{}: {}\n",
+            "- @{}: {}{}\n",
             agent.handle,
-            headline(agent.product)
+            headline(agent.product),
+            registry_asks(agent.product)
         ));
     }
     out
+}
+
+/// How many of a product's example questions the roster quotes — enough to
+/// route by, short enough that one product cannot crowd the list.
+const ROSTER_ASKS: usize = 12;
+
+/// The questions a product's verbs answer (ADR 0058), quoted after its
+/// headline so the planner routes on what the agent can actually do. Empty for
+/// a product that has not moved to intents yet.
+fn registry_asks(product: AgentProduct) -> String {
+    let asks: Vec<String> = crate::agent_product::tool_sets(product)
+        .iter()
+        .filter_map(|set| set.intents())
+        .flat_map(|module| module.intents.iter())
+        .flat_map(|intent| intent.answers.iter())
+        .take(ROSTER_ASKS)
+        .map(|ask| format!("\"{ask}\""))
+        .collect();
+    if asks.is_empty() {
+        String::new()
+    } else {
+        format!(" Ask it for: {}.", asks.join(", "))
+    }
 }
 
 /// The whole planner system prompt for one roster.
@@ -229,6 +253,35 @@ pub async fn run_planner(
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+
+    /// ADR 0058: a moved product's roster line quotes the questions its verbs
+    /// answer, so "what did we quote X" is routed to Billing by the registry.
+    #[test]
+    fn the_roster_says_what_a_moved_product_answers() {
+        let prompt = plan_system_prompt(
+            &[
+                PlanAgent {
+                    handle: "billing",
+                    product: AgentProduct::Billing,
+                },
+                PlanAgent {
+                    handle: "crm",
+                    product: AgentProduct::Crm,
+                },
+            ],
+            MAX_PLAN_STEPS,
+        );
+        assert!(prompt.contains("- @billing:"));
+        assert!(prompt.contains("\"what did we quote X\""), "{prompt}");
+        assert!(prompt.contains("\"which quotes are open\""));
+        // A product still on hand-written tools has no hints yet — and no
+        // empty "Ask it for:" either.
+        let crm_line = prompt
+            .lines()
+            .find(|line| line.starts_with("- @crm:"))
+            .unwrap_or_default();
+        assert!(!crm_line.contains("Ask it for:"), "{crm_line}");
+    }
 
     const ROSTER: [PlanAgent<'static>; 3] = [
         PlanAgent {

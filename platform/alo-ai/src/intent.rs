@@ -118,7 +118,19 @@ impl IntentSpec {
                 .collect();
             format!("{{{}}}", inner.join(", "))
         };
-        format!("- {}: {} args: {}.\n", self.name, self.purpose, args)
+        let uses = if self.answers.is_empty() {
+            String::new()
+        } else {
+            format!(
+                " Use for: {}.",
+                self.answers
+                    .iter()
+                    .map(|ask| format!("\"{ask}\""))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        };
+        format!("- {}: {} args: {}.{uses}\n", self.name, self.purpose, args)
     }
 }
 
@@ -272,11 +284,11 @@ mod tests {
         assert_eq!(
             SEND.doc_line(),
             "- send_quote: Send an offer. args: {\"quote\": text (required, the quote's number), \
-             \"note\": text (optional, one extra sentence)}.\n"
+             \"note\": text (optional, one extra sentence)}. Use for: \"send the quote\".\n"
         );
         assert_eq!(
             OPEN.doc_line(),
-            "- open_quotes: The offers still open. args: none.\n"
+            "- open_quotes: The offers still open. args: none. Use for: \"which quotes are open\".\n"
         );
         let doc = MODULE.doc();
         assert!(doc.starts_with("- ") && doc.ends_with('\n'));
