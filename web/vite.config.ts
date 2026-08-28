@@ -6,6 +6,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { configDefaults, defineConfig } from "vitest/config";
 import type { ProxyOptions } from "vite";
 import { fileURLToPath } from "node:url";
+import { resolveDevApi } from "./dev-api";
 
 // Product selection (ADR 0019): the whole app is defined by one product
 // surface. `@product` resolves to it — the full workspace by default, the
@@ -26,11 +27,11 @@ const productTitle: Record<typeof product, string> = {
 };
 
 // Local dev backend. `npm run dev` serves the UI from Vite but the app calls its
-// API same-origin, so in dev we proxy the API (and Collabora) path prefixes to a
-// real alo server — the live server by default, overridable with VITE_DEV_API
-// (e.g. a local jmap on http://localhost:8080). Auth is bearer-token in
-// localStorage (no cookies), so changeOrigin is all that's needed.
-const DEV_API = process.env.VITE_DEV_API ?? "https://mail.alomails.com";
+// API same-origin, so in dev we proxy the API (and Collabora) path prefixes.
+// Local development must default to the local API. Silently forwarding a
+// developer's credentials to production makes a healthy local account look as
+// though its password is wrong. VITE_DEV_API can still override this target.
+const DEV_API = resolveDevApi(process.env.VITE_DEV_API);
 
 // Several API prefixes (/drive, /tasks, /admin, …) are ALSO client-side route
 // paths. A browser page-load of one (refresh on /drive) sends `Accept: text/html`
