@@ -428,6 +428,40 @@
   color: var(--text-tertiary);
   padding-left: 6px;
 }
+/* The absence layer (B7.03): a fact drawn behind the grid, not an event on
+   it — so no calendar colour, no hover, nothing to click. The dashed edge is
+   what says "layer" where a solid bar says "yours to open". */
+.awayPill {
+  display: block;
+  min-width: 0;
+  width: 100%;
+  font-size: 0.72rem;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  border-left: 3px dashed var(--border-default);
+  color: var(--text-tertiary);
+  background: var(--bg-raised);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.awayLine {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  margin: 0 0 8px;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+.awayLabel {
+  font-weight: var(--weight-medium);
+  flex-shrink: 0;
+}
+.awayNames {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* ---- week view ---- */
 .week {
@@ -478,6 +512,12 @@
 .allDayStrip {
   top: 44px;
   min-height: 26px;
+}
+/* The week's absence row shares the strip's grid but not its stickiness: two
+   rows pinned to the same offset would overlap on scroll, and a background
+   layer may scroll away where the all-day row (things to open) may not. */
+.awayStrip {
+  position: static;
 }
 .allDayCol {
   border-right: 1px solid var(--border-subtle, #eee6da);

@@ -350,6 +350,8 @@ export const fr: Partial<Catalog> = {
   agendaMonth: "Mois",
   agendaWeek: "Semaine",
   agendaAllDay: "Toute la journée",
+  agendaAway: "Absent",
+  agendaAwayTitle: (names: string) => `Absent : ${names}`,
   agendaEventTitle: "Ajouter un titre",
   agendaEventStart: "Début",
   agendaEventEnd: "Fin",

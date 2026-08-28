@@ -1,8 +1,9 @@
 // The week time-grid — Monday-first, an hour gutter and 7 day columns, à la
 // Google/Outlook. Timed events are positioned blocks; all-day events sit in a
 // strip above the grid. Click empty time to add an event at that hour.
-import { getLocale } from "../i18n";
+import { getLocale, strings } from "../i18n";
 import type { CalendarEvent } from "../jmap";
+import { awayNames, localDayKey, type AbsentColleague } from "./absences";
 import {
   HOURS_IN_DAY,
   eventOnDay,
@@ -17,6 +18,7 @@ interface Props {
   anchor: Date;
   today: Date;
   events: CalendarEvent[];
+  absences: ReadonlyMap<string, AbsentColleague[]>;
   onSlotClick: (at: Date) => void;
   onEventClick: (event: CalendarEvent) => void;
 }
@@ -27,6 +29,7 @@ export function WeekView({
   anchor,
   today,
   events,
+  absences,
   onSlotClick,
   onEventClick,
 }: Props) {
@@ -46,6 +49,9 @@ export function WeekView({
   }));
   const allDay = parsed.filter((p) => p.e.allDay);
   const timed = parsed.filter((p) => !p.e.allDay);
+  const anyAway = days.some(
+    (day) => (absences.get(localDayKey(day)) ?? []).length > 0,
+  );
 
   function slotAt(day: Date, offsetY: number): Date {
     const hour = Math.max(0, Math.min(23, Math.floor(offsetY / HOUR_HEIGHT)));
@@ -72,6 +78,28 @@ export function WeekView({
           );
         })}
       </div>
+
+      {anyAway && (
+        <div className={`${styles.allDayStrip} ${styles.awayStrip}`}>
+          <div className={styles.gutterCorner}> </div>
+          {days.map((day) => {
+            const away = absences.get(localDayKey(day)) ?? [];
+            return (
+              <div key={day.toISOString()} className={styles.allDayCol}>
+                {away.length > 0 && (
+                  <span
+                    className={styles.awayPill}
+                    title={strings.agendaAwayTitle(awayNames(away))}
+                    aria-label={strings.agendaAwayTitle(awayNames(away))}
+                  >
+                    {awayNames(away)}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {allDay.length > 0 && (
         <div className={styles.allDayStrip}>

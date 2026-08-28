@@ -302,6 +302,8 @@ export const en = {
   agendaMonth: "Month",
   agendaWeek: "Week",
   agendaAllDay: "All day",
+  agendaAway: "Away",
+  agendaAwayTitle: (names: string) => `Away: ${names}`,
   agendaEventTitle: "Add a title",
   agendaEventStart: "Starts",
   agendaEventEnd: "Ends",

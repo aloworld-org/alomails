@@ -2,6 +2,12 @@
 // its events as pills; click a day to add one, click a pill to edit.
 import { getLocale, strings } from "../i18n";
 import type { CalendarEvent } from "../jmap";
+import {
+  awayCellText,
+  awayNames,
+  localDayKey,
+  type AbsentColleague,
+} from "./absences";
 import { eventOnDay, monthGridDays, sameDay, startOfMonth } from "./dates";
 import styles from "./AgendaModule.module.css";
 
@@ -9,6 +15,7 @@ interface Props {
   anchor: Date;
   today: Date;
   events: CalendarEvent[];
+  absences: ReadonlyMap<string, AbsentColleague[]>;
   selectedDay: Date;
   colorOf: (calendarId: string) => string;
   onDayClick: (day: Date) => void;
@@ -21,6 +28,7 @@ export function MonthView({
   anchor,
   today,
   events,
+  absences,
   selectedDay,
   colorOf,
   onDayClick,
@@ -64,6 +72,7 @@ export function MonthView({
                   ? -1
                   : 1,
             );
+          const away = absences.get(localDayKey(day)) ?? [];
           const isToday = sameDay(day, today);
           const isSelected = sameDay(day, selectedDay);
           const otherMonth = day.getMonth() !== month;
@@ -89,6 +98,15 @@ export function MonthView({
                 </span>
               </div>
               <div className={styles.dayEvents}>
+                {away.length > 0 && (
+                  <span
+                    className={styles.awayPill}
+                    title={strings.agendaAwayTitle(awayNames(away))}
+                    aria-label={strings.agendaAwayTitle(awayNames(away))}
+                  >
+                    {awayCellText(away)}
+                  </span>
+                )}
                 {dayEvents.slice(0, MAX_PER_DAY).map(({ e, s }) => (
                   <button
                     key={`${e.id}-${e.startsAt}`}

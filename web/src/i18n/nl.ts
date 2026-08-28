@@ -343,6 +343,8 @@ export const nl: Partial<Catalog> = {
   agendaMonth: "Maand",
   agendaWeek: "Week",
   agendaAllDay: "Hele dag",
+  agendaAway: "Afwezig",
+  agendaAwayTitle: (names: string) => `Afwezig: ${names}`,
   agendaEventTitle: "Voeg een titel toe",
   agendaEventStart: "Begint",
   agendaEventEnd: "Eindigt",

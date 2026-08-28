@@ -371,6 +371,8 @@ export const de: Partial<Catalog> = {
   agendaMonth: "Monat",
   agendaWeek: "Woche",
   agendaAllDay: "Ganztägig",
+  agendaAway: "Abwesend",
+  agendaAwayTitle: (names: string) => `Abwesend: ${names}`,
   agendaEventTitle: "Titel hinzufügen",
   agendaEventStart: "Beginn",
   agendaEventEnd: "Ende",

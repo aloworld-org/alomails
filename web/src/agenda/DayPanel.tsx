@@ -3,6 +3,7 @@
 // module already loaded — clicking an entry opens it in the event editor.
 import { getLocale, strings } from "../i18n";
 import type { CalendarEvent } from "../jmap";
+import { awayNames, localDayKey, type AbsentColleague } from "./absences";
 import { addDays, sameDay, startOfDay } from "./dates";
 import styles from "./AgendaModule.module.css";
 
@@ -10,6 +11,7 @@ interface Props {
   day: Date;
   today: Date;
   events: CalendarEvent[];
+  absences: ReadonlyMap<string, AbsentColleague[]>;
   colorOf: (calendarId: string) => string;
   onEventClick: (event: CalendarEvent) => void;
 }
@@ -25,10 +27,18 @@ function titleOf(e: CalendarEvent): string {
   return e.summary.trim().length > 0 ? e.summary : strings.agendaUntitledEvent;
 }
 
-export function DayPanel({ day, today, events, colorOf, onEventClick }: Props) {
+export function DayPanel({
+  day,
+  today,
+  events,
+  absences,
+  colorOf,
+  onEventClick,
+}: Props) {
   const locale = getLocale();
   const start = startOfDay(day);
   const end = addDays(start, 1);
+  const away = absences.get(localDayKey(day)) ?? [];
 
   const dayEvents = events
     .filter((e) => new Date(e.startsAt) < end && new Date(e.endsAt) > start)
@@ -70,6 +80,12 @@ export function DayPanel({ day, today, events, colorOf, onEventClick }: Props) {
             {strings.agendaEventCount(dayEvents.length)}
           </span>
         </div>
+        {away.length > 0 && (
+          <p className={styles.awayLine} title={awayNames(away)}>
+            <span className={styles.awayLabel}>{strings.agendaAway}</span>
+            <span className={styles.awayNames}>{awayNames(away)}</span>
+          </p>
+        )}
         {dayEvents.length === 0 ? (
           <p className={styles.panelEmpty}>{strings.homeNoEventsToday}</p>
         ) : (

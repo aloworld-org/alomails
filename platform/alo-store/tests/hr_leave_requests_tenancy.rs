@@ -792,6 +792,7 @@ async fn the_absence_layer_says_who_is_away_and_nothing_else() {
     .unwrap();
 
     // Both away the same week; one of them works only three days of it.
+    let mut requests = Vec::new();
     for person in [&employee, &colleague] {
         let request = hr
             .create_hr_leave_request(
@@ -809,6 +810,7 @@ async fn the_absence_layer_says_who_is_away_and_nothing_else() {
         hr.decide_hr_leave_request(&request, true, &user, "", today)
             .await
             .unwrap();
+        requests.push(request);
     }
 
     let days = hr
@@ -856,6 +858,21 @@ async fn the_absence_layer_says_who_is_away_and_nothing_else() {
             .iter()
             .all(|person| person.name != "Jonas Peeters")),
         "a planning read is about the team there is"
+    );
+
+    // Leave given back leaves the layer in the same act (B7.03): the feed reads
+    // `status = 'approved'` and nothing else, so the calendar drawn from it has
+    // nothing to take back — there was never an event anywhere to delete.
+    hr.cancel_hr_leave_request(&requests[0], &user, today)
+        .await
+        .unwrap();
+    let gone = hr
+        .hr_absences(day(2026, Month::March, 1), day(2026, Month::March, 15))
+        .await
+        .unwrap();
+    assert!(
+        gone.is_empty(),
+        "nobody is away once the one live absence is cancelled"
     );
 }
 

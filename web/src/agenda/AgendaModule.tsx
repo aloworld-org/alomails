@@ -30,6 +30,7 @@ import {
   ToolbarGroup,
   useDialogs,
 } from "../ds";
+import { useAbsenceLayer } from "./absences";
 import { EventModal } from "./EventModal";
 import { ShareDialog } from "./ShareDialog";
 import { MiniMonth } from "./MiniMonth";
@@ -144,6 +145,10 @@ export function AgendaModule() {
       view === "month" ? 42 : view === "week" ? 7 : view === "agenda" ? 30 : 1;
     return [base, addDays(base, Math.max(span, 21))];
   }, [view, anchor]);
+
+  // Who is away on each visible day — the workspace provides the feed, the
+  // standalone mail product has none and the map stays empty (see absences.ts).
+  const absences = useAbsenceLayer(from, to);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -416,6 +421,7 @@ export function AgendaModule() {
               today={today}
               selectedDay={selectedDay}
               events={visibleEvents}
+              absences={absences}
               colorOf={colorOf}
               onDayClick={createOnDay}
               onEventClick={(e) => void openEvent(e)}
@@ -425,6 +431,7 @@ export function AgendaModule() {
               anchor={anchor}
               today={today}
               events={visibleEvents}
+              absences={absences}
               onSlotClick={(at) => openNew(at)}
               onEventClick={(e) => void openEvent(e)}
             />
@@ -445,6 +452,7 @@ export function AgendaModule() {
         day={selectedDay}
         today={today}
         events={visibleEvents}
+        absences={absences}
         colorOf={colorOf}
         onEventClick={(e) => void openEvent(e)}
       />
