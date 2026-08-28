@@ -46,9 +46,30 @@ describe("AppLauncher", () => {
     renderLauncher();
 
     const trigger = screen.getByRole("button", { name: strings.appLauncher });
-    expect(trigger.querySelectorAll("[data-launcher-dot]")).toHaveLength(9);
-    expect(trigger.className).toContain("text-[#D7DEE2]");
-    expect(trigger.className).toContain("hover:text-white");
+    const dots = Array.from(
+      trigger.querySelectorAll<HTMLElement>("[data-launcher-dot]"),
+    );
+    const label = trigger.querySelector<HTMLElement>("[data-launcher-label]");
+
+    expect(dots).toHaveLength(9);
+    expect(dots.every((dot) => dot.className.includes("bg-[#D7DEE2]"))).toBe(
+      true,
+    );
+    expect(dots.every((dot) => dot.className.includes("group-hover:bg-white"))).toBe(
+      true,
+    );
+    expect(label?.className).toContain("text-[#D7DEE2]");
+    expect(label?.className).toContain("group-hover:text-white");
+
+    fireEvent.click(trigger);
+    expect(
+      Array.from(
+        trigger.querySelectorAll<HTMLElement>("[data-launcher-dot]"),
+      ).every((dot) => dot.className.includes("bg-white")),
+    ).toBe(true);
+    expect(
+      trigger.querySelector<HTMLElement>("[data-launcher-label]")?.className,
+    ).toContain("text-white");
   });
 
   test("shows favorites once and keeps the remaining catalogue quiet", () => {

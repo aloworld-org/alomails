@@ -45,8 +45,8 @@ export function AppLauncher({ apps, favoriteModules }: AppLauncherProps) {
     <li ref={triggerRef} className="w-full">
       <button
         type="button"
-        className={`group flex w-full flex-col items-center gap-[3px] rounded-xl px-0 py-2 text-[#D7DEE2] transition-colors duration-150 hover:bg-[#2B3439] hover:text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#E76F51]/20 ${
-          open ? "bg-[#343D42] text-white" : ""
+        className={`group flex w-full flex-col items-center gap-[3px] rounded-xl px-0 py-2 transition-colors duration-150 hover:bg-[#2B3439] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#E76F51]/20 ${
+          open ? "bg-[#343D42]" : ""
         }`}
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
@@ -62,11 +62,22 @@ export function AppLauncher({ apps, favoriteModules }: AppLauncherProps) {
             <span
               key={index}
               data-launcher-dot
-              className="size-1 rounded-full bg-current"
+              className={`size-1 rounded-full transition-colors duration-150 ${
+                open
+                  ? "bg-white"
+                  : "bg-[#D7DEE2] group-hover:bg-white group-focus-visible:bg-white"
+              }`}
             />
           ))}
         </span>
-        <span className="text-[10px] font-medium tracking-[0.01em]">
+        <span
+          data-launcher-label
+          className={`text-[10px] font-medium tracking-[0.01em] transition-colors duration-150 ${
+            open
+              ? "text-white"
+              : "text-[#D7DEE2] group-hover:text-white group-focus-visible:text-white"
+          }`}
+        >
           {strings.appLauncher}
         </span>
       </button>
