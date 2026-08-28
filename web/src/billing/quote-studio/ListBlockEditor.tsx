@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -39,10 +40,13 @@ export function ListBlockEditor({
     style?: ListStyleId;
   }) => void;
 }) {
+  const [activeIndex, setActiveIndex] = useState(0);
   const parsed = parseListItems(items);
   // An empty list still shows one row to type into.
   const rows: ListItem[] = parsed.length === 0 ? [{ level: 0, text: "" }] : parsed;
   const numbered = numberListItems(rows, style);
+  const selectedIndex = Math.min(activeIndex, rows.length - 1);
+  const selectedItem = rows[selectedIndex];
   const commit = (next: ListItem[]) =>
     onChange({ items: next.length === 0 ? "" : serializeListItems(next) });
   const replace = (index: number, text: string) =>
@@ -72,9 +76,52 @@ export function ListBlockEditor({
           <p className="text-sm font-semibold text-primary">
             {strings.quoteStudioListLayout}
           </p>
-          <p className="mt-0.5 text-xs text-secondary">
-            {strings.quoteStudioListLayoutHelp}
-          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <p className="text-xs text-secondary">
+              {strings.quoteStudioListLayoutHelp}
+            </p>
+            <div
+              role="toolbar"
+              aria-label={strings.quoteStudioListItemFormatting}
+              className="flex items-center gap-1"
+            >
+              <BlockCommand
+                label={strings.quoteStudioOutdentItem}
+                disabled={selectedItem?.level === 0}
+                onClick={() => shift(selectedIndex, -1)}
+              >
+                <IndentDecrease className="size-4" />
+              </BlockCommand>
+              <BlockCommand
+                label={strings.quoteStudioIndentItem}
+                disabled={!canIndentListItem(rows, selectedIndex)}
+                onClick={() => shift(selectedIndex, 1)}
+              >
+                <IndentIncrease className="size-4" />
+              </BlockCommand>
+              <BlockCommand
+                label={strings.quoteStudioMoveItemUp}
+                disabled={selectedIndex === 0}
+                onClick={() => move(selectedIndex, -1)}
+              >
+                <ArrowUp className="size-4" />
+              </BlockCommand>
+              <BlockCommand
+                label={strings.quoteStudioMoveItemDown}
+                disabled={selectedIndex === rows.length - 1}
+                onClick={() => move(selectedIndex, 1)}
+              >
+                <ArrowDown className="size-4" />
+              </BlockCommand>
+              <BlockCommand
+                label={strings.quoteStudioRemoveItem}
+                danger
+                onClick={() => remove(selectedIndex)}
+              >
+                <Trash2 className="size-4" />
+              </BlockCommand>
+            </div>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <ListStyleGallery
@@ -103,71 +150,33 @@ export function ListBlockEditor({
         {numbered.map((item, index) => (
           <div
             key={index}
+            onFocusCapture={() => setActiveIndex(index)}
+            onClick={() => setActiveIndex(index)}
             className={cx(
               "group/list-item rounded-xl border border-default bg-surface p-3 shadow-sm transition-colors hover:border-accent/30 focus-within:border-accent/30",
+              selectedIndex === index && "border-accent/35",
               item.level === 1 && "ml-6",
               item.level === 2 && "ml-12",
             )}
           >
-            <div
-              role="toolbar"
-              aria-label={strings.quoteStudioListItemFormatting}
-              className="mb-2 flex min-h-10 items-center justify-end gap-1 opacity-0 transition-opacity group-hover/list-item:opacity-100 group-focus-within/list-item:opacity-100 max-md:opacity-100"
-            >
-              <BlockCommand
-                label={strings.quoteStudioOutdentItem}
-                disabled={item.level === 0}
-                onClick={() => shift(index, -1)}
-              >
-                <IndentDecrease className="size-4" />
-              </BlockCommand>
-              <BlockCommand
-                label={strings.quoteStudioIndentItem}
-                disabled={!canIndentListItem(rows, index)}
-                onClick={() => shift(index, 1)}
-              >
-                <IndentIncrease className="size-4" />
-              </BlockCommand>
-              <BlockCommand
-                label={strings.quoteStudioMoveItemUp}
-                disabled={index === 0}
-                onClick={() => move(index, -1)}
-              >
-                <ArrowUp className="size-4" />
-              </BlockCommand>
-              <BlockCommand
-                label={strings.quoteStudioMoveItemDown}
-                disabled={index === rows.length - 1}
-                onClick={() => move(index, 1)}
-              >
-                <ArrowDown className="size-4" />
-              </BlockCommand>
-              <BlockCommand
-                label={strings.quoteStudioRemoveItem}
-                danger
-                onClick={() => remove(index)}
-              >
-                <Trash2 className="size-4" />
-              </BlockCommand>
-            </div>
-            <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3">
+            <div className="mb-2 flex min-h-9 items-center gap-3">
               <span
                 className="grid min-h-9 min-w-9 place-items-center rounded-lg bg-raised px-1.5 text-xs font-semibold tabular-nums text-secondary"
                 aria-hidden="true"
               >
                 {item.marker}
               </span>
-              <InlineRichTextEditor
-                value={item.text}
-                aria-label={
-                  ordered
-                    ? strings.quoteStudioNumberedItemA11y(index + 1)
-                    : strings.quoteStudioBulletItemA11y(index + 1)
-                }
-                placeholder={strings.quoteStudioWriteItem}
-                onChange={(value) => replace(index, value)}
-              />
             </div>
+            <InlineRichTextEditor
+              value={item.text}
+              aria-label={
+                ordered
+                  ? strings.quoteStudioNumberedItemA11y(index + 1)
+                  : strings.quoteStudioBulletItemA11y(index + 1)
+              }
+              placeholder={strings.quoteStudioWriteItem}
+              onChange={(value) => replace(index, value)}
+            />
           </div>
         ))}
       </div>

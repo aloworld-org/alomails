@@ -20,9 +20,13 @@ describe("ListBlockEditor", () => {
     render(
       <ListBlockEditor ordered items={"One\nTwo"} columns={1} style="decimal" onChange={onChange} />,
     );
-    const indent = screen.getAllByRole("button", { name: strings.quoteStudioIndentItem });
-    expect((indent[0] as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(indent[1] as HTMLButtonElement);
+    const indent = screen.getByRole("button", { name: strings.quoteStudioIndentItem });
+    expect((indent as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.focus(screen.getByRole("textbox", {
+      name: strings.quoteStudioNumberedItemA11y(2),
+    }));
+    expect((indent as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(indent);
     expect(onChange).toHaveBeenCalledWith({ items: "One\n\tTwo" });
   });
 
@@ -34,16 +38,14 @@ describe("ListBlockEditor", () => {
     expect(screen.getByText("a)")).not.toBeNull();
   });
 
-  it("places item tools above the editable text", () => {
+  it("places the active-item tools beside the list guidance", () => {
     render(
       <ListBlockEditor ordered={false} items="One" columns={1} style="disc" onChange={vi.fn()} />,
     );
     const toolbar = screen.getByRole("toolbar", {
       name: strings.quoteStudioListItemFormatting,
     });
-    const editor = screen.getByRole("textbox", {
-      name: strings.quoteStudioBulletItemA11y(1),
-    });
-    expect(toolbar.compareDocumentPosition(editor) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    const guidance = screen.getByText(strings.quoteStudioListLayoutHelp);
+    expect(guidance.parentElement?.contains(toolbar)).toBe(true);
   });
 });
