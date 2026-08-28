@@ -110,7 +110,7 @@ pub fn system_prompt_for(product: AgentProduct) -> String {
     let sets = tool_sets(product);
     let mut docs = String::new();
     let mut guidance = String::new();
-    for set in sets {
+    for set in &sets {
         docs.push_str(&set.doc());
         guidance.push_str(set.guidance);
     }

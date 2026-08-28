@@ -19,9 +19,10 @@ use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
 use axum::{Json, body::Bytes};
 use serde_json::{Value, json};
+use std::future::Future;
+use std::pin::Pin;
 use time::format_description::well_known::Rfc3339;
 
-use crate::agent_billing as billing;
 use crate::agent_crm as crm;
 use crate::agent_docs as docs;
 use crate::agent_finance as finance;
@@ -392,6 +393,23 @@ async fn record_run(
 }
 
 /// Run one tool, once it is allowed to run. Split out so
+/// One verb's run, boxed so every module's dispatcher has the one shape.
+pub(crate) type Dispatched<'a> =
+    Pin<Box<dyn Future<Output = Result<Json<Value>, Problem>> + Send + 'a>>;
+
+/// A module's dispatcher: its verbs by name, `None` for a verb that is not
+/// its, so the loop below asks the next module.
+pub(crate) type ModuleDispatcher =
+    for<'a> fn(&'a AppState, &'a Account, &'a str, &'a Value) -> Option<Dispatched<'a>>;
+
+/// The modules that have moved to intents (ADR 0058), one row each — the
+/// whole of a module's registration in this file (A4.1c). A loop that lands a
+/// module adds its row here and nothing to the match below; two loops landing
+/// at once conflict on neighbouring lines, and the resolution is to keep both.
+/// The registry's twin is `alo_ai::MOVED`, and a test in each module holds the
+/// two lists to the same length.
+pub(crate) const MODULES: &[ModuleDispatcher] = &[crate::billing_intents::dispatch];
+
 /// [`execute_tool`]'s boundary check and audit cannot be bypassed by a caller
 /// reaching the dispatcher directly.
 async fn dispatch(
@@ -400,6 +418,11 @@ async fn dispatch(
     tool: &str,
     args: &Value,
 ) -> Result<Json<Value>, Problem> {
+    for module in MODULES {
+        if let Some(run) = module(state, account, tool, args) {
+            return run.await;
+        }
+    }
     match tool {
         "create_task" => execute_create_task(account, args).await,
         // alo Tasks' set beyond that one (A2.7), on the same seam. The three
@@ -440,26 +463,6 @@ async fn dispatch(
         "draft_reply" => execute_draft_reply(account, args, state).await,
         "send_email" => execute_send(account, args, state).await,
         "move_to_folder" => execute_move_to_folder(account, args).await,
-        // alo Billing's tools (B1.25). A product's executors live in that
-        // product's module, so this match stays a dispatcher and never becomes
-        // the place every module's argument rules pile up.
-        // alo Billing's verbs (ADR 0058): the reads answer from the record
-        // views its routes serve; the writes are proposed, previewed and run
-        // only on the asker's approval.
-        "open_quotes" => crate::billing_intents::execute_open_quotes(account, args).await,
-        "quote_lookup" => crate::billing_intents::execute_quote_lookup(account, args).await,
-        "customer_lookup" => crate::billing_intents::execute_customer_lookup(account, args).await,
-        "unpaid_invoices" => crate::billing_intents::execute_unpaid_invoices(account, args).await,
-        "invoice_lookup" => crate::billing_intents::execute_invoice_lookup(account, args).await,
-        "billing_totals" => crate::billing_intents::execute_billing_totals(account, args).await,
-        "send_quote" => crate::billing_intents::execute_send_quote(account, args).await,
-        "issue_invoice" => crate::billing_intents::execute_issue_invoice(account, args).await,
-        "record_payment" => crate::billing_intents::execute_record_payment(account, args).await,
-        "create_invoice_draft" => billing::execute_create_invoice_draft(account, args).await,
-        "quote_to_invoice" => billing::execute_quote_to_invoice(account, args).await,
-        "draft_payment_reminder" => {
-            billing::execute_draft_payment_reminder(account, args, state).await
-        }
         // alo CRM's tools (B2.10), on the same seam.
         "create_deal" => crm::execute_create_deal(account, args, state).await,
         "move_deal_stage" => crm::execute_move_deal_stage(account, args).await,

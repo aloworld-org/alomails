@@ -17,7 +17,7 @@
 //! Both read this one table, so they cannot disagree about what an agent is
 //! allowed to do.
 
-use alo_store::AgentProduct;
+use alo_store::{ALL_AGENT_PRODUCTS, AgentProduct};
 
 use crate::agent_agenda::{AGENDA_GUIDANCE, AGENDA_TOOL_DOC, AGENDA_TOOLS};
 use crate::agent_chat::{CHAT_GUIDANCE, CHAT_TOOL_DOC, CHAT_TOOLS};
@@ -116,7 +116,6 @@ const AGENDA_SET: ToolSet = set(AGENDA_TOOLS, AGENDA_TOOL_DOC, AGENDA_GUIDANCE);
 const TASKS_SET: ToolSet = set(TASKS_TOOLS, TASKS_TOOL_DOC, TASKS_GUIDANCE);
 const CHAT_SET: ToolSet = set(CHAT_TOOLS, CHAT_TOOL_DOC, CHAT_GUIDANCE);
 const DRIVE_SET: ToolSet = set(DRIVE_TOOLS, DRIVE_TOOL_DOC, DRIVE_GUIDANCE);
-const BILLING_SET: ToolSet = intents(&BILLING_INTENTS);
 const CRM_SET: ToolSet = set(CRM_TOOLS, CRM_TOOL_DOC, CRM_GUIDANCE);
 const PROJECTS_SET: ToolSet = set(PROJECTS_TOOLS, PROJECTS_TOOL_DOC, PROJECTS_GUIDANCE);
 const FINANCE_SET: ToolSet = set(FINANCE_TOOLS, FINANCE_TOOL_DOC, FINANCE_GUIDANCE);
@@ -146,7 +145,6 @@ const CHAT: &[ToolSet] = &[CHAT_SET];
 const DRIVE: &[ToolSet] = &[DRIVE_SET];
 const SHEETS: &[ToolSet] = &[SHEETS_SET];
 const DOCS: &[ToolSet] = &[DOCS_SET];
-const BILLING: &[ToolSet] = &[BILLING_SET];
 const CRM: &[ToolSet] = &[CRM_SET];
 const PROJECTS: &[ToolSet] = &[PROJECTS_SET];
 const FINANCE: &[ToolSet] = &[FINANCE_SET];
@@ -161,8 +159,15 @@ const MEET: &[ToolSet] = &[MEET_SET];
 ///
 /// One table. Adding a product's agent is filling in one row, and the prompt,
 /// the allowlist and the boundary all follow from it.
-#[must_use]
-pub fn tool_sets(product: AgentProduct) -> &'static [ToolSet] {
+/// The modules that have moved to intents (ADR 0058), one row each — the whole
+/// of a module's registration in this crate (A4.1c). A loop that lands a module
+/// adds its row here and nothing else in this file; two loops landing at once
+/// conflict on neighbouring lines, and the resolution is to keep both. A row's
+/// product sees the module as its own; Ask alo sees every row.
+pub const MOVED: &[(AgentProduct, &IntentModule)] = &[(AgentProduct::Billing, &BILLING_INTENTS)];
+
+/// The hand-written sets a product still carries — empty once it has moved.
+fn static_sets(product: AgentProduct) -> &'static [ToolSet] {
     match product {
         AgentProduct::Mail => MAIL,
         AgentProduct::Agenda => AGENDA,
@@ -171,7 +176,7 @@ pub fn tool_sets(product: AgentProduct) -> &'static [ToolSet] {
         AgentProduct::Drive => DRIVE,
         AgentProduct::Sheets => SHEETS,
         AgentProduct::Docs => DOCS,
-        AgentProduct::Billing => BILLING,
+        AgentProduct::Billing => &[],
         AgentProduct::Crm => CRM,
         AgentProduct::Projects => PROJECTS,
         AgentProduct::Finance => FINANCE,
@@ -183,31 +188,34 @@ pub fn tool_sets(product: AgentProduct) -> &'static [ToolSet] {
         // Ask alo works across products, so it is offered all of them — the
         // one agent for which that is the decision rather than the default
         // (ADR 0034).
-        AgentProduct::Workspace => WORKSPACE,
+        AgentProduct::Workspace => &[],
     }
 }
 
-/// Every product's sets, concatenated, for "Ask alo" — in the order
-/// `ALL_AGENT_PRODUCTS` lists the products, which a test holds it to.
-const WORKSPACE: &[ToolSet] = &[
-    MAIL_SET,
-    CONTACTS_SET,
-    AGENDA_SET,
-    TASKS_SET,
-    CHAT_SET,
-    DRIVE_SET,
-    SHEETS_SET,
-    DOCS_SET,
-    BILLING_SET,
-    CRM_SET,
-    PROJECTS_SET,
-    FINANCE_SET,
-    INVENTORY_SET,
-    HR_SET,
-    INSIGHTS_SET,
-    MEET_SET,
-    SITES_SET,
-];
+/// A product's tool sets in prompt order: what it still carries by hand, then
+/// its moved modules in [`MOVED`] order. Ask alo ([`AgentProduct::Workspace`])
+/// is every product once, in [`ALL_AGENT_PRODUCTS`] order — a list nobody
+/// maintains by hand, so a module registered once is offered everywhere it
+/// should be.
+#[must_use]
+pub fn tool_sets(product: AgentProduct) -> Vec<ToolSet> {
+    if product == AgentProduct::Workspace {
+        return ALL_AGENT_PRODUCTS
+            .iter()
+            .copied()
+            .filter(|each| *each != AgentProduct::Workspace)
+            .flat_map(tool_sets)
+            .collect();
+    }
+    let mut out = static_sets(product).to_vec();
+    out.extend(
+        MOVED
+            .iter()
+            .filter(|(owner, _)| *owner == product)
+            .map(|(_, module)| intents(module)),
+    );
+    out
+}
 
 /// Who the agent is, said in the first line of its system prompt.
 ///
@@ -465,6 +473,42 @@ mod tests {
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
         assert_eq!(workspace.len(), 80);
+    }
+
+    /// A moved module registers once (A4.1c): its row in [`MOVED`] is what puts
+    /// its verbs in its product's prompt and in Ask alo's, and nothing else in
+    /// this file names it — the property that lets several loops land modules
+    /// without editing the same match arms.
+    #[test]
+    fn a_moved_module_is_one_row() {
+        assert!(
+            MOVED
+                .iter()
+                .any(|(owner, _)| *owner == AgentProduct::Billing)
+        );
+        for (owner, module) in MOVED {
+            let verbs: Vec<&str> = module.intents.iter().map(|intent| intent.name).collect();
+            assert!(!verbs.is_empty(), "{owner} moved an empty module");
+            let mine: Vec<&str> = tools_for(*owner).iter().map(|tool| tool.name).collect();
+            for verb in &verbs {
+                assert!(mine.contains(verb), "{owner} does not list its own {verb}");
+                assert!(
+                    offers(*owner, verb),
+                    "{owner} does not offer its own {verb}"
+                );
+                assert!(
+                    offers(AgentProduct::Workspace, verb),
+                    "Ask alo does not offer {verb}"
+                );
+            }
+        }
+        let source = include_str!("agent_product.rs");
+        let name = concat!("BILLING_", "INTENTS");
+        assert_eq!(
+            source.matches(name).count(),
+            2,
+            "Billing is named by its import and its row, nowhere else"
+        );
     }
 
     /// The boundary's question, over the whole registry: a product offers its

@@ -70,7 +70,7 @@ pub use agent_plan::{
     AgentPlan, MAX_PLAN_STEPS, PlanAgent, PlanAsk, PlanStep, parse_plan, plan_messages,
     plan_system_prompt, run_planner,
 };
-pub use agent_product::{ToolSet, offers, tool_sets, tools_for};
+pub use agent_product::{MOVED, ToolSet, offers, tool_sets, tools_for};
 pub use agent_projects::PROJECTS_TOOLS;
 pub use agent_sheets::SHEETS_TOOLS;
 pub use agent_sites::SITES_TOOLS;

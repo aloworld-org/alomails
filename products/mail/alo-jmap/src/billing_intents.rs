@@ -42,7 +42,7 @@ use crate::billing::{iso_date, map_store_err};
 use crate::billing_customers::customer_json;
 use crate::billing_document::today;
 use crate::error::Problem;
-use crate::state::Account;
+use crate::state::{Account, AppState};
 
 /// How many documents a list read returns — enough for a question, small
 /// enough to sit inside the turn's result window.
@@ -844,6 +844,41 @@ pub async fn execute_record_payment(account: &Account, args: &Value) -> Reply {
     ok(result)
 }
 
+/// The module's verbs by name (A4.1c) — Billing's one row in the agent's
+/// dispatcher list, `crate::agent::MODULES`. `None` is "not mine": the
+/// dispatcher then asks the next module, so two modules never need to know of
+/// each other. The three older writes still live in `agent_billing`, and are
+/// reached from here so the agent has one place to look.
+pub(crate) fn dispatch<'a>(
+    state: &'a AppState,
+    account: &'a Account,
+    tool: &'a str,
+    args: &'a Value,
+) -> Option<crate::agent::Dispatched<'a>> {
+    let run: crate::agent::Dispatched<'a> = match tool {
+        "open_quotes" => Box::pin(execute_open_quotes(account, args)),
+        "quote_lookup" => Box::pin(execute_quote_lookup(account, args)),
+        "customer_lookup" => Box::pin(execute_customer_lookup(account, args)),
+        "unpaid_invoices" => Box::pin(execute_unpaid_invoices(account, args)),
+        "invoice_lookup" => Box::pin(execute_invoice_lookup(account, args)),
+        "billing_totals" => Box::pin(execute_billing_totals(account, args)),
+        "send_quote" => Box::pin(execute_send_quote(account, args)),
+        "issue_invoice" => Box::pin(execute_issue_invoice(account, args)),
+        "record_payment" => Box::pin(execute_record_payment(account, args)),
+        "create_invoice_draft" => Box::pin(crate::agent_billing::execute_create_invoice_draft(
+            account, args,
+        )),
+        "quote_to_invoice" => Box::pin(crate::agent_billing::execute_quote_to_invoice(
+            account, args,
+        )),
+        "draft_payment_reminder" => Box::pin(crate::agent_billing::execute_draft_payment_reminder(
+            account, args, state,
+        )),
+        _ => return None,
+    };
+    Some(run)
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
@@ -877,7 +912,7 @@ mod tests {
 
     #[test]
     fn every_verb_the_registry_offers_is_dispatched() {
-        let dispatch = include_str!("agent.rs");
+        let dispatch = include_str!("billing_intents.rs");
         for intent in BILLING.intents {
             assert!(
                 dispatch.contains(&format!("\"{}\" =>", intent.name)),
@@ -885,6 +920,25 @@ mod tests {
                 intent.name
             );
         }
+    }
+
+    /// Billing's registration is one row in each list (A4.1c): the agent's
+    /// dispatcher names this module once, the registry names it once, and the
+    /// two lists are the same length — every moved module has its dispatcher.
+    #[test]
+    fn the_module_is_one_row_in_each_list() {
+        let agent = include_str!("agent.rs");
+        assert_eq!(
+            agent.matches("billing_intents::").count(),
+            1,
+            "agent.rs names Billing only in MODULES"
+        );
+        assert!(agent.contains("crate::billing_intents::dispatch"));
+        assert_eq!(
+            crate::agent::MODULES.len(),
+            alo_ai::MOVED.len(),
+            "a moved module without a dispatcher, or the reverse"
+        );
     }
 
     /// The call each verb's route handlers must contain (A4.1b): the shared
