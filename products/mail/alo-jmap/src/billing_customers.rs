@@ -165,11 +165,8 @@ pub async fn list_customers(
     Query(q): Query<ListQuery>,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
-    let customers = account
-        .acc
-        .billing_customers(flag(q.include_archived.as_deref()))
-        .await
-        .map_err(map_store_err)?;
+    let customers =
+        crate::billing_intents::customers(&account, flag(q.include_archived.as_deref())).await?;
     Ok(Json(json!({
         "customers": customers.iter().map(customer_json).collect::<Vec<_>>(),
     })))

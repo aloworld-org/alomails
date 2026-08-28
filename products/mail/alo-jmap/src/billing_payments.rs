@@ -181,29 +181,8 @@ pub async fn create_payment(
     let input: PaymentBody = parse_body(&body)?;
     let input = input.into_payment()?;
     let id = BillingInvoiceId::new(id);
-    let payment_id = account
-        .acc
-        .record_billing_payment(&id, &input)
-        .await
-        .map_err(map_store_err)?;
-    let document = account
-        .acc
-        .billing_invoice(&id)
-        .await
-        .map_err(map_store_err)?
-        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such invoice"))?;
-    let recorded = account
-        .acc
-        .billing_payments(&id)
-        .await
-        .map_err(map_store_err)?
-        .into_iter()
-        .find(|p| p.id.as_str() == payment_id.as_str())
-        .ok_or_else(Problem::server_error)?;
-    Ok(Json(json!({
-        "payment": payment_json(&recorded),
-        "invoice": document_json(&document, today()),
-    })))
+    let body = crate::billing_intents::record_payment(&account, &id, &input).await?;
+    Ok(Json(body))
 }
 
 /// `DELETE /billing/invoices/{id}/payments/{paymentId}` →

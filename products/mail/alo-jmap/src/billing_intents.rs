@@ -14,25 +14,33 @@
 //! matching a name are returned for the person to choose, and a write refuses
 //! the ambiguity with a sentence rather than picking one. Nothing here guesses.
 //!
+//! **A route is an adapter of the same verb** (ADR 0058, A4.1b). The shared
+//! cores below do the verb's work on resolved inputs, and both callers run
+//! them: the `/billing/` handler with the id from its path, the executor after
+//! resolving a name. The coverage test at the bottom asserts the call in each
+//! handler's source, so a route and its verb cannot quietly drift apart.
+//!
 //! The three older writes (`create_invoice_draft`, `quote_to_invoice`,
-//! `draft_payment_reminder`) keep their executors in [`crate::agent_billing`].
+//! `draft_payment_reminder`) keep their executors in [`crate::agent_billing`],
+//! which calls the same cores.
 
 use std::collections::HashMap;
 
 use axum::Json;
+use axum::http::StatusCode;
 use serde_json::{Value, json};
 use time::format_description::well_known::Iso8601;
 use time::{Date, Duration, Month};
 
-use alo_store::billing_invoices::{InvoiceStatus, InvoiceSummary};
+use alo_store::billing_invoices::{InvoiceStatus, NewInvoice};
 use alo_store::billing_payments::NewPayment;
-use alo_store::billing_quotes::{QuoteStatus, QuoteSummary};
-use alo_store::{BillingCustomerId, BillingInvoiceId, BillingQuoteId, Customer};
+use alo_store::billing_quotes::{AcceptedAs, QuoteStatus};
+use alo_store::{BillingCustomerId, BillingInvoiceId, BillingQuoteId, Customer, NewLine};
 
 use crate::agent_args::{integer, string_arg, unprocessable};
 use crate::billing::{iso_date, map_store_err};
 use crate::billing_customers::customer_json;
-use crate::billing_document::{today, with_totals};
+use crate::billing_document::today;
 use crate::error::Problem;
 use crate::state::Account;
 
@@ -40,11 +48,11 @@ use crate::state::Account;
 /// enough to sit inside the turn's result window.
 const MAX_LISTED: usize = 12;
 
-type Reply = Result<Json<Value>, Problem>;
+pub(crate) type Reply = Result<Json<Value>, Problem>;
 
 /// Every read's answer, with its money made readable before it reaches the
 /// model ([`with_display`]).
-fn ok(result: Value) -> Reply {
+pub(crate) fn ok(result: Value) -> Reply {
     Ok(Json(
         json!({ "ok": true, "result": with_display(result, None) }),
     ))
@@ -121,17 +129,222 @@ fn with_display(value: Value, currency: Option<&str>) -> Value {
     }
 }
 
+// ---- the shared cores: what a route and its verb both run ----------------
+//
+// Each returns exactly what its route answers today, so the handler stays a
+// thin adapter and the executor builds its agent-facing extras on top.
+
+/// The customer list `GET /billing/customers` serves — name order, active
+/// first — and the list every name in a proposal is resolved against.
+pub(crate) async fn customers(
+    account: &Account,
+    include_archived: bool,
+) -> Result<Vec<Customer>, Problem> {
+    account
+        .acc
+        .billing_customers(include_archived)
+        .await
+        .map_err(map_store_err)
+}
+
+/// The offer list `GET /billing/quotes` serves: the tenant's offers with
+/// `status` (all of them on `None`), newest first, each as the list entry the
+/// screen shows — totals computed, lines omitted.
+pub(crate) async fn quote_list(
+    account: &Account,
+    status: Option<QuoteStatus>,
+) -> Result<Vec<Value>, Problem> {
+    let day = today();
+    Ok(account
+        .acc
+        .billing_quotes(status)
+        .await
+        .map_err(map_store_err)?
+        .iter()
+        .map(|q| crate::billing_quotes::summary_json(q, day))
+        .collect())
+}
+
+/// The whole offer `GET /billing/quotes/{id}` serves — lines, totals, status.
+pub(crate) async fn quote_record(account: &Account, id: &BillingQuoteId) -> Result<Value, Problem> {
+    let document = account
+        .acc
+        .billing_quote(id)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such quote"))?;
+    Ok(crate::billing_quotes::document_json(&document, today()))
+}
+
+/// The invoice list `GET /billing/invoices` serves: the tenant's documents
+/// with `status` (all of them on `None`), newest first, each with its totals
+/// and settlement.
+pub(crate) async fn invoice_list(
+    account: &Account,
+    status: Option<InvoiceStatus>,
+) -> Result<Vec<Value>, Problem> {
+    let day = today();
+    Ok(account
+        .acc
+        .billing_invoices(status)
+        .await
+        .map_err(map_store_err)?
+        .iter()
+        .map(|i| crate::billing_invoices::summary_json(i, day))
+        .collect())
+}
+
+/// The whole document `GET /billing/invoices/{id}` serves — lines, totals,
+/// settlement.
+pub(crate) async fn invoice_record(
+    account: &Account,
+    id: &BillingInvoiceId,
+) -> Result<Value, Problem> {
+    let document = account
+        .acc
+        .billing_invoice(id)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such invoice"))?;
+    Ok(crate::billing_invoices::document_json(&document, today()))
+}
+
+/// `POST /billing/quotes/{id}/send`'s act: number the offer, start its
+/// validity clock, freeze it. Answers the sent document.
+pub(crate) async fn send_quote(account: &Account, id: &BillingQuoteId) -> Result<Value, Problem> {
+    let document = account
+        .acc
+        .send_billing_quote(id)
+        .await
+        .map_err(map_store_err)?;
+    Ok(crate::billing_quotes::document_json(&document, today()))
+}
+
+/// `POST /billing/quotes/{id}/accept`'s act: close the offer and raise what it
+/// becomes — a draft invoice for services, a draft sales order for goods (ADR
+/// 0054 §5). Answers all three slots so a caller never asks "did it also make
+/// one?".
+pub(crate) async fn accept_quote(account: &Account, id: &BillingQuoteId) -> Result<Value, Problem> {
+    let accepted = account
+        .acc
+        .accept_billing_quote(id)
+        .await
+        .map_err(map_store_err)?;
+    let day = today();
+    let mut body = json!({
+        "quote": crate::billing_quotes::document_json(&accepted.quote, day),
+        "invoice": Value::Null,
+        "salesOrder": Value::Null,
+    });
+    match &accepted.outcome {
+        AcceptedAs::InvoiceDraft(invoice_id) => {
+            let invoice = account
+                .acc
+                .billing_invoice(invoice_id)
+                .await
+                .map_err(map_store_err)?
+                .ok_or_else(Problem::server_error)?;
+            body["invoice"] = crate::billing_invoices::document_json(&invoice, day);
+        }
+        AcceptedAs::SalesOrder(order_id) => {
+            let order = account
+                .acc
+                .inv_sales_order(order_id)
+                .await
+                .map_err(map_store_err)?
+                .ok_or_else(Problem::server_error)?;
+            body["salesOrder"] = crate::inventory_so::document_json(&order, day);
+        }
+    }
+    Ok(body)
+}
+
+/// `POST /billing/invoices`' act: validate the lines **before** the header is
+/// written — so a typo in the last line does not leave an empty draft behind —
+/// then raise the draft and answer the stored document.
+pub(crate) async fn create_invoice_draft(
+    account: &Account,
+    header: &NewInvoice,
+    lines: Option<&[NewLine]>,
+) -> Result<Value, Problem> {
+    if let Some(lines) = lines {
+        account
+            .acc
+            .billing_line_totals(lines)
+            .map_err(map_store_err)?;
+    }
+    let id = account
+        .acc
+        .create_billing_invoice(header)
+        .await
+        .map_err(map_store_err)?;
+    if let Some(lines) = lines {
+        account
+            .acc
+            .set_billing_invoice_lines(&id, lines)
+            .await
+            .map_err(map_store_err)?;
+    }
+    invoice_record(account, &id).await
+}
+
+/// `POST /billing/invoices/{id}/issue`'s act: the next number from the gapless
+/// series, the dates stamped, the document frozen. Answers the issued
+/// document.
+pub(crate) async fn issue_invoice(
+    account: &Account,
+    id: &BillingInvoiceId,
+) -> Result<Value, Problem> {
+    let document = account
+        .acc
+        .issue_billing_invoice(id)
+        .await
+        .map_err(map_store_err)?;
+    Ok(crate::billing_invoices::document_json(&document, today()))
+}
+
+/// `POST /billing/invoices/{id}/payments`' act: record the money, then answer
+/// the stored payment **and** the document after the ledger changed, so the
+/// caller sees the status the payment projected without a second read.
+pub(crate) async fn record_payment(
+    account: &Account,
+    id: &BillingInvoiceId,
+    payment: &NewPayment,
+) -> Result<Value, Problem> {
+    let payment_id = account
+        .acc
+        .record_billing_payment(id, payment)
+        .await
+        .map_err(map_store_err)?;
+    let document = account
+        .acc
+        .billing_invoice(id)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such invoice"))?;
+    let recorded = account
+        .acc
+        .billing_payments(id)
+        .await
+        .map_err(map_store_err)?
+        .into_iter()
+        .find(|p| p.id.as_str() == payment_id.as_str())
+        .ok_or_else(Problem::server_error)?;
+    Ok(json!({
+        "payment": crate::billing_payments::payment_json(&recorded),
+        "invoice": crate::billing_invoices::document_json(&document, today()),
+    }))
+}
+
+// ---- resolution, and the executors on top of the cores -------------------
+
 /// The customers whose name contains `wanted`, an exact match winning alone.
 async fn find_customers(account: &Account, wanted: &str) -> Result<Vec<Customer>, Problem> {
     let wanted = wanted.trim().to_lowercase();
     if wanted.is_empty() {
         return Err(unprocessable("name the customer"));
     }
-    let all = account
-        .acc
-        .billing_customers(false)
-        .await
-        .map_err(map_store_err)?;
+    let all = customers(account, false).await?;
     let exact: Vec<Customer> = all
         .iter()
         .filter(|c| c.name.to_lowercase() == wanted)
@@ -180,76 +393,62 @@ async fn names_for(
         .map_err(map_store_err)
 }
 
-fn quote_summary_json(q: &QuoteSummary, names: &HashMap<String, String>, day: Date) -> Value {
-    let mut value = with_totals(crate::billing_quotes::quote_json(&q.quote, day), &q.totals);
-    if let Some(object) = value.as_object_mut() {
-        object.insert(
-            "customerName".to_owned(),
-            json!(names.get(q.quote.customer_id.as_str())),
-        );
-    }
-    value
+/// The customer id a list entry names, for a name lookup.
+fn customer_id_of(entry: &Value) -> Option<BillingCustomerId> {
+    entry["customerId"].as_str().map(BillingCustomerId::new)
 }
 
-fn invoice_summary_json(i: &InvoiceSummary, names: &HashMap<String, String>, day: Date) -> Value {
-    let inv = &i.invoice;
-    json!({
-        "id": inv.id.as_str(),
-        "number": inv.number,
-        "customerId": inv.customer_id.as_str(),
-        "customerName": names.get(inv.customer_id.as_str()),
-        "status": inv.status.as_str(),
-        "currency": inv.currency,
-        "issueDate": inv.issue_date.map(iso_date),
-        "dueDate": inv.due_date.map(iso_date),
-        "overdue": inv.is_overdue(day),
-        "isCreditNote": inv.is_credit_note,
-        "grossCents": i.totals.gross_cents,
-        "netCents": i.totals.net_cents,
-        "vatCents": i.totals.vat_cents,
-        "paidCents": i.paid_cents,
-        "outstandingCents": i.totals.gross_cents - i.paid_cents,
-    })
+/// The list entry with the customer's name beside the id — what an agent
+/// needs that a screen with the customer already open does not.
+fn with_customer_name(mut entry: Value, names: &HashMap<String, String>) -> Value {
+    if let Some(object) = entry.as_object_mut() {
+        let name = object
+            .get("customerId")
+            .and_then(Value::as_str)
+            .and_then(|id| names.get(id));
+        object.insert("customerName".to_owned(), json!(name));
+    }
+    entry
+}
+
+/// What is left to pay on a list entry, from the settlement its record view
+/// carries.
+fn outstanding_cents(entry: &Value) -> i64 {
+    entry["settlement"]["outstandingCents"]
+        .as_i64()
+        .unwrap_or_default()
 }
 
 /// `open_quotes` — the sent, unanswered offers, plus the count of drafts.
 pub async fn execute_open_quotes(account: &Account, args: &Value) -> Reply {
-    let day = today();
     let only = match string_arg(args, "customer") {
         Some(name) => Some(find_customers(account, &name).await?),
         None => None,
     };
-    let keep = |q: &QuoteSummary| {
+    let keep = |q: &Value| {
         only.as_ref()
-            .is_none_or(|customers| customers.iter().any(|c| c.id == q.quote.customer_id))
+            .is_none_or(|wanted| wanted.iter().any(|c| q["customerId"] == c.id.as_str()))
     };
-    let sent: Vec<QuoteSummary> = account
-        .acc
-        .billing_quotes(Some(QuoteStatus::Sent))
-        .await
-        .map_err(map_store_err)?
+    let sent: Vec<Value> = quote_list(account, Some(QuoteStatus::Sent))
+        .await?
         .into_iter()
-        .filter(keep)
+        .filter(|q| keep(q))
         .collect();
-    let drafts: Vec<QuoteSummary> = account
-        .acc
-        .billing_quotes(Some(QuoteStatus::Draft))
-        .await
-        .map_err(map_store_err)?
+    let drafts: Vec<Value> = quote_list(account, Some(QuoteStatus::Draft))
+        .await?
         .into_iter()
-        .filter(keep)
+        .filter(|q| keep(q))
         .collect();
     let names = names_for(
         account,
-        sent.iter()
-            .chain(drafts.iter())
-            .map(|q| q.quote.customer_id.clone()),
+        sent.iter().chain(drafts.iter()).filter_map(customer_id_of),
     )
     .await?;
     let open: Vec<Value> = sent
         .iter()
         .take(MAX_LISTED)
-        .map(|q| quote_summary_json(q, &names, day))
+        .cloned()
+        .map(|q| with_customer_name(q, &names))
         .collect();
     // Across the whole book a draft is only counted — it is not an offer yet.
     // Asked about one customer, their drafts are listed too: "what did we
@@ -258,7 +457,8 @@ pub async fn execute_open_quotes(account: &Account, args: &Value) -> Reply {
         drafts
             .iter()
             .take(MAX_LISTED)
-            .map(|q| quote_summary_json(q, &names, day))
+            .cloned()
+            .map(|q| with_customer_name(q, &names))
             .collect()
     } else {
         Vec::new()
@@ -324,34 +524,27 @@ async fn resolve_quote(
 /// `quote_lookup` — one offer in full.
 pub async fn execute_quote_lookup(account: &Account, args: &Value) -> Reply {
     let id = resolve_quote(account, args, None).await?;
-    let document = account
-        .acc
-        .billing_quote(&id)
-        .await
-        .map_err(map_store_err)?
-        .ok_or_else(|| unprocessable("no such quote"))?;
-    let day = today();
-    let names = names_for(account, std::iter::once(document.quote.customer_id.clone())).await?;
-    let mut value = crate::billing_quotes::document_json(&document, day);
+    let mut value = quote_record(account, &id).await?;
+    let customer_id = value["customerId"]
+        .as_str()
+        .map(ToOwned::to_owned)
+        .unwrap_or_default();
+    let names = names_for(
+        account,
+        std::iter::once(BillingCustomerId::new(customer_id.clone())),
+    )
+    .await?;
     // The customer's other offers, as summaries, so "has it been sent?" and
     // "is there a newer draft?" are answered from the same lookup.
-    let others: Vec<Value> = account
-        .acc
-        .billing_quotes(None)
-        .await
-        .map_err(map_store_err)?
-        .iter()
-        .filter(|q| {
-            q.quote.customer_id == document.quote.customer_id && q.quote.id != document.quote.id
-        })
+    let others: Vec<Value> = quote_list(account, None)
+        .await?
+        .into_iter()
+        .filter(|q| q["customerId"] == customer_id.as_str() && q["id"] != value["id"])
         .take(MAX_LISTED)
-        .map(|q| quote_summary_json(q, &names, day))
+        .map(|q| with_customer_name(q, &names))
         .collect();
     if let Some(object) = value.as_object_mut() {
-        object.insert(
-            "customerName".to_owned(),
-            json!(names.get(document.quote.customer_id.as_str())),
-        );
+        object.insert("customerName".to_owned(), json!(names.get(&customer_id)));
         object.insert("otherQuotes".to_owned(), Value::Array(others));
     }
     ok(value)
@@ -372,70 +565,56 @@ pub async fn execute_customer_lookup(account: &Account, args: &Value) -> Reply {
         }));
     }
     let customer = found.remove(0);
-    let day = today();
     let names = HashMap::from([(customer.id.as_str().to_owned(), customer.name.clone())]);
-    let open: Vec<Value> = account
-        .acc
-        .billing_quotes(Some(QuoteStatus::Sent))
-        .await
-        .map_err(map_store_err)?
-        .iter()
-        .filter(|q| q.quote.customer_id == customer.id)
+    let open: Vec<Value> = quote_list(account, Some(QuoteStatus::Sent))
+        .await?
+        .into_iter()
+        .filter(|q| q["customerId"] == customer.id.as_str())
         .take(MAX_LISTED)
-        .map(|q| quote_summary_json(q, &names, day))
+        .map(|q| with_customer_name(q, &names))
         .collect();
-    let unpaid: Vec<Value> = account
-        .acc
-        .billing_invoices(Some(InvoiceStatus::Issued))
-        .await
-        .map_err(map_store_err)?
-        .iter()
-        .filter(|i| i.invoice.customer_id == customer.id && i.totals.gross_cents > i.paid_cents)
+    let unpaid: Vec<Value> = invoice_list(account, Some(InvoiceStatus::Issued))
+        .await?
+        .into_iter()
+        .filter(|i| i["customerId"] == customer.id.as_str() && outstanding_cents(i) > 0)
         .take(MAX_LISTED)
-        .map(|i| invoice_summary_json(i, &names, day))
+        .map(|i| with_customer_name(i, &names))
         .collect();
     ok(json!({
         "customer": customer_json(&customer),
         "openQuotes": open,
         "unpaidInvoices": unpaid,
-        "outstandingCents": unpaid.iter().filter_map(|i| i["outstandingCents"].as_i64()).sum::<i64>(),
+        "outstandingCents": unpaid.iter().map(outstanding_cents).sum::<i64>(),
     }))
 }
 
 /// `unpaid_invoices` — issued and not settled, overdue flagged.
 pub async fn execute_unpaid_invoices(account: &Account, args: &Value) -> Reply {
-    let day = today();
     let only = match string_arg(args, "customer") {
         Some(name) => Some(find_customers(account, &name).await?),
         None => None,
     };
-    let unpaid: Vec<InvoiceSummary> = account
-        .acc
-        .billing_invoices(Some(InvoiceStatus::Issued))
-        .await
-        .map_err(map_store_err)?
+    let unpaid: Vec<Value> = invoice_list(account, Some(InvoiceStatus::Issued))
+        .await?
         .into_iter()
-        .filter(|i| i.totals.gross_cents > i.paid_cents)
+        .filter(|i| outstanding_cents(i) > 0)
         .filter(|i| {
             only.as_ref()
-                .is_none_or(|customers| customers.iter().any(|c| c.id == i.invoice.customer_id))
+                .is_none_or(|wanted| wanted.iter().any(|c| i["customerId"] == c.id.as_str()))
         })
         .collect();
-    let names = names_for(
-        account,
-        unpaid.iter().map(|i| i.invoice.customer_id.clone()),
-    )
-    .await?;
+    let names = names_for(account, unpaid.iter().filter_map(customer_id_of)).await?;
     let listed: Vec<Value> = unpaid
         .iter()
         .take(MAX_LISTED)
-        .map(|i| invoice_summary_json(i, &names, day))
+        .cloned()
+        .map(|i| with_customer_name(i, &names))
         .collect();
     ok(json!({
         "unpaid": listed,
         "unpaidCount": unpaid.len(),
-        "overdueCount": unpaid.iter().filter(|i| i.invoice.is_overdue(day)).count(),
-        "outstandingCents": unpaid.iter().map(|i| i.totals.gross_cents - i.paid_cents).sum::<i64>(),
+        "overdueCount": unpaid.iter().filter(|i| i["overdue"] == true).count(),
+        "outstandingCents": unpaid.iter().map(outstanding_cents).sum::<i64>(),
     }))
 }
 
@@ -473,23 +652,18 @@ async fn resolve_invoice(account: &Account, args: &Value) -> Result<BillingInvoi
 /// `invoice_lookup` — one invoice in full.
 pub async fn execute_invoice_lookup(account: &Account, args: &Value) -> Reply {
     let id = resolve_invoice(account, args).await?;
-    let document = account
-        .acc
-        .billing_invoice(&id)
-        .await
-        .map_err(map_store_err)?
-        .ok_or_else(|| unprocessable("no such invoice"))?;
+    let mut value = invoice_record(account, &id).await?;
+    let customer_id = value["customerId"]
+        .as_str()
+        .map(ToOwned::to_owned)
+        .unwrap_or_default();
     let names = names_for(
         account,
-        std::iter::once(document.invoice.customer_id.clone()),
+        std::iter::once(BillingCustomerId::new(customer_id.clone())),
     )
     .await?;
-    let mut value = crate::billing_invoices::document_json(&document, today());
     if let Some(object) = value.as_object_mut() {
-        object.insert(
-            "customerName".to_owned(),
-            json!(names.get(document.invoice.customer_id.as_str())),
-        );
+        object.insert("customerName".to_owned(), json!(names.get(&customer_id)));
     }
     ok(value)
 }
@@ -549,10 +723,13 @@ fn period(args: &Value, day: Date) -> Result<(Date, Date), Problem> {
     ))
 }
 
-/// `billing_totals` — invoiced, paid, outstanding and VAT over a period.
+/// `billing_totals` — invoiced, paid, outstanding and VAT over a period,
+/// summed over the same record views the invoice list serves, so the totals
+/// and the list can never disagree about a document's figures.
 pub async fn execute_billing_totals(account: &Account, args: &Value) -> Reply {
     let day = today();
     let (from, to) = period(args, day)?;
+    let (from, to) = (iso_date(from), iso_date(to));
     let mut invoiced = 0i64;
     let mut net = 0i64;
     let mut vat = 0i64;
@@ -561,28 +738,27 @@ pub async fn execute_billing_totals(account: &Account, args: &Value) -> Reply {
     let mut count = 0usize;
     let mut overdue = 0usize;
     for status in [InvoiceStatus::Issued, InvoiceStatus::Paid] {
-        for i in account
-            .acc
-            .billing_invoices(Some(status))
-            .await
-            .map_err(map_store_err)?
-        {
-            let Some(issued) = i.invoice.issue_date else {
+        for entry in invoice_list(account, Some(status)).await? {
+            // ISO dates compare as their days do.
+            let Some(issued) = entry["issueDate"].as_str() else {
                 continue;
             };
-            if issued < from || issued > to {
+            if issued < from.as_str() || issued > to.as_str() {
                 continue;
             }
-            if i.invoice.is_credit_note {
-                credited += i.totals.gross_cents;
+            let gross = entry["totals"]["grossCents"].as_i64().unwrap_or_default();
+            if entry["creditNote"] == true {
+                credited += gross;
                 continue;
             }
             count += 1;
-            invoiced += i.totals.gross_cents;
-            net += i.totals.net_cents;
-            vat += i.totals.vat_cents;
-            paid += i.paid_cents;
-            if i.invoice.is_overdue(day) {
+            invoiced += gross;
+            net += entry["totals"]["netCents"].as_i64().unwrap_or_default();
+            vat += entry["totals"]["vatCents"].as_i64().unwrap_or_default();
+            paid += entry["settlement"]["paidCents"]
+                .as_i64()
+                .unwrap_or_default();
+            if entry["overdue"] == true {
                 overdue += 1;
             }
         }
@@ -594,8 +770,8 @@ pub async fn execute_billing_totals(account: &Account, args: &Value) -> Reply {
         .map_err(map_store_err)?
         .base_currency;
     ok(json!({
-        "from": iso_date(from),
-        "to": iso_date(to),
+        "from": from,
+        "to": to,
         "currency": currency,
         "invoiceCount": count,
         "invoicedGrossCents": invoiced,
@@ -611,14 +787,7 @@ pub async fn execute_billing_totals(account: &Account, args: &Value) -> Reply {
 /// `send_quote` — a write, run on the asker's approval.
 pub async fn execute_send_quote(account: &Account, args: &Value) -> Reply {
     let id = resolve_quote(account, args, Some(QuoteStatus::Draft)).await?;
-    let document = account
-        .acc
-        .send_billing_quote(&id)
-        .await
-        .map_err(map_store_err)?;
-    ok(
-        json!({ "kind": "quote", "quote": crate::billing_quotes::document_json(&document, today()) }),
-    )
+    ok(json!({ "kind": "quote", "quote": send_quote(account, &id).await? }))
 }
 
 /// `issue_invoice` — a write: the customer's newest draft becomes owed.
@@ -633,14 +802,10 @@ pub async fn execute_issue_invoice(account: &Account, args: &Value) -> Reply {
         .into_iter()
         .find(|i| i.invoice.customer_id == customer.id)
         .ok_or_else(|| unprocessable(format!("{} has no draft invoice to issue", customer.name)))?;
-    let document = account
-        .acc
-        .issue_billing_invoice(&draft.invoice.id)
-        .await
-        .map_err(map_store_err)?;
-    ok(
-        json!({ "kind": "invoice", "invoice": crate::billing_invoices::document_json(&document, today()) }),
-    )
+    ok(json!({
+        "kind": "invoice",
+        "invoice": issue_invoice(account, &draft.invoice.id).await?,
+    }))
 }
 
 /// `record_payment` — a write: money received against an invoice.
@@ -672,22 +837,11 @@ pub async fn execute_record_payment(account: &Account, args: &Value) -> Reply {
         method: string_arg(args, "method").unwrap_or_else(|| "transfer".to_owned()),
         reference: string_arg(args, "reference").unwrap_or_default(),
     };
-    let payment_id = account
-        .acc
-        .record_billing_payment(&id, &payment)
-        .await
-        .map_err(map_store_err)?;
-    let after = account
-        .acc
-        .billing_invoice(&id)
-        .await
-        .map_err(map_store_err)?
-        .ok_or_else(|| unprocessable("no such invoice"))?;
-    ok(json!({
-        "kind": "payment",
-        "paymentId": payment_id.as_str(),
-        "invoice": crate::billing_invoices::document_json(&after, today()),
-    }))
+    let mut result = record_payment(account, &id, &payment).await?;
+    if let Some(object) = result.as_object_mut() {
+        object.insert("kind".to_owned(), json!("payment"));
+    }
+    ok(result)
 }
 
 #[cfg(test)]
@@ -729,6 +883,108 @@ mod tests {
                 dispatch.contains(&format!("\"{}\" =>", intent.name)),
                 "{} has no executor in the dispatch",
                 intent.name
+            );
+        }
+    }
+
+    /// The call each verb's route handlers must contain (A4.1b): the shared
+    /// core the verb's executor runs, qualified so a store function whose name
+    /// merely ends the same way cannot satisfy it.
+    const SHARED_CORES: &[(&str, &str)] = &[
+        ("open_quotes", "billing_intents::quote_list("),
+        ("quote_lookup", "billing_intents::quote_record("),
+        ("customer_lookup", "billing_intents::customers("),
+        ("unpaid_invoices", "billing_intents::invoice_list("),
+        ("invoice_lookup", "billing_intents::invoice_record("),
+        ("billing_totals", "billing_intents::invoice_list("),
+        (
+            "create_invoice_draft",
+            "billing_intents::create_invoice_draft(",
+        ),
+        ("quote_to_invoice", "billing_intents::accept_quote("),
+        ("draft_payment_reminder", "draft_reminder("),
+        ("send_quote", "billing_intents::send_quote("),
+        ("issue_invoice", "billing_intents::issue_invoice("),
+        ("record_payment", "billing_intents::record_payment("),
+    ];
+
+    /// The route modules whose handlers may adapt a Billing verb.
+    const ROUTE_MODULES: &[(&str, &str)] = &[
+        ("billing_customers", include_str!("billing_customers.rs")),
+        ("billing_invoices", include_str!("billing_invoices.rs")),
+        ("billing_payments", include_str!("billing_payments.rs")),
+        ("billing_quotes", include_str!("billing_quotes.rs")),
+        ("billing_reminder", include_str!("billing_reminder.rs")),
+    ];
+
+    /// The `module::handler` pairs a router source registers on `route`.
+    fn handlers_of(router: &str, route: &str) -> Vec<(String, String)> {
+        let literal = format!("\"{route}\"");
+        let mut found = Vec::new();
+        let mut rest = router;
+        while let Some(at) = rest.find(&literal) {
+            let after = &rest[at + literal.len()..];
+            let segment = &after[..after.find(".route").unwrap_or(after.len())];
+            for token in segment.split(|c: char| !(c.is_alphanumeric() || c == '_' || c == ':')) {
+                if let Some((module, handler)) = token.split_once("::")
+                    && !module.is_empty()
+                    && !handler.is_empty()
+                    && !handler.contains(':')
+                {
+                    found.push((module.to_owned(), handler.to_owned()));
+                }
+            }
+            rest = after;
+        }
+        found
+    }
+
+    /// The body of `async fn name(…)` in `source` — the signature excluded, so
+    /// a handler whose own name contains the core's cannot match itself.
+    fn body_of<'a>(source: &'a str, name: &str) -> &'a str {
+        let Some(start) = source.find(&format!("async fn {name}(")) else {
+            return "";
+        };
+        let after = &source[start..];
+        let Some(open) = after.find('{') else {
+            return "";
+        };
+        let body = &after[open + 1..];
+        &body[..body.find("\npub async fn ").unwrap_or(body.len())]
+    }
+
+    /// A4.1b's claim, asserted structurally: for every verb, at least one
+    /// handler registered on the verb's routes **calls** the shared core the
+    /// executor runs — the call, not just the route's name in a list.
+    #[test]
+    fn every_verbs_route_handler_calls_the_executors_core() {
+        let server = include_str!("server.rs");
+        for intent in BILLING.intents {
+            let (_, call) = SHARED_CORES
+                .iter()
+                .find(|(verb, _)| *verb == intent.name)
+                .unwrap_or_else(|| panic!("{} names no shared core", intent.name));
+            let handlers: Vec<(String, String)> = intent
+                .routes
+                .iter()
+                .flat_map(|route| handlers_of(server, route))
+                .collect();
+            assert!(
+                !handlers.is_empty(),
+                "{}: no handler registered on {:?}",
+                intent.name,
+                intent.routes
+            );
+            let adapted = handlers.iter().any(|(module, handler)| {
+                ROUTE_MODULES
+                    .iter()
+                    .find(|(name, _)| name == module)
+                    .is_some_and(|(_, source)| body_of(source, handler).contains(call))
+            });
+            assert!(
+                adapted,
+                "{}: none of {:?} calls {call}…) — the route and the verb have drifted apart",
+                intent.name, handlers
             );
         }
     }

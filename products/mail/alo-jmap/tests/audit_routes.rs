@@ -387,6 +387,7 @@ POST /projects/updates -> projects.update.create
 POST /projects/weeks/{monday}/submit -> projects.week.submit
 POST /projects/weeks/{monday}/withdraw -> projects.week.withdraw
 PUT /billing/fx/rates -> billing.fx.rates.update
+PUT /billing/quotes/{id}/design -> billing.quote.design.update
 PUT /finance/mileage/rates -> finance.mileage.rates.update
 PUT /hr/holiday-calendars -> hr.holiday_calendar.update
 PUT /inventory/counts/{id}/lines/{product_id} -> inventory.count.line.update

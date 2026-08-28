@@ -313,23 +313,20 @@ pub async fn list_invoices(
     // Parsed even when the overdue view wins, so a misspelled status is still
     // a `422` rather than being silently swallowed by a second parameter.
     let status = status_filter(q.status.as_deref())?;
-    let invoices = if flag(q.overdue.as_deref()) {
+    let invoices: Vec<Value> = if flag(q.overdue.as_deref()) {
+        let today = today();
         account
             .acc
             .billing_overdue_invoices()
             .await
             .map_err(map_store_err)?
+            .iter()
+            .map(|s| summary_json(s, today))
+            .collect()
     } else {
-        account
-            .acc
-            .billing_invoices(status)
-            .await
-            .map_err(map_store_err)?
+        crate::billing_intents::invoice_list(&account, status).await?
     };
-    let today = today();
-    Ok(Json(json!({
-        "invoices": invoices.iter().map(|s| summary_json(s, today)).collect::<Vec<_>>(),
-    })))
+    Ok(Json(json!({ "invoices": invoices })))
 }
 
 /// `POST /billing/invoices` `{customerId, lines?, …}` → `{"invoice":{…}}` —
@@ -366,28 +363,9 @@ pub async fn create_invoice(
     }
     let header = req.header(NewInvoice::for_customer(BillingCustomerId::new("")));
     let lines = req.lines();
-    if let Some(lines) = lines.as_deref() {
-        account
-            .acc
-            .billing_line_totals(lines)
-            .map_err(map_store_err)?;
-    }
-    let id = account
-        .acc
-        .create_billing_invoice(&header)
-        .await
-        .map_err(map_store_err)?;
-    if let Some(lines) = lines.as_deref() {
-        account
-            .acc
-            .set_billing_invoice_lines(&id, lines)
-            .await
-            .map_err(map_store_err)?;
-    }
-    let document = load(&account.acc, &id).await?;
-    Ok(Json(
-        json!({ "invoice": document_json(&document, today()) }),
-    ))
+    let invoice =
+        crate::billing_intents::create_invoice_draft(&account, &header, lines.as_deref()).await?;
+    Ok(Json(json!({ "invoice": invoice })))
 }
 
 /// `GET /billing/invoices/{id}` →
@@ -411,7 +389,7 @@ pub async fn get_invoice(
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     let id = BillingInvoiceId::new(id);
-    let document = load(&account.acc, &id).await?;
+    let invoice = crate::billing_intents::invoice_record(&account, &id).await?;
     let credits = account
         .acc
         .billing_credit_notes(&id)
@@ -424,7 +402,7 @@ pub async fn get_invoice(
         .map_err(map_store_err)?;
     let today = today();
     Ok(Json(json!({
-        "invoice": document_json(&document, today),
+        "invoice": invoice,
         "creditNotes": credits.iter().map(|s| summary_json(s, today)).collect::<Vec<_>>(),
         "payments": payments.iter().map(crate::billing_payments::payment_json).collect::<Vec<_>>(),
     })))
@@ -515,14 +493,9 @@ pub async fn issue_invoice(
     Path(id): Path<String>,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
-    let document = account
-        .acc
-        .issue_billing_invoice(&BillingInvoiceId::new(id))
-        .await
-        .map_err(map_store_err)?;
-    Ok(Json(
-        json!({ "invoice": document_json(&document, today()) }),
-    ))
+    let invoice =
+        crate::billing_intents::issue_invoice(&account, &BillingInvoiceId::new(id)).await?;
+    Ok(Json(json!({ "invoice": invoice })))
 }
 
 /// `POST /billing/invoices/{id}/void` → `{"invoice":{…}}` — cancel an

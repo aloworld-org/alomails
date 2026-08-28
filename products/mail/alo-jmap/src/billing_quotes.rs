@@ -39,9 +39,7 @@ use serde_json::{Value, json};
 use time::Date;
 
 use alo_store::billing_quote_lines::NewQuoteLine;
-use alo_store::billing_quotes::{
-    AcceptedAs, NewQuote, Quote, QuoteDocument, QuoteStatus, QuoteSummary,
-};
+use alo_store::billing_quotes::{NewQuote, Quote, QuoteDocument, QuoteStatus, QuoteSummary};
 use alo_store::{AccountStore, BillingCustomerId, BillingProductId, BillingQuoteId, Line};
 
 use crate::billing::{iso, iso_date, map_store_err, parse_body};
@@ -105,7 +103,11 @@ pub(crate) fn document_json(d: &QuoteDocument, today: Date) -> Value {
 }
 
 /// A list entry: the header and what the offer is worth, without the lines.
-fn summary_json(s: &QuoteSummary, today: Date) -> Value {
+///
+/// `pub(crate)` because the offer list's shared core
+/// ([`crate::billing_intents::quote_list`]) renders it for the route and the
+/// Billing agent alike, so both read one shape.
+pub(crate) fn summary_json(s: &QuoteSummary, today: Date) -> Value {
     with_totals(quote_json(&s.quote, today), &s.totals)
 }
 
@@ -269,15 +271,8 @@ pub async fn list_quotes(
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     let status = status_filter(q.status.as_deref())?;
-    let quotes = account
-        .acc
-        .billing_quotes(status)
-        .await
-        .map_err(map_store_err)?;
-    let today = today();
-    Ok(Json(json!({
-        "quotes": quotes.iter().map(|s| summary_json(s, today)).collect::<Vec<_>>(),
-    })))
+    let quotes = crate::billing_intents::quote_list(&account, status).await?;
+    Ok(Json(json!({ "quotes": quotes })))
 }
 
 /// `POST /billing/quotes` `{customerId, lines?, …}` → `{"quote":{…}}` — raise a
@@ -342,14 +337,14 @@ pub async fn get_quote(
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     let id = BillingQuoteId::new(id);
-    let document = load(&account.acc, &id).await?;
+    let quote = crate::billing_intents::quote_record(&account, &id).await?;
     let invoice = account
         .acc
         .billing_invoice_for_quote(&id)
         .await
         .map_err(map_store_err)?;
     Ok(Json(json!({
-        "quote": document_json(&document, today()),
+        "quote": quote,
         "invoiceId": invoice.as_ref().map(alo_store::BillingInvoiceId::as_str),
     })))
 }
@@ -439,12 +434,8 @@ pub async fn send_quote(
     Path(id): Path<String>,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
-    let document = account
-        .acc
-        .send_billing_quote(&BillingQuoteId::new(id))
-        .await
-        .map_err(map_store_err)?;
-    Ok(Json(json!({ "quote": document_json(&document, today()) })))
+    let quote = crate::billing_intents::send_quote(&account, &BillingQuoteId::new(id)).await?;
+    Ok(Json(json!({ "quote": quote })))
 }
 
 /// `POST /billing/quotes/{id}/accept` → `{"quote":{…},"invoice":{…}}` — the
@@ -476,37 +467,7 @@ pub async fn accept_quote(
     Path(id): Path<String>,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
-    let accepted = account
-        .acc
-        .accept_billing_quote(&BillingQuoteId::new(id))
-        .await
-        .map_err(map_store_err)?;
-    let today = today();
-    let mut body = json!({
-        "quote": document_json(&accepted.quote, today),
-        "invoice": Value::Null,
-        "salesOrder": Value::Null,
-    });
-    match &accepted.outcome {
-        AcceptedAs::InvoiceDraft(invoice_id) => {
-            let invoice = account
-                .acc
-                .billing_invoice(invoice_id)
-                .await
-                .map_err(map_store_err)?
-                .ok_or_else(Problem::server_error)?;
-            body["invoice"] = crate::billing_invoices::document_json(&invoice, today);
-        }
-        AcceptedAs::SalesOrder(order_id) => {
-            let order = account
-                .acc
-                .inv_sales_order(order_id)
-                .await
-                .map_err(map_store_err)?
-                .ok_or_else(Problem::server_error)?;
-            body["salesOrder"] = crate::inventory_so::document_json(&order, today);
-        }
-    }
+    let body = crate::billing_intents::accept_quote(&account, &BillingQuoteId::new(id)).await?;
     Ok(Json(body))
 }
 

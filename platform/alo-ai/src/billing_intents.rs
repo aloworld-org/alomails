@@ -146,7 +146,9 @@ pub const BILLING_INTENTS: &[IntentSpec] = &[
         ],
         preview: None,
         undo: None,
-        routes: &["/billing/reports/vat"],
+        // Summed over the same record views `/billing/invoices` serves — the
+        // by-rate VAT report answers a different question (see the exclusions).
+        routes: &["/billing/invoices"],
     },
     // ---- writes: propose, then the asker approves ------------------------
     IntentSpec {
@@ -402,6 +404,10 @@ pub const BILLING_EXCLUDED: &[Excluded] = &[
     Excluded {
         route: "/billing/fx/rates/import",
         why: "Takes a file.",
+    },
+    Excluded {
+        route: "/billing/reports/vat",
+        why: "The by-rate VAT summary is the accountant's screen; billing_totals answers period questions from the same invoice records.",
     },
     Excluded {
         route: "/billing/reports/vat.csv",

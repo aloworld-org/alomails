@@ -35,7 +35,6 @@ use serde_json::{Value, json};
 
 use alo_store::billing_invoices::NewInvoice;
 use alo_store::billing_line::QTY_MAX_MILLI;
-use alo_store::billing_quotes::AcceptedAs;
 use alo_store::{BillingCustomerId, NewLine};
 
 use crate::agent_args::{integer, pick, pick_name, string_arg, unprocessable};
@@ -109,41 +108,16 @@ pub async fn execute_create_invoice_draft(
                 .map_err(|why| unprocessable(format!("line {}: {why}", index + 1)))?,
         );
     }
-    // The store's own arithmetic and validation, before anything is written.
-    let totals = account
-        .acc
-        .billing_line_totals(&lines)
-        .map_err(map_store_err)?;
-
     let header = NewInvoice {
         reference: string_arg(args, "reference").unwrap_or_default(),
         note: string_arg(args, "note").unwrap_or_default(),
         ..NewInvoice::for_customer(BillingCustomerId::new(customer.id.as_str()))
     };
-    let id = account
-        .acc
-        .create_billing_invoice(&header)
-        .await
-        .map_err(map_store_err)?;
-    account
-        .acc
-        .set_billing_invoice_lines(&id, &lines)
-        .await
-        .map_err(map_store_err)?;
-
-    Ok(Json(json!({
-        "ok": true,
-        "result": {
-            "kind": "invoice",
-            "id": id.as_str(),
-            "status": "draft",
-            "customer": customer.name,
-            "currency": customer.currency,
-            "lineCount": lines.len(),
-            "netCents": totals.net_cents,
-            "grossCents": totals.gross_cents,
-        }
-    })))
+    // The same core `POST /billing/invoices` runs (A4.1b): lines validated
+    // before the header is written, the stored document answered.
+    let invoice =
+        crate::billing_intents::create_invoice_draft(account, &header, Some(&lines)).await?;
+    crate::billing_intents::ok(json!({ "kind": "invoice", "invoice": invoice }))
 }
 
 /// `quote_to_invoice` — accept the quote with the approved number, which closes
@@ -171,54 +145,21 @@ pub async fn execute_quote_to_invoice(
         .await
         .map_err(map_store_err)?
         .ok_or_else(|| no_such("quote", &number))?;
-    let accepted = account
-        .acc
-        .accept_billing_quote(&id)
-        .await
-        .map_err(map_store_err)?;
-    // Which document the acceptance raised depends on the offer's lines (ADR
-    // 0054 §5), so the result **names its kind** rather than assuming one. An
-    // agent that reported "invoice" for a sales order would be telling the room
+    // The same core `POST /billing/quotes/{id}/accept` runs (A4.1b). Which
+    // document the acceptance raised depends on the offer's lines (ADR 0054
+    // §5), so the result **names its kind** rather than assuming one. An agent
+    // that reported "invoice" for a sales order would be telling the room
     // something untrue about what it had just done.
-    let result = match &accepted.outcome {
-        AcceptedAs::InvoiceDraft(invoice_id) => {
-            let invoice = account
-                .acc
-                .billing_invoice(invoice_id)
-                .await
-                .map_err(map_store_err)?
-                .ok_or_else(Problem::server_error)?;
-            json!({
-                "kind": "invoice",
-                "id": invoice_id.as_str(),
-                "status": "draft",
-                "fromQuote": accepted.quote.quote.number,
-                "currency": invoice.invoice.currency,
-                "lineCount": invoice.lines.len(),
-                "netCents": invoice.totals.net_cents,
-                "grossCents": invoice.totals.gross_cents,
-            })
-        }
-        AcceptedAs::SalesOrder(order_id) => {
-            let order = account
-                .acc
-                .inv_sales_order(order_id)
-                .await
-                .map_err(map_store_err)?
-                .ok_or_else(Problem::server_error)?;
-            json!({
-                "kind": "salesOrder",
-                "id": order_id.as_str(),
-                "status": "draft",
-                "fromQuote": accepted.quote.quote.number,
-                "currency": order.order.currency,
-                "lineCount": order.lines.len(),
-                "netCents": order.totals.net_cents,
-                "grossCents": order.totals.gross_cents,
-            })
-        }
+    let mut body = crate::billing_intents::accept_quote(account, &id).await?;
+    let kind = if body["salesOrder"].is_null() {
+        "invoice"
+    } else {
+        "salesOrder"
     };
-    Ok(Json(json!({ "ok": true, "result": result })))
+    if let Some(object) = body.as_object_mut() {
+        object.insert("kind".to_owned(), json!(kind));
+    }
+    crate::billing_intents::ok(body)
 }
 
 /// `draft_payment_reminder` — write the reminder for the approved invoice
