@@ -124,8 +124,15 @@ export function ChoicePicker({
                 disabled={option.disabled}
                 className={cx(
                   "flex min-h-11 w-full items-center gap-3 rounded-lg !px-4 !py-2.5 text-left text-base text-primary transition-colors",
-                  "hover:!bg-accent-soft hover:!text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/30",
-                  (isSelected || isActive) && "!bg-accent-soft !text-accent",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/30",
+                  // Two different facts, two different looks. The fill follows
+                  // the pointer / arrow keys and marks exactly one row: the one
+                  // Enter or a click would choose. The accent colour and the
+                  // check mark belong to the current value alone. Giving both
+                  // states the same fill made two rows look chosen whenever
+                  // the pointer rested on a row other than the value.
+                  isActive && "!bg-raised",
+                  isSelected && "font-semibold !text-accent",
                   option.disabled === true && "cursor-not-allowed opacity-45",
                 )}
                 onMouseEnter={() => {

@@ -32,6 +32,35 @@ describe("ChoicePicker", () => {
     expect(screen.queryByRole("listbox", { name: "Example choice" })).toBeNull();
   });
 
+  test("keeps the pointer highlight and the chosen value visually distinct", () => {
+    render(
+      <ChoicePicker
+        value="second"
+        options={options}
+        placeholder="Choose"
+        label="Example choice"
+        onChange={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Example choice" }));
+    const first = screen.getByRole("option", { name: "First option" });
+    const second = screen.getByRole("option", { name: "Second option" });
+    fireEvent.mouseEnter(first);
+
+    // The fill marks the one row the pointer rests on; the accent colour and
+    // the check mark mark the value. Neither row shows the other's cue, so
+    // two rows never read as chosen at once.
+    expect(first.className).toContain("!bg-raised");
+    expect(second.className).not.toContain("!bg-raised");
+    expect(second.className).toContain("!text-accent");
+    expect(first.className).not.toContain("!text-accent");
+    expect(second.getAttribute("aria-selected")).toBe("true");
+    expect(first.getAttribute("aria-selected")).toBe("false");
+    expect(second.querySelector("svg")).toBeTruthy();
+    expect(first.querySelector("svg")).toBeNull();
+  });
+
   test("supports keyboard movement and never selects a disabled option", () => {
     const onChange = vi.fn();
     render(
