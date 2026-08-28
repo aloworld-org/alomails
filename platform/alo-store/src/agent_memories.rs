@@ -342,18 +342,19 @@ impl AccountStore {
         Ok(row.and_then(|(setting,)| setting))
     }
 
-    /// Whether a turn ending in this room learns: the room's switch, else the
+    /// Whether this room's memory is on: the room's switch, else the
     /// workspace default, else ON.
     ///
-    /// This gates **learning only**. An explicit "remember that …" does not
-    /// come through here — a person asking by name is the consent the switch
-    /// approximates — and retrieval (A6.2) is scoped by rows, not switches:
-    /// switching a room off hides its memories rather than deleting them
-    /// (30-day deletion is A6.3).
+    /// Gates **learning** at the end of a turn, and gates **retrieval** the
+    /// same way (A6.2): a room switched off hides its memories from later
+    /// turns rather than deleting them (30-day deletion is A6.3) — the rows
+    /// stay, and flipping the switch back on surfaces them again. An explicit
+    /// "remember that …" does not come through here — a person asking by name
+    /// is the consent the switch approximates.
     ///
     /// # Errors
     /// [`StoreError::NotFound`] if the room is not the caller's to see.
-    pub async fn memory_learning_enabled(&self, channel: &ChatChannelId) -> Result<bool> {
+    pub async fn memory_enabled(&self, channel: &ChatChannelId) -> Result<bool> {
         let setting = self.channel_memory_setting(channel).await?;
         if let Some(chosen) = setting {
             return Ok(chosen);

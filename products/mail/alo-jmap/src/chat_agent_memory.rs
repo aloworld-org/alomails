@@ -15,8 +15,16 @@
 //!
 //! Scope follows the room: a channel feeds that channel's memory, a
 //! one-to-one with an agent feeds only that person's — the store refuses the
-//! combination that would cross them. Retrieval into later turns is A6.2 and
-//! deliberately not here.
+//! combination that would cross them.
+//!
+//! **Retrieval reads the same scope back and nothing wider** (A6.2,
+//! [`remembered`]): a turn in a room is grounded in that agent's memories of
+//! that room; a turn in the agent's own one-to-one is grounded in what it
+//! remembers about the asker; and there is no third case — a delegate taking
+//! a turn inside somebody else's one-to-one reads nothing, because the only
+//! memories in scope there belong to the room's own counterpart. A room
+//! switched off hides its memories from retrieval rather than deleting them
+//! (the design's "off hides"; 30-day deletion is A6.3).
 
 use axum::Json;
 use axum::extract::{Path, State};
@@ -24,7 +32,9 @@ use axum::http::HeaderMap;
 use serde_json::{Value, json};
 
 use alo_ai::{AiConfig, WorkspaceSource};
-use alo_store::{ChatAgent, ChatChannelId, ChatMessageId, MemoryLearnedFrom, StoreError};
+use alo_store::{
+    ChatAgent, ChatAgentId, ChatChannelId, ChatMessageId, MemoryLearnedFrom, StoreError,
+};
 
 use crate::chat_agent_routes::map_store_err;
 use crate::error::Problem;
@@ -112,6 +122,55 @@ pub(crate) async fn remember_explicit(
     Some(crate::chat_agent::Spoken::Answered)
 }
 
+/// How many memories ground one turn: the newest of the scope, not all two
+/// hundred it may hold. Matches the grounding budget
+/// ([`crate::chat_agent::CHAT_SOURCES`]) — what an agent remembers should
+/// inform a turn, not crowd out the question.
+const MEMORY_SOURCES: usize = 8;
+
+/// What one turn remembers, as further numbered sources (A6.2).
+///
+/// The scope is the turn's and nothing wider: a room turn reads `agent`'s
+/// memories **of that room**; a turn in `agent`'s own one-to-one reads what it
+/// remembers **about the asker** (the store binds that read to the caller's
+/// id, so there is no argument with which to reach a colleague's); and a turn
+/// some other agent takes inside a one-to-one — a delegate handed a
+/// sub-question there — reads nothing, because no memory in that room is its.
+/// A room whose memory switch resolves off surfaces nothing: off hides.
+///
+/// Best-effort by design, like the grounding it joins: a turn that cannot
+/// read its memories still answers, from the sources it has.
+pub(crate) async fn remembered(
+    account: &Account,
+    agent: &ChatAgentId,
+    channel: &ChatChannelId,
+    from: usize,
+) -> Vec<WorkspaceSource> {
+    let acc = &account.acc;
+    if !acc.memory_enabled(channel).await.unwrap_or(false) {
+        return Vec::new();
+    }
+    let rows = match acc.channel_agent_counterpart(channel).await {
+        Ok(Some(counterpart)) if counterpart.as_str() == agent.as_str() => {
+            acc.my_memories(agent).await
+        }
+        Ok(Some(_)) => return Vec::new(),
+        Ok(None) => acc.channel_memories(agent, channel).await,
+        Err(_) => return Vec::new(),
+    }
+    .unwrap_or_default();
+    rows.into_iter()
+        .take(MEMORY_SOURCES)
+        .enumerate()
+        .map(|(i, memory)| WorkspaceSource {
+            index: from + i + 1,
+            kind: "remembered".to_owned(),
+            title: memory.fact,
+            detail: String::new(),
+        })
+        .collect()
+}
+
 /// One answered exchange, as the extractor is shown it.
 pub(crate) struct Exchange<'a> {
     /// What the person asked, in their own words.
@@ -138,7 +197,7 @@ pub(crate) async fn learn_from_turn(
     exchange: &Exchange<'_>,
 ) {
     let acc = &account.acc;
-    if !acc.memory_learning_enabled(channel).await.unwrap_or(false) {
+    if !acc.memory_enabled(channel).await.unwrap_or(false) {
         return;
     }
     let Ok(facts) =

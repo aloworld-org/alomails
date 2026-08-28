@@ -637,3 +637,422 @@ async fn memories_are_the_tenants_and_the_rooms_alone() {
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0].fact, "the merger closes in October");
 }
+
+/// The agent-authored messages of a room, id and body, through `token`'s eyes.
+async fn agent_replies(h: &Harness, token: &str, channel: &str) -> Vec<(String, String)> {
+    let (status, body) = get(&h.app, token, &format!("/chat/channels/{channel}/messages")).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    body["messages"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|m| m["authorKind"] == "agent")
+        .map(|m| {
+            (
+                m["id"].as_str().unwrap().to_owned(),
+                m["body"].as_str().unwrap_or_default().to_owned(),
+            )
+        })
+        .collect()
+}
+
+/// Say something as `token` and wait for a **new** agent reply containing
+/// `marker` — new, because a room that has already spoken holds old agent
+/// messages a first-match search would return instantly.
+async fn ask_for(h: &Harness, token: &str, channel: &str, question: &str, marker: &str) -> String {
+    let before: std::collections::HashSet<String> = agent_replies(h, token, channel)
+        .await
+        .into_iter()
+        .map(|(id, _)| id)
+        .collect();
+    let (status, body) = post(
+        &h.app,
+        token,
+        &format!("/chat/channels/{channel}/messages"),
+        json!({ "body": question }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let asked = body["id"].as_str().unwrap().to_owned();
+    let deadline = Instant::now() + Duration::from_secs(30);
+    loop {
+        let now = agent_replies(h, token, channel).await;
+        if now
+            .iter()
+            .any(|(id, said)| !before.contains(id) && said.contains(marker))
+        {
+            return asked;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "no new reply containing {marker:?}: {now:?}"
+        );
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+}
+
+/// Wait until the scripted model has been asked `n` times — the fence that
+/// keeps a script's entries landing on the calls they were written for.
+async fn await_calls(seen: &crate::common::model::Seen, n: usize) {
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while seen.lock().unwrap().len() < n {
+        assert!(
+            Instant::now() < deadline,
+            "the model was never asked {n} times"
+        );
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+}
+
+/// The user content of the model's `i`th call — the prompt carrying the
+/// numbered sources the turn was grounded in.
+fn grounded_with(seen: &crate::common::model::Seen, i: usize) -> String {
+    let calls = seen.lock().unwrap();
+    calls[i]["messages"][1]["content"]
+        .as_str()
+        .unwrap()
+        .to_owned()
+}
+
+/// Flip a room's memory switch through the wire, as `token`.
+async fn switch_memory(h: &Harness, token: &str, channel: &str, enabled: bool) {
+    let (status, body) = post(
+        &h.app,
+        token,
+        &format!("/chat/channels/{channel}/memory"),
+        json!({ "enabled": enabled }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+}
+
+/// **A turn reads its own room's memories and no other room's** — the
+/// wrong-channel test (A6.2). One agent, two rooms, one fact remembered in
+/// the first: the first room's turn is grounded in it as a numbered source,
+/// and the second room's turn — same agent, same asker, same tenant — never
+/// sees it. And a room switched off hides what it remembers without deleting
+/// it.
+#[tokio::test]
+async fn a_turn_reads_only_its_own_rooms_memories() {
+    let h = harness("memread").await;
+    let (deals, agent) = a_room_with(&h, "billing", AgentProduct::Billing).await;
+    let (status, body) = post(
+        &h.app,
+        &h.token,
+        "/chat/channels",
+        json!({ "name": "ops", "visibility": "public" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let ops = body["id"].as_str().unwrap().to_owned();
+    h.acc
+        .add_agent_to_channel(&ChatChannelId::new(ops.clone()), &agent)
+        .await
+        .unwrap();
+
+    ask_for(
+        &h,
+        &h.token,
+        &deals,
+        "@billing remember that Northstar invoices are net 30",
+        "remember",
+    )
+    .await;
+
+    let (base, seen) = scripted_model(vec![
+        says("Net 30, as agreed [1]."),
+        json!(["Northstar sends orders quarterly"]).to_string(),
+        says("Nothing here says what Northstar's terms are."),
+        json!([]).to_string(),
+        says("I can't see anything remembered just now."),
+    ])
+    .await;
+    use_model(&h, &base).await;
+    switch_memory(&h, &h.token, &deals, true).await;
+    switch_memory(&h, &h.token, &ops, true).await;
+
+    // The room the fact lives in: the turn is grounded in it.
+    ask_for(
+        &h,
+        &h.token,
+        &deals,
+        "@billing what terms do Northstar have?",
+        "Net 30",
+    )
+    .await;
+    let prompt = grounded_with(&seen, 0);
+    assert!(
+        prompt.contains("remembered \"Northstar invoices are net 30\""),
+        "{prompt}"
+    );
+
+    // The extraction lands its fact — which is also the fence that keeps the
+    // script in order before the next room speaks.
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while h
+        .acc
+        .channel_memories(&agent, &ChatChannelId::new(deals.clone()))
+        .await
+        .unwrap()
+        .len()
+        < 2
+    {
+        assert!(Instant::now() < deadline, "the turn never learned");
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+
+    // The wrong channel: the same agent asked the same thing by the same
+    // person, one room over — and no memory of it anywhere in the prompt.
+    ask_for(
+        &h,
+        &h.token,
+        &ops,
+        "@billing what terms do Northstar have?",
+        "Nothing here",
+    )
+    .await;
+    let prompt = grounded_with(&seen, 2);
+    assert!(
+        !prompt.contains("Northstar invoices are net 30"),
+        "{prompt}"
+    );
+    assert!(!prompt.contains("remembered \""), "{prompt}");
+    await_calls(&seen, 4).await;
+
+    // Off hides: the room's own memories stop grounding it the moment its
+    // switch goes off — and stay in the store, ready for the switch back on.
+    switch_memory(&h, &h.token, &deals, false).await;
+    ask_for(
+        &h,
+        &h.token,
+        &deals,
+        "@billing what terms do Northstar have?",
+        "can't see",
+    )
+    .await;
+    let prompt = grounded_with(&seen, 4);
+    assert!(!prompt.contains("remembered \""), "{prompt}");
+    assert_eq!(
+        h.acc
+            .channel_memories(&agent, &ChatChannelId::new(deals))
+            .await
+            .unwrap()
+            .len(),
+        2,
+        "hidden is not deleted"
+    );
+}
+
+/// **A one-to-one turn reads what the agent remembers about the asker — and
+/// only the asker.** A colleague's turn with the same agent is grounded in
+/// their own facts, never the first person's; and a room turn never reads
+/// anybody's one-to-one memory, whatever its switch says.
+#[tokio::test]
+async fn a_dm_turn_reads_the_askers_own_memories_and_nobody_elses() {
+    let h = harness("memdmread").await;
+    let agenda = h
+        .acc
+        .create_agent("agenda", "Agenda", None, AgentProduct::Agenda)
+        .await
+        .unwrap();
+    let (status, room) = post(
+        &h.app,
+        &h.token,
+        &format!("/chat/agents/{}/dm", agenda.as_str()),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{room}");
+    let mine = room["id"].as_str().unwrap().to_owned();
+    ask_for(
+        &h,
+        &h.token,
+        &mine,
+        "Remember that I prefer morning meetings",
+        "remember",
+    )
+    .await;
+
+    // A colleague of the same tenant, with their own one-to-one.
+    let email = format!("colleague-{}@memdmread.test", h.tenant);
+    let colleague = h.ts.create_user(&email).await.unwrap();
+    h.identity
+        .set_password(&h.tenant, &colleague, &email, "s3cret-pw")
+        .await
+        .unwrap();
+    let their_token = h
+        .identity
+        .password_login(&email, "s3cret-pw", None)
+        .await
+        .unwrap()
+        .expect("token issued")
+        .0
+        .reveal()
+        .to_owned();
+    let (status, room) = post(
+        &h.app,
+        &their_token,
+        &format!("/chat/agents/{}/dm", agenda.as_str()),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{room}");
+    let theirs = room["id"].as_str().unwrap().to_owned();
+    ask_for(
+        &h,
+        &their_token,
+        &theirs,
+        "Remember that I prefer late afternoons",
+        "remember",
+    )
+    .await;
+
+    let (base, seen) = scripted_model(vec![
+        says("Morning it is [1]."),
+        json!([]).to_string(),
+        says("Late afternoon, then [1]."),
+        json!([]).to_string(),
+        says("No preference is noted in this room."),
+        json!([]).to_string(),
+    ])
+    .await;
+    use_model(&h, &base).await;
+    switch_memory(&h, &h.token, &mine, true).await;
+    switch_memory(&h, &their_token, &theirs, true).await;
+
+    ask_for(&h, &h.token, &mine, "when should we meet?", "Morning").await;
+    let prompt = grounded_with(&seen, 0);
+    assert!(
+        prompt.contains("remembered \"I prefer morning meetings\""),
+        "{prompt}"
+    );
+    assert!(
+        !prompt.contains("late afternoons"),
+        "a colleague's memory must never ground another person's turn: {prompt}"
+    );
+    await_calls(&seen, 2).await;
+
+    ask_for(
+        &h,
+        &their_token,
+        &theirs,
+        "when should we meet?",
+        "afternoon",
+    )
+    .await;
+    let prompt = grounded_with(&seen, 2);
+    assert!(
+        prompt.contains("remembered \"I prefer late afternoons\""),
+        "{prompt}"
+    );
+    assert!(!prompt.contains("morning meetings"), "{prompt}");
+    await_calls(&seen, 4).await;
+
+    // A room turn reads the room's memory, never a person's — even with the
+    // room's switch on and both one-to-ones full of preferences.
+    let (status, body) = post(
+        &h.app,
+        &h.token,
+        "/chat/channels",
+        json!({ "name": "planning", "visibility": "public" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let planning = body["id"].as_str().unwrap().to_owned();
+    h.acc
+        .add_agent_to_channel(&ChatChannelId::new(planning.clone()), &agenda)
+        .await
+        .unwrap();
+    switch_memory(&h, &h.token, &planning, true).await;
+    ask_for(
+        &h,
+        &h.token,
+        &planning,
+        "@agenda when should we meet?",
+        "No preference",
+    )
+    .await;
+    let prompt = grounded_with(&seen, 4);
+    assert!(
+        !prompt.contains("morning meetings") && !prompt.contains("late afternoons"),
+        "{prompt}"
+    );
+}
+
+/// The delegate envelope, as the model returns it.
+fn delegates(to: &str, ask: &str) -> String {
+    json!({ "kind": "delegate", "delegate": { "to": to, "ask": ask } }).to_string()
+}
+
+/// **A delegate grounds in its own memories, never the asking agent's** —
+/// memories are per agent even inside one room. Billing hands a sub-question
+/// to Tasks in a room where both have remembered something: each turn's
+/// prompt carries its own agent's fact and not the other's.
+#[tokio::test]
+async fn a_delegate_grounds_in_its_own_memories_not_the_asking_agents() {
+    let h = harness("memdeleg").await;
+    let (room, _billing) = a_room_with(&h, "billing", AgentProduct::Billing).await;
+    let tasks = h
+        .acc
+        .create_agent("tasks", "Tasks", None, AgentProduct::Tasks)
+        .await
+        .unwrap();
+    h.acc
+        .add_agent_to_channel(&ChatChannelId::new(room.clone()), &tasks)
+        .await
+        .unwrap();
+
+    ask_for(
+        &h,
+        &h.token,
+        &room,
+        "@billing remember that Northstar invoices are net 30",
+        "remember",
+    )
+    .await;
+    ask_for(
+        &h,
+        &h.token,
+        &room,
+        "@tasks remember that Fridays are for reviews",
+        "remember",
+    )
+    .await;
+
+    let (base, seen) = scripted_model(vec![
+        delegates("tasks", "what is due this week?"),
+        says("The review is due Friday [1]."),
+        says("All set — @tasks says the review is due Friday [2]."),
+        json!([]).to_string(),
+    ])
+    .await;
+    use_model(&h, &base).await;
+    switch_memory(&h, &h.token, &room, true).await;
+
+    ask_for(
+        &h,
+        &h.token,
+        &room,
+        "@billing are we ready for Northstar?",
+        "All set",
+    )
+    .await;
+    let asking = grounded_with(&seen, 0);
+    assert!(
+        asking.contains("remembered \"Northstar invoices are net 30\""),
+        "{asking}"
+    );
+    assert!(
+        !asking.contains("Fridays are for reviews"),
+        "another agent's memory must never ground this one's turn: {asking}"
+    );
+    let delegated = grounded_with(&seen, 1);
+    assert!(
+        delegated.contains("remembered \"Fridays are for reviews\""),
+        "{delegated}"
+    );
+    assert!(
+        !delegated.contains("Northstar invoices are net 30"),
+        "{delegated}"
+    );
+}

@@ -162,7 +162,13 @@ async fn take_turn(
         }
     }
 
-    let ground = ground(account, agent.product, question, CHAT_SOURCES).await;
+    let mut ground = ground(account, agent.product, question, CHAT_SOURCES).await;
+    // What this agent remembers here joins the numbered sources (A6.2): the
+    // room's own memories in a room, what it remembers about the asker in its
+    // one-to-one — the same scope the learning below feeds, read back.
+    let recalled =
+        crate::chat_agent_memory::remembered(account, &agent.id, channel, ground.len()).await;
+    ground.extend(recalled);
     // Who this agent may hand a sub-question to (A5.1): the same module-gated
     // roster orchestration routes over, which is what keeps a handoff inside
     // what the asker can see. Ask alo gets none here — its delegation path is

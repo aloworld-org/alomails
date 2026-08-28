@@ -546,13 +546,23 @@ pub(crate) async fn delegate_turn(
     roster: &[ChatAgent],
     depth: usize,
 ) -> Result<TurnResult, InferenceError> {
-    let ground = crate::chat_agent::ground(
+    let mut ground = crate::chat_agent::ground(
         env.account,
         delegate.product,
         ask,
         crate::chat_agent::CHAT_SOURCES,
     )
     .await;
+    // The delegate remembers as itself, in the room the run is visible in
+    // (A6.2): its own channel memories there, and nothing in a one-to-one
+    // that is not its — memories are per agent, so the asking agent's are
+    // never handed across a handoff.
+    if let Some(channel) = channel {
+        let recalled =
+            crate::chat_agent_memory::remembered(env.account, &delegate.id, channel, ground.len())
+                .await;
+        ground.extend(recalled);
+    }
     let nested = Turn {
         product: delegate.product,
         request: ask,
