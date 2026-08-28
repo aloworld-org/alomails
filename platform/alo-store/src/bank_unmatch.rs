@@ -145,9 +145,10 @@ impl AccountStore {
         let reversal_entry_id = self.post_fin_entry_in(&mut tx, &reversal).await?;
 
         // The match row goes first: `bank_matches.payment_id` refuses the
-        // payment's deletion while it points at it (migration 0143, ON DELETE
-        // RESTRICT), which is the database saying the same thing this file does
-        // — a line must never claim to be settled by a payment that is gone.
+        // payment's deletion while it points at it (migration 0174, NO ACTION,
+        // checked at the end of the delete statement), which is the database
+        // saying the same thing this file does — a line must never claim to be
+        // settled by a payment that is gone.
         let removed = sqlx::query("DELETE FROM bank_matches WHERE tenant_id = $1 AND id = $2")
             .bind(self.tenant.as_str())
             .bind(locked.id.as_str())

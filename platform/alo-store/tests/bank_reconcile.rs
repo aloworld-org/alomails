@@ -694,3 +694,176 @@ async fn two_tenants_holding_the_same_statement_and_the_same_number_never_meet()
         "their receivable stands exactly as their issue booked it"
     );
 }
+
+/// A payment a bank line settles cannot be deleted through the billing door
+/// (B7.02): the line would go on claiming to be settled by money that is gone.
+/// The refusal names the act that does it right, and that act — unmatching —
+/// still works and does all three things at once.
+#[tokio::test]
+async fn a_matched_payment_refuses_deletion_and_unmatching_is_the_door() {
+    let store = common::test_store().await;
+    let (acc, _) = tenant_with_chart(&store, "guard").await;
+    let customer = customer(&acc, "guard").await;
+    let (invoice, number, issued_on) = issued_invoice(&acc, &customer).await;
+    let lines = stage(&acc, &[(issued_on, GROSS_CENTS, number)]).await;
+    acc.confirm_bank_match(&lines[0], &BankMatchTarget::Invoice(invoice.clone()))
+        .await
+        .unwrap();
+    let payments = acc.billing_payments(&invoice).await.unwrap();
+    assert_eq!(payments.len(), 1);
+
+    // The billing door refuses, whole: the payment stays, the line stays
+    // matched, the document stays settled, and no reversal was written.
+    let entries_before = acc.fin_entries(None, None, 100).await.unwrap().len();
+    refused(
+        acc.delete_billing_payment(&invoice, &payments[0].id).await,
+        "take the match back",
+    );
+    assert_eq!(acc.billing_payments(&invoice).await.unwrap().len(), 1);
+    assert_eq!(
+        acc.bank_line(&lines[0]).await.unwrap().unwrap().status,
+        BankLineStatus::Matched
+    );
+    assert_eq!(
+        acc.billing_invoice(&invoice)
+            .await
+            .unwrap()
+            .unwrap()
+            .invoice
+            .status,
+        InvoiceStatus::Paid
+    );
+    assert_eq!(
+        acc.fin_entries(None, None, 100).await.unwrap().len(),
+        entries_before,
+        "a refused deletion writes nothing to the books"
+    );
+
+    // The named door: one act removes the payment, reverses the settlement and
+    // returns the line to the pile.
+    acc.unmatch_bank_line(&lines[0]).await.unwrap();
+    assert!(acc.billing_payments(&invoice).await.unwrap().is_empty());
+    assert_eq!(
+        acc.bank_line(&lines[0]).await.unwrap().unwrap().status,
+        BankLineStatus::Unmatched
+    );
+    assert_eq!(receivable(&acc).await, (GROSS_CENTS, GROSS_CENTS));
+}
+
+/// Law 1's last verb (B7.02): deleting a tenant who has imported, matched and
+/// booked leaves **nothing** behind — erasure is a GDPR obligation, and it must
+/// not depend on which cascade Postgres runs first. Migration 0143's RESTRICT
+/// keys made exactly that dependence; 0174 softens them to NO ACTION and
+/// `delete_tenant` clears the matches itself before the cascade starts, so no
+/// ordering can leave a check staring at a match the cascade has not reached.
+/// Two tenants, so the deletion also proves it takes nobody else's rows with
+/// it.
+#[tokio::test]
+async fn deleting_a_tenant_who_reconciled_erases_everything_and_only_theirs() {
+    let store = common::test_store().await;
+    let (going, going_tenant) = tenant_with_chart(&store, "going").await;
+    let (staying, staying_tenant) = tenant_with_chart(&store, "staying").await;
+
+    // Both tenants live the same full life: an issued invoice, a hand-keyed
+    // deposit, a statement of two lines, the rest confirmed against the
+    // document — payments both matched and manual, entries of every kind, and
+    // one line left unmatched in the pile.
+    for (acc, tag) in [(&going, "going"), (&staying, "staying")] {
+        let customer = customer(acc, tag).await;
+        let (invoice, number, issued_on) = issued_invoice(acc, &customer).await;
+        acc.record_billing_payment(
+            &invoice,
+            &NewPayment {
+                paid_on: Some(issued_on),
+                amount_cents: 30_000,
+                method: "bank transfer".to_owned(),
+                reference: "deposit".to_owned(),
+            },
+        )
+        .await
+        .unwrap();
+        let lines = stage(
+            acc,
+            &[
+                (issued_on, GROSS_CENTS - 30_000, number),
+                (issued_on, -8_990, "Stadtwerke Muenchen".to_owned()),
+            ],
+        )
+        .await;
+        acc.confirm_bank_match(&lines[0], &BankMatchTarget::Invoice(invoice.clone()))
+            .await
+            .unwrap();
+        assert_eq!(receivable(acc).await, (0, 0));
+    }
+
+    // The act under test: before 0174 this failed on
+    // `bank_matches_tenant_id_payment_id_fkey` the moment the cascade reached
+    // a payment the match still named.
+    store.delete_tenant(&going_tenant).await.unwrap();
+
+    // The sweep: every bank, billing and finance table that carries a
+    // tenant_id holds not one row of the deleted tenant. Read raw — a scoped
+    // query would hide an orphan by construction.
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(1)
+        .connect(&common::database_url())
+        .await
+        .unwrap();
+    let tables: Vec<String> = sqlx::query_scalar(
+        "SELECT c.table_name FROM information_schema.columns c \
+         JOIN information_schema.tables t \
+           ON t.table_schema = c.table_schema AND t.table_name = c.table_name \
+         WHERE c.table_schema = 'public' AND c.column_name = 'tenant_id' \
+           AND t.table_type = 'BASE TABLE' \
+           AND (c.table_name LIKE 'bank\\_%' \
+             OR c.table_name LIKE 'billing\\_%' \
+             OR c.table_name LIKE 'fin\\_%') \
+         ORDER BY c.table_name",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    for expected in [
+        "bank_lines",
+        "bank_matches",
+        "bank_statements",
+        "billing_invoices",
+        "billing_payments",
+        "fin_entries",
+        "fin_postings",
+    ] {
+        assert!(
+            tables.iter().any(|table| table == expected),
+            "the sweep must cover {expected}; it found {tables:?}"
+        );
+    }
+    for table in &tables {
+        let remaining: i64 = sqlx::query_scalar(&format!(
+            "SELECT count(*) FROM {table} WHERE tenant_id = $1"
+        ))
+        .bind(going_tenant.as_str())
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(remaining, 0, "{table} still holds rows of a deleted tenant");
+    }
+
+    // The other tenant's world is exactly as they left it.
+    let mut kept: i64 = 0;
+    for table in &tables {
+        let count: i64 = sqlx::query_scalar(&format!(
+            "SELECT count(*) FROM {table} WHERE tenant_id = $1"
+        ))
+        .bind(staying_tenant.as_str())
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        kept += count;
+    }
+    assert!(
+        kept > 0,
+        "the surviving tenant's reconciliation is still there"
+    );
+    assert_eq!(receivable(&staying).await, (0, 0));
+    assert!(staying.fin_unbalanced_entries().await.unwrap().is_empty());
+}

@@ -266,6 +266,29 @@ pub(crate) fn payment_in_sequence(
     Err(StoreError::NotFound)
 }
 
+/// A payment a bank line is matched to cannot be deleted through the billing
+/// door: the line would go on claiming to be settled by money that is gone.
+/// `bank_matches.payment_id` refuses the delete at the end of the statement
+/// (migration 0174, `NO ACTION`; tenant erasure clears the matches first and
+/// passes — see `delete_tenant`), and this turns that SQLSTATE into a refusal
+/// naming the act that does it right: [`AccountStore::unmatch_bank_line`]
+/// removes the payment, reverses the settlement and returns the line to the
+/// pile, in one transaction — which is also why the unmatch path itself never
+/// trips this key: it deletes the match row first, in the same transaction.
+fn map_matched_payment(error: sqlx::Error) -> StoreError {
+    match error {
+        sqlx::Error::Database(ref db) if db.code().as_deref() == Some("23503") => {
+            StoreError::Conflict(
+                "a bank line is matched to this payment; take the match back on the \
+                 reconciliation screen instead — unmatching removes the payment and returns the \
+                 line to the pile"
+                    .to_owned(),
+            )
+        }
+        other => StoreError::Db(other),
+    }
+}
+
 impl AccountStore {
     /// Records money received against one of this tenant's **issued** invoices,
     /// and reprojects the document's status from the ledger that results.
@@ -419,11 +442,18 @@ impl AccountStore {
     /// removing one from the middle would leave every later entry computed
     /// against a prefix that no longer exists.
     ///
+    /// A payment a **bank line is matched to** cannot be deleted through this
+    /// door at all: the line would go on claiming to be settled by money that
+    /// is gone. The refusal names the act that does both halves —
+    /// [`AccountStore::unmatch_bank_line`] removes the payment, reverses the
+    /// settlement and returns the line to the pile, in one transaction.
+    ///
     /// # Errors
     /// [`StoreError::NotFound`] when the invoice or the payment is absent or
     /// another tenant's; [`StoreError::Conflict`] when a later payment has to
-    /// be taken back first, or the reversal would land in a closed period;
-    /// [`StoreError::Db`] on failure.
+    /// be taken back first, when a matched bank line settles this payment, or
+    /// when the reversal would land in a closed period; [`StoreError::Db`] on
+    /// failure.
     pub async fn delete_billing_payment(
         &self,
         invoice_id: &BillingInvoiceId,
@@ -502,7 +532,7 @@ impl AccountStore {
         .bind(payment_id.as_str())
         .execute(&mut **tx)
         .await
-        .map_err(StoreError::Db)?;
+        .map_err(map_matched_payment)?;
         if removed.rows_affected() == 0 {
             return Err(StoreError::NotFound);
         }

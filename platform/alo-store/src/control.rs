@@ -188,17 +188,33 @@ impl Store {
     /// rows. Garage blob objects for the tenant are not swept here (a recorded
     /// storage-cost follow-up, not a leak — see ADR 0012).
     ///
+    /// One table is cleared by hand first, in the same transaction (B7.02).
+    /// `bank_matches` carries no key to `tenants`: its erasure rides the
+    /// cascade `tenants → bank_statements → bank_lines → bank_matches`, and
+    /// Postgres fires queued foreign-key events in order — so the check
+    /// guarding its payment and entry links (migration 0174) can run while
+    /// that two-hop cascade has not reached the matches yet, and refuse an
+    /// erasure the next ordering would have allowed. Deleting the tenant's
+    /// matches before the cascade starts makes erasure — a GDPR obligation —
+    /// independent of that order.
+    ///
     /// # Errors
     /// [`StoreError::NotFound`] if the tenant does not exist;
     /// [`StoreError::Db`] on failure.
     pub async fn delete_tenant(&self, tenant: &TenantId) -> Result<()> {
+        let mut tx = self.pool().begin().await?;
+        sqlx::query("DELETE FROM bank_matches WHERE tenant_id = $1")
+            .bind(tenant.as_str())
+            .execute(&mut *tx)
+            .await?;
         let done = sqlx::query("DELETE FROM tenants WHERE id = $1")
             .bind(tenant.as_str())
-            .execute(self.pool())
+            .execute(&mut *tx)
             .await?;
         if done.rows_affected() == 0 {
             return Err(StoreError::NotFound);
         }
+        tx.commit().await?;
         Ok(())
     }
 
