@@ -1,12 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Grip } from "lucide-react";
-import { NavLink } from "react-router-dom";
 
-import { cx } from "../ds";
 import { strings } from "../i18n";
 import type { ProductModule } from "../product";
-import styles from "./Rail.module.css";
+import { AppTile } from "./AppTile";
 
 interface AppLauncherProps {
   apps: ProductModule[];
@@ -44,71 +41,79 @@ export function AppLauncher({ apps, favoriteModules }: AppLauncherProps) {
     };
   }, [open]);
 
-  const tile = (app: ProductModule) => (
-    <NavLink
-      key={app.id}
-      to={app.path}
-      className={({ isActive }) =>
-        cx(
-          "group flex min-h-20 min-w-0 flex-col items-center justify-center gap-2 rounded-xl border border-transparent px-2 py-3 text-xs font-medium text-secondary transition-colors duration-150 hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
-          isActive && "border-accent/20 bg-accent-soft text-accent",
-        )
-      }
-      onClick={() => setOpen(false)}
-    >
-      <span className="grid size-10 place-items-center rounded-xl bg-surface text-primary transition-colors duration-150 group-hover:text-accent group-aria-[current=page]:text-accent">
-        <app.Icon className="size-5" strokeWidth={1.75} />
-      </span>
-      <span className="max-w-full truncate">{app.label}</span>
-    </NavLink>
-  );
-
   return (
-    <li ref={triggerRef}>
+    <li ref={triggerRef} className="w-full">
       <button
         type="button"
-        className={cx(styles.item, open && styles.active)}
+        className={`flex w-full flex-col items-center gap-[3px] rounded-[var(--radius-lg)] px-0 py-2 text-[var(--text-on-rail-muted)] transition-colors duration-150 hover:bg-[var(--bg-rail-hover)] hover:text-[var(--text-on-rail)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#E76F51]/20 ${
+          open ? "bg-[var(--bg-rail-active)] text-[var(--text-on-rail)]" : ""
+        }`}
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={strings.appLauncher}
         title={strings.appLauncher}
       >
-        <Grip strokeWidth={2} />
-        <span className={styles.label}>{strings.appLauncher}</span>
+        <svg
+          className="size-[22px]"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          {[5, 12, 19].flatMap((y) =>
+            [5, 12, 19].map((x) => (
+              <circle key={`${x}-${y}`} cx={x} cy={y} r="1.65" />
+            )),
+          )}
+        </svg>
+        <span className="text-[10px] font-medium tracking-[0.01em]">
+          {strings.appLauncher}
+        </span>
       </button>
 
       {open &&
         createPortal(
           <div
             ref={panelRef}
-            className="fixed left-[calc(var(--rail-width)+10px)] top-[76px] z-[1000] flex max-h-[calc(100dvh-92px)] w-[min(360px,calc(100vw-var(--rail-width)-28px))] flex-col overflow-hidden rounded-3xl border border-default bg-raised text-primary shadow-lg max-md:bottom-[60px] max-md:left-3 max-md:top-auto max-md:max-h-[60dvh] max-md:w-[calc(100vw-24px)]"
+            className="fixed left-[calc(var(--rail-width)+10px)] top-[76px] z-[1000] flex max-h-[calc(100dvh-92px)] w-[min(380px,calc(100vw-var(--rail-width)-28px))] flex-col overflow-hidden rounded-[28px] border border-[#CBD5E1]/65 bg-white text-[#102A43] shadow-[0_12px_36px_rgba(16,42,67,0.08)] max-md:bottom-[60px] max-md:left-3 max-md:top-auto max-md:max-h-[60dvh] max-md:w-[calc(100vw-24px)]"
             role="dialog"
             aria-label={strings.appLauncher}
           >
-            <header className="px-5 pb-4 pt-5">
-              <h2 className="text-lg font-semibold tracking-tight text-primary">
+            <header className="px-6 pb-5 pt-6">
+              <h2 className="text-lg font-semibold tracking-tight text-[#102A43]">
                 {strings.appLauncherFavorites}
               </h2>
-              <p className="mt-1 max-w-xs text-sm leading-5 text-secondary">
+              <p className="mt-1.5 max-w-xs text-sm leading-5 text-slate-500">
                 {strings.appLauncherAutoHint}
               </p>
             </header>
 
-            <div className="min-h-0 overflow-y-auto px-4 pb-5">
+            <div className="min-h-0 overflow-y-auto px-6 pb-6">
               <section aria-label={strings.appLauncherFavorites}>
-                <div className="grid grid-cols-3 gap-2">
-                  {favoriteModules.map(tile)}
+                <div className="grid grid-cols-3 gap-x-3 gap-y-4">
+                  {favoriteModules.map((app) => (
+                    <AppTile
+                      key={app.id}
+                      app={app}
+                      onSelect={() => setOpen(false)}
+                    />
+                  ))}
                 </div>
               </section>
 
               {remainingApps.length > 0 && (
-                <section className="mt-5 border-t border-subtle pt-5">
-                  <h3 className="mb-2 px-2 text-xs font-semibold tracking-[0.08em] text-tertiary">
+                <section className="mt-6 border-t border-[#CBD5E1]/55 pt-6">
+                  <h3 className="mb-3 text-sm font-semibold text-slate-500">
                     {strings.appLauncherMore}
                   </h3>
-                  <div className="grid grid-cols-3 gap-2">
-                    {remainingApps.map(tile)}
+                  <div className="grid grid-cols-3 gap-x-3 gap-y-4">
+                    {remainingApps.map((app) => (
+                      <AppTile
+                        key={app.id}
+                        app={app}
+                        onSelect={() => setOpen(false)}
+                      />
+                    ))}
                   </div>
                 </section>
               )}

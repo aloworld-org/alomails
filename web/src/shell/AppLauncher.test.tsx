@@ -42,6 +42,13 @@ function renderLauncher() {
 }
 
 describe("AppLauncher", () => {
+  test("keeps the familiar nine-dot launcher mark", () => {
+    renderLauncher();
+
+    const trigger = screen.getByRole("button", { name: strings.appLauncher });
+    expect(trigger.querySelectorAll("circle")).toHaveLength(9);
+  });
+
   test("shows favorites once and keeps the remaining catalogue quiet", () => {
     renderLauncher();
 
