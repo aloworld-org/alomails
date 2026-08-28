@@ -16,7 +16,16 @@
 //! an ordinary nested turn — its prompt, its grounding, its scope at the
 //! execution boundary, all through the **asker's** account door — and its
 //! answer is folded back in as a further numbered source to cite. The room
-//! sees the handoff line before it runs; the delegate itself posts nothing.
+//! sees the handoff line before it runs; a delegate that merely answers posts
+//! nothing. A delegate that wants to **change** something posts its proposal
+//! itself, under its own id, and the run ends there (A5.2): one pending
+//! proposal is the run's whole approval surface, and the author of the message
+//! carrying it is what the approval later runs at — so it must be the
+//! delegate, never the asking agent.
+//!
+//! **Ask alo's planner is this mechanism, not a second one** (A5.2): an
+//! orchestrated step is [`delegate_turn`] at depth 1, drawing on the same
+//! [`RunEnv`] budget as the handoffs it may make itself.
 //!
 //! The bounds hold it down, and all of them are here rather than in the prompt:
 //!
@@ -65,6 +74,12 @@ const MAX_HANDOFFS: usize = 4;
 /// offered nobody.
 const MAX_HANDOFF_DEPTH: usize = 2;
 
+// A full plan always fits its run's budget (A5.2). Ask alo's plan is this run
+// machinery — each step spends a handoff slot — so the planner's step cap must
+// sit at or below the handoff cap, or a maximal plan would refuse its own last
+// step before anything else had spent a thing.
+const _: () = assert!(alo_ai::MAX_PLAN_STEPS <= MAX_HANDOFFS);
+
 /// How much of a tool's result is shown to the model. Enough for a diary month
 /// or a stock record; short enough that one verbose tool cannot crowd out the
 /// question it was meant to answer.
@@ -90,7 +105,10 @@ const OUT_OF_LOOKUPS: &str = "I looked things up as far as I'm allowed to for on
      answer. Could you narrow it down, or ask me one part of it at a time?";
 
 /// Said when the run spent every handoff it had and still wanted another.
-const OUT_OF_HANDOFFS: &str = "I've asked the other agents as much as I'm allowed to for one question and still couldn't \
+/// Crate-visible because an orchestrated run says it too when its plan wants
+/// a step the budget refuses (A5.2: one budget, however the sub-question
+/// travels).
+pub(crate) const OUT_OF_HANDOFFS: &str = "I've asked the other agents as much as I'm allowed to for one question and still couldn't \
      finish. Could you ask the remaining part directly?";
 
 /// One run's spend, shared across the asking turn and every turn it delegates
@@ -203,8 +221,10 @@ pub(crate) struct Turn<'a> {
     pub context: TurnContext<'a>,
     /// The agents this run may hand a sub-question to (A5.1): the asker's own
     /// module-gated roster, already stripped of the retired and of every "Ask
-    /// alo". Empty where delegation has no place — the command palette, and an
-    /// orchestrated step (Ask alo's planner is the delegation path there).
+    /// alo". Empty where delegation has no place — the command palette, which
+    /// has no room for the handoff line to be seen in. An orchestrated step
+    /// carries it too (A5.2): the plan is that run's delegation, and a step
+    /// may hand off further on the same budget.
     pub roster: &'a [ChatAgent],
 }
 
@@ -219,6 +239,11 @@ pub(crate) enum TurnResult {
         /// The sentence that goes in the room.
         say: String,
     },
+    /// A delegate's write, already said and recorded in the room under the
+    /// delegate's own id (A5.2) — the run's one approval surface. There is
+    /// nothing left for the caller to post, and nothing further may run: a
+    /// second pending proposal would be a second button whose order matters.
+    DelegateProposed,
 }
 
 /// Run one turn to a result, executing its reading tools along the way.
@@ -237,23 +262,41 @@ pub(crate) async fn take_turn(
     config: &AiConfig,
     turn: &Turn<'_>,
 ) -> Result<TurnResult, InferenceError> {
-    let env = RunEnv {
-        state,
-        account,
-        config,
-        budget: RunBudget::new(),
-    };
+    let env = RunEnv::new(state, account, config);
     turn_at(&env, turn, 0).await
 }
 
 /// What every depth of one run shares: the world it runs in, and the one
 /// budget it spends. A struct rather than four parameters threaded through the
 /// recursion, so a nested turn cannot be handed somebody else's budget.
-struct RunEnv<'a> {
+///
+/// Crate-visible because an orchestrated run is one of these too (A5.2): Ask
+/// alo's plan holds one env across all its steps, so a step and the handoffs
+/// it makes draw down the same budget.
+pub(crate) struct RunEnv<'a> {
     state: &'a AppState,
     account: &'a Account,
     config: &'a AiConfig,
     budget: RunBudget,
+}
+
+impl<'a> RunEnv<'a> {
+    /// One run's environment, with a fresh budget.
+    pub(crate) fn new(state: &'a AppState, account: &'a Account, config: &'a AiConfig) -> Self {
+        Self {
+            state,
+            account,
+            config,
+            budget: RunBudget::new(),
+        }
+    }
+
+    /// Take one handoff from the run's budget, saying whether there was one to
+    /// take. An orchestrated plan spends this for each of its steps — the plan
+    /// IS the delegation, so a step and a handoff are the same spend.
+    pub(crate) fn take_handoff(&self) -> bool {
+        self.budget.take_handoff()
+    }
 }
 
 /// One turn at one depth of a run, drawing on the run's one budget.
@@ -310,8 +353,13 @@ fn turn_at<'a>(
                     if !env.budget.take_handoff() {
                         return Ok(finish(Step::Handoff { to, ask }));
                     }
-                    let detail = run_handoff(env, turn, depth, &to, &ask).await;
-                    (DELEGATED_KIND, format!("@{to}"), detail)
+                    match run_handoff(env, turn, depth, &to, &ask).await {
+                        Handoff::Fold(detail) => (DELEGATED_KIND, format!("@{to}"), detail),
+                        // The delegate proposed, in the room, under its own id:
+                        // the run is over, whatever depth this is — one pending
+                        // proposal is the whole approval surface (A5.2).
+                        Handoff::Over(result) => return Ok(result),
+                    }
                 }
             };
             sources.push(WorkspaceSource {
@@ -359,22 +407,33 @@ fn handoff_offers<'a>(turn: &'a Turn<'_>, depth: usize) -> Vec<PlanAgent<'a>> {
         .collect()
 }
 
+/// What one handoff came to, for the loop above.
+enum Handoff {
+    /// A line for the asking model's sources: the delegate's answer, or the
+    /// sentence saying why there is none.
+    Fold(String),
+    /// The run is over: a delegate's proposal is pending in the room, and
+    /// nothing further may run behind it.
+    Over(TurnResult),
+}
+
 /// One handoff (ADR 0057 §3): resolve the handle against the asker's own
 /// roster, say in the room who is being asked what, take the delegate's turn
 /// as the asker on the run's shared budget, and fold what came of it into a
 /// line the asking model can cite — or answer around.
 ///
-/// Nothing here fails the turn. A handle the asker cannot see, a delegate that
-/// wanted to change something, a model that could not be reached — each is a
-/// sentence for the model, because "say which part you could not do" is a far
-/// better turn than one that dies silently.
+/// Nothing here fails the turn. A handle the asker cannot see or a model that
+/// could not be reached is a sentence for the model, because "say which part
+/// you could not do" is a far better turn than one that dies silently. A
+/// delegate that wants to **change** something ends the run instead (A5.2):
+/// its proposal goes in the room under its own id and waits for the asker.
 async fn run_handoff(
     env: &RunEnv<'_>,
     turn: &Turn<'_>,
     depth: usize,
     to: &str,
     ask: &str,
-) -> String {
+) -> Handoff {
     // Resolved against the same roster the offer was made from — the asker's
     // own module-gated agents — and against the same depth rule, so a stray
     // envelope at the depth cap meets the same line an unknown handle does.
@@ -391,10 +450,10 @@ async fn run_handoff(
                     .is_some_and(|id| id.as_str() == agent.id.as_str())
         });
     let Some(delegate) = target else {
-        return format!(
+        return Handoff::Fold(format!(
             "nobody was asked: there is no @{to} here you can hand this to — answer from what \
              you have, or say which part you could not do"
-        );
+        ));
     };
     // The room sees who asked whom for what, before it runs — the handoff
     // line ADR 0057 §3 requires ("visibly: the room sees who asked whom").
@@ -405,32 +464,82 @@ async fn run_handoff(
     // it (ADR 0034).
     if let (Some(asking), Some(channel)) = (turn.context.agent, turn.context.channel) {
         let line = format!("I'm asking @{}: {ask}", delegate.handle);
-        if env
-            .account
-            .acc
-            .add_agent_to_channel(channel, asking)
-            .await
-            .is_ok()
-            && env
-                .account
-                .acc
-                .post_as_agent(channel, asking, &line, None)
-                .await
-                .is_ok()
-        {
-            let audience: Vec<alo_store::UserId> = env
-                .account
-                .acc
-                .channel_members(channel)
-                .await
-                .map(|members| members.into_iter().map(|member| member.user).collect())
-                .unwrap_or_default();
-            crate::push::notify_chat(env.state, &env.account.tenant, &audience).await;
-        }
+        join_and_say(env, channel, asking, &line).await;
     }
-    // An ordinary turn of the delegate's own: its product's grounding, its
-    // prompt, its id at the execution boundary — and the asker's account door
-    // under all of it, which is what "as the asker" means.
+    match delegate_turn(
+        env,
+        delegate,
+        ask,
+        turn.today,
+        turn.context.channel,
+        turn.roster,
+        depth + 1,
+    )
+    .await
+    {
+        Ok(TurnResult::Answer(text)) => {
+            Handoff::Fold(format!("@{} answered: {text}", delegate.handle))
+        }
+        // **A delegate's write lands on the asker's one approval surface**
+        // (A5.2): said in the room by the delegate itself — the author of the
+        // message is what the approval runs at, so it must be the delegate —
+        // and recorded against that message. The run ends here.
+        Ok(TurnResult::Propose { action, say }) => match turn.context.channel {
+            Some(channel) => match propose_in_room(env, channel, &delegate.id, &action, &say).await
+            {
+                Some(()) => Handoff::Over(TurnResult::DelegateProposed),
+                // The room would not take it — the delegate's module gate, a
+                // room gone archived. The old words are the safe floor: the
+                // person is pointed at the agent that can do it.
+                None => Handoff::Fold(wanted_a_change(&delegate.handle, &say)),
+            },
+            // No room to carry a proposal (never the case for a handoff today:
+            // the palette offers no roster) — the words, not a lost write.
+            None => Handoff::Fold(wanted_a_change(&delegate.handle, &say)),
+        },
+        // A deeper delegate already proposed: the surface exists, bubble the
+        // end of the run up the chain.
+        Ok(TurnResult::DelegateProposed) => Handoff::Over(TurnResult::DelegateProposed),
+        Err(_) => Handoff::Fold(format!(
+            "the handoff to @{} did not run: the model could not be reached",
+            delegate.handle
+        )),
+    }
+}
+
+/// The fold-in line for a delegate's write that could not be proposed: the
+/// asking agent is told what it wanted so it can say so, and the person can
+/// ask that agent directly.
+fn wanted_a_change(handle: &str, say: &str) -> String {
+    format!(
+        "@{handle} did not answer — it wanted to make a change first: \"{say}\". That change \
+         could not be put up for approval here: say so, and that the person can ask @{handle} \
+         directly."
+    )
+}
+
+/// Take one delegate's turn: its product's grounding, its prompt, its id at
+/// the execution boundary — and the asker's account door under all of it,
+/// which is what "as the asker" means.
+///
+/// **The one mechanism a sub-question travels by** (A5.2): a handoff calls it
+/// at `depth + 1`, and an orchestrated step of Ask alo's plan calls it at
+/// depth 1 — the plan is that run's delegation, not a second machinery — so
+/// both draw on the same [`RunEnv`] budget and both may hand off further
+/// until the depth cap.
+///
+/// # Errors
+/// [`InferenceError`] as [`take_turn`]: the caller decides whether that is a
+/// fold-in sentence (a handoff) or a room line (a plan step).
+pub(crate) async fn delegate_turn(
+    env: &RunEnv<'_>,
+    delegate: &ChatAgent,
+    ask: &str,
+    today: &str,
+    channel: Option<&ChatChannelId>,
+    roster: &[ChatAgent],
+    depth: usize,
+) -> Result<TurnResult, InferenceError> {
     let ground = crate::chat_agent::ground(
         env.account,
         delegate.product,
@@ -442,30 +551,67 @@ async fn run_handoff(
         product: delegate.product,
         request: ask,
         sources: &ground,
-        today: turn.today,
+        today,
         folders: &[],
         context: TurnContext {
             agent: Some(&delegate.id),
-            channel: turn.context.channel,
+            channel,
         },
-        roster: turn.roster,
+        roster,
     };
-    match turn_at(env, &nested, depth + 1).await {
-        Ok(TurnResult::Answer(text)) => format!("@{} answered: {text}", delegate.handle),
-        // A delegate's write is NOT proposed from here (that is A5.2's one
-        // approval surface); the asking agent is told what it wanted so it can
-        // say so, and the person can ask that agent directly.
-        Ok(TurnResult::Propose { say, .. }) => format!(
-            "@{} did not answer — it wanted to make a change first: \"{say}\". A change a \
-             delegate wants is not proposed from here: say so, and that the person can ask @{} \
-             directly.",
-            delegate.handle, delegate.handle
-        ),
-        Err(_) => format!(
-            "the handoff to @{} did not run: the model could not be reached",
-            delegate.handle
-        ),
-    }
+    turn_at(env, &nested, depth).await
+}
+
+/// Join `agent` to the room, say one line as it, and tell the room — the
+/// idempotent, module-gated join every speaking agent makes (ADR 0034), so a
+/// run cannot put an agent in a room its asker was not allowed to reach.
+/// Best-effort, like every posting inside a turn.
+async fn join_and_say(
+    env: &RunEnv<'_>,
+    channel: &ChatChannelId,
+    agent: &ChatAgentId,
+    body: &str,
+) -> Option<alo_store::ChatMessageId> {
+    env.account
+        .acc
+        .add_agent_to_channel(channel, agent)
+        .await
+        .ok()?;
+    let said = env
+        .account
+        .acc
+        .post_as_agent(channel, agent, body, None)
+        .await
+        .ok()?;
+    let audience: Vec<alo_store::UserId> = env
+        .account
+        .acc
+        .channel_members(channel)
+        .await
+        .map(|members| members.into_iter().map(|member| member.user).collect())
+        .unwrap_or_default();
+    crate::push::notify_chat(env.state, &env.account.tenant, &audience).await;
+    Some(said.id)
+}
+
+/// Put a delegate's write up for approval: its sentence in the room under its
+/// own id, the action recorded against that message, only the asker's tap to
+/// run it. `None` when the room would not take the message — the caller then
+/// falls back to folding the wish in as words rather than losing it.
+async fn propose_in_room(
+    env: &RunEnv<'_>,
+    channel: &ChatChannelId,
+    delegate: &ChatAgentId,
+    action: &alo_ai::ProposedAction,
+    say: &str,
+) -> Option<()> {
+    let said = join_and_say(env, channel, delegate, say).await?;
+    env.account
+        .acc
+        .propose_action(&said, &action.tool, &action.args)
+        .await
+        .ok()?;
+    Some(())
 }
 
 /// What a decision means for the turn: the turn is over, or there is a read to
@@ -584,7 +730,9 @@ mod tests {
     fn a_read_still_wanted_at_the_bound_becomes_an_answer() {
         match finish(step(action("stock_answer"))) {
             TurnResult::Answer(text) => assert!(text.contains("narrow it down")),
-            TurnResult::Propose { .. } => panic!("a read must never become a proposal"),
+            TurnResult::Propose { .. } | TurnResult::DelegateProposed => {
+                panic!("a read must never become a proposal")
+            }
         }
     }
 
@@ -595,7 +743,9 @@ mod tests {
                 assert_eq!(action.tool, "create_task");
                 assert_eq!(say, "doing it");
             }
-            TurnResult::Answer(_) => panic!("a write must still wait for a tap"),
+            TurnResult::Answer(_) | TurnResult::DelegateProposed => {
+                panic!("a write must still wait for a tap")
+            }
         }
     }
 
@@ -621,7 +771,9 @@ mod tests {
         });
         match finish(wanted) {
             TurnResult::Answer(text) => assert!(text.contains("ask the remaining part")),
-            TurnResult::Propose { .. } => panic!("a handoff must never become a proposal"),
+            TurnResult::Propose { .. } | TurnResult::DelegateProposed => {
+                panic!("a handoff must never become a proposal")
+            }
         }
     }
 
@@ -744,7 +896,7 @@ mod tests {
                     assert!(!entry.is_read(), "{} was put behind a button", entry.name);
                     assert_eq!(action.tool, entry.name);
                 }
-                Step::Done(TurnResult::Answer(_)) => {
+                Step::Done(TurnResult::Answer(_) | TurnResult::DelegateProposed) => {
                     panic!("{} became an answer with no tool run", entry.name)
                 }
                 Step::Handoff { .. } => {
@@ -770,7 +922,9 @@ mod tests {
     fn an_answer_passes_straight_through() {
         match finish(step(AgentDecision::Answer("42 in stock [1].".to_owned()))) {
             TurnResult::Answer(text) => assert_eq!(text, "42 in stock [1]."),
-            TurnResult::Propose { .. } => panic!("an answer is not a proposal"),
+            TurnResult::Propose { .. } | TurnResult::DelegateProposed => {
+                panic!("an answer is not a proposal")
+            }
         }
     }
 

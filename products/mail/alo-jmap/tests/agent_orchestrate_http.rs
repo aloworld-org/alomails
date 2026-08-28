@@ -7,9 +7,13 @@
 //! * each step runs as **that agent** — its prompt, its scope at the execution
 //!   boundary, its name on the message — and not as Ask alo with everything;
 //! * a run has **one approval surface**: it stops at the first step that wants
-//!   to change something, and the steps behind it do not run;
+//!   to change something — even a change wanted by a step's own delegate — and
+//!   the steps behind it do not run;
 //! * **Stop** ends a run between its steps rather than merely declining to post
-//!   one answer.
+//!   one answer;
+//! * the plan is **the run's delegation, on one budget** (A5.2): a step may
+//!   hand off further, and steps and handoffs together are bounded by the same
+//!   four slots a product agent's own run gets.
 //!
 //! No live model is called: the tenant's AI backend is the scripted local
 //! socket in `common::model`, which also records what it was shown — and what
@@ -46,6 +50,20 @@ async fn get(app: &Router, token: &str, uri: &str) -> (StatusCode, Value) {
         .body(Body::empty())
         .unwrap();
     send(app, req).await
+}
+
+/// The delegate envelope, as a step's model returns it (A5.1).
+fn delegates(to: &str, ask: &str) -> String {
+    json!({ "kind": "delegate", "delegate": { "to": to, "ask": ask } }).to_string()
+}
+
+/// The handoff lines in the room, in order.
+fn handoff_lines(all: &[Value]) -> Vec<String> {
+    all.iter()
+        .filter_map(|m| m["body"].as_str())
+        .filter(|body| body.starts_with("I'm asking @"))
+        .map(str::to_owned)
+        .collect()
 }
 
 /// A plan envelope, as the planner returns it.
@@ -571,4 +589,145 @@ async fn a_request_needing_no_agent_is_answered_by_ask_alo_itself() {
     assert_eq!(calls(&seen), 1);
     // It was the planner that answered, and it was shown the roster.
     assert!(system_of(&seen, 0).contains("- @mail: You are the alo Mail agent"));
+}
+
+/// **The planner is the delegation path, on one budget** (A5.2, ADR 0057 §3):
+/// a plan step is a delegate turn that may hand off further, and steps and
+/// handoffs together draw down the same four slots. Step one spends one slot
+/// and its three handoffs the other three, so step two is refused with no
+/// model call — and the room is told in Ask alo's own words rather than the
+/// bound being quietly exceeded.
+#[tokio::test]
+async fn a_plan_step_hands_off_and_the_whole_run_shares_one_budget() {
+    let h = harness("orchbudget").await;
+    let (channel, alo) = a_room_with_ask_alo(&h).await;
+    let billing = an_agent(&h, "billing", AgentProduct::Billing).await;
+    let tasks = an_agent(&h, "tasks", AgentProduct::Tasks).await;
+
+    let (base, seen) = scripted_model(vec![
+        plans(&[
+            ("billing", "reconcile the quarter"),
+            ("tasks", "what is on my plate?"),
+        ]),
+        delegates("tasks", "part one?"),
+        says("one"),
+        delegates("tasks", "part two?"),
+        says("two"),
+        delegates("tasks", "part three?"),
+        says("three"),
+        says("All reconciled — @tasks confirmed every part [1][2][3]."),
+    ])
+    .await;
+    use_model(&h, &base).await;
+
+    let all = ask_and_wait(&h, &channel, "@alo reconcile the quarter", |all| {
+        all.iter().any(|m| {
+            m["body"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("as much as I'm allowed to")
+        })
+    })
+    .await;
+
+    // The step handed off, visibly, inside an orchestrated run — and its turn
+    // was offered the roster, which is what makes a step a delegation and not
+    // a narrower second machinery.
+    let lines = handoff_lines(&all);
+    assert_eq!(lines.len(), 3, "{}", json!(all));
+    assert!(lines.iter().all(|l| l.starts_with("I'm asking @tasks:")));
+    assert!(user_of(&seen, 1).contains("You can hand off to:"));
+
+    // Step one spoke its three handoff lines and its answer under its own
+    // name; its delegate folded and posted nothing.
+    assert_eq!(said_by(&all, &billing).len(), 4, "{}", json!(all));
+    assert!(said_by(&all, &tasks).is_empty());
+
+    // Step two never ran: the run's four slots were spent — one on the step,
+    // three on its handoffs — so Ask alo said so and made no further call.
+    let last = said_by(&all, &alo).last().unwrap()["body"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    assert!(last.contains("as much as I'm allowed to"), "{last}");
+    assert_eq!(
+        calls(&seen),
+        8,
+        "the planner, step one's four decisions, its delegate's three answers"
+    );
+    assert!(all.iter().all(|m| m["proposal"].is_null()));
+}
+
+/// **A write wanted two levels down still lands on the asker's one approval
+/// surface** (A5.2): a plan step's own delegate proposes — in the room, under
+/// its own id, so the approval runs at ITS scope — the run stops behind that
+/// single pending button, and the remaining step never runs.
+#[tokio::test]
+async fn a_plan_steps_delegate_proposes_on_the_one_approval_surface() {
+    let h = harness("orchdelprop").await;
+    let (channel, _alo) = a_room_with_ask_alo(&h).await;
+    let billing = an_agent(&h, "billing", AgentProduct::Billing).await;
+    let tasks = an_agent(&h, "tasks", AgentProduct::Tasks).await;
+    let mail = an_agent(&h, "mail", AgentProduct::Mail).await;
+
+    let (base, seen) = scripted_model(vec![
+        plans(&[
+            ("billing", "chase the Northstar quote"),
+            ("mail", "tell Northstar we are on it"),
+        ]),
+        delegates("tasks", "add a follow-up for the Northstar quote"),
+        wants(
+            "create_task",
+            json!({ "title": "Follow up on the Northstar quote" }),
+            "I'll add a follow-up task.",
+        ),
+    ])
+    .await;
+    use_model(&h, &base).await;
+
+    let all = ask_and_wait(&h, &channel, "@alo chase Northstar", |all| {
+        all.iter().any(|m| {
+            m["body"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("waits until you approve")
+        })
+    })
+    .await;
+
+    // The proposal is the TASKS agent's message — the step's delegate, two
+    // levels below Ask alo — and it is the only thing pending.
+    let proposed = said_by(&all, &tasks);
+    assert_eq!(proposed.len(), 1, "{}", json!(all));
+    assert_eq!(proposed[0]["body"], json!("I'll add a follow-up task."));
+    assert_eq!(proposed[0]["proposal"]["tool"], json!("create_task"));
+    let pending: Vec<&Value> = all
+        .iter()
+        .filter(|m| m["proposal"]["state"] == json!("pending"))
+        .collect();
+    assert_eq!(
+        pending.len(),
+        1,
+        "one approval surface, however deep the write came from"
+    );
+
+    // The room read the chain: the plan, billing's handoff line, the
+    // delegate's proposal, and Ask alo saying the rest waits behind it.
+    assert_eq!(handoff_lines(&all).len(), 1);
+    assert_eq!(said_by(&all, &billing).len(), 1, "its handoff line only");
+    assert!(said_by(&all, &mail).is_empty(), "the second step never ran");
+    assert_eq!(calls(&seen), 3, "planner, the step, the step's delegate");
+
+    // The asker's tap runs it — the same approval a direct ask gets.
+    let id = proposed[0]["proposal"]["id"].as_str().unwrap();
+    let (status, done) = post(
+        &h.app,
+        &h.token,
+        &format!("/chat/proposals/{id}"),
+        json!({ "approve": true }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{done}");
+    assert_eq!(done["state"], json!("approved"));
+    assert!(!done["result"].is_null(), "the task was actually created");
 }

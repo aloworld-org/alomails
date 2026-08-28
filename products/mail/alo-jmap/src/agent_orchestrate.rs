@@ -17,6 +17,13 @@
 //!   [`ChatAgentId`] — so `execute_tool` reads *its* product off *its* row.
 //!   Ask alo's own scope is never what a delegated lookup runs at, which would
 //!   quietly undo A1.2.
+//! * **The plan is the run's delegation, not a second machinery** (A5.2,
+//!   ADR 0057 §3). Every step is [`crate::agent_turn::delegate_turn`] at
+//!   depth 1, on ONE [`RunEnv`] budget held across the whole run: a step
+//!   spends a handoff slot exactly as a handoff does, a step's own handoffs
+//!   and reads draw down the same counters, and a plan the budget refuses to
+//!   continue says so in the room rather than quietly running wider than a
+//!   product agent's run ever could.
 //! * **The plan is visible.** It goes into the room as a message before any of
 //!   it runs, so somebody watching knows what is about to happen and can stop
 //!   it. A run whose plan only appears afterwards is a run nobody could have
@@ -44,8 +51,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use alo_ai::{AgentPlan, AiConfig, InferenceError, PlanAgent, PlanAsk, PlanStep};
 use alo_store::{AgentProduct, ChatAgent, ChatAgentId, ChatChannelId, UserId};
 
-use crate::agent_turn::{Turn, TurnContext, TurnResult, take_turn as run_turn};
-use crate::chat_agent::{CHAT_SOURCES, Spoken, UNCONFIGURED, UNREACHABLE, ground};
+use crate::agent_turn::{OUT_OF_HANDOFFS, RunEnv, TurnResult, delegate_turn};
+use crate::chat_agent::{Spoken, UNCONFIGURED, UNREACHABLE};
 use crate::push;
 use crate::state::{Account, AppState};
 
@@ -158,7 +165,11 @@ pub(crate) async fn orchestrate(
         // same words every other agent uses.
         Err(_) => return Orchestrated::NotRouted,
     };
-    Orchestrated::Ran(run_plan(&voice, run, &roster, &steps).await)
+    // ONE budget for the whole run (A5.2): the steps spend its handoff slots,
+    // and whatever a step reads or hands off further comes out of the same
+    // counters — the plan is the delegation, so it is bounded like one.
+    let env = RunEnv::new(state, account, run.config);
+    Orchestrated::Ran(run_plan(&voice, run, &env, &roster, &steps).await)
 }
 
 /// The agents this run may route to: the ones this person can see, minus the
@@ -187,10 +198,11 @@ pub(crate) async fn roster(account: &Account, alo: &ChatAgent) -> Vec<ChatAgent>
 }
 
 /// Post the plan, then take each step until one of them changes something, one
-/// of them fails, or somebody presses Stop.
+/// of them fails, the budget refuses another, or somebody presses Stop.
 async fn run_plan(
     voice: &Voice<'_>,
     run: &Run<'_>,
+    env: &RunEnv<'_>,
     roster: &[ChatAgent],
     steps: &[PlanStep],
 ) -> Option<Spoken> {
@@ -204,6 +216,14 @@ async fn run_plan(
         if run.is_stopped() {
             voice.say(&run.alo.id, &stopped_after(done, total)).await;
             return Some(Spoken::Stopped);
+        }
+        // A step is a handoff and spends a handoff slot (A5.2). A full plan
+        // always fits — the planner is capped below the budget — so this only
+        // bites when an earlier step's own handoffs spent the rest, and then
+        // the room is told rather than the bound being quietly exceeded.
+        if !env.take_handoff() {
+            voice.say(&run.alo.id, OUT_OF_HANDOFFS).await;
+            return Some(Spoken::Excused);
         }
         let Some(delegate) = roster.iter().find(|agent| agent.handle == step.agent) else {
             // Unreachable: the plan was parsed against this roster. Stated
@@ -226,7 +246,23 @@ async fn run_plan(
                 .await;
             return Some(Spoken::Excused);
         }
-        let took = take_step(voice, run, delegate, &step.ask).await;
+        // The step is a delegate turn at depth 1 — the same mechanism a
+        // product agent's handoff travels by, offered the same roster, so a
+        // step may hand off once more and every spend lands on the run's one
+        // budget. Nothing here is special-cased for orchestration: the step
+        // gets the same grounding, the same reads-answer/writes-propose split
+        // and the same boundary it would get if the person had typed
+        // `@mail …` themselves.
+        let took = delegate_turn(
+            env,
+            delegate,
+            &step.ask,
+            run.today,
+            Some(voice.channel),
+            roster,
+            1,
+        )
+        .await;
         // Stopped while this step was thinking: the model call cannot be
         // un-made, but its words can be kept out of the room, and the room is
         // told the run ended rather than left waiting on a plan.
@@ -254,6 +290,16 @@ async fn run_plan(
                 }
                 return Some(Spoken::Proposed);
             }
+            // A step's own delegate proposed (A5.2): the proposal is already
+            // in the room under that delegate's id, and it is the same one
+            // surface — the run stops behind it exactly as it does for a
+            // step's own write.
+            Ok(TurnResult::DelegateProposed) => {
+                if done + 1 < total {
+                    voice.say(&run.alo.id, WAITING_ON_APPROVAL).await;
+                }
+                return Some(Spoken::Proposed);
+            }
             Err(InferenceError::Disabled | InferenceError::NotConfigured) => {
                 voice.say(&run.alo.id, UNCONFIGURED).await;
                 return Some(Spoken::Excused);
@@ -265,33 +311,6 @@ async fn run_plan(
         }
     }
     Some(Spoken::Answered)
-}
-
-/// One step: an ordinary product-agent turn, grounded in that product and run
-/// under that agent's id.
-///
-/// Nothing here is special-cased for orchestration — that is the point. A step
-/// gets the same read budget, the same reads-answer/writes-propose split and the
-/// same boundary it would get if the person had typed `@mail …` themselves.
-async fn take_step(
-    voice: &Voice<'_>,
-    run: &Run<'_>,
-    delegate: &ChatAgent,
-    ask: &str,
-) -> Result<TurnResult, InferenceError> {
-    let sources = ground(voice.account, delegate.product, ask, CHAT_SOURCES).await;
-    let turn = Turn {
-        product: delegate.product,
-        request: ask,
-        sources: &sources,
-        today: run.today,
-        folders: &[],
-        context: TurnContext::in_room(&delegate.id, voice.channel),
-        // A step does not hand off further (A5.1): the plan above it is the
-        // delegation, and A5.2 makes the two one mechanism.
-        roster: &[],
-    };
-    run_turn(voice.state, voice.account, run.config, &turn).await
 }
 
 /// The plan as the room reads it: one numbered line per step, naming the agent

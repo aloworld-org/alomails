@@ -13,9 +13,10 @@
 //!   turn taken;
 //! * the run is **bounded**: at most four handoffs, refusals included, and a
 //!   chain no deeper than two;
-//! * a **write a delegate wants is not proposed** from a handoff (that lands
-//!   with A5.2's one approval surface): the asking agent is told, the person
-//!   is pointed at the agent itself, and no proposal row exists.
+//! * a **write a delegate wants is proposed by the delegate itself** (A5.2):
+//!   it joins the room and posts its own sentence — the author of the message
+//!   is the scope the approval later runs at, so it must be the delegate —
+//!   and the run ends behind that one pending button, the asker's to tap.
 //!
 //! No live model is called: the tenant's AI backend is the scripted local
 //! socket in `common::model`, which records what each turn was shown — and
@@ -403,12 +404,12 @@ async fn a_handoff_chain_ends_at_depth_two() {
     assert_eq!(said_by(&all, &billing).len(), 2, "its line and its answer");
 }
 
-/// **A delegate's write is not proposed from a handoff.** The asking agent is
-/// told what the delegate wanted, no proposal row exists anywhere, and the
-/// person is pointed at the agent that can do it — until A5.2 lands the one
-/// approval surface for delegated writes.
+/// **A delegate's write lands on the asker's one approval surface** (A5.2).
+/// The delegate joins the room and posts the proposal itself — under its own
+/// id, which is the scope the approval later runs at — the run ends behind
+/// that single pending button, and the asker's tap actually runs the change.
 #[tokio::test]
-async fn a_delegates_write_is_folded_as_words_and_proposed_nowhere() {
+async fn a_delegates_write_is_proposed_by_the_delegate_and_the_asker_approves_it() {
     let h = harness("delegwrite").await;
     let (channel, billing) = a_room_with(&h, "billing", AgentProduct::Billing).await;
     let tasks = an_agent(&h, "tasks", AgentProduct::Tasks).await;
@@ -420,34 +421,56 @@ async fn a_delegates_write_is_folded_as_words_and_proposed_nowhere() {
             json!({ "title": "Follow up on the Northstar quote" }),
             "I'll add a follow-up task.",
         ),
-        says("@tasks can add that follow-up if you ask it directly."),
     ])
     .await;
     use_model(&h, &base).await;
 
     let all = ask_and_wait(&h, &channel, "@billing chase the Northstar quote", |all| {
-        all.iter().any(|m| {
-            m["body"]
-                .as_str()
-                .unwrap_or_default()
-                .contains("ask it directly")
-        })
+        all.iter()
+            .any(|m| m["proposal"]["state"] == json!("pending"))
     })
     .await;
 
-    // The delegate's wish came back as words for the asking agent…
-    let folded = user_of(&seen, 2);
-    assert!(folded.contains("wanted to make a change first"));
-    assert!(folded.contains("I'll add a follow-up task."));
-    assert!(folded.contains("not proposed from here"));
-    // …and nowhere as a button: no proposal row, and the delegate said
-    // nothing in the room.
-    assert!(
-        all.iter().all(|m| m["proposal"].is_null()),
-        "{}",
+    // The room read the handoff line, then the delegate's own sentence with
+    // the button on it — and nothing after: the run is over, waiting on the
+    // one approval. The asking agent was never asked to comment on a change
+    // that is not its to make.
+    assert_eq!(
+        handoff_lines(&all),
+        vec!["I'm asking @tasks: add a follow-up for the Northstar quote"]
+    );
+    assert_eq!(
+        said_by(&all, &billing).len(),
+        1,
+        "the handoff line and nothing after: {}",
         json!(all)
     );
-    assert!(said_by(&all, &tasks).is_empty());
-    assert_eq!(calls(&seen), 3);
-    assert_eq!(said_by(&all, &billing).len(), 2);
+    assert_eq!(calls(&seen), 2);
+
+    // The proposal is the DELEGATE's message: tasks joined the room to say it,
+    // so the approval runs at the Tasks agent's scope, not Billing's.
+    let proposed = said_by(&all, &tasks);
+    assert_eq!(proposed.len(), 1, "the delegate speaks its own proposal");
+    assert_eq!(proposed[0]["body"], json!("I'll add a follow-up task."));
+    assert_eq!(proposed[0]["proposal"]["tool"], json!("create_task"));
+    assert_eq!(proposed[0]["proposal"]["state"], json!("pending"));
+    let pending: Vec<&Value> = all
+        .iter()
+        .filter(|m| m["proposal"]["state"] == json!("pending"))
+        .collect();
+    assert_eq!(pending.len(), 1, "exactly one thing to approve");
+
+    // The asker's tap runs it, through the same boundary every proposal
+    // crosses — and only then does the task exist.
+    let id = proposed[0]["proposal"]["id"].as_str().unwrap();
+    let (status, done) = post(
+        &h.app,
+        &h.token,
+        &format!("/chat/proposals/{id}"),
+        json!({ "approve": true }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{done}");
+    assert_eq!(done["state"], json!("approved"));
+    assert!(!done["result"].is_null(), "the task was actually created");
 }

@@ -213,6 +213,10 @@ async fn take_turn(
                 .ok()?;
             Some(Spoken::Proposed)
         }
+        // A delegate of this run proposed (A5.2): its sentence and its
+        // proposal are already in the room under its own id — the run's one
+        // approval surface — and this agent has nothing left to say.
+        Ok(TurnResult::DelegateProposed) => Some(Spoken::Proposed),
         Err(InferenceError::Disabled | InferenceError::NotConfigured) => {
             let _ = acc
                 .post_as_agent(channel, &agent.id, UNCONFIGURED, None)
