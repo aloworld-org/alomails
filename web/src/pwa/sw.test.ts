@@ -395,13 +395,29 @@ describe("registerOfflineShell", () => {
   function fakeWindow(withServiceWorker = true) {
     const listeners: Record<string, () => void> = {};
     const register = vi.fn(() => Promise.resolve({}));
+    const unregister = vi.fn(() => Promise.resolve(true));
+    const getRegistrations = vi.fn(() => Promise.resolve([{ unregister }]));
+    const cacheKeys = vi.fn(() =>
+      Promise.resolve(["alo-offline-v1", "another-application-cache"]),
+    );
+    const deleteCache = vi.fn(() => Promise.resolve(true));
     const win = {
       addEventListener: (type: string, fn: () => void) => {
         listeners[type] = fn;
       },
-      navigator: withServiceWorker ? { serviceWorker: { register } } : {},
+      navigator: withServiceWorker
+        ? { serviceWorker: { register, getRegistrations } }
+        : {},
+      caches: { keys: cacheKeys, delete: deleteCache },
     } as unknown as Window;
-    return { win, listeners, register };
+    return {
+      win,
+      listeners,
+      register,
+      unregister,
+      getRegistrations,
+      deleteCache,
+    };
   }
 
   it("registers /sw.js after the page load in production", () => {
@@ -412,11 +428,22 @@ describe("registerOfflineShell", () => {
     expect(register).toHaveBeenCalledWith("/sw.js");
   });
 
-  it("does nothing in dev builds", () => {
-    const { win, listeners, register } = fakeWindow();
+  it("removes stale Alo offline state in dev builds", async () => {
+    const {
+      win,
+      listeners,
+      register,
+      unregister,
+      getRegistrations,
+      deleteCache,
+    } = fakeWindow();
     registerOfflineShell(win, false);
+    await vi.waitFor(() => expect(unregister).toHaveBeenCalledOnce());
     expect(listeners.load).toBeUndefined();
     expect(register).not.toHaveBeenCalled();
+    expect(getRegistrations).toHaveBeenCalledOnce();
+    expect(deleteCache).toHaveBeenCalledWith("alo-offline-v1");
+    expect(deleteCache).not.toHaveBeenCalledWith("another-application-cache");
   });
 
   it("does nothing where service workers are unsupported", () => {
