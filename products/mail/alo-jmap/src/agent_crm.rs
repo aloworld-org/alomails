@@ -1,6 +1,7 @@
-//! Executing the **CRM** tools of an approved agent proposal (ADR 0034,
-//! ADR 0035 wave B2.10) — the acting half of what [`alo_ai::agent_crm`]
-//! describes to the model.
+//! Executing the **CRM** write verbs of an approved agent proposal (ADR 0034,
+//! ADR 0035 wave B2.10; since AA.1 the acting half of the writes
+//! [`alo_ai::crm_intents`] describes, reached through
+//! [`crate::crm_intents::dispatch`]).
 //!
 //! Called only from [`crate::agent::agent_execute`], which is the single acting
 //! path: the user saw the proposal and approved it. Everything here therefore

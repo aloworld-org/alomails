@@ -23,7 +23,6 @@ use std::future::Future;
 use std::pin::Pin;
 use time::format_description::well_known::Rfc3339;
 
-use crate::agent_crm as crm;
 use crate::agent_docs as docs;
 use crate::agent_finance as finance;
 use crate::agent_finance_answers as finance_answers;
@@ -461,7 +460,10 @@ pub(crate) type ModuleDispatcher =
 /// at once conflict on neighbouring lines, and the resolution is to keep both.
 /// The registry's twin is `alo_ai::MOVED`, and a test in each module holds the
 /// two lists to the same length.
-pub(crate) const MODULES: &[ModuleDispatcher] = &[crate::billing_intents::dispatch];
+pub(crate) const MODULES: &[ModuleDispatcher] = &[
+    crate::billing_intents::dispatch,
+    crate::crm_intents::dispatch,
+];
 
 /// [`execute_tool`]'s boundary check and audit cannot be bypassed by a caller
 /// reaching the dispatcher directly.
@@ -516,10 +518,6 @@ async fn dispatch(
         "draft_reply" => execute_draft_reply(account, args, state).await,
         "send_email" => execute_send(account, args, state).await,
         "move_to_folder" => execute_move_to_folder(account, args).await,
-        // alo CRM's tools (B2.10), on the same seam.
-        "create_deal" => crm::execute_create_deal(account, args, state).await,
-        "move_deal_stage" => crm::execute_move_deal_stage(account, args).await,
-        "draft_followup" => crm::execute_draft_followup(account, args, state).await,
         // alo Projects' tools (B3.10a), on the same seam. `log_time` writes a
         // *proposed* entry the user accepts in their own timesheet; the summary
         // writes nothing at all.

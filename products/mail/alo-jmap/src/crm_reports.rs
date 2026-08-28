@@ -139,7 +139,7 @@ fn currency_json(c: &PipelineCurrency) -> Value {
 /// because the period does **not** bound them: value by stage is the board as
 /// it stands now, while `won` and `lost` are the deals that closed between
 /// `from` and `to`.
-fn report_json(report: &PipelineReport, at: OffsetDateTime) -> Value {
+pub(crate) fn report_json(report: &PipelineReport, at: OffsetDateTime) -> Value {
     json!({
         "pipelineId": report.pipeline_id.as_str(),
         "pipelineName": report.pipeline_name,

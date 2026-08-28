@@ -268,19 +268,33 @@ mod tests {
                     handle: "crm",
                     product: AgentProduct::Crm,
                 },
+                PlanAgent {
+                    handle: "projects",
+                    product: AgentProduct::Projects,
+                },
             ],
             MAX_PLAN_STEPS,
         );
         assert!(prompt.contains("- @billing:"));
         assert!(prompt.contains("\"what did we quote X\""), "{prompt}");
         assert!(prompt.contains("\"which quotes are open\""));
-        // A product still on hand-written tools has no hints yet — and no
-        // empty "Ask it for:" either.
+        // Sales moved at AA.1, so its line carries its verbs' questions too.
         let crm_line = prompt
             .lines()
             .find(|line| line.starts_with("- @crm:"))
             .unwrap_or_default();
-        assert!(!crm_line.contains("Ask it for:"), "{crm_line}");
+        assert!(crm_line.contains("Ask it for:"), "{crm_line}");
+        assert!(
+            crm_line.contains("\"which deals are open, and at what stage\""),
+            "{crm_line}"
+        );
+        // A product still on hand-written tools has no hints yet — and no
+        // empty "Ask it for:" either.
+        let projects_line = prompt
+            .lines()
+            .find(|line| line.starts_with("- @projects:"))
+            .unwrap_or_default();
+        assert!(!projects_line.contains("Ask it for:"), "{projects_line}");
     }
 
     const ROSTER: [PlanAgent<'static>; 3] = [

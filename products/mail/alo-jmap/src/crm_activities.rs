@@ -36,7 +36,7 @@ use crate::state::{AppState, authenticate};
 /// `happenedAt` is when it happened and `createdAt` when it was written: a call
 /// logged an hour later is dated the hour it took place, and a reader can see
 /// both rather than being told a story about one.
-fn activity_json(a: &Activity) -> Value {
+pub(crate) fn activity_json(a: &Activity) -> Value {
     json!({
         "id": a.id.as_str(),
         "dealId": a.deal_id.as_str(),

@@ -22,7 +22,6 @@ use alo_store::{ALL_AGENT_PRODUCTS, AgentProduct};
 use crate::agent_agenda::{AGENDA_GUIDANCE, AGENDA_TOOL_DOC, AGENDA_TOOLS};
 use crate::agent_chat::{CHAT_GUIDANCE, CHAT_TOOL_DOC, CHAT_TOOLS};
 use crate::agent_contacts::{CONTACTS_GUIDANCE, CONTACTS_TOOL_DOC, CONTACTS_TOOLS};
-use crate::agent_crm::{CRM_GUIDANCE, CRM_TOOL_DOC, CRM_TOOLS};
 use crate::agent_docs::{DOCS_GUIDANCE, DOCS_TOOL_DOC, DOCS_TOOLS};
 use crate::agent_drive::{DRIVE_GUIDANCE, DRIVE_TOOL_DOC, DRIVE_TOOLS};
 use crate::agent_finance::{FINANCE_GUIDANCE, FINANCE_TOOL_DOC, FINANCE_TOOLS};
@@ -37,6 +36,7 @@ use crate::agent_sites::{SITES_GUIDANCE, SITES_TOOL_DOC, SITES_TOOLS};
 use crate::agent_tasks::{TASKS_GUIDANCE, TASKS_TOOL_DOC, TASKS_TOOLS};
 use crate::agent_tool::AgentTool;
 use crate::billing_intents::BILLING as BILLING_INTENTS;
+use crate::crm_intents::CRM as CRM_INTENTS;
 use crate::intent::IntentModule;
 
 /// One module's contribution to a product's agent: what it may do, how each
@@ -116,7 +116,6 @@ const AGENDA_SET: ToolSet = set(AGENDA_TOOLS, AGENDA_TOOL_DOC, AGENDA_GUIDANCE);
 const TASKS_SET: ToolSet = set(TASKS_TOOLS, TASKS_TOOL_DOC, TASKS_GUIDANCE);
 const CHAT_SET: ToolSet = set(CHAT_TOOLS, CHAT_TOOL_DOC, CHAT_GUIDANCE);
 const DRIVE_SET: ToolSet = set(DRIVE_TOOLS, DRIVE_TOOL_DOC, DRIVE_GUIDANCE);
-const CRM_SET: ToolSet = set(CRM_TOOLS, CRM_TOOL_DOC, CRM_GUIDANCE);
 const PROJECTS_SET: ToolSet = set(PROJECTS_TOOLS, PROJECTS_TOOL_DOC, PROJECTS_GUIDANCE);
 const FINANCE_SET: ToolSet = set(FINANCE_TOOLS, FINANCE_TOOL_DOC, FINANCE_GUIDANCE);
 const INVENTORY_SET: ToolSet = set(INVENTORY_TOOLS, INVENTORY_TOOL_DOC, INVENTORY_GUIDANCE);
@@ -145,7 +144,6 @@ const CHAT: &[ToolSet] = &[CHAT_SET];
 const DRIVE: &[ToolSet] = &[DRIVE_SET];
 const SHEETS: &[ToolSet] = &[SHEETS_SET];
 const DOCS: &[ToolSet] = &[DOCS_SET];
-const CRM: &[ToolSet] = &[CRM_SET];
 const PROJECTS: &[ToolSet] = &[PROJECTS_SET];
 const FINANCE: &[ToolSet] = &[FINANCE_SET];
 const INVENTORY: &[ToolSet] = &[INVENTORY_SET];
@@ -164,7 +162,10 @@ const MEET: &[ToolSet] = &[MEET_SET];
 /// adds its row here and nothing else in this file; two loops landing at once
 /// conflict on neighbouring lines, and the resolution is to keep both. A row's
 /// product sees the module as its own; Ask alo sees every row.
-pub const MOVED: &[(AgentProduct, &IntentModule)] = &[(AgentProduct::Billing, &BILLING_INTENTS)];
+pub const MOVED: &[(AgentProduct, &IntentModule)] = &[
+    (AgentProduct::Billing, &BILLING_INTENTS),
+    (AgentProduct::Crm, &CRM_INTENTS),
+];
 
 /// The hand-written sets a product still carries — empty once it has moved.
 fn static_sets(product: AgentProduct) -> &'static [ToolSet] {
@@ -177,7 +178,7 @@ fn static_sets(product: AgentProduct) -> &'static [ToolSet] {
         AgentProduct::Sheets => SHEETS,
         AgentProduct::Docs => DOCS,
         AgentProduct::Billing => &[],
-        AgentProduct::Crm => CRM,
+        AgentProduct::Crm => &[],
         AgentProduct::Projects => PROJECTS,
         AgentProduct::Finance => FINANCE,
         AgentProduct::Inventory => INVENTORY,
@@ -400,7 +401,15 @@ mod tests {
         );
         assert_eq!(
             names(AgentProduct::Crm),
-            ["create_deal", "move_deal_stage", "draft_followup"]
+            [
+                "open_deals",
+                "deal_lookup",
+                "pipeline_summary",
+                "company_history",
+                "create_deal",
+                "move_deal_stage",
+                "draft_followup"
+            ]
         );
         assert_eq!(
             names(AgentProduct::Projects),
@@ -472,7 +481,7 @@ mod tests {
             .map(|tool| tool.name)
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
-        assert_eq!(workspace.len(), 80);
+        assert_eq!(workspace.len(), 84);
     }
 
     /// A moved module registers once (A4.1c): its row in [`MOVED`] is what puts

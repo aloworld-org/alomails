@@ -2,8 +2,8 @@
 //! names alo Projects contributes to the one agent, and the words that tell a
 //! model what they take.
 //!
-//! The third product on the seam [`crate::agent_billing`] opened and
-//! [`crate::agent_crm`] confirmed: a product agent is a tool set plus a
+//! The third product on the seam the Billing and CRM tool sets opened (both
+//! since moved to intents): a product agent is a tool set plus a
 //! paragraph, not a second system. Nothing here reads, writes or decides
 //! anything — the proposal is parsed by [`crate::agent`], and an approved
 //! proposal is executed by the jmap layer against the caller's tenant-scoped

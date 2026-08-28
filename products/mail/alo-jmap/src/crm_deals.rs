@@ -65,7 +65,7 @@ pub(crate) fn deal_json(d: &Deal) -> Value {
 
 /// One move a deal made. The row written when the deal was created carries no
 /// `fromStageId`, which is how a reader tells "raised here" from "moved here".
-fn event_json(e: &StageEvent) -> Value {
+pub(crate) fn event_json(e: &StageEvent) -> Value {
     json!({
         "id": e.id.as_str(),
         "dealId": e.deal_id.as_str(),

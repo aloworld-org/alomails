@@ -795,6 +795,13 @@ mod tests {
                 "unpaid_invoices",
                 "invoice_lookup",
                 "billing_totals",
+                // AA.1: Sales' verbs — the four reads that let "@crm which
+                // deals are open?" answer from the record, rendered from the
+                // intent registry.
+                "open_deals",
+                "deal_lookup",
+                "pipeline_summary",
+                "company_history",
                 "project_status_summary",
                 "vat_summary",
                 "flag_anomalies",
@@ -827,7 +834,7 @@ mod tests {
                 "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 80);
+        assert_eq!(all_tools().len(), 84);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }
@@ -903,11 +910,15 @@ mod tests {
     /// offered.
     #[test]
     fn a_one_sided_product_is_told_about_the_half_it_has() {
-        // Every Sales tool changes something. (Billing was the example until
-        // ADR 0058 gave it reads; it is now two-sided, like Mail below.)
+        // Sales was the write-only example until AA.1 gave it reads — the same
+        // move that took Billing off this list at ADR 0058. Both are now
+        // two-sided, like Mail below, and no product is write-only any more;
+        // the "Every tool you have CHANGES something" sentence waits for the
+        // next product born with writes alone.
         let crm = system_prompt_for(AgentProduct::Crm);
-        assert!(crm.contains("Every tool you have CHANGES something"));
-        assert!(!crm.contains("These tools only READ"));
+        assert!(crm.contains("These tools only READ"));
+        assert!(crm.contains("open_deals"));
+        assert!(crm.contains("Every other tool CHANGES something"));
         let billing = system_prompt_for(AgentProduct::Billing);
         assert!(billing.contains("These tools only READ"));
         assert!(billing.contains("open_quotes"));
@@ -997,8 +1008,8 @@ mod tests {
         // Every tool line comes before every product's guidance, so a model
         // reads the whole menu before it reads how to fill an order from it.
         assert!(at("- site_publish:") < at("For a billing verb"));
-        assert!(at("For a billing verb") < at("For a CRM tool"));
-        assert!(at("For a CRM tool") < at("For a projects tool"));
+        assert!(at("For a billing verb") < at("For a CRM verb"));
+        assert!(at("For a CRM verb") < at("For a projects tool"));
         assert!(at("For a projects tool") < at("For a finance tool"));
         assert!(at("For a finance tool") < at("For an inventory tool"));
         assert!(at("For an inventory tool") < at("For an HR tool"));
