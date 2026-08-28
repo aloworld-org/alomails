@@ -54,6 +54,7 @@ pub mod billing_document;
 pub mod billing_einvoice;
 pub mod billing_einvoice_rules;
 pub mod billing_fx;
+pub mod billing_intents;
 pub mod billing_invoices;
 pub mod billing_pain001;
 pub mod billing_pain001_rules;

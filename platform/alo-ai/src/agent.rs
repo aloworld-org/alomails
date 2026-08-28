@@ -111,10 +111,10 @@ pub fn system_prompt_for(product: AgentProduct) -> String {
     let mut docs = String::new();
     let mut guidance = String::new();
     for set in sets {
-        docs.push_str(set.doc);
+        docs.push_str(&set.doc());
         guidance.push_str(set.guidance);
     }
-    let no_tools = sets.iter().all(|set| set.tools.is_empty());
+    let no_tools = sets.iter().all(|set| set.tools().is_empty());
     let tools = tools_block(product, &docs, no_tools);
     // A product with tools but no retrieval is told where its records actually
     // are. One with neither is told nothing extra: it has no lookup to offer,
@@ -665,6 +665,14 @@ mod tests {
                 // in it. Drafting and rewriting are writes and are not here.
                 "doc_read",
                 "doc_answer",
+                // ADR 0058: Billing's verbs — the six reads that were
+                // missing on 2026-08-28, rendered from the intent registry.
+                "open_quotes",
+                "quote_lookup",
+                "customer_lookup",
+                "unpaid_invoices",
+                "invoice_lookup",
+                "billing_totals",
                 "project_status_summary",
                 "vat_summary",
                 "flag_anomalies",
@@ -697,7 +705,7 @@ mod tests {
                 "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 71);
+        assert_eq!(all_tools().len(), 80);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }
@@ -773,10 +781,14 @@ mod tests {
     /// offered.
     #[test]
     fn a_one_sided_product_is_told_about_the_half_it_has() {
-        // Every Billing tool changes something.
+        // Every Sales tool changes something. (Billing was the example until
+        // ADR 0058 gave it reads; it is now two-sided, like Mail below.)
+        let crm = system_prompt_for(AgentProduct::Crm);
+        assert!(crm.contains("Every tool you have CHANGES something"));
+        assert!(!crm.contains("These tools only READ"));
         let billing = system_prompt_for(AgentProduct::Billing);
-        assert!(billing.contains("Every tool you have CHANGES something"));
-        assert!(!billing.contains("These tools only READ"));
+        assert!(billing.contains("These tools only READ"));
+        assert!(billing.contains("open_quotes"));
 
         // Mail's nine writes plus the address book's one read: two-sided, so
         // it gets the two-list sentence.
@@ -851,7 +863,8 @@ mod tests {
         assert!(at("- whats_on:") < at("- create_task:"));
         assert!(at("- create_task:") < at("- catch_up_room:"));
         assert!(at("- catch_up_room:") < at("- find_file:"));
-        assert!(at("- find_file:") < at("- create_invoice_draft:"));
+        assert!(at("- find_file:") < at("- open_quotes:"));
+        assert!(at("- open_quotes:") < at("- create_invoice_draft:"));
         assert!(at("- create_invoice_draft:") < at("- create_deal:"));
         assert!(at("- create_deal:") < at("- log_time:"));
         assert!(at("- log_time:") < at("- categorise_transactions:"));
@@ -860,8 +873,8 @@ mod tests {
         assert!(at("- who_is_off:") < at("- site_answer:"));
         // Every tool line comes before every product's guidance, so a model
         // reads the whole menu before it reads how to fill an order from it.
-        assert!(at("- site_publish:") < at("For a billing tool"));
-        assert!(at("For a billing tool") < at("For a CRM tool"));
+        assert!(at("- site_publish:") < at("For a billing verb"));
+        assert!(at("For a billing verb") < at("For a CRM tool"));
         assert!(at("For a CRM tool") < at("For a projects tool"));
         assert!(at("For a projects tool") < at("For a finance tool"));
         assert!(at("For a finance tool") < at("For an inventory tool"));

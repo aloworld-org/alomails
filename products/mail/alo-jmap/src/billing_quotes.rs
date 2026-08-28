@@ -60,7 +60,7 @@ use crate::state::{AppState, authenticate};
 /// — it has not consumed a number — and `decidedDate` is `null` until the offer
 /// is answered, which is how a client tells the three phases of its life apart
 /// without parsing `status`.
-fn quote_json(q: &Quote, today: Date) -> Value {
+pub(crate) fn quote_json(q: &Quote, today: Date) -> Value {
     json!({
         "id": q.id.as_str(),
         "customerId": q.customer_id.as_str(),

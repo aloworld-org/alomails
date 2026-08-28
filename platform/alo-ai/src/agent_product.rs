@@ -20,7 +20,6 @@
 use alo_store::AgentProduct;
 
 use crate::agent_agenda::{AGENDA_GUIDANCE, AGENDA_TOOL_DOC, AGENDA_TOOLS};
-use crate::agent_billing::{BILLING_GUIDANCE, BILLING_TOOL_DOC, BILLING_TOOLS};
 use crate::agent_chat::{CHAT_GUIDANCE, CHAT_TOOL_DOC, CHAT_TOOLS};
 use crate::agent_contacts::{CONTACTS_GUIDANCE, CONTACTS_TOOL_DOC, CONTACTS_TOOLS};
 use crate::agent_crm::{CRM_GUIDANCE, CRM_TOOL_DOC, CRM_TOOLS};
@@ -37,6 +36,8 @@ use crate::agent_sheets::{SHEETS_GUIDANCE, SHEETS_TOOL_DOC, SHEETS_TOOLS};
 use crate::agent_sites::{SITES_GUIDANCE, SITES_TOOL_DOC, SITES_TOOLS};
 use crate::agent_tasks::{TASKS_GUIDANCE, TASKS_TOOL_DOC, TASKS_TOOLS};
 use crate::agent_tool::AgentTool;
+use crate::billing_intents::BILLING as BILLING_INTENTS;
+use crate::intent::IntentModule;
 
 /// One module's contribution to a product's agent: what it may do, how each
 /// tool is described, and the rules that keep a proposal from it honest.
@@ -46,20 +47,64 @@ use crate::agent_tool::AgentTool;
 /// it is its own subject matter, not because it is its own agent.
 #[derive(Debug, Clone, Copy)]
 pub struct ToolSet {
-    /// The tools, each carrying its own read/write effect (ADR 0047 §1).
-    pub tools: &'static [AgentTool],
-    /// The `- name: …` lines the model reads.
-    pub doc: &'static str,
+    /// Hand-written tools, each carrying its own read/write effect (ADR 0047
+    /// §1) — the shape every module had before intents; empty once a module
+    /// has moved to [`IntentModule`].
+    static_tools: &'static [AgentTool],
+    /// Hand-written `- name: …` lines the model reads; empty once moved.
+    static_doc: &'static str,
+    /// The module's verbs (ADR 0058), from which tools and doc lines render.
+    intents: Option<&'static IntentModule>,
     /// The paragraph appended after every product's tool lines.
     pub guidance: &'static str,
+}
+
+impl ToolSet {
+    /// The tools, in prompt order.
+    #[must_use]
+    pub fn tools(&self) -> Vec<AgentTool> {
+        let mut out = self.static_tools.to_vec();
+        if let Some(module) = self.intents {
+            out.extend(module.tools());
+        }
+        out
+    }
+
+    /// The `- name: …` lines the model reads.
+    #[must_use]
+    pub fn doc(&self) -> String {
+        let mut out = self.static_doc.to_owned();
+        if let Some(module) = self.intents {
+            out.push_str(&module.doc());
+        }
+        out
+    }
+
+    /// The verbs behind this set, when the module has moved to intents.
+    #[must_use]
+    pub fn intents(&self) -> Option<&'static IntentModule> {
+        self.intents
+    }
 }
 
 /// One module's three constants, gathered.
 const fn set(tools: &'static [AgentTool], doc: &'static str, guidance: &'static str) -> ToolSet {
     ToolSet {
-        tools,
-        doc,
+        static_tools: tools,
+        static_doc: doc,
+        intents: None,
         guidance,
+    }
+}
+
+/// A module that has moved to intents (ADR 0058): everything renders from
+/// its [`IntentModule`].
+const fn intents(module: &'static IntentModule) -> ToolSet {
+    ToolSet {
+        static_tools: &[],
+        static_doc: "",
+        intents: Some(module),
+        guidance: module.guidance,
     }
 }
 
@@ -71,7 +116,7 @@ const AGENDA_SET: ToolSet = set(AGENDA_TOOLS, AGENDA_TOOL_DOC, AGENDA_GUIDANCE);
 const TASKS_SET: ToolSet = set(TASKS_TOOLS, TASKS_TOOL_DOC, TASKS_GUIDANCE);
 const CHAT_SET: ToolSet = set(CHAT_TOOLS, CHAT_TOOL_DOC, CHAT_GUIDANCE);
 const DRIVE_SET: ToolSet = set(DRIVE_TOOLS, DRIVE_TOOL_DOC, DRIVE_GUIDANCE);
-const BILLING_SET: ToolSet = set(BILLING_TOOLS, BILLING_TOOL_DOC, BILLING_GUIDANCE);
+const BILLING_SET: ToolSet = intents(&BILLING_INTENTS);
 const CRM_SET: ToolSet = set(CRM_TOOLS, CRM_TOOL_DOC, CRM_GUIDANCE);
 const PROJECTS_SET: ToolSet = set(PROJECTS_TOOLS, PROJECTS_TOOL_DOC, PROJECTS_GUIDANCE);
 const FINANCE_SET: ToolSet = set(FINANCE_TOOLS, FINANCE_TOOL_DOC, FINANCE_GUIDANCE);
@@ -227,7 +272,7 @@ pub(crate) const STAY_IN_PRODUCT: &str = " A question about another part of the 
 pub fn tools_for(product: AgentProduct) -> Vec<AgentTool> {
     let mut out = Vec::new();
     for set in tool_sets(product) {
-        out.extend_from_slice(set.tools);
+        out.extend(set.tools());
     }
     out
 }
@@ -243,7 +288,7 @@ pub fn tools_for(product: AgentProduct) -> Vec<AgentTool> {
 pub fn offers(product: AgentProduct, tool: &str) -> bool {
     tool_sets(product)
         .iter()
-        .any(|set| set.tools.iter().any(|entry| entry.name == tool))
+        .any(|set| set.tools().iter().any(|entry| entry.name == tool))
 }
 
 #[cfg(test)]
@@ -331,9 +376,18 @@ mod tests {
         assert_eq!(
             names(AgentProduct::Billing),
             [
+                "open_quotes",
+                "quote_lookup",
+                "customer_lookup",
+                "unpaid_invoices",
+                "invoice_lookup",
+                "billing_totals",
                 "create_invoice_draft",
                 "quote_to_invoice",
-                "draft_payment_reminder"
+                "draft_payment_reminder",
+                "send_quote",
+                "issue_invoice",
+                "record_payment"
             ]
         );
         assert_eq!(
@@ -410,7 +464,7 @@ mod tests {
             .map(|tool| tool.name)
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
-        assert_eq!(workspace.len(), 71);
+        assert_eq!(workspace.len(), 80);
     }
 
     /// The boundary's question, over the whole registry: a product offers its

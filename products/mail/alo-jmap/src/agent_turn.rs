@@ -15,7 +15,7 @@
 //!
 //! - **At most [`MAX_READS`] read executions per turn.** A confused or injected
 //!   turn cannot spend a workspace's inference budget going round; on the
-//!   fourth it answers with what it has and says so.
+//!   seventh it answers with what it has and says so.
 //! - **A write is refused at the execution boundary**, not asked not to happen.
 //!   [`crate::agent::execute_tool`] is given [`Approval::InTurn`] here, and that
 //!   is what makes "reads only" true no matter what the model returns.
@@ -32,8 +32,9 @@ use alo_store::{AgentProduct, ChatAgentId, ChatChannelId};
 use crate::agent::{Approval, ToolRun, execute_tool};
 use crate::state::{Account, AppState};
 
-/// How many reading tools one turn may run (ADR 0047 §2).
-const MAX_READS: usize = 3;
+/// How many reading tools one turn may run (ADR 0047 §2, raised by ADR 0058:
+/// "what did we quote Northstar" is customer → quotes → quote).
+const MAX_READS: usize = 6;
 
 /// How much of a tool's result is shown to the model. Enough for a diary month
 /// or a stock record; short enough that one verbose tool cannot crowd out the

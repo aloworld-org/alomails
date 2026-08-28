@@ -443,6 +443,18 @@ async fn dispatch(
         // alo Billing's tools (B1.25). A product's executors live in that
         // product's module, so this match stays a dispatcher and never becomes
         // the place every module's argument rules pile up.
+        // alo Billing's verbs (ADR 0058): the reads answer from the record
+        // views its routes serve; the writes are proposed, previewed and run
+        // only on the asker's approval.
+        "open_quotes" => crate::billing_intents::execute_open_quotes(account, args).await,
+        "quote_lookup" => crate::billing_intents::execute_quote_lookup(account, args).await,
+        "customer_lookup" => crate::billing_intents::execute_customer_lookup(account, args).await,
+        "unpaid_invoices" => crate::billing_intents::execute_unpaid_invoices(account, args).await,
+        "invoice_lookup" => crate::billing_intents::execute_invoice_lookup(account, args).await,
+        "billing_totals" => crate::billing_intents::execute_billing_totals(account, args).await,
+        "send_quote" => crate::billing_intents::execute_send_quote(account, args).await,
+        "issue_invoice" => crate::billing_intents::execute_issue_invoice(account, args).await,
+        "record_payment" => crate::billing_intents::execute_record_payment(account, args).await,
         "create_invoice_draft" => billing::execute_create_invoice_draft(account, args).await,
         "quote_to_invoice" => billing::execute_quote_to_invoice(account, args).await,
         "draft_payment_reminder" => {

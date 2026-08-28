@@ -20,7 +20,6 @@ use egress::{is_blocked_ip, split_authority};
 
 mod agent;
 pub mod agent_agenda;
-pub mod agent_billing;
 pub mod agent_chat;
 pub mod agent_contacts;
 pub mod agent_crm;
@@ -39,8 +38,10 @@ pub mod agent_sheets;
 pub mod agent_sites;
 pub mod agent_tasks;
 mod agent_tool;
+pub mod billing_intents;
 pub mod doc_blocks;
 pub mod insights;
+pub mod intent;
 pub mod sheet_charts;
 pub mod sheet_grid;
 pub mod site_chat;
@@ -54,7 +55,6 @@ pub use agent::{
     system_prompt_for,
 };
 pub use agent_agenda::AGENDA_TOOLS;
-pub use agent_billing::BILLING_TOOLS;
 pub use agent_chat::CHAT_TOOLS;
 pub use agent_contacts::CONTACTS_TOOLS;
 pub use agent_crm::CRM_TOOLS;
@@ -77,6 +77,7 @@ pub use agent_sites::SITES_TOOLS;
 pub use agent_tasks::TASKS_TOOLS;
 pub use agent_tool::{AgentTool, Effect, find_tool};
 pub use insights::{ChartReply, chart_messages, chart_turn, parse_chart_reply, repair_messages};
+pub use intent::{Arg, Excluded, IntentModule, IntentSpec, render_preview, routes_in};
 pub use site_chat::{
     MAX_QUESTION_CHARS, SiteChatCitation, SiteChatError, SiteChatRefusal, SiteChatReply,
     SiteChatSource, SiteChatVoice, answer_site_question, citation_path, parse_site_chat_reply,
@@ -497,20 +498,47 @@ pub async fn extract_price_list_image(
     ];
     let url = endpoint(&config.base_url, "chat/completions");
     let client = build_client(&url, Duration::from_secs(90)).await?;
-    let body = VisionChatRequest { model: config.model.trim(), messages, temperature: 0.0, stream: false };
+    let body = VisionChatRequest {
+        model: config.model.trim(),
+        messages,
+        temperature: 0.0,
+        stream: false,
+    };
     let mut request = client.post(&url).json(&body);
-    if let Some(key) = &config.api_key && !key.trim().is_empty() {
+    if let Some(key) = &config.api_key
+        && !key.trim().is_empty()
+    {
         request = request.bearer_auth(key.trim());
     }
-    let response = request.send().await.map_err(|_| InferenceError::Transport)?;
+    let response = request
+        .send()
+        .await
+        .map_err(|_| InferenceError::Transport)?;
     let status = response.status();
     if !status.is_success() {
         return Err(InferenceError::Backend(status.as_u16()));
     }
     let completion = parse_completion(&read_body_capped(response).await?)?;
-    let json_text = completion.trim().strip_prefix("```json").or_else(|| completion.trim().strip_prefix("```")).unwrap_or(completion.trim()).strip_suffix("```").unwrap_or(completion.trim()).trim();
-    let rows: Vec<PriceListCandidate> = serde_json::from_str(json_text).map_err(|_| InferenceError::Empty)?;
-    Ok(rows.into_iter().filter(|row| !row.name.trim().is_empty() && row.unit_price.is_finite() && row.unit_price >= 0.0 && row.vat_rate.is_finite() && row.vat_rate >= 0.0).collect())
+    let json_text = completion
+        .trim()
+        .strip_prefix("```json")
+        .or_else(|| completion.trim().strip_prefix("```"))
+        .unwrap_or(completion.trim())
+        .strip_suffix("```")
+        .unwrap_or(completion.trim())
+        .trim();
+    let rows: Vec<PriceListCandidate> =
+        serde_json::from_str(json_text).map_err(|_| InferenceError::Empty)?;
+    Ok(rows
+        .into_iter()
+        .filter(|row| {
+            !row.name.trim().is_empty()
+                && row.unit_price.is_finite()
+                && row.unit_price >= 0.0
+                && row.vat_rate.is_finite()
+                && row.vat_rate >= 0.0
+        })
+        .collect())
 }
 
 /// Improve an email draft via the configured backend. User-invoked only.

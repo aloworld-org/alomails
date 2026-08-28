@@ -40,7 +40,7 @@ use crate::state::{AppState, authenticate};
 
 /// A customer as JSON. `archived` is the flag the UI filters on; `archivedAt`
 /// is when it happened, for the record.
-fn customer_json(c: &Customer) -> Value {
+pub(crate) fn customer_json(c: &Customer) -> Value {
     json!({
         "id": c.id.as_str(),
         "name": c.name,
