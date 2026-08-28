@@ -16,7 +16,16 @@
 //! * a **write a delegate wants is proposed by the delegate itself** (A5.2):
 //!   it joins the room and posts its own sentence — the author of the message
 //!   is the scope the approval later runs at, so it must be the delegate —
-//!   and the run ends behind that one pending button, the asker's to tap.
+//!   and the run ends behind that one pending button, the asker's to tap;
+//! * the delegate's whole data path is the **asker's** (A5.3): its grounding
+//!   and the reads it executes carry the asker's own records and nobody
+//!   else's — not a colleague's, not another tenant's — and nothing the run
+//!   does lands in any room but the one the question was asked in;
+//! * **a shared room is not a way round the module gate** (A5.3): an agent
+//!   another member put in the very room the ask happens in is still dropped
+//!   for an asker whose module was switched off — membership grants nothing,
+//!   visibility is the only door — while the member who has the module can
+//!   hand off to it in the same room.
 //!
 //! No live model is called: the tenant's AI backend is the scripted local
 //! socket in `common::model`, which records what each turn was shown — and
@@ -31,9 +40,11 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use serde_json::{Value, json};
 
-use alo_store::{AgentProduct, AppModule, ChatAgentId, ChatChannelId};
 use crate::common::model::{Seen, says, scripted_model, use_model, wants};
 use crate::common::{Harness, harness, harness_on, send};
+use alo_store::{
+    AccountStore, AgentProduct, AppModule, CalendarEvent, ChatAgentId, ChatChannelId, EventId,
+};
 
 async fn post(app: &Router, token: &str, uri: &str, body: Value) -> (StatusCode, Value) {
     let req = Request::builder()
@@ -113,9 +124,21 @@ async fn ask_and_wait(
     question: &str,
     done: impl Fn(&[Value]) -> bool,
 ) -> Vec<Value> {
+    ask_as(h, &h.token, channel, question, done).await
+}
+
+/// [`ask_and_wait`], as whoever holds `token` — the isolation tests need two
+/// people asking in the same room.
+async fn ask_as(
+    h: &Harness,
+    token: &str,
+    channel: &str,
+    question: &str,
+    done: impl Fn(&[Value]) -> bool,
+) -> Vec<Value> {
     let (status, body) = post(
         &h.app,
-        &h.token,
+        token,
         &format!("/chat/channels/{channel}/messages"),
         json!({ "body": question }),
     )
@@ -471,4 +494,267 @@ async fn a_delegates_write_is_proposed_by_the_delegate_and_the_asker_approves_it
     assert_eq!(status, StatusCode::OK, "{done}");
     assert_eq!(done["state"], json!("approved"));
     assert!(!done["result"].is_null(), "the task was actually created");
+}
+
+// ---- A5.3: the delegate's whole data path is the asker's ---------------------
+
+/// The day every diary entry below is on, and the day the delegate is asked
+/// about.
+const DAY: &str = "2027-03-11";
+
+/// One diary entry on this person's own calendar, on [`DAY`]. Same shape as
+/// the A1.6 isolation suite's, because it is the same question being asked of
+/// a deeper surface.
+async fn diary(acc: &AccountStore, summary: &str) {
+    use time::{Date, Month, Time};
+    let calendar = acc.ensure_personal_calendar().await.unwrap();
+    let start = Date::from_calendar_date(2027, Month::March, 11)
+        .unwrap()
+        .with_time(Time::from_hms(9, 0, 0).unwrap())
+        .assume_utc();
+    acc.create_event(&CalendarEvent {
+        id: EventId::generate(),
+        calendar_id: calendar,
+        summary: summary.to_owned(),
+        description: None,
+        location: None,
+        starts_at: start,
+        ends_at: start + time::Duration::hours(1),
+        all_day: false,
+        recurrence: None,
+        attendees: Vec::new(),
+        exdates: Vec::new(),
+        timezone: None,
+        rdates: Vec::new(),
+        recurrence_id: None,
+        reminder_minutes: None,
+        attendee_status: Vec::new(),
+    })
+    .await
+    .unwrap();
+}
+
+/// A second person of the tenant: their own login, and their own door into
+/// the store.
+async fn colleague(h: &Harness, tag: &str) -> (String, AccountStore) {
+    let email = format!("{tag}-{}@deleg.test", h.tenant);
+    let user = h.ts.create_user(&email).await.unwrap();
+    h.identity
+        .set_password(&h.tenant, &user, &email, "s3cret-pw")
+        .await
+        .unwrap();
+    let token = h
+        .identity
+        .password_login(&email, "s3cret-pw", None)
+        .await
+        .unwrap()
+        .expect("token issued")
+        .0
+        .reveal()
+        .to_owned();
+    (token, h.store.for_account(h.tenant.clone(), user))
+}
+
+/// **A delegate reaches nothing the asker could not** (A5.3). Its grounding
+/// and the read it executes inside its turn run through the asker's own
+/// account door: the asker's diary entry is there, a colleague's private
+/// entry and another tenant's are not — on the same day, matching the same
+/// question, so what separates them is access and nothing else. And the run
+/// stays in its room: a second channel the delegate is a member of gains
+/// nothing.
+#[tokio::test]
+async fn a_delegates_grounding_and_reads_are_the_askers_and_nobody_elses() {
+    let h = harness("delegiso").await;
+    let (channel, billing) = a_room_with(&h, "billing", AgentProduct::Billing).await;
+    let agenda = an_agent(&h, "agenda", AgentProduct::Agenda).await;
+
+    // Three diaries, one day, one word: the asker's own, a colleague's the
+    // asker may not read, and another tenant's on the same store.
+    diary(&h.acc, "kestrel planning").await;
+    let (_, ben) = colleague(&h, "ben").await;
+    diary(&ben, "kestrel review with the board").await;
+    let other = harness_on(std::sync::Arc::clone(&h.store), "delegisob").await;
+    diary(&other.acc, "kestrel dinner with the board").await;
+
+    // A second room with the delegate in it, which the run must not touch.
+    let (status, staffing) = post(
+        &h.app,
+        &h.token,
+        "/chat/channels",
+        json!({ "name": "staffing", "visibility": "public" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{staffing}");
+    let staffing = staffing["id"].as_str().unwrap().to_owned();
+    h.acc
+        .add_agent_to_channel(&ChatChannelId::new(staffing.clone()), &agenda)
+        .await
+        .unwrap();
+
+    let (base, seen) = scripted_model(vec![
+        delegates("agenda", "what is on the diary about the kestrel?"),
+        wants(
+            "whats_on",
+            json!({ "from": DAY, "to": DAY }),
+            "Checking the diary.",
+        ),
+        says("Kestrel planning, at nine."),
+        says("The diary holds the kestrel planning at nine [1]."),
+    ])
+    .await;
+    use_model(&h, &base).await;
+
+    let all = ask_and_wait(&h, &channel, "@billing anything on the kestrel?", |all| {
+        all.iter().any(|m| {
+            m["body"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("planning at nine")
+        })
+    })
+    .await;
+
+    // The room saw the handoff and the answer; the delegate posted nothing.
+    assert_eq!(
+        handoff_lines(&all),
+        vec!["I'm asking @agenda: what is on the diary about the kestrel?"]
+    );
+    assert!(
+        said_by(&all, &agenda).is_empty(),
+        "a delegate posts nothing"
+    );
+    assert_eq!(said_by(&all, &billing).len(), 2);
+    assert_eq!(calls(&seen), 4);
+
+    // The delegate's grounding (its first call) and the diary read it executed
+    // (folded into its second) carry the asker's entry and nobody else's. The
+    // negatives mean something because the positive is beside them: all three
+    // entries are on the same day and match the same word.
+    for call in [1, 2] {
+        let shown = user_of(&seen, call);
+        assert!(
+            shown.contains("kestrel planning"),
+            "call {call} must carry the asker's own diary: {shown}"
+        );
+        assert!(
+            !shown.contains("kestrel review"),
+            "call {call} must carry no colleague's diary: {shown}"
+        );
+        assert!(
+            !shown.contains("kestrel dinner"),
+            "call {call} must carry no other tenant's diary: {shown}"
+        );
+    }
+
+    // The run happened in its room and nowhere else: the other channel the
+    // delegate is a member of gained no message.
+    assert!(
+        messages(&h, &staffing).await.is_empty(),
+        "a delegation never crosses into another channel"
+    );
+}
+
+/// **A shared room is not a way round the module gate** (A5.3's "never across
+/// a shared channel"). A colleague who has Inventory puts `@inventory` in the
+/// very room the ask happens in; for an asker whose Inventory was switched
+/// off, the handle still resolves to nobody — membership grants nothing,
+/// the asker's own module-gated roster is the only door. The colleague's own
+/// handoff in the same room is the paired positive: the drop is the gate
+/// biting, not a handoff that never works.
+#[tokio::test]
+async fn a_shared_room_is_not_a_way_round_the_module_gate_for_a_handoff() {
+    let h = harness("delegroom").await;
+    let (channel, billing) = a_room_with(&h, "billing", AgentProduct::Billing).await;
+    let inventory = an_agent(&h, "inventory", AgentProduct::Inventory).await;
+    let room = ChatChannelId::new(channel.clone());
+
+    // Carol joins the shared room and puts the Inventory agent in it herself.
+    let (carol_token, carol) = colleague(&h, "carol").await;
+    carol.join_channel(&room).await.unwrap();
+    carol.add_agent_to_channel(&room, &inventory).await.unwrap();
+
+    // An admin switches Inventory off for the asker — and only the asker.
+    let admin = h.ts.create_user("console@delegroom.test").await.unwrap();
+    h.ts.set_admin(&admin, true).await.unwrap();
+    h.ts.set_module_access(&h.user, AppModule::Inventory, false, &admin)
+        .await
+        .unwrap();
+
+    // The same room, to two people: the member list itself already differs.
+    let mine: Vec<String> = h
+        .acc
+        .channel_agents(&room)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|agent| agent.handle)
+        .collect();
+    assert_eq!(mine, vec!["billing"], "the asker has no @inventory to see");
+    let carols: Vec<String> = carol
+        .channel_agents(&room)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|agent| agent.handle)
+        .collect();
+    assert_eq!(carols, vec!["billing", "inventory"]);
+
+    let (base, seen) = scripted_model(vec![
+        // The asker's run: the handle is dropped, no delegate turn is taken.
+        delegates("inventory", "is the X100 in stock?"),
+        says("I couldn't reach anyone who can check the stock."),
+        // Carol's run in the same room: the same handle resolves and answers.
+        delegates("inventory", "is the X100 in stock?"),
+        says("The X100: twelve in stock."),
+        says("Twelve on the shelf — @inventory checked [1]."),
+    ])
+    .await;
+    use_model(&h, &base).await;
+
+    let all = ask_and_wait(
+        &h,
+        &channel,
+        "@billing can we fulfil the X100 order?",
+        |all| {
+            all.iter().any(|m| {
+                m["body"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .contains("couldn't reach anyone")
+            })
+        },
+    )
+    .await;
+    // No handoff line, no delegate turn: the model was told there is nobody by
+    // that name — the agent sitting in the room notwithstanding — and the
+    // offer never named it either.
+    assert!(handoff_lines(&all).is_empty(), "{}", json!(all));
+    assert_eq!(calls(&seen), 2);
+    assert!(user_of(&seen, 1).contains("there is no @inventory"));
+    assert!(!user_of(&seen, 0).contains("@inventory"));
+
+    let all = ask_as(
+        &h,
+        &carol_token,
+        &channel,
+        "@billing can we fulfil the X100 order?",
+        |all| {
+            all.iter().any(|m| {
+                m["body"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .contains("Twelve on the shelf")
+            })
+        },
+    )
+    .await;
+    // For Carol the very same handle in the very same room is offered, asked,
+    // and answers.
+    assert_eq!(
+        handoff_lines(&all),
+        vec!["I'm asking @inventory: is the X100 in stock?"]
+    );
+    assert_eq!(calls(&seen), 5);
+    assert!(user_of(&seen, 2).contains("@inventory"));
+    assert_eq!(said_by(&all, &billing).len(), 3, "{}", json!(all));
 }
