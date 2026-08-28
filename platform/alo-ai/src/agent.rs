@@ -774,10 +774,15 @@ mod tests {
                 "thread_actions",
                 "catch_up_room",
                 "find_in_chat",
+                // AB.1: the Drive agent's verbs, rendered from the intent
+                // registry — what the Drive holds, what one folder holds, what
+                // the Spaces share, and what a file or an attachment actually
+                // says. Creating a folder, renaming and moving are writes and
+                // are not here.
+                "recent_files",
+                "list_folder",
+                "shared_with_me",
                 "find_file",
-                // A2.5: the Drive agent says what a file contains and what is
-                // attached to an email. Renaming and moving are writes and are
-                // not here.
                 "file_read",
                 "attachment_read",
                 "sheet_read",
@@ -834,7 +839,7 @@ mod tests {
                 "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 84);
+        assert_eq!(all_tools().len(), 88);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }

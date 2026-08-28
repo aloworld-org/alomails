@@ -108,6 +108,7 @@ pub mod docs;
 pub mod document_mail;
 pub mod drafts;
 pub mod drive;
+pub mod drive_intents;
 pub mod error;
 pub mod filters;
 pub mod finance_approvals;

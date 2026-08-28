@@ -23,7 +23,6 @@ use crate::agent_agenda::{AGENDA_GUIDANCE, AGENDA_TOOL_DOC, AGENDA_TOOLS};
 use crate::agent_chat::{CHAT_GUIDANCE, CHAT_TOOL_DOC, CHAT_TOOLS};
 use crate::agent_contacts::{CONTACTS_GUIDANCE, CONTACTS_TOOL_DOC, CONTACTS_TOOLS};
 use crate::agent_docs::{DOCS_GUIDANCE, DOCS_TOOL_DOC, DOCS_TOOLS};
-use crate::agent_drive::{DRIVE_GUIDANCE, DRIVE_TOOL_DOC, DRIVE_TOOLS};
 use crate::agent_finance::{FINANCE_GUIDANCE, FINANCE_TOOL_DOC, FINANCE_TOOLS};
 use crate::agent_hr::{HR_GUIDANCE, HR_TOOL_DOC, HR_TOOLS};
 use crate::agent_insights::{INSIGHTS_GUIDANCE, INSIGHTS_TOOL_DOC, INSIGHTS_TOOLS};
@@ -37,6 +36,7 @@ use crate::agent_tasks::{TASKS_GUIDANCE, TASKS_TOOL_DOC, TASKS_TOOLS};
 use crate::agent_tool::AgentTool;
 use crate::billing_intents::BILLING as BILLING_INTENTS;
 use crate::crm_intents::CRM as CRM_INTENTS;
+use crate::drive_intents::DRIVE as DRIVE_INTENTS;
 use crate::intent::IntentModule;
 
 /// One module's contribution to a product's agent: what it may do, how each
@@ -115,7 +115,6 @@ const CONTACTS_SET: ToolSet = set(CONTACTS_TOOLS, CONTACTS_TOOL_DOC, CONTACTS_GU
 const AGENDA_SET: ToolSet = set(AGENDA_TOOLS, AGENDA_TOOL_DOC, AGENDA_GUIDANCE);
 const TASKS_SET: ToolSet = set(TASKS_TOOLS, TASKS_TOOL_DOC, TASKS_GUIDANCE);
 const CHAT_SET: ToolSet = set(CHAT_TOOLS, CHAT_TOOL_DOC, CHAT_GUIDANCE);
-const DRIVE_SET: ToolSet = set(DRIVE_TOOLS, DRIVE_TOOL_DOC, DRIVE_GUIDANCE);
 const PROJECTS_SET: ToolSet = set(PROJECTS_TOOLS, PROJECTS_TOOL_DOC, PROJECTS_GUIDANCE);
 const FINANCE_SET: ToolSet = set(FINANCE_TOOLS, FINANCE_TOOL_DOC, FINANCE_GUIDANCE);
 const INVENTORY_SET: ToolSet = set(INVENTORY_TOOLS, INVENTORY_TOOL_DOC, INVENTORY_GUIDANCE);
@@ -141,7 +140,6 @@ const MAIL: &[ToolSet] = &[MAIL_SET, CONTACTS_SET];
 const AGENDA: &[ToolSet] = &[AGENDA_SET];
 const TASKS: &[ToolSet] = &[TASKS_SET];
 const CHAT: &[ToolSet] = &[CHAT_SET];
-const DRIVE: &[ToolSet] = &[DRIVE_SET];
 const SHEETS: &[ToolSet] = &[SHEETS_SET];
 const DOCS: &[ToolSet] = &[DOCS_SET];
 const PROJECTS: &[ToolSet] = &[PROJECTS_SET];
@@ -165,6 +163,7 @@ const MEET: &[ToolSet] = &[MEET_SET];
 pub const MOVED: &[(AgentProduct, &IntentModule)] = &[
     (AgentProduct::Billing, &BILLING_INTENTS),
     (AgentProduct::Crm, &CRM_INTENTS),
+    (AgentProduct::Drive, &DRIVE_INTENTS),
 ];
 
 /// The hand-written sets a product still carries — empty once it has moved.
@@ -174,7 +173,7 @@ fn static_sets(product: AgentProduct) -> &'static [ToolSet] {
         AgentProduct::Agenda => AGENDA,
         AgentProduct::Tasks => TASKS,
         AgentProduct::Chat => CHAT,
-        AgentProduct::Drive => DRIVE,
+        AgentProduct::Drive => &[],
         AgentProduct::Sheets => SHEETS,
         AgentProduct::Docs => DOCS,
         AgentProduct::Billing => &[],
@@ -361,9 +360,13 @@ mod tests {
         assert_eq!(
             names(AgentProduct::Drive),
             [
+                "recent_files",
+                "list_folder",
+                "shared_with_me",
                 "find_file",
                 "file_read",
                 "attachment_read",
+                "create_folder",
                 "file_rename",
                 "file_move",
             ]
@@ -481,7 +484,7 @@ mod tests {
             .map(|tool| tool.name)
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
-        assert_eq!(workspace.len(), 84);
+        assert_eq!(workspace.len(), 88);
     }
 
     /// A moved module registers once (A4.1c): its row in [`MOVED`] is what puts
@@ -512,12 +515,17 @@ mod tests {
             }
         }
         let source = include_str!("agent_product.rs");
-        let name = concat!("BILLING_", "INTENTS");
-        assert_eq!(
-            source.matches(name).count(),
-            2,
-            "Billing is named by its import and its row, nowhere else"
-        );
+        for module in [
+            concat!("BILLING_", "INTENTS"),
+            concat!("CRM_", "INTENTS"),
+            concat!("DRIVE_", "INTENTS"),
+        ] {
+            assert_eq!(
+                source.matches(module).count(),
+                2,
+                "{module} is named by its import and its row, nowhere else"
+            );
+        }
     }
 
     /// The boundary's question, over the whole registry: a product offers its

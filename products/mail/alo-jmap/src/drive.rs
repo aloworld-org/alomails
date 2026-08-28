@@ -17,7 +17,7 @@ use alo_store::{BlobId, DriveLocation, DriveNode, DriveNodeId, NewDriveFile, Spa
 use crate::error::Problem;
 use crate::state::{AppState, authenticate};
 
-fn map_err(e: StoreError) -> Problem {
+pub(crate) fn map_err(e: StoreError) -> Problem {
     match e {
         StoreError::NotFound => Problem::with(StatusCode::NOT_FOUND, "not found"),
         StoreError::Forbidden => Problem::with(StatusCode::FORBIDDEN, "insufficient role"),
@@ -45,7 +45,7 @@ fn parent_of(parent: Option<&str>) -> Option<DriveNodeId> {
         .map(|p| DriveNodeId::new(p.to_owned()))
 }
 
-fn node_json(n: &DriveNode) -> Value {
+pub(crate) fn node_json(n: &DriveNode) -> Value {
     json!({
         "id": n.id.as_str(),
         "parentId": n.parent_id.as_ref().map(|p| p.as_str()),
@@ -82,14 +82,8 @@ pub async fn list(
     let account = authenticate(&state, &headers).await?;
     let loc = location_of(q.space.as_deref());
     let parent = parent_of(q.parent.as_deref());
-    let nodes = account
-        .acc
-        .drive_list(&loc, parent.as_ref())
-        .await
-        .map_err(map_err)?;
-    Ok(Json(
-        json!({ "nodes": nodes.iter().map(node_json).collect::<Vec<_>>() }),
-    ))
+    let nodes = crate::drive_intents::node_list(&account, &loc, parent.as_ref()).await?;
+    Ok(Json(json!({ "nodes": nodes })))
 }
 
 /// `GET /drive/trash?space=` → `{"nodes":[...]}` — the trashed nodes of a location.
@@ -127,15 +121,13 @@ pub async fn create_folder(
     if name.is_empty() {
         return Err(Problem::with(StatusCode::BAD_REQUEST, "a name is required"));
     }
-    let id = account
-        .acc
-        .drive_create_folder(
-            &location_of(req.space.as_deref()),
-            parent_of(req.parent.as_deref()).as_ref(),
-            name,
-        )
-        .await
-        .map_err(map_err)?;
+    let id = crate::drive_intents::create_folder(
+        &account,
+        &location_of(req.space.as_deref()),
+        parent_of(req.parent.as_deref()).as_ref(),
+        name,
+    )
+    .await?;
     Ok(Json(json!({ "id": id.as_str() })))
 }
 
@@ -208,15 +200,8 @@ pub async fn get_node(
     Path(id): Path<String>,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
-    let Some(node) = account
-        .acc
-        .drive_node(&DriveNodeId::new(id))
-        .await
-        .map_err(map_err)?
-    else {
-        return Err(Problem::with(StatusCode::NOT_FOUND, "no such node"));
-    };
-    Ok(Json(json!({ "node": node_json(&node) })))
+    let node = crate::drive_intents::node_record(&account, &DriveNodeId::new(id)).await?;
+    Ok(Json(json!({ "node": node })))
 }
 
 #[derive(Deserialize)]
@@ -240,11 +225,7 @@ pub async fn rename(
             "name cannot be empty",
         ));
     }
-    account
-        .acc
-        .drive_rename(&DriveNodeId::new(id), name)
-        .await
-        .map_err(map_err)?;
+    crate::drive_intents::rename_node(&account, &DriveNodeId::new(id), name).await?;
     Ok(Json(json!({ "status": "ok" })))
 }
 
@@ -266,15 +247,13 @@ pub async fn move_node(
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     let req: DestBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
-    account
-        .acc
-        .drive_move(
-            &DriveNodeId::new(id),
-            &location_of(req.space.as_deref()),
-            parent_of(req.parent.as_deref()).as_ref(),
-        )
-        .await
-        .map_err(map_err)?;
+    crate::drive_intents::move_node(
+        &account,
+        &DriveNodeId::new(id),
+        &location_of(req.space.as_deref()),
+        parent_of(req.parent.as_deref()).as_ref(),
+    )
+    .await?;
     Ok(Json(json!({ "status": "ok" })))
 }
 

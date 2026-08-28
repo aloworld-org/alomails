@@ -1,5 +1,6 @@
 //! Executing alo Drive's agent tools (ADR 0034, queue item A2.5) — the acting
-//! half of what [`alo_ai::agent_drive`] describes to the model.
+//! half of the older verbs `alo_ai::drive_intents` describes to the model,
+//! reached through [`crate::drive_intents::dispatch`] (AB.1).
 //!
 //! Three reads run inside the turn ([`crate::agent_turn`]); the two that change
 //! the Drive run only from [`crate::agent::agent_execute`], after the person who
@@ -197,11 +198,7 @@ pub async fn execute_file_rename(account: &Account, args: &Value) -> Result<Json
         )));
     }
 
-    account
-        .acc
-        .drive_rename(&node.id, &name)
-        .await
-        .map_err(map_store_err)?;
+    crate::drive_intents::rename_node(account, &node.id, &name).await?;
     Ok(Json(json!({
         "ok": true,
         "result": {
@@ -230,27 +227,9 @@ pub async fn execute_file_rename(account: &Account, args: &Value) -> Result<Json
 pub async fn execute_file_move(account: &Account, args: &Value) -> Result<Json<Value>, Problem> {
     let node = resolve_file(account, args, "file").await?;
     require_writable(account, &node).await?;
-    let folders = own_folders(account).await?;
     let dest: Option<DriveNode> = match string_arg(args, "folder") {
         None => None,
-        Some(wanted) => {
-            if folders.is_empty() {
-                return Err(unprocessable(
-                    "there is no folder in your drive yet — a file can only move to the top level",
-                ));
-            }
-            Some(
-                pick(
-                    &wanted,
-                    folders
-                        .iter()
-                        .map(|folder| (folder.name.as_str(), folder.clone()))
-                        .collect(),
-                    "folder",
-                )
-                .map_err(|problem| folder_refusal(problem, &folders))?,
-            )
-        }
+        Some(wanted) => Some(one_folder(account, &wanted).await?),
     };
     let dest_id = dest.as_ref().map(|folder| folder.id.clone());
 
@@ -283,11 +262,13 @@ pub async fn execute_file_move(account: &Account, args: &Value) -> Result<Json<V
         )));
     }
 
-    account
-        .acc
-        .drive_move(&node.id, &DriveLocation::Personal, dest_id.as_ref())
-        .await
-        .map_err(map_store_err)?;
+    crate::drive_intents::move_node(
+        account,
+        &node.id,
+        &DriveLocation::Personal,
+        dest_id.as_ref(),
+    )
+    .await?;
     Ok(Json(json!({
         "ok": true,
         "result": {
@@ -304,7 +285,7 @@ pub async fn execute_file_move(account: &Account, args: &Value) -> Result<Json<V
 
 /// The file an argument names, out of the caller's own Drive.
 ///
-/// Names, never ids — [`alo_ai::agent_drive`]'s first rule. The candidates come
+/// Names, never ids — `alo_ai::drive_intents`' first rule. The candidates come
 /// from `drive_find`, which is personal, non-trashed and tenant-scoped, so a
 /// file belonging to another tenant or to a colleague is not among the things
 /// that can be named here.
@@ -346,6 +327,28 @@ async fn require_writable(account: &Account, node: &DriveNode) -> Result<(), Pro
             node.name
         )))
     }
+}
+
+/// The folder an argument names, out of the caller's own Drive — resolved the
+/// way a destination always is here: out of [`own_folders`], with the refusal
+/// listing the folders there are. Shared by `file_move`, `list_folder` and
+/// `create_folder`, so "which folder did they mean" has one answer.
+pub(crate) async fn one_folder(account: &Account, wanted: &str) -> Result<DriveNode, Problem> {
+    let folders = own_folders(account).await?;
+    if folders.is_empty() {
+        return Err(unprocessable(
+            "there is no folder in your drive yet — a file can only move to the top level",
+        ));
+    }
+    pick(
+        wanted,
+        folders
+            .iter()
+            .map(|folder| (folder.name.as_str(), folder.clone()))
+            .collect(),
+        "folder",
+    )
+    .map_err(|problem| folder_refusal(problem, &folders))
 }
 
 /// Every folder of the caller's own Drive, breadth first and bounded.
@@ -415,7 +418,7 @@ async fn sibling_named(
 
 /// The node called `name` directly inside `parent` (the Drive's top level when
 /// `None`), if there is one.
-async fn named_in(
+pub(crate) async fn named_in(
     account: &Account,
     parent: Option<&DriveNodeId>,
     name: &str,
@@ -438,7 +441,7 @@ async fn named_in(
 /// `../secrets/report` would read as a name in this store and as a traversal in
 /// anything that later writes the tree to a filesystem, and the cheapest place
 /// to refuse that is the only place a name is set.
-fn checked_name(wanted: &str) -> Result<String, Problem> {
+pub(crate) fn checked_name(wanted: &str) -> Result<String, Problem> {
     let name = wanted.trim();
     if name.is_empty() {
         return Err(unprocessable("say what the file should be called"));

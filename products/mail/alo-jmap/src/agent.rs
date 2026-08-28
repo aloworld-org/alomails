@@ -475,6 +475,7 @@ pub(crate) type ModuleDispatcher =
 pub(crate) const MODULES: &[ModuleDispatcher] = &[
     crate::billing_intents::dispatch,
     crate::crm_intents::dispatch,
+    crate::drive_intents::dispatch,
 ];
 
 /// [`execute_tool`]'s boundary check and audit cannot be bypassed by a caller
@@ -533,17 +534,6 @@ async fn dispatch(
         // alo Projects' tools (B3.10a), on the same seam. `log_time` writes a
         // *proposed* entry the user accepts in their own timesheet; the summary
         // writes nothing at all.
-        // alo Drive's tool set (A2.5), on the same seam. The three reads find a
-        // file, say what one contains, and pull the text out of what somebody
-        // attached to an email; the two writes change where a file is and what
-        // it is called, and nothing else about it. There is deliberately no way
-        // for an agent to delete a file, to share one, or to edit a byte inside
-        // one — a document is alo Docs' to edit and a spreadsheet alo Sheets'.
-        "find_file" => crate::agent_drive::execute_find_file(account, args).await,
-        "file_read" => crate::agent_drive::execute_file_read(account, args).await,
-        "attachment_read" => crate::agent_attachments::execute_attachment_read(account, args).await,
-        "file_rename" => crate::agent_drive::execute_file_rename(account, args).await,
-        "file_move" => crate::agent_drive::execute_file_move(account, args).await,
         // alo Sheets' tools (A2.2), on the same seam. The three reads answer
         // with the addresses of the cells they read; the two writes edit the
         // stored workbook and therefore wait for the asker's own approval —
