@@ -20,7 +20,6 @@ use egress::{is_blocked_ip, split_authority};
 
 mod agent;
 pub mod agent_agenda;
-pub mod agent_chat;
 pub mod agent_contacts;
 pub mod agent_docs;
 pub mod agent_finance;
@@ -38,6 +37,7 @@ pub mod agent_sites;
 pub mod agent_tasks;
 mod agent_tool;
 pub mod billing_intents;
+pub mod chat_intents;
 pub mod crm_intents;
 pub mod doc_blocks;
 pub mod drive_intents;
@@ -56,7 +56,6 @@ pub use agent::{
     system_prompt_for,
 };
 pub use agent_agenda::AGENDA_TOOLS;
-pub use agent_chat::CHAT_TOOLS;
 pub use agent_contacts::CONTACTS_TOOLS;
 pub use agent_docs::DOCS_TOOLS;
 pub use agent_finance::FINANCE_TOOLS;

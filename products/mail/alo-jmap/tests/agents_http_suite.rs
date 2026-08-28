@@ -8,6 +8,7 @@ mod common;
 
 mod agent_agenda_http;
 mod agent_billing_intents_http;
+mod agent_chat_intents_http;
 mod agent_correspondence_http;
 mod agent_crm_intents_http;
 mod agent_delegation_http;

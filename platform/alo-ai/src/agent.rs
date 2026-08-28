@@ -772,6 +772,13 @@ mod tests {
                 "my_plate",
                 "overdue_by_owner",
                 "thread_actions",
+                // AC.1: the Chat agent's reads, rendered from the intent
+                // registry — the rooms, the unread, the membership, and the
+                // two the old tool set already had. Posting and creating a
+                // room are writes and are not here.
+                "my_rooms",
+                "unread_rooms",
+                "room_members",
                 "catch_up_room",
                 "find_in_chat",
                 // AB.1: the Drive agent's verbs, rendered from the intent
@@ -839,7 +846,7 @@ mod tests {
                 "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 88);
+        assert_eq!(all_tools().len(), 93);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }
@@ -935,10 +942,14 @@ mod tests {
         assert!(mail.contains("Every other tool CHANGES something"));
         assert!(mail.contains("find_contact"));
 
-        // Chat has only lookups.
+        // Chat had only lookups until AC.1 gave it a previewed post and a
+        // room creation: two-sided now, and the prompt says so from the
+        // declarations rather than from anybody's memory of it.
         let chat = system_prompt_for(AgentProduct::Chat);
-        assert!(chat.contains("Every tool you have only READS"));
-        assert!(!chat.contains("Every other tool CHANGES"));
+        assert!(chat.contains("These tools only READ"));
+        assert!(chat.contains("Every other tool CHANGES something"));
+        assert!(chat.contains("my_rooms"));
+        assert!(chat.contains("post_message"));
 
         // Drive was one-sided until A2.5 gave it a rename and a move; three
         // reads and two writes make it two-sided, and the prompt says so from

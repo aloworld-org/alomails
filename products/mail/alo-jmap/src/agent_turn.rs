@@ -913,19 +913,20 @@ mod tests {
                 }
             }
         }
-        // Forty-seven of them, which is the whole point of ADR 0047 — eleven
+        // Fifty of them, which is the whole point of ADR 0047 — eleven
         // from the products A1 covered, the Website agent's three (A2.1), its
         // language count (A2.1b), the Sheet agent's three (A2.2), the Docs
         // agent's two (A2.3), the Insights agent's three (A2.4), the Drive
         // agent's five intent reads plus attachment_read (A2.5, AB.1), the
         // Agenda agent's two (A2.6), the Tasks agent's three (A2.7), the Mail
         // agent's two (A2.8), the Meet agent's two (A3.2), the Billing
-        // agent's six intent reads (A4.1) and the Sales agent's four (AA.1);
-        // the folder, the rename, the move, the reschedule, the priority, the
-        // chase, the capture and the minutes are writes and are counted on
-        // the other side.
+        // agent's six intent reads (A4.1), the Sales agent's four (AA.1) and
+        // the Chat agent's three new intent reads (AC.1); the folder, the
+        // rename, the move, the reschedule, the priority, the chase, the
+        // capture, the minutes and the room post are writes and are counted
+        // on the other side.
         let reads = alo_ai::all_tools().iter().filter(|t| t.is_read()).count();
-        assert_eq!(reads, 47);
+        assert_eq!(reads, 50);
     }
 
     #[test]

@@ -61,7 +61,7 @@ fn map_store_err(e: StoreError) -> Problem {
 ///
 /// Best-effort throughout: a write that succeeded is never reported as failed
 /// because a live notification could not be sent.
-async fn notify_room(
+pub(crate) async fn notify_room(
     state: &AppState,
     account: &Account,
     channel: &ChatChannelId,
@@ -99,7 +99,7 @@ pub(crate) fn channel_json(c: &ChatChannel) -> Value {
     })
 }
 
-fn summary_json(s: &ChatChannelSummary, mentions: &HashMap<String, i64>) -> Value {
+pub(crate) fn summary_json(s: &ChatChannelSummary, mentions: &HashMap<String, i64>) -> Value {
     let mut value = channel_json(&s.channel);
     if let Some(object) = value.as_object_mut() {
         object.insert("unread".to_owned(), json!(s.unread));
@@ -127,7 +127,7 @@ fn summary_json(s: &ChatChannelSummary, mentions: &HashMap<String, i64>) -> Valu
 /// Best-effort by design — if the lookup fails, the payload still goes out
 /// with ids and no addresses. A feed that renders unlabelled is a poor screen;
 /// a feed that 500s because the directory hiccuped is a broken one.
-async fn resolve_emails(
+pub(crate) async fn resolve_emails(
     state: &AppState,
     account: &Account,
     users: &[UserId],
@@ -153,7 +153,7 @@ async fn label_agents(account: &Account, into: &mut HashMap<String, String>) {
     }
 }
 
-fn member_json(m: &ChatMember, emails: &HashMap<String, String>) -> Value {
+pub(crate) fn member_json(m: &ChatMember, emails: &HashMap<String, String>) -> Value {
     json!({
         "user": m.user.as_str(),
         "email": emails.get(m.user.as_str()),
@@ -271,7 +271,7 @@ fn attach_proposal(
     }
 }
 
-fn message_json(m: &ChatMessage, emails: &HashMap<String, String>) -> Value {
+pub(crate) fn message_json(m: &ChatMessage, emails: &HashMap<String, String>) -> Value {
     json!({
         "id": m.id.as_str(),
         "channel": m.channel.as_str(),

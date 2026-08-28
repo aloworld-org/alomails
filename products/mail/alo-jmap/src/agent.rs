@@ -474,6 +474,7 @@ pub(crate) type ModuleDispatcher =
 /// two lists to the same length.
 pub(crate) const MODULES: &[ModuleDispatcher] = &[
     crate::billing_intents::dispatch,
+    crate::chat_intents::dispatch,
     crate::crm_intents::dispatch,
     crate::drive_intents::dispatch,
 ];
@@ -567,8 +568,8 @@ async fn dispatch(
         "find_a_time" => crate::agent_agenda::execute_find_a_time(account, args, state).await,
         "meeting_prep" => crate::agent_meeting::execute_meeting_prep(account, args).await,
         "reschedule_event" => crate::agent_meeting::execute_reschedule_event(account, args).await,
-        "catch_up_room" => crate::agent_reads::execute_catch_up_room(account, args).await,
-        "find_in_chat" => crate::agent_reads::execute_find_in_chat(account, args).await,
+        // Chat's verbs, `catch_up_room` and `find_in_chat` included, are
+        // dispatched by its module row above (AC.1).
         "find_contact" => crate::agent_reads::execute_find_contact(account, args).await,
         "log_time" => projects::execute_log_time(account, args).await,
         "project_status_summary" => projects::execute_project_status_summary(account, args).await,

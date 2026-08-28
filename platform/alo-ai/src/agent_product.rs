@@ -20,7 +20,6 @@
 use alo_store::{ALL_AGENT_PRODUCTS, AgentProduct};
 
 use crate::agent_agenda::{AGENDA_GUIDANCE, AGENDA_TOOL_DOC, AGENDA_TOOLS};
-use crate::agent_chat::{CHAT_GUIDANCE, CHAT_TOOL_DOC, CHAT_TOOLS};
 use crate::agent_contacts::{CONTACTS_GUIDANCE, CONTACTS_TOOL_DOC, CONTACTS_TOOLS};
 use crate::agent_docs::{DOCS_GUIDANCE, DOCS_TOOL_DOC, DOCS_TOOLS};
 use crate::agent_finance::{FINANCE_GUIDANCE, FINANCE_TOOL_DOC, FINANCE_TOOLS};
@@ -35,6 +34,7 @@ use crate::agent_sites::{SITES_GUIDANCE, SITES_TOOL_DOC, SITES_TOOLS};
 use crate::agent_tasks::{TASKS_GUIDANCE, TASKS_TOOL_DOC, TASKS_TOOLS};
 use crate::agent_tool::AgentTool;
 use crate::billing_intents::BILLING as BILLING_INTENTS;
+use crate::chat_intents::CHAT as CHAT_INTENTS;
 use crate::crm_intents::CRM as CRM_INTENTS;
 use crate::drive_intents::DRIVE as DRIVE_INTENTS;
 use crate::intent::IntentModule;
@@ -115,6 +115,7 @@ const CONTACTS_SET: ToolSet = set(CONTACTS_TOOLS, CONTACTS_TOOL_DOC, CONTACTS_GU
 const AGENDA_SET: ToolSet = set(AGENDA_TOOLS, AGENDA_TOOL_DOC, AGENDA_GUIDANCE);
 const TASKS_SET: ToolSet = set(TASKS_TOOLS, TASKS_TOOL_DOC, TASKS_GUIDANCE);
 const CHAT_SET: ToolSet = set(CHAT_TOOLS, CHAT_TOOL_DOC, CHAT_GUIDANCE);
+const DRIVE_SET: ToolSet = set(DRIVE_TOOLS, DRIVE_TOOL_DOC, DRIVE_GUIDANCE);
 const PROJECTS_SET: ToolSet = set(PROJECTS_TOOLS, PROJECTS_TOOL_DOC, PROJECTS_GUIDANCE);
 const FINANCE_SET: ToolSet = set(FINANCE_TOOLS, FINANCE_TOOL_DOC, FINANCE_GUIDANCE);
 const INVENTORY_SET: ToolSet = set(INVENTORY_TOOLS, INVENTORY_TOOL_DOC, INVENTORY_GUIDANCE);
@@ -140,6 +141,7 @@ const MAIL: &[ToolSet] = &[MAIL_SET, CONTACTS_SET];
 const AGENDA: &[ToolSet] = &[AGENDA_SET];
 const TASKS: &[ToolSet] = &[TASKS_SET];
 const CHAT: &[ToolSet] = &[CHAT_SET];
+const DRIVE: &[ToolSet] = &[DRIVE_SET];
 const SHEETS: &[ToolSet] = &[SHEETS_SET];
 const DOCS: &[ToolSet] = &[DOCS_SET];
 const PROJECTS: &[ToolSet] = &[PROJECTS_SET];
@@ -162,6 +164,7 @@ const MEET: &[ToolSet] = &[MEET_SET];
 /// product sees the module as its own; Ask alo sees every row.
 pub const MOVED: &[(AgentProduct, &IntentModule)] = &[
     (AgentProduct::Billing, &BILLING_INTENTS),
+    (AgentProduct::Chat, &CHAT_INTENTS),
     (AgentProduct::Crm, &CRM_INTENTS),
     (AgentProduct::Drive, &DRIVE_INTENTS),
 ];
@@ -173,7 +176,7 @@ fn static_sets(product: AgentProduct) -> &'static [ToolSet] {
         AgentProduct::Agenda => AGENDA,
         AgentProduct::Tasks => TASKS,
         AgentProduct::Chat => CHAT,
-        AgentProduct::Drive => &[],
+        AgentProduct::Drive => DRIVE,
         AgentProduct::Sheets => SHEETS,
         AgentProduct::Docs => DOCS,
         AgentProduct::Billing => &[],
@@ -356,7 +359,18 @@ mod tests {
                 "capture_actions",
             ]
         );
-        assert_eq!(names(AgentProduct::Chat), ["catch_up_room", "find_in_chat"]);
+        assert_eq!(
+            names(AgentProduct::Chat),
+            [
+                "my_rooms",
+                "unread_rooms",
+                "room_members",
+                "catch_up_room",
+                "find_in_chat",
+                "post_message",
+                "create_room",
+            ]
+        );
         assert_eq!(
             names(AgentProduct::Drive),
             [
@@ -484,7 +498,7 @@ mod tests {
             .map(|tool| tool.name)
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
-        assert_eq!(workspace.len(), 88);
+        assert_eq!(workspace.len(), 93);
     }
 
     /// A moved module registers once (A4.1c): its row in [`MOVED`] is what puts
@@ -638,5 +652,15 @@ mod tests {
         assert!(!offers(AgentProduct::Agenda, "meeting_record"));
         assert!(!offers(AgentProduct::Chat, "meeting_minutes"));
         assert!(!offers(AgentProduct::Meet, "meeting_prep"));
+        // …and the ones AC.1 adds: speaking in a room is Chat's alone, and
+        // only as a previewed proposal in the asker's own name. No other
+        // agent may reach a room's feed, and the Chat agent still cannot
+        // turn what it read there into a task or an email.
+        assert!(offers(AgentProduct::Chat, "post_message"));
+        assert!(offers(AgentProduct::Chat, "create_room"));
+        assert!(!offers(AgentProduct::Meet, "post_message"));
+        assert!(!offers(AgentProduct::Tasks, "post_message"));
+        assert!(!offers(AgentProduct::Chat, "send_email"));
+        assert!(!offers(AgentProduct::Chat, "create_task"));
     }
 }
