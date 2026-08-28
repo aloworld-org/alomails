@@ -105,6 +105,7 @@ pub mod dmarc_reports;
 pub mod document;
 pub mod drive;
 pub mod error;
+pub mod events;
 pub mod extract;
 pub mod fin_accounts;
 pub mod fin_aged;
@@ -428,6 +429,7 @@ pub use dmarc_reports::{DmarcAggregateRow, DmarcEventRecord};
 pub use document::{Document, DocumentSummary};
 pub use drive::{DriveLocation, DriveNode, DriveVersion, NewDriveFile};
 pub use error::{Result, StoreError};
+pub use events::{DomainEvent, NewDomainEvent};
 pub use fin_accounts::{
     ACCOUNT_CODE_MAX_CHARS, ACCOUNT_NAME_MAX_CHARS, Account, AccountRole, AccountType, CHART,
     CHART_SEED_KEY, ChartAccount, ChartName, ChartSeed, NewAccount,
@@ -521,9 +523,9 @@ pub use id::{
     CalendarId, CampaignBounceId, CampaignConsentId, CampaignId, CampaignSegmentId, CampaignSendId,
     CampaignSuppressionId, CampaignUnsubscribeTokenId, CategoryId, ChatAgentId, ChatChannelId,
     ChatMessageId, ChatProposalId, ChatToolRunId, CommentId, ContactId, CrmActivityId, CrmDealId,
-    CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId, FinAccountId, FinCategoryId,
-    FinEntryId, FinExpenseId, FinMatchRuleId, FinMileageId, FinMileageRateId, FinPeriodId,
-    FinPostingId, GroupId, HrApplicantId, HrApplicantNoteId, HrChecklistStepId,
+    CrmEventId, CrmPipelineId, CrmStageId, DomainEventId, DriveNodeId, EventId, FinAccountId,
+    FinCategoryId, FinEntryId, FinExpenseId, FinMatchRuleId, FinMileageId, FinMileageRateId,
+    FinPeriodId, FinPostingId, GroupId, HrApplicantId, HrApplicantNoteId, HrChecklistStepId,
     HrChecklistTemplateId, HrDocumentId, HrEmployeeId, HrEmploymentId, HrLeavePolicyId,
     HrLeaveRequestId, HrLetterTemplateId, HrOpeningId, HrPayrollExportId, InsightDashboardId,
     InsightTileId, InvCountId, InvLocationId, InvMoveId, InvPoReceiptId, InvPurchaseOrderId,

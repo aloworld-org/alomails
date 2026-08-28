@@ -451,6 +451,12 @@ opaque_id!(
     ChatToolRunId
 );
 opaque_id!(
+    /// One event on the tenant's stream — one intent execution, read or write
+    /// (ADR 0058 §5). Append-only: the id addresses a row for reading, and
+    /// nothing in the store ever updates or deletes one.
+    DomainEventId
+);
+opaque_id!(
     /// One journal entry — everything one document event did to the books, in
     /// one transaction (alo Finance, ADR 0035, wave B4). An entry is written
     /// whole and never edited: a correction is another entry pointing back at

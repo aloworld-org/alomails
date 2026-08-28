@@ -314,6 +314,11 @@ pub(crate) async fn execute_tool(
     let done = dispatch(state, account, tool, args).await;
     // ADR 0047 §4: both paths leave a row, and a refusal leaves one too.
     record_run(account, run, &entry, args, done.is_ok()).await;
+    // ADR 0058 §5: every intent execution emits an event on the tenant's
+    // stream. Executions only — a refusal is not something that happened.
+    if let Ok(reply) = &done {
+        emit_event(account, run, &entry, &reply.0).await;
+    }
     done
 }
 
@@ -390,6 +395,51 @@ async fn record_run(
     {
         tracing::warn!(tool = entry.name, error = %err, "agent tool run not recorded");
     }
+}
+
+/// Emit one event onto the tenant's stream for an execution that happened
+/// (ADR 0058 §5).
+///
+/// **Best-effort on purpose**, exactly like [`record_run`]: the execution has
+/// already answered, and undoing an act because its event could not be
+/// written would trade a working product for a stream nobody asked to be
+/// strict. The failure is reported to the operator's log with the verb's name
+/// and never its arguments or result.
+async fn emit_event(
+    account: &Account,
+    run: &ToolRun<'_>,
+    entry: &alo_ai::AgentTool,
+    reply: &Value,
+) {
+    let record = event_record_ref(reply);
+    let event = alo_store::NewDomainEvent {
+        kind: entry.name,
+        effect: entry.effect.as_str(),
+        record_type: record.as_ref().map(|(kind, _)| kind.as_str()),
+        record_id: record.as_ref().map(|(_, id)| id.as_str()),
+        agent: run.agent,
+    };
+    if let Err(err) = account.acc.emit_event(&event).await {
+        tracing::warn!(tool = entry.name, error = %err, "intent event not emitted");
+    }
+}
+
+/// The record an execution's reply names, when it names exactly one.
+///
+/// Executors answer `{"ok":true,"result":…}` where a result about one record
+/// carries its record word as `kind` and the record's id either at the top
+/// (`{"kind":"task","id":…}`) or on the record filed under the word itself
+/// (`{"kind":"quote","quote":{"id":…}}`). Both shapes are read; a result that
+/// is not about one record — a list, a total, a report — yields `None`, which
+/// is an event without a record reference rather than a wrong one.
+fn event_record_ref(reply: &Value) -> Option<(String, String)> {
+    let result = reply.get("result")?;
+    let kind = result.get("kind")?.as_str()?;
+    let id = result
+        .get("id")
+        .or_else(|| result.get(kind).and_then(|record| record.get("id")))
+        .and_then(Value::as_str)?;
+    Some((kind.to_owned(), id.to_owned()))
 }
 
 /// Run one tool, once it is allowed to run. Split out so
@@ -1236,9 +1286,37 @@ fn parse_due(s: &str) -> Option<time::OffsetDateTime> {
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::{
-        Approval, addr_specs, must_wait_for_approval, parse_due, parse_rfc3339, parse_wake_time,
-        reply_references, reply_subject, resolve_email_source,
+        Approval, addr_specs, event_record_ref, must_wait_for_approval, parse_due, parse_rfc3339,
+        parse_wake_time, reply_references, reply_subject, resolve_email_source,
     };
+
+    /// The stream's record reference comes from the executor's own reply —
+    /// both shapes in use — and a result that is not about one record yields
+    /// none rather than a wrong one.
+    #[test]
+    fn an_events_record_is_read_from_the_reply_that_named_it() {
+        let wrapped = serde_json::json!({ "ok": true, "result": {
+            "kind": "quote", "quote": { "id": "q-1", "number": "QUO-1" } } });
+        assert_eq!(
+            event_record_ref(&wrapped),
+            Some(("quote".to_owned(), "q-1".to_owned()))
+        );
+        let flat = serde_json::json!({ "ok": true, "result": {
+            "kind": "task", "id": "t-9", "title": "call" } });
+        assert_eq!(
+            event_record_ref(&flat),
+            Some(("task".to_owned(), "t-9".to_owned()))
+        );
+        // A list read names no single record; neither does a kindless result.
+        let list = serde_json::json!({ "ok": true, "result": { "open": [], "openCount": 0 } });
+        assert_eq!(event_record_ref(&list), None);
+        let bare = serde_json::json!({ "ok": true });
+        assert_eq!(event_record_ref(&bare), None);
+        // A kind whose record object carries no id is not half-referenced.
+        let no_id = serde_json::json!({ "ok": true, "result": {
+            "kind": "payment", "payment": { "amountCents": 100 } } });
+        assert_eq!(event_record_ref(&no_id), None);
+    }
 
     /// The boundary rule, over **every** tool that exists rather than a sample:
     /// a write is refused from inside a turn and allowed with the asker's own

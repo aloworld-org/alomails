@@ -5,6 +5,12 @@
 //! and when*, in the order it happened. The web surfaces it as a tab on the
 //! record itself, which is the only place the question is ever actually asked.
 //!
+//! Since ADR 0058 the answer merges two sources: the audit entries the route
+//! middleware writes for a person's clicks, and the tenant's event stream,
+//! where every intent execution an agent runs lands (A4.6). One act is in
+//! exactly one of them, so the merged history never shows a change twice —
+//! and an agent's `send_quote` finally shows on the quote it sent.
+//!
 //! Deliberately **not** admin-only. `/admin/audit` is the tenant-wide
 //! administrative log and stays behind the admin gate; this is the history of a
 //! record the caller can already open and edit, and hiding "who changed this
@@ -19,7 +25,7 @@ use axum::http::{HeaderMap, StatusCode};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
-use alo_store::AuditEntry;
+use alo_store::{AuditEntry, DomainEvent};
 
 use crate::billing::iso;
 use crate::error::Problem;
@@ -70,11 +76,31 @@ fn entry_json(entry: &AuditEntry) -> Value {
         "id": entry.id,
         "action": entry.action,
         "actor": entry.actor,
+        "agent": Value::Null,
         "entityType": entry.entity_type,
         "entityId": entry.entity_id,
         "target": entry.target,
         "detail": entry.detail,
         "at": iso(entry.created_at),
+    })
+}
+
+/// One event of the record's stream, in the entry shape the tab already
+/// reads — `action` is the verb that ran, and `agent` names the agent that
+/// ran it (a person's own palette run has none). The entity address is the
+/// one the caller asked with, because every item of the answer is about that
+/// record.
+fn event_json(event: &DomainEvent, entity_type: &str, entity_id: &str) -> Value {
+    json!({
+        "id": event.id.as_str(),
+        "action": event.kind,
+        "actor": event.actor,
+        "agent": event.agent,
+        "entityType": entity_type,
+        "entityId": entity_id,
+        "target": Value::Null,
+        "detail": Value::Null,
+        "at": iso(event.created_at),
     })
 }
 
@@ -97,13 +123,32 @@ pub async fn list_entity_audit(
         ));
     };
     let limit = query.limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT);
-    let entries = state
-        .store
-        .for_tenant(account.tenant.clone())
+    let tenant = state.store.for_tenant(account.tenant.clone());
+    let entries = tenant
         .list_entity_audit(&entity_type, &entity_id, limit)
         .await
         .map_err(|_| Problem::server_error())?;
-    let list: Vec<Value> = entries.iter().map(entry_json).collect();
+    // The record's history has two sources until wave A8 unifies them: the
+    // route middleware's entries (a person's clicks) and the event stream (an
+    // agent's executions, ADR 0058 §5). One act lands in exactly one of them,
+    // so the merge never shows a change twice.
+    let events = tenant
+        .list_record_events(&entity_type, &entity_id, limit)
+        .await
+        .map_err(|_| Problem::server_error())?;
+    let mut merged: Vec<(time::OffsetDateTime, Value)> = entries
+        .iter()
+        .map(|entry| (entry.created_at, entry_json(entry)))
+        .chain(events.iter().map(|event| {
+            (
+                event.created_at,
+                event_json(event, &entity_type, &entity_id),
+            )
+        }))
+        .collect();
+    merged.sort_by_key(|(at, _)| std::cmp::Reverse(*at));
+    merged.truncate(usize::try_from(limit).unwrap_or(usize::MAX));
+    let list: Vec<Value> = merged.into_iter().map(|(_, item)| item).collect();
     Ok(Json(json!({ "entries": list })))
 }
 
