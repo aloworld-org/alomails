@@ -143,7 +143,10 @@ export function ProjectsView({
               </p>
             </div>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          {/* `min-w-0`, not `shrink-0`: the group already wraps, but a
+              flex item that refuses to shrink keeps its one-line width and
+              overflows a phone instead of wrapping. */}
+          <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
             <Button
               variant="ghost"
               icon={<CopyPlus size={16} />}
@@ -155,7 +158,10 @@ export function ProjectsView({
             <Button icon={<Plus size={16} />} onClick={onNewProject}>{strings.projectsNew}</Button>
           </div>
         </div>
-        <div className="overflow-x-auto">
+        {/* Scrolls horizontally on purpose — the table keeps its readable
+            column widths and the strip pans; the responsive e2e sweep exempts
+            marked containers from its element-width invariant. */}
+        <div className="overflow-x-auto" data-allow-overflow="">
           <table className="w-full min-w-[76rem] border-collapse text-sm">
           <thead>
             <tr className="bg-raised/60 text-left text-xs font-semibold uppercase tracking-wide text-tertiary">

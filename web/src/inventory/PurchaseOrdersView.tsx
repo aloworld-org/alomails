@@ -132,7 +132,7 @@ export function PurchaseOrdersView() {
       ) : shown.length === 0 && !loading ? (
         <p className={styles.noMatches}>{strings.inventoryNoMatches}</p>
       ) : (
-        <div className={styles.tableWrap}>
+        <div className={styles.tableWrap} data-allow-overflow="">
           <table className={styles.table}>
             <thead>
               <tr>

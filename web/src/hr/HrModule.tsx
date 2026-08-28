@@ -100,7 +100,9 @@ export function HrModule() {
         <h1 className={styles.title}>{strings.moduleHr}</h1>
         {!settled && <Spinner size={16} />}
         {settled && (
-          <nav className={styles.tabs}>
+          // Scrolls horizontally on a phone by design; the responsive e2e
+          // sweep exempts marked strips from its width invariant.
+          <nav className={styles.tabs} data-allow-overflow="">
             {/* Everybody's, and first: a person's own leave is the most-read
                 thing in HR and the reason this module is not behind a role. */}
             <NavLink

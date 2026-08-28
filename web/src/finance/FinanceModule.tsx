@@ -105,7 +105,9 @@ export function FinanceModule() {
     <div className={styles.finance}>
       <header className={styles.header}>
         <h1 className={styles.title}>{strings.moduleFinance}</h1>
-        <nav className={styles.tabs}>
+        {/* Scrolls horizontally on a phone by design; the responsive e2e
+            sweep exempts marked strips from its width invariant. */}
+        <nav className={styles.tabs} data-allow-overflow="">
           {TABS.filter((tab) => approver || !tab.bookkeeper).map((tab) => (
             <NavLink
               key={tab.path}

@@ -127,7 +127,7 @@ export function OrderLines({
       {rows.length === 0 ? (
         <p className={styles.noMatches}>{strings.inventoryNoLines}</p>
       ) : (
-        <div className={styles.tableWrap}>
+        <div className={styles.tableWrap} data-allow-overflow="">
           <table className={styles.table}>
             <thead>
               <tr>

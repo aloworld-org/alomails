@@ -108,7 +108,7 @@ export function MoveHistory({
           )}
 
           {moves.length > 0 && (
-            <div className={styles.tableWrap}>
+            <div className={styles.tableWrap} data-allow-overflow="">
               <table className={styles.table}>
                 <thead>
                   <tr>

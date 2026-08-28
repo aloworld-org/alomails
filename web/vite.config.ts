@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 // ds/tokens.css by scripts/gen-tailwind-theme.mjs, so utilities and custom
 // properties are the same values spelled two ways.
 import tailwindcss from "@tailwindcss/vite";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 import type { ProxyOptions } from "vite";
 import { fileURLToPath } from "node:url";
 
@@ -134,6 +134,9 @@ export default defineConfig(({ command }) => ({
   },
   test: {
     environment: "jsdom",
+    // The Playwright suite in e2e/ matches vitest's default spec glob but
+    // needs a real browser and its own runner (`npm run test:responsive`).
+    exclude: [...configDefaults.exclude, "e2e/**"],
     // Raises Testing Library's async timeout off its one-second default, which
     // a loaded runner blows through — the gate was failing a different
     // innocent test on every run. See `vitest.setup.ts` for the evidence.

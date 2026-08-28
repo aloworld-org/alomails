@@ -195,7 +195,14 @@ export function Table({
     <div
       className={region}
       {...(scrollable
-        ? { tabIndex: 0, role: "region", "aria-label": label }
+        ? {
+            tabIndex: 0,
+            role: "region",
+            "aria-label": label,
+            // The region scrolls on purpose; the responsive e2e sweep exempts
+            // marked containers from its element-width invariant.
+            "data-allow-overflow": "",
+          }
         : {})}
     >
       <table className={table}>

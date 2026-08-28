@@ -59,7 +59,9 @@ export function InventoryModule() {
     <div className={styles.inventory}>
       <header className={styles.header}>
         <h1 className={styles.title}>{strings.moduleInventory}</h1>
-        <nav className={styles.tabs}>
+        {/* Scrolls horizontally on a phone by design; the responsive e2e
+            sweep exempts marked strips from its width invariant. */}
+        <nav className={styles.tabs} data-allow-overflow="">
           {TABS.map((tab) => (
             <NavLink
               key={tab.path}

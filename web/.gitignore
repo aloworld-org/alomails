@@ -3,3 +3,7 @@
 /dist-workplace/
 /dist-drive/
 /dist-mail/
+
+# The responsive e2e suite's runtime droppings: stack logs, failure
+# screenshots, the throwaway stack's blob dir and pid bookkeeping.
+/e2e/.artifacts/

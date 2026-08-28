@@ -36,6 +36,20 @@
   gap: 2px;
   margin-left: auto;
 }
+/* On a phone the strip scrolls sideways under a finger — every tab one swipe
+   away — rather than running off the screen edge (the same choice Inventory's
+   strip makes). */
+@media (max-width: 48rem) {
+  .tabs {
+    margin-left: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+  .tab {
+    white-space: nowrap;
+  }
+}
 .tab {
   padding: 8px 14px;
   border-radius: var(--radius-md);
