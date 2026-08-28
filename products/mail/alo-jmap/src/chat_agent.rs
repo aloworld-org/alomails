@@ -162,6 +162,15 @@ async fn take_turn(
     }
 
     let ground = ground(account, agent.product, question, CHAT_SOURCES).await;
+    // Who this agent may hand a sub-question to (A5.1): the same module-gated
+    // roster orchestration routes over, which is what keeps a handoff inside
+    // what the asker can see. Ask alo gets none here — its delegation path is
+    // the planner above, and this turn is only its fallback.
+    let roster = if agent.product == alo_store::AgentProduct::Workspace {
+        Vec::new()
+    } else {
+        crate::agent_orchestrate::roster(account, agent).await
+    };
     // The turn, with its reading tools run inside it (ADR 0047): asking what is
     // in stock comes back as the figure, and only a change comes back as
     // something to approve.
@@ -176,6 +185,7 @@ async fn take_turn(
         today: &today,
         folders: &[],
         context: TurnContext::in_room(&agent.id, channel),
+        roster: &roster,
     };
     let decided = run_turn(state, account, &config, &turn).await;
     // Stopped while it was thinking: the call cannot be un-made, but its words

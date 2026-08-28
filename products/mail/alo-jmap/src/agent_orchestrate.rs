@@ -167,7 +167,11 @@ pub(crate) async fn orchestrate(
 /// Read through [`alo_store::AccountStore::agents`], so the module gate is the
 /// same one the agent list itself obeys: a module an admin switched off for
 /// this person has no agent here, and therefore no step can name it.
-async fn roster(account: &Account, alo: &ChatAgent) -> Vec<ChatAgent> {
+///
+/// Crate-visible because a product agent's handoffs ([`crate::agent_turn`],
+/// A5.1) route over this same list: one roster, one gate, however a
+/// sub-question travels.
+pub(crate) async fn roster(account: &Account, alo: &ChatAgent) -> Vec<ChatAgent> {
     account
         .acc
         .agents()
@@ -283,6 +287,9 @@ async fn take_step(
         today: run.today,
         folders: &[],
         context: TurnContext::in_room(&delegate.id, voice.channel),
+        // A step does not hand off further (A5.1): the plan above it is the
+        // delegation, and A5.2 makes the two one mechanism.
+        roster: &[],
     };
     run_turn(voice.state, voice.account, run.config, &turn).await
 }

@@ -21,6 +21,7 @@ use serde::{Deserialize, Serialize};
 
 pub use alo_store::AgentProduct;
 
+use crate::agent_plan::PlanAgent;
 use crate::agent_product::{tool_sets, tools_for};
 use crate::agent_tool::{AgentTool, find_tool};
 use crate::{AiConfig, ChatMessage, InferenceError, WorkspaceSource, chat, render_sources};
@@ -47,7 +48,8 @@ pub struct ProposedAction {
     pub args: serde_json::Value,
 }
 
-/// What the agent decided for one turn: answer, or propose a single action.
+/// What the agent decided for one turn: answer, propose a single action, or
+/// hand a sub-question to another agent.
 #[derive(Debug, Clone, PartialEq)]
 pub enum AgentDecision {
     /// A grounded answer (cites the numbered sources); nothing to execute.
@@ -58,6 +60,17 @@ pub enum AgentDecision {
         action: ProposedAction,
         /// A short, human sentence describing what it will do.
         say: String,
+    },
+    /// A handoff (ADR 0057 §3, A5.1): another agent is asked a sub-question
+    /// inside this run, as the asker, and its answer comes back as a source.
+    /// Every bound on it — depth, count, whether `to` names anybody the asker
+    /// can see — is enforced by the caller, never here: the model is the
+    /// untrusted party, and this variant is only what it asked for.
+    Delegate {
+        /// The handle of the agent to ask, without the `@`.
+        to: String,
+        /// The sub-question, in words that stand on their own.
+        ask: String,
     },
 }
 
@@ -249,6 +262,33 @@ pub struct AgentAsk<'a> {
     /// The user's mail-folder names, so `move_to_folder` can only target a real
     /// one. Ignored unless this product actually has that tool.
     pub folders: &'a [String],
+    /// The agents this turn may hand a sub-question to (A5.1) — the asker's
+    /// own module-gated roster, minus this agent itself. Empty when the run
+    /// has no room, no depth left, or nobody to hand to, and the offer is
+    /// then not made at all.
+    pub delegates: &'a [PlanAgent<'a>],
+}
+
+/// The handoff offer (ADR 0057 §3), appended to the user turn when there is
+/// somebody to hand a sub-question to. It rides in the user message rather
+/// than the system prompt because it is a fact about *this* run — the roster
+/// and the remaining depth — not about the product's agent.
+fn delegates_block(delegates: &[PlanAgent<'_>]) -> String {
+    if delegates.is_empty() {
+        return String::new();
+    }
+    let roster = delegates
+        .iter()
+        .map(|agent| format!("@{} (the {} agent)", agent.handle, agent.product))
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!(
+        "\n\nYou may also HAND OFF one sub-question that belongs to another agent's product: \
+{{\"kind\":\"delegate\",\"delegate\":{{\"to\":\"<handle>\",\"ask\":\"<the sub-question, in words that stand on their own>\"}}}}. \
+The handoff runs immediately, as the person asking, and that agent's answer comes back to you as a \
+further numbered source to cite in your own answer. Never hand off what your own tools cover, and \
+hand off one thing at a time. You can hand off to: {roster}."
+    )
 }
 
 /// The chat messages for one agent turn. Pure and exported so the prompt is
@@ -268,11 +308,12 @@ pub fn agent_messages(ask: &AgentAsk<'_>) -> Vec<ChatMessage> {
             )
         };
     let user = format!(
-        "Today's date is {}.\nRequest: {}\n\nSources:\n{}{}",
+        "Today's date is {}.\nRequest: {}\n\nSources:\n{}{}{}",
         ask.today.trim(),
         ask.request.trim(),
         render_sources(ask.sources),
-        folder_line
+        folder_line,
+        delegates_block(ask.delegates)
     );
     vec![
         ChatMessage {
@@ -302,6 +343,13 @@ pub(crate) fn extract_json(text: &str) -> Option<&str> {
 /// [`InferenceError::Empty`] if no valid envelope is present.
 pub fn parse_decision(text: &str) -> Result<AgentDecision, InferenceError> {
     #[derive(Deserialize)]
+    struct Handoff {
+        #[serde(default)]
+        to: String,
+        #[serde(default)]
+        ask: String,
+    }
+    #[derive(Deserialize)]
     struct Envelope {
         kind: String,
         #[serde(default)]
@@ -310,6 +358,8 @@ pub fn parse_decision(text: &str) -> Result<AgentDecision, InferenceError> {
         action: Option<ProposedAction>,
         #[serde(default)]
         say: Option<String>,
+        #[serde(default)]
+        delegate: Option<Handoff>,
     }
     let json = extract_json(text).ok_or(InferenceError::Empty)?;
     let env: Envelope = serde_json::from_str(json).map_err(|_| InferenceError::Empty)?;
@@ -330,6 +380,17 @@ pub fn parse_decision(text: &str) -> Result<AgentDecision, InferenceError> {
                 action,
                 say: env.say.unwrap_or_default().trim().to_owned(),
             })
+        }
+        "delegate" => {
+            let handoff = env.delegate.ok_or(InferenceError::Empty)?;
+            // Models write the handle the way people do; the roster stores it
+            // bare, so the `@` is stripped rather than made a resolution miss.
+            let to = handoff.to.trim().trim_start_matches('@').trim().to_owned();
+            let ask = handoff.ask.trim().to_owned();
+            if to.is_empty() || ask.is_empty() {
+                return Err(InferenceError::Empty);
+            }
+            Ok(AgentDecision::Delegate { to, ask })
         }
         _ => Err(InferenceError::Empty),
     }
@@ -456,6 +517,66 @@ mod tests {
         }
     }
 
+    /// A5.1: the third envelope. The handle is stored bare, so the `@` a model
+    /// naturally writes is stripped rather than made a resolution miss; a
+    /// handoff with nobody or nothing to ask is no decision at all.
+    #[test]
+    fn parses_a_delegate_envelope_and_strips_the_at() {
+        let text =
+            r#"{"kind":"delegate","delegate":{"to":"@inventory","ask":"is the X100 in stock?"}}"#;
+        assert_eq!(
+            parse_decision(text).unwrap(),
+            AgentDecision::Delegate {
+                to: "inventory".to_owned(),
+                ask: "is the X100 in stock?".to_owned()
+            }
+        );
+        let bare =
+            r#"{"kind":"delegate","delegate":{"to":"crm","ask":"which deal is behind Q-31?"}}"#;
+        assert!(matches!(
+            parse_decision(bare).unwrap(),
+            AgentDecision::Delegate { to, .. } if to == "crm"
+        ));
+        assert!(parse_decision(r#"{"kind":"delegate"}"#).is_err());
+        assert!(parse_decision(r#"{"kind":"delegate","delegate":{"to":"@","ask":"x"}}"#).is_err());
+        assert!(
+            parse_decision(r#"{"kind":"delegate","delegate":{"to":"crm","ask":"  "}}"#).is_err()
+        );
+    }
+
+    /// The handoff offer is a fact about the run: it names exactly the roster
+    /// it was given, and with nobody to hand to it is not made at all — an
+    /// offer with an empty list would read as an invitation to invent one.
+    #[test]
+    fn the_handoff_offer_is_made_only_when_there_is_somebody_to_hand_to() {
+        let roster = [
+            PlanAgent {
+                handle: "crm",
+                product: AgentProduct::Crm,
+            },
+            PlanAgent {
+                handle: "stock",
+                product: AgentProduct::Inventory,
+            },
+        ];
+        let mut asked = ask(AgentProduct::Billing, "can we fulfil the quote?", &[], &[]);
+        asked.delegates = &roster;
+        let offered = agent_messages(&asked);
+        let user = &offered[1].content;
+        assert!(user.contains("\"kind\":\"delegate\""));
+        assert!(user.contains("@crm (the crm agent)"));
+        assert!(user.contains("@stock (the inventory agent)"));
+        assert!(user.contains("Never hand off what your own tools cover"));
+        // …and the offer survives into the after-read call, where the folded
+        // answer is what it is being asked to cite.
+        let after = after_read_messages(&asked, true);
+        assert!(after[1].content.contains("@crm (the crm agent)"));
+
+        let without = agent_messages(&ask(AgentProduct::Billing, "hi", &[], &[]));
+        assert!(!without[1].content.contains("HAND OFF"));
+        assert!(!without[1].content.contains("\"kind\":\"delegate\""));
+    }
+
     #[test]
     fn tolerates_code_fences_and_preamble() {
         let text = "Sure!\n```json\n{\"kind\":\"answer\",\"answer\":\"Hi\"}\n```";
@@ -486,6 +607,7 @@ mod tests {
             sources,
             today: "2026-08-07",
             folders,
+            delegates: &[],
         }
     }
 
@@ -830,6 +952,7 @@ mod tests {
             sources: &sources,
             today: "2026-08-14",
             folders: &[],
+            delegates: &[],
         };
         let more = after_read_messages(&asked, true);
         let last = &more[1].content;

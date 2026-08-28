@@ -11,30 +11,59 @@
 //! so the answer is cited to the record instead of to a search snippet. A
 //! **write** still comes back as a proposal and is the caller's to record.
 //!
-//! Two bounds hold it down, and both are here rather than in the prompt:
+//! A turn may also **hand off** a sub-question to another agent (ADR 0057 §3,
+//! A5.1): the model replies with a `delegate` envelope, the named agent takes
+//! an ordinary nested turn — its prompt, its grounding, its scope at the
+//! execution boundary, all through the **asker's** account door — and its
+//! answer is folded back in as a further numbered source to cite. The room
+//! sees the handoff line before it runs; the delegate itself posts nothing.
 //!
-//! - **At most [`MAX_READS`] read executions per turn.** A confused or injected
+//! The bounds hold it down, and all of them are here rather than in the prompt:
+//!
+//! - **At most [`MAX_READS`] read executions per run.** A confused or injected
 //!   turn cannot spend a workspace's inference budget going round; on the
 //!   seventh it answers with what it has and says so.
+//! - **At most [`MAX_HANDOFFS`] handoffs per run, to a depth of
+//!   [`MAX_HANDOFF_DEPTH`]**, and the run has ONE budget: a delegate's reads
+//!   and further handoffs draw down the same [`RunBudget`] the asking agent
+//!   started with, so nesting multiplies nothing.
 //! - **A write is refused at the execution boundary**, not asked not to happen.
 //!   [`crate::agent::execute_tool`] is given [`Approval::InTurn`] here, and that
 //!   is what makes "reads only" true no matter what the model returns.
+//! - **A handoff reaches only agents the asker can see.** The roster is the
+//!   asker's own module-gated agent list; a handle outside it is dropped with
+//!   a line the model can answer around, never resolved more widely.
 //!
 //! Everything runs through the **asker's** account door, exactly as the
 //! retrieval that grounds the turn already did. A read's blast radius under
 //! prompt injection is therefore the one workspace search already had: a
 //! hostile message can make an agent look up something the person who
-//! triggered the turn could already look up, and nothing further.
+//! triggered the turn could already look up, and nothing further — and a
+//! handoff widens that to other agents' *reads*, still as the same person.
 
-use alo_ai::{AgentAsk, AgentDecision, AiConfig, InferenceError, WorkspaceSource};
-use alo_store::{AgentProduct, ChatAgentId, ChatChannelId};
+use std::future::Future;
+use std::pin::Pin;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+use alo_ai::{AgentAsk, AgentDecision, AiConfig, InferenceError, PlanAgent, WorkspaceSource};
+use alo_store::{AgentProduct, ChatAgent, ChatAgentId, ChatChannelId};
 
 use crate::agent::{Approval, ToolRun, execute_tool};
 use crate::state::{Account, AppState};
 
-/// How many reading tools one turn may run (ADR 0047 §2, raised by ADR 0058:
-/// "what did we quote Northstar" is customer → quotes → quote).
+/// How many reading tools one run may execute (ADR 0047 §2, raised by ADR
+/// 0058: "what did we quote Northstar" is customer → quotes → quote).
 const MAX_READS: usize = 6;
+
+/// How many handoffs one run may make, refusals included (ADR 0057 §3). A
+/// dropped handoff spends its slot too — that is what keeps a model that
+/// insists on delegating from circling forever.
+const MAX_HANDOFFS: usize = 4;
+
+/// How deep a handoff chain may go (ADR 0057 §3): the asking agent may hand
+/// off, its delegate may hand off once more, and the turn at that depth is
+/// offered nobody.
+const MAX_HANDOFF_DEPTH: usize = 2;
 
 /// How much of a tool's result is shown to the model. Enough for a diary month
 /// or a stock record; short enough that one verbose tool cannot crowd out the
@@ -51,10 +80,63 @@ pub(crate) const MAX_RESULT_CHARS: usize = 4_000;
 /// tell what it looked up from what a search happened to match.
 const RESULT_KIND: &str = "tool result";
 
+/// The `kind` a delegate's folded-in answer carries in the numbered sources
+/// (A5.1), so citing it names the agent that was asked.
+const DELEGATED_KIND: &str = "delegated answer";
+
 /// Said when the turn used every lookup it had and still wanted another. It
 /// says which question went unanswered rather than pretending to one.
 const OUT_OF_LOOKUPS: &str = "I looked things up as far as I'm allowed to for one question and still couldn't get to an \
      answer. Could you narrow it down, or ask me one part of it at a time?";
+
+/// Said when the run spent every handoff it had and still wanted another.
+const OUT_OF_HANDOFFS: &str = "I've asked the other agents as much as I'm allowed to for one question and still couldn't \
+     finish. Could you ask the remaining part directly?";
+
+/// One run's spend, shared across the asking turn and every turn it delegates
+/// to — the "one budget" of ADR 0057 §3. Counters rather than a mutex because
+/// the whole run is one task: atomics are just the cheapest thing that lets
+/// the nested futures stay `Send`.
+struct RunBudget {
+    /// Read executions taken, capped at [`MAX_READS`].
+    reads: AtomicUsize,
+    /// Handoffs taken (refused ones included), capped at [`MAX_HANDOFFS`].
+    handoffs: AtomicUsize,
+}
+
+impl RunBudget {
+    const fn new() -> Self {
+        Self {
+            reads: AtomicUsize::new(0),
+            handoffs: AtomicUsize::new(0),
+        }
+    }
+
+    /// Take one read from the run, saying whether there was one to take.
+    fn take_read(&self) -> bool {
+        take(&self.reads, MAX_READS)
+    }
+
+    /// Whether a further read could still be taken — what the after-read
+    /// prompt tells the model about its remaining budget.
+    fn reads_left(&self) -> bool {
+        self.reads.load(Ordering::SeqCst) < MAX_READS
+    }
+
+    /// Take one handoff from the run, saying whether there was one to take.
+    fn take_handoff(&self) -> bool {
+        take(&self.handoffs, MAX_HANDOFFS)
+    }
+}
+
+/// Count one use against `cap`, refusing at it.
+fn take(counter: &AtomicUsize, cap: usize) -> bool {
+    counter
+        .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |used| {
+            (used < cap).then_some(used + 1)
+        })
+        .is_ok()
+}
 
 /// Where a turn is happening, for the boundary check and the audit record.
 #[derive(Debug, Clone, Copy)]
@@ -119,6 +201,11 @@ pub(crate) struct Turn<'a> {
     pub folders: &'a [String],
     /// The agent and the room, if there are any.
     pub context: TurnContext<'a>,
+    /// The agents this run may hand a sub-question to (A5.1): the asker's own
+    /// module-gated roster, already stripped of the retired and of every "Ask
+    /// alo". Empty where delegation has no place — the command palette, and an
+    /// orchestrated step (Ask alo's planner is the delegation path there).
+    pub roster: &'a [ChatAgent],
 }
 
 /// What one turn ended as.
@@ -150,66 +237,252 @@ pub(crate) async fn take_turn(
     config: &AiConfig,
     turn: &Turn<'_>,
 ) -> Result<TurnResult, InferenceError> {
-    let Turn {
-        product,
-        request,
-        today,
-        folders,
-        context,
-        ..
-    } = *turn;
-    let mut sources = turn.sources.to_vec();
-    // Built twice rather than held across the loop: `sources` grows by a tool
-    // result between the two calls, so an `AgentAsk` borrowing it cannot
-    // outlive one round.
-    let mut decided = alo_ai::run_agent(
+    let env = RunEnv {
+        state,
+        account,
         config,
-        &AgentAsk {
+        budget: RunBudget::new(),
+    };
+    turn_at(&env, turn, 0).await
+}
+
+/// What every depth of one run shares: the world it runs in, and the one
+/// budget it spends. A struct rather than four parameters threaded through the
+/// recursion, so a nested turn cannot be handed somebody else's budget.
+struct RunEnv<'a> {
+    state: &'a AppState,
+    account: &'a Account,
+    config: &'a AiConfig,
+    budget: RunBudget,
+}
+
+/// One turn at one depth of a run, drawing on the run's one budget.
+///
+/// Boxed because it is recursive: a handoff takes the delegate's turn through
+/// this same function at `depth + 1`, and an async fn cannot hold its own
+/// future inline.
+fn turn_at<'a>(
+    env: &'a RunEnv<'a>,
+    turn: &'a Turn<'a>,
+    depth: usize,
+) -> Pin<Box<dyn Future<Output = Result<TurnResult, InferenceError>> + Send + 'a>> {
+    Box::pin(async move {
+        let Turn {
             product,
             request,
-            sources: &sources,
             today,
             folders,
-        },
-    )
-    .await?;
-
-    for used in 0..MAX_READS {
-        let action = match step(decided) {
-            Step::Done(result) => return Ok(result),
-            Step::RunRead(action) => action,
-        };
-        let detail = run_read(state, account, &action, context).await;
-        sources.push(WorkspaceSource {
-            index: sources.len() + 1,
-            kind: RESULT_KIND.to_owned(),
-            title: action.tool.clone(),
-            detail,
-        });
-        let more_allowed = used + 1 < MAX_READS;
-        decided = alo_ai::run_agent_after_read(
-            config,
+            context,
+            ..
+        } = *turn;
+        let mut sources = turn.sources.to_vec();
+        let offers = handoff_offers(turn, depth);
+        // Built each round rather than held across the loop: `sources` grows by
+        // a tool result between the calls, so an `AgentAsk` borrowing it cannot
+        // outlive one round.
+        let mut decided = alo_ai::run_agent(
+            env.config,
             &AgentAsk {
                 product,
                 request,
                 sources: &sources,
                 today,
                 folders,
+                delegates: &offers,
             },
-            more_allowed,
         )
         .await?;
-    }
-    Ok(finish(decided))
+
+        loop {
+            // Every round either ends the turn or spends the run's budget, and
+            // a spend the budget refuses ends the turn too — which is what
+            // bounds the loop, nested turns included.
+            let (kind, title, detail) = match step(decided) {
+                Step::Done(result) => return Ok(result),
+                Step::RunRead(action) => {
+                    if !env.budget.take_read() {
+                        return Ok(finish(Step::RunRead(action)));
+                    }
+                    let detail = run_read(env.state, env.account, &action, context).await;
+                    (RESULT_KIND, action.tool.clone(), detail)
+                }
+                Step::Handoff { to, ask } => {
+                    if !env.budget.take_handoff() {
+                        return Ok(finish(Step::Handoff { to, ask }));
+                    }
+                    let detail = run_handoff(env, turn, depth, &to, &ask).await;
+                    (DELEGATED_KIND, format!("@{to}"), detail)
+                }
+            };
+            sources.push(WorkspaceSource {
+                index: sources.len() + 1,
+                kind: kind.to_owned(),
+                title,
+                detail,
+            });
+            decided = alo_ai::run_agent_after_read(
+                env.config,
+                &AgentAsk {
+                    product,
+                    request,
+                    sources: &sources,
+                    today,
+                    folders,
+                    delegates: &offers,
+                },
+                env.budget.reads_left(),
+            )
+            .await?;
+        }
+    })
 }
 
-/// What a decision means for the turn: either the turn is over, or there is a
-/// read to run before asking again.
+/// The agents this turn is offered to hand off to: the run's roster minus the
+/// turn's own agent, and nobody once the chain is [`MAX_HANDOFF_DEPTH`] deep —
+/// an offer that cannot be honoured is the invitation to a refusal loop.
+fn handoff_offers<'a>(turn: &'a Turn<'_>, depth: usize) -> Vec<PlanAgent<'a>> {
+    if depth >= MAX_HANDOFF_DEPTH {
+        return Vec::new();
+    }
+    turn.roster
+        .iter()
+        .filter(|agent| {
+            !turn
+                .context
+                .agent
+                .is_some_and(|id| id.as_str() == agent.id.as_str())
+        })
+        .map(|agent| PlanAgent {
+            handle: &agent.handle,
+            product: agent.product,
+        })
+        .collect()
+}
+
+/// One handoff (ADR 0057 §3): resolve the handle against the asker's own
+/// roster, say in the room who is being asked what, take the delegate's turn
+/// as the asker on the run's shared budget, and fold what came of it into a
+/// line the asking model can cite — or answer around.
+///
+/// Nothing here fails the turn. A handle the asker cannot see, a delegate that
+/// wanted to change something, a model that could not be reached — each is a
+/// sentence for the model, because "say which part you could not do" is a far
+/// better turn than one that dies silently.
+async fn run_handoff(
+    env: &RunEnv<'_>,
+    turn: &Turn<'_>,
+    depth: usize,
+    to: &str,
+    ask: &str,
+) -> String {
+    // Resolved against the same roster the offer was made from — the asker's
+    // own module-gated agents — and against the same depth rule, so a stray
+    // envelope at the depth cap meets the same line an unknown handle does.
+    // A handle the asker cannot see is DROPPED here: no room line, no turn.
+    let target = turn
+        .roster
+        .iter()
+        .filter(|_| depth < MAX_HANDOFF_DEPTH)
+        .find(|agent| {
+            agent.handle == to
+                && !turn
+                    .context
+                    .agent
+                    .is_some_and(|id| id.as_str() == agent.id.as_str())
+        });
+    let Some(delegate) = target else {
+        return format!(
+            "nobody was asked: there is no @{to} here you can hand this to — answer from what \
+             you have, or say which part you could not do"
+        );
+    };
+    // The room sees who asked whom for what, before it runs — the handoff
+    // line ADR 0057 §3 requires ("visibly: the room sees who asked whom").
+    // Best-effort, like every posting inside a turn. A nested asker is a
+    // delegate itself and not yet in the room, so it joins to say its line —
+    // the same idempotent, module-gated join an orchestrated step makes,
+    // because an agent that takes part in a conversation is a participant in
+    // it (ADR 0034).
+    if let (Some(asking), Some(channel)) = (turn.context.agent, turn.context.channel) {
+        let line = format!("I'm asking @{}: {ask}", delegate.handle);
+        if env
+            .account
+            .acc
+            .add_agent_to_channel(channel, asking)
+            .await
+            .is_ok()
+            && env
+                .account
+                .acc
+                .post_as_agent(channel, asking, &line, None)
+                .await
+                .is_ok()
+        {
+            let audience: Vec<alo_store::UserId> = env
+                .account
+                .acc
+                .channel_members(channel)
+                .await
+                .map(|members| members.into_iter().map(|member| member.user).collect())
+                .unwrap_or_default();
+            crate::push::notify_chat(env.state, &env.account.tenant, &audience).await;
+        }
+    }
+    // An ordinary turn of the delegate's own: its product's grounding, its
+    // prompt, its id at the execution boundary — and the asker's account door
+    // under all of it, which is what "as the asker" means.
+    let ground = crate::chat_agent::ground(
+        env.account,
+        delegate.product,
+        ask,
+        crate::chat_agent::CHAT_SOURCES,
+    )
+    .await;
+    let nested = Turn {
+        product: delegate.product,
+        request: ask,
+        sources: &ground,
+        today: turn.today,
+        folders: &[],
+        context: TurnContext {
+            agent: Some(&delegate.id),
+            channel: turn.context.channel,
+        },
+        roster: turn.roster,
+    };
+    match turn_at(env, &nested, depth + 1).await {
+        Ok(TurnResult::Answer(text)) => format!("@{} answered: {text}", delegate.handle),
+        // A delegate's write is NOT proposed from here (that is A5.2's one
+        // approval surface); the asking agent is told what it wanted so it can
+        // say so, and the person can ask that agent directly.
+        Ok(TurnResult::Propose { say, .. }) => format!(
+            "@{} did not answer — it wanted to make a change first: \"{say}\". A change a \
+             delegate wants is not proposed from here: say so, and that the person can ask @{} \
+             directly.",
+            delegate.handle, delegate.handle
+        ),
+        Err(_) => format!(
+            "the handoff to @{} did not run: the model could not be reached",
+            delegate.handle
+        ),
+    }
+}
+
+/// What a decision means for the turn: the turn is over, or there is a read to
+/// run — or a handoff to make — before asking again.
 enum Step {
     /// Nothing left to look up.
     Done(TurnResult),
     /// A reading tool to execute, whose result grounds the next question.
     RunRead(alo_ai::ProposedAction),
+    /// A sub-question to hand to another agent, whose answer grounds the next
+    /// question (A5.1).
+    Handoff {
+        /// The handle the model named, bare.
+        to: String,
+        /// The sub-question, in words that stand on their own.
+        ask: String,
+    },
 }
 
 /// Read one decision (ADR 0047 §1). **The whole read-versus-write split lives
@@ -237,18 +510,21 @@ fn step(decided: AgentDecision) -> Step {
                 Step::Done(TurnResult::Propose { action, say })
             }
         }
+        AgentDecision::Delegate { to, ask } => Step::Handoff { to, ask },
     }
 }
 
-/// The decision, once no more reads may run.
+/// The step, once the budget refuses it.
 ///
 /// A read still being asked for here is the bound biting: it must not become a
 /// proposal, because a button that reads something is the bug ADR 0047 exists
-/// to remove — so the turn says what happened instead.
-fn finish(decided: AgentDecision) -> TurnResult {
-    match step(decided) {
+/// to remove — so the turn says what happened instead. A handoff at the bound
+/// ends the same way, in its own words.
+fn finish(step: Step) -> TurnResult {
+    match step {
         Step::Done(result) => result,
         Step::RunRead(_) => TurnResult::Answer(OUT_OF_LOOKUPS.to_owned()),
+        Step::Handoff { .. } => TurnResult::Answer(OUT_OF_HANDOFFS.to_owned()),
     }
 }
 
@@ -306,7 +582,7 @@ mod tests {
     /// The bound biting must not produce a button on a read.
     #[test]
     fn a_read_still_wanted_at_the_bound_becomes_an_answer() {
-        match finish(action("stock_answer")) {
+        match finish(step(action("stock_answer"))) {
             TurnResult::Answer(text) => assert!(text.contains("narrow it down")),
             TurnResult::Propose { .. } => panic!("a read must never become a proposal"),
         }
@@ -314,7 +590,7 @@ mod tests {
 
     #[test]
     fn a_write_at_the_bound_is_still_proposed() {
-        match finish(action("create_task")) {
+        match finish(step(action("create_task"))) {
             TurnResult::Propose { action, say } => {
                 assert_eq!(action.tool, "create_task");
                 assert_eq!(say, "doing it");
@@ -329,10 +605,81 @@ mod tests {
     #[test]
     fn an_unknown_tool_is_not_treated_as_a_read() {
         assert!(matches!(
-            finish(action("delete_everything")),
+            finish(step(action("delete_everything"))),
             TurnResult::Propose { .. }
         ));
         assert!(matches!(step(action("delete_everything")), Step::Done(_)));
+    }
+
+    /// A handoff the budget refuses ends as a sentence, never as a proposal
+    /// and never as a delegate turn nobody counted.
+    #[test]
+    fn a_handoff_at_the_bound_becomes_an_answer_in_its_own_words() {
+        let wanted = step(AgentDecision::Delegate {
+            to: "crm".to_owned(),
+            ask: "which deal is behind Q-31?".to_owned(),
+        });
+        match finish(wanted) {
+            TurnResult::Answer(text) => assert!(text.contains("ask the remaining part")),
+            TurnResult::Propose { .. } => panic!("a handoff must never become a proposal"),
+        }
+    }
+
+    /// One budget for one run (ADR 0057 §3): the caps refuse exactly at their
+    /// numbers, wherever in the run the spend comes from.
+    #[test]
+    fn the_run_budget_refuses_at_its_caps() {
+        let budget = RunBudget::new();
+        for _ in 0..MAX_READS {
+            assert!(budget.take_read());
+        }
+        assert!(!budget.take_read(), "a seventh read must be refused");
+        assert!(!budget.reads_left());
+        for _ in 0..MAX_HANDOFFS {
+            assert!(budget.take_handoff());
+        }
+        assert!(!budget.take_handoff(), "a fifth handoff must be refused");
+    }
+
+    fn roster_agent(handle: &str, product: AgentProduct) -> ChatAgent {
+        ChatAgent {
+            id: ChatAgentId::new(format!("agent-{handle}")),
+            handle: handle.to_owned(),
+            name: handle.to_owned(),
+            description: None,
+            product,
+            disabled: false,
+        }
+    }
+
+    /// The offer is the roster minus the turn's own agent, and nobody at the
+    /// depth cap — the turn two handoffs down is told about no one, so the
+    /// chain ends by construction rather than by refusal.
+    #[test]
+    fn handoffs_are_offered_within_depth_and_never_to_oneself() {
+        let roster = [
+            roster_agent("billing", AgentProduct::Billing),
+            roster_agent("inventory", AgentProduct::Inventory),
+        ];
+        let billing_id = ChatAgentId::new("agent-billing".to_owned());
+        let channel = ChatChannelId::new("c1".to_owned());
+        let turn = Turn {
+            product: AgentProduct::Billing,
+            request: "can we fulfil the quote?",
+            sources: &[],
+            today: "2026-08-28",
+            folders: &[],
+            context: TurnContext::in_room(&billing_id, &channel),
+            roster: &roster,
+        };
+        let offered = handoff_offers(&turn, 0);
+        assert_eq!(offered.len(), 1, "never to oneself");
+        assert_eq!(offered[0].handle, "inventory");
+        assert_eq!(handoff_offers(&turn, 1).len(), 1);
+        assert!(
+            handoff_offers(&turn, MAX_HANDOFF_DEPTH).is_empty(),
+            "the turn at the depth cap is offered nobody"
+        );
     }
 
     /// **Another product's read takes the read path and is refused there**
@@ -400,6 +747,9 @@ mod tests {
                 Step::Done(TurnResult::Answer(_)) => {
                     panic!("{} became an answer with no tool run", entry.name)
                 }
+                Step::Handoff { .. } => {
+                    panic!("{} is a tool, never a handoff", entry.name)
+                }
             }
         }
         // Forty of them, which is the whole point of ADR 0047 — eleven
@@ -417,7 +767,7 @@ mod tests {
 
     #[test]
     fn an_answer_passes_straight_through() {
-        match finish(AgentDecision::Answer("42 in stock [1].".to_owned())) {
+        match finish(step(AgentDecision::Answer("42 in stock [1].".to_owned()))) {
             TurnResult::Answer(text) => assert_eq!(text, "42 in stock [1]."),
             TurnResult::Propose { .. } => panic!("an answer is not a proposal"),
         }

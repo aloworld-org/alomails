@@ -219,6 +219,9 @@ pub async fn agent(
         today: &today,
         folders: &folders,
         context: TurnContext::palette(),
+        // No handoffs outside a room: there is nowhere for the handoff line to
+        // be seen, and Ask alo's own delegation path is the planner.
+        roster: &[],
     };
     match take_turn(&state, &account, &config, &turn).await {
         Ok(TurnResult::Answer(answer)) => Ok(Json(json!({
