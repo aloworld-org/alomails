@@ -7381,6 +7381,8 @@ export const de: Partial<Catalog> = {
   quoteStudioPricingTableNumber: (number: number) => `Preistabelle ${number}`,
   quoteStudioNumberedListColumns: "Spalten der nummerierten Liste",
   quoteStudioBulletListColumns: "Spalten der Aufzählung",
+  quoteStudioParagraphColumns: "Spalten des Absatzes",
+  quoteStudioQuoteColumns: "Spalten des Zitats",
   quoteStudioColumnCount: (count: number) =>
     count === 1 ? "1 Spalte" : `${count} Spalten`,
   quoteStudioNumberedItemA11y: (number: number) =>

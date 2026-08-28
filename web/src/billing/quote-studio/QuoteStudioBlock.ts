@@ -5,8 +5,17 @@ export type DividerWidth = 25 | 50 | 75 | 100;
 export type QuoteStudioBlock =
   | { id: string; kind: "text"; heading: string; body: string }
   | { id: string; kind: "heading"; level: 1 | 2 | 3; text: string }
-  | { id: string; kind: "paragraph"; text: string }
-  | { id: string; kind: "quote"; text: string; attribution: string }
+  // `columns` flows the prose into newspaper columns (1–3), the same setting a
+  // list already carries. Optional so every design saved before it existed
+  // reads as one column; anything outside 1–3 is clamped by `textColumns`.
+  | { id: string; kind: "paragraph"; text: string; columns?: 1 | 2 | 3 }
+  | {
+      id: string;
+      kind: "quote";
+      text: string;
+      attribution: string;
+      columns?: 1 | 2 | 3;
+    }
   | {
       id: string;
       kind: "list";

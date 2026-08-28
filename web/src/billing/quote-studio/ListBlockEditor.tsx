@@ -1,8 +1,9 @@
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
-import { ChoicePicker, cx } from "../../ds";
+import { cx } from "../../ds";
 import { strings } from "../../i18n";
 import { BlockCommand } from "./BlockCommand";
 import { InlineRichTextEditor } from "./InlineRichTextEditor";
+import { TextColumnsPicker } from "./TextColumnsPicker";
 
 export function ListBlockEditor({
   ordered,
@@ -47,28 +48,15 @@ export function ListBlockEditor({
             {strings.quoteStudioListLayoutHelp}
           </p>
         </div>
-        <div className="flex items-center gap-2 text-xs font-semibold text-secondary">
-          <span>{strings.quoteStudioColumns}</span>
-          <div className="w-36">
-            <ChoicePicker
-              value={String(columns)}
-              label={
-                ordered
-                  ? strings.quoteStudioNumberedListColumns
-                  : strings.quoteStudioBulletListColumns
-              }
-              placeholder={strings.quoteStudioChooseColumns}
-              options={[
-                { value: "1", label: strings.quoteStudioColumnCount(1) },
-                { value: "2", label: strings.quoteStudioColumnCount(2) },
-                { value: "3", label: strings.quoteStudioColumnCount(3) },
-              ]}
-              onChange={(value) =>
-                onChange({ columns: Number(value) as 1 | 2 | 3 })
-              }
-            />
-          </div>
-        </div>
+        <TextColumnsPicker
+          value={columns}
+          label={
+            ordered
+              ? strings.quoteStudioNumberedListColumns
+              : strings.quoteStudioBulletListColumns
+          }
+          onChange={(next) => onChange({ columns: next })}
+        />
       </div>
       <div
         className={cx(

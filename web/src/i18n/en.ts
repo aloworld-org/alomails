@@ -7423,6 +7423,8 @@ export const en = {
   quoteStudioPricingTableNumber: (number: number) => `Pricing table ${number}`,
   quoteStudioNumberedListColumns: "Numbered list columns",
   quoteStudioBulletListColumns: "Bullet list columns",
+  quoteStudioParagraphColumns: "Paragraph columns",
+  quoteStudioQuoteColumns: "Quote columns",
   quoteStudioColumnCount: (count: number) =>
     count === 1 ? "1 column" : `${count} columns`,
   quoteStudioNumberedItemA11y: (number: number) => `Numbered item ${number}`,

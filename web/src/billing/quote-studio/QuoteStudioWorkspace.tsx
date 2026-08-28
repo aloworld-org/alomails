@@ -41,6 +41,11 @@ import { InlineRichTextContent } from "./InlineRichTextContent";
 import { InlineRichTextEditor } from "./InlineRichTextEditor";
 import { RichTextContent } from "./RichTextContent";
 import { RichTextEditor } from "./RichTextEditor";
+import {
+  TextColumnsPicker,
+  textColumns,
+  textColumnsClass,
+} from "./TextColumnsPicker";
 import { DividerBlockEditor } from "./DividerBlockEditor";
 import { ListBlockEditor } from "./ListBlockEditor";
 import { ImageContentBlock } from "./ImageContentBlock";
@@ -945,19 +950,32 @@ export const QuoteStudioWorkspace = forwardRef<
                           )
                         ) : block.kind === "paragraph" ? (
                           readOnly ? (
-                            <RichTextContent value={block.text} />
+                            <div className={textColumnsClass(textColumns(block.columns))}>
+                              <RichTextContent value={block.text} />
+                            </div>
                           ) : (
-                            <RichTextEditor
-                              value={block.text}
-                              label={strings.quoteStudioParagraph}
-                              placeholder={strings.quoteStudioWriteParagraph}
-                              onChange={(text) => update(block.id, { text })}
-                            />
+                            <div className="grid gap-3">
+                              <div className="flex justify-end">
+                                <TextColumnsPicker
+                                  value={textColumns(block.columns)}
+                                  label={strings.quoteStudioParagraphColumns}
+                                  onChange={(columns) => update(block.id, { columns })}
+                                />
+                              </div>
+                              <RichTextEditor
+                                value={block.text}
+                                label={strings.quoteStudioParagraph}
+                                placeholder={strings.quoteStudioWriteParagraph}
+                                onChange={(text) => update(block.id, { text })}
+                              />
+                            </div>
                           )
                         ) : block.kind === "quote" ? (
                           readOnly ? (
                             <blockquote className="border-l-4 border-[var(--quote-accent)] pl-5 text-lg italic">
-                              <RichTextContent value={block.text} />
+                              <div className={textColumnsClass(textColumns(block.columns))}>
+                                <RichTextContent value={block.text} />
+                              </div>
                               {block.attribution && (
                                 <footer className="mt-2 text-sm not-italic opacity-70">
                                   <InlineRichTextContent
@@ -968,6 +986,13 @@ export const QuoteStudioWorkspace = forwardRef<
                             </blockquote>
                           ) : (
                             <div className="grid gap-3">
+                              <div className="flex justify-end">
+                                <TextColumnsPicker
+                                  value={textColumns(block.columns)}
+                                  label={strings.quoteStudioQuoteColumns}
+                                  onChange={(columns) => update(block.id, { columns })}
+                                />
+                              </div>
                               <RichTextEditor
                                 value={block.text}
                                 label={strings.quoteStudioQuotation}

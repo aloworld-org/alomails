@@ -7271,6 +7271,8 @@ export const nl: Partial<Catalog> = {
   quoteStudioPricingTableNumber: (number: number) => `Prijstabel ${number}`,
   quoteStudioNumberedListColumns: "Kolommen voor genummerde lijst",
   quoteStudioBulletListColumns: "Kolommen voor opsomming",
+  quoteStudioParagraphColumns: "Kolommen voor alinea",
+  quoteStudioQuoteColumns: "Kolommen voor citaat",
   quoteStudioColumnCount: (count: number) =>
     count === 1 ? "1 kolom" : `${count} kolommen`,
   quoteStudioNumberedItemA11y: (number: number) => `Genummerd item ${number}`,

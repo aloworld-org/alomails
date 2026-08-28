@@ -7348,6 +7348,8 @@ export const fr: Partial<Catalog> = {
     `Tableau tarifaire ${number}`,
   quoteStudioNumberedListColumns: "Colonnes de la liste numérotée",
   quoteStudioBulletListColumns: "Colonnes de la liste à puces",
+  quoteStudioParagraphColumns: "Colonnes du paragraphe",
+  quoteStudioQuoteColumns: "Colonnes de la citation",
   quoteStudioColumnCount: (count: number) =>
     count === 1 ? "1 colonne" : `${count} colonnes`,
   quoteStudioNumberedItemA11y: (number: number) => `Élément numéroté ${number}`,
