@@ -19,6 +19,7 @@ mod agent_events_http;
 mod agent_insights_http;
 mod agent_isolation_http;
 mod agent_meet_http;
+mod agent_memory_http;
 mod agent_orchestrate_http;
 mod agent_reads_answer_http;
 mod agent_seed_http;

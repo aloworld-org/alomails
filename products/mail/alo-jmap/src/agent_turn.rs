@@ -250,7 +250,10 @@ pub(crate) enum TurnResult {
 ///
 /// `sources` is the access-scoped grounding the caller retrieved; the tool
 /// results are appended to it as further numbered sources, so a citation means
-/// the same thing whichever it points at.
+/// the same thing whichever it points at. The final list — grounding plus
+/// everything the turn looked up or folded in — comes back beside the result,
+/// because it is exactly "what the turn read", which is all end-of-turn memory
+/// learning (ADR 0057 §6, A6.1) is allowed to learn from.
 ///
 /// # Errors
 /// [`InferenceError`] for disabled/unconfigured/unreachable/backend/empty —
@@ -261,7 +264,7 @@ pub(crate) async fn take_turn(
     account: &Account,
     config: &AiConfig,
     turn: &Turn<'_>,
-) -> Result<TurnResult, InferenceError> {
+) -> Result<(TurnResult, Vec<WorkspaceSource>), InferenceError> {
     let env = RunEnv::new(state, account, config);
     turn_at(&env, turn, 0).await
 }
@@ -299,16 +302,19 @@ impl<'a> RunEnv<'a> {
     }
 }
 
+/// One turn's boxed future: what it ended as, beside everything it read.
+type TurnFuture<'a> = Pin<
+    Box<
+        dyn Future<Output = Result<(TurnResult, Vec<WorkspaceSource>), InferenceError>> + Send + 'a,
+    >,
+>;
+
 /// One turn at one depth of a run, drawing on the run's one budget.
 ///
 /// Boxed because it is recursive: a handoff takes the delegate's turn through
 /// this same function at `depth + 1`, and an async fn cannot hold its own
 /// future inline.
-fn turn_at<'a>(
-    env: &'a RunEnv<'a>,
-    turn: &'a Turn<'a>,
-    depth: usize,
-) -> Pin<Box<dyn Future<Output = Result<TurnResult, InferenceError>> + Send + 'a>> {
+fn turn_at<'a>(env: &'a RunEnv<'a>, turn: &'a Turn<'a>, depth: usize) -> TurnFuture<'a> {
     Box::pin(async move {
         let Turn {
             product,
@@ -341,24 +347,24 @@ fn turn_at<'a>(
             // a spend the budget refuses ends the turn too — which is what
             // bounds the loop, nested turns included.
             let (kind, title, detail) = match step(decided) {
-                Step::Done(result) => return Ok(result),
+                Step::Done(result) => return Ok((result, sources)),
                 Step::RunRead(action) => {
                     if !env.budget.take_read() {
-                        return Ok(finish(Step::RunRead(action)));
+                        return Ok((finish(Step::RunRead(action)), sources));
                     }
                     let detail = run_read(env.state, env.account, &action, context).await;
                     (RESULT_KIND, action.tool.clone(), detail)
                 }
                 Step::Handoff { to, ask } => {
                     if !env.budget.take_handoff() {
-                        return Ok(finish(Step::Handoff { to, ask }));
+                        return Ok((finish(Step::Handoff { to, ask }), sources));
                     }
                     match run_handoff(env, turn, depth, &to, &ask).await {
                         Handoff::Fold(detail) => (DELEGATED_KIND, format!("@{to}"), detail),
                         // The delegate proposed, in the room, under its own id:
                         // the run is over, whatever depth this is — one pending
                         // proposal is the whole approval surface (A5.2).
-                        Handoff::Over(result) => return Ok(result),
+                        Handoff::Over(result) => return Ok((result, sources)),
                     }
                 }
             };
@@ -559,7 +565,10 @@ pub(crate) async fn delegate_turn(
         },
         roster,
     };
-    turn_at(env, &nested, depth).await
+    // The delegate's own reading list stays with the delegate: memory learning
+    // (A6.1) learns from the top-level turn only, and what a delegate read is
+    // folded into that turn's sources as its answer, already scoped.
+    turn_at(env, &nested, depth).await.map(|(result, _)| result)
 }
 
 /// Join `agent` to the room, say one line as it, and tell the room — the

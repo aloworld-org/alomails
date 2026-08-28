@@ -20,26 +20,26 @@ use crate::{
     billing_products, billing_quote_designs, billing_quotes, billing_reminder, billing_reports,
     billing_schedules, billing_send, billing_sepa, billing_settings, blob, calendar,
     campaign_audience, campaign_consent, campaign_preview, campaign_record, campaign_segments,
-    campaign_suppression, campaign_unsubscribe, carddav, chat, chat_agent_routes, contacts,
-    crm_activities, crm_deals, crm_handoff, crm_imports, crm_next_steps, crm_pipelines,
-    crm_reports, crm_stages, crm_threads, delegates, docs, drive, filters, finance_approvals,
-    finance_bank, finance_bank_match, finance_chart, finance_expenses, finance_mileage,
-    finance_periods, finance_receipts, finance_report_aged, finance_report_balance,
-    finance_report_pl, finance_report_vat, flagdue, hr_checklists, hr_documents, hr_employees,
-    hr_holidays, hr_leave_balances, hr_leave_policies, hr_leave_requests, hr_letters, hr_org,
-    hr_payroll, hr_recruitment, imap_import_route, insights, insights_ask, insights_eval,
-    insights_gallery, inventory_counts, inventory_locations, inventory_moves, inventory_order_book,
-    inventory_po, inventory_po_print, inventory_po_receipts, inventory_po_send, inventory_reorder,
-    inventory_scan, inventory_so, inventory_so_deliveries, inventory_so_invoice, inventory_stock,
-    inventory_supplier_prices, inventory_suppliers, invite_route, meet_routes, module_access,
-    projects_clients, projects_invoices, projects_plan, projects_reports, projects_templates,
-    projects_time, projects_updates, projects_weeks, push, push_subscriptions, readiness,
-    reset_route, schedule, scoped_roles, security, session, settings, share, signup_route,
-    site_protection, site_schedule, site_version_preview, site_versions, sites, sites_attribution,
-    sites_bookings, sites_catalogs, sites_chat, sites_conversions, sites_domain_purchases,
-    sites_heatmap, sites_knowledge, sites_orders, sites_palette, sites_shop_config,
-    sites_shop_items, sites_shop_settings, sites_templates, sites_tickets, snooze, spaces, tasks,
-    unsubscribe, wopi, workspace_search,
+    campaign_suppression, campaign_unsubscribe, carddav, chat, chat_agent_memory,
+    chat_agent_routes, contacts, crm_activities, crm_deals, crm_handoff, crm_imports,
+    crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads, delegates, docs, drive,
+    filters, finance_approvals, finance_bank, finance_bank_match, finance_chart, finance_expenses,
+    finance_mileage, finance_periods, finance_receipts, finance_report_aged,
+    finance_report_balance, finance_report_pl, finance_report_vat, flagdue, hr_checklists,
+    hr_documents, hr_employees, hr_holidays, hr_leave_balances, hr_leave_policies,
+    hr_leave_requests, hr_letters, hr_org, hr_payroll, hr_recruitment, imap_import_route, insights,
+    insights_ask, insights_eval, insights_gallery, inventory_counts, inventory_locations,
+    inventory_moves, inventory_order_book, inventory_po, inventory_po_print, inventory_po_receipts,
+    inventory_po_send, inventory_reorder, inventory_scan, inventory_so, inventory_so_deliveries,
+    inventory_so_invoice, inventory_stock, inventory_supplier_prices, inventory_suppliers,
+    invite_route, meet_routes, module_access, projects_clients, projects_invoices, projects_plan,
+    projects_reports, projects_templates, projects_time, projects_updates, projects_weeks, push,
+    push_subscriptions, readiness, reset_route, schedule, scoped_roles, security, session,
+    settings, share, signup_route, site_protection, site_schedule, site_version_preview,
+    site_versions, sites, sites_attribution, sites_bookings, sites_catalogs, sites_chat,
+    sites_conversions, sites_domain_purchases, sites_heatmap, sites_knowledge, sites_orders,
+    sites_palette, sites_shop_config, sites_shop_items, sites_shop_settings, sites_templates,
+    sites_tickets, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -360,6 +360,12 @@ pub fn app_with_site_boundaries(
         .route(
             "/chat/channels/{id}/agents/{agent}",
             delete(chat_agent_routes::remove_channel_agent),
+        )
+        // The room's memory switch (ADR 0057 §6): any member reads it, the
+        // owner (or either side of a one-to-one) sets it.
+        .route(
+            "/chat/channels/{id}/memory",
+            get(chat_agent_memory::channel_memory).post(chat_agent_memory::set_channel_memory),
         )
         .route(
             "/chat/proposals/{id}",
@@ -2258,6 +2264,12 @@ pub fn app_with_site_boundaries(
             axum::routing::delete(admin::delete_provider),
         )
         .route("/admin/ai/test", post(admin::test_connection))
+        // Admin console: the workspace default for agent channel memory
+        // (`Account::require_admin`, checked in the handler as `/admin/*` does).
+        .route(
+            "/admin/agent-memory",
+            get(chat_agent_memory::memory_default).post(chat_agent_memory::set_memory_default),
+        )
         // Admin console: users & mailboxes.
         .route(
             "/admin/users",

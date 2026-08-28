@@ -86,6 +86,7 @@ pub mod campaigns;
 pub mod carddav;
 pub mod chat;
 pub mod chat_agent;
+pub mod chat_agent_memory;
 pub mod chat_agent_names;
 pub mod chat_agent_routes;
 pub mod chat_turns;

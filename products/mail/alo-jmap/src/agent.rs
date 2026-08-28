@@ -222,7 +222,12 @@ pub async fn agent(
         // be seen, and Ask alo's own delegation path is the planner.
         roster: &[],
     };
-    match take_turn(&state, &account, &config, &turn).await {
+    // The palette has no room, so its turn feeds no channel memory: the read
+    // list beside the result is dropped here on purpose (A6.1).
+    match take_turn(&state, &account, &config, &turn)
+        .await
+        .map(|(result, _)| result)
+    {
         Ok(TurnResult::Answer(answer)) => Ok(Json(json!({
             "answer": answer, "action": Value::Null,
             "reason": Value::Null, "sources": sources_json

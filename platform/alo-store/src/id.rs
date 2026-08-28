@@ -457,6 +457,11 @@ opaque_id!(
     DomainEventId
 );
 opaque_id!(
+    /// One fact an agent remembers, in one channel or for one person (ADR
+    /// 0057 §6). Addressed by id so "What I remember" can forget exactly one.
+    AgentMemoryId
+);
+opaque_id!(
     /// One journal entry — everything one document event did to the books, in
     /// one transaction (alo Finance, ADR 0035, wave B4). An entry is written
     /// whole and never edited: a correction is another entry pointing back at

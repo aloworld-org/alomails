@@ -709,7 +709,13 @@ pub async fn post_message(
     // Saying something to an agent is the whole trigger — by name in a room, or
     // by being in a one-to-one with it (ADR 0048). The turn runs off this
     // request so the words just said are not held up by a model call.
-    crate::chat_agent::answer_if_asked(&state, &account, &message.channel, &message.body);
+    crate::chat_agent::answer_if_asked(
+        &state,
+        &account,
+        &message.channel,
+        &message.body,
+        &message.id,
+    );
     let emails = resolve_emails(&state, &account, std::slice::from_ref(&message.author)).await;
     let shared = account
         .acc

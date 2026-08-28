@@ -12,6 +12,7 @@ pub mod account_imap;
 pub mod account_mapi;
 pub mod account_sieve;
 pub mod agent_ground;
+pub mod agent_memories;
 pub mod agent_product;
 pub mod agent_tool_runs;
 pub mod app_passwords;
@@ -291,6 +292,7 @@ pub use account_imap::{ImapEntry, ImapMailbox, ImapSearchRow};
 pub use account_mapi::{MapiDirectoryEntry, MapiMessageRow};
 pub use account_sieve::{OutboundAction, SieveDelivery, SieveScriptMeta};
 pub use agent_ground::GroundSource;
+pub use agent_memories::{AgentMemory, MEMORIES_PER_SCOPE, MEMORY_FACT_MAX, MemoryLearnedFrom};
 pub use agent_product::{ALL_AGENT_PRODUCTS, AgentProduct};
 pub use agent_tool_runs::{AgentToolRun, NewAgentToolRun};
 pub use app_passwords::{
@@ -517,27 +519,27 @@ pub use hr_payroll_mapping::{
     mapping_for_country as payroll_mapping_for_country,
 };
 pub use id::{
-    AppPasswordId, AttachmentId, BankLineId, BankMatchId, BankStatementId, BaseFieldId,
-    BaseRecordId, BaseTableId, BaseViewId, BillingBillId, BillingCustomerId, BillingInvoiceId,
-    BillingLineId, BillingPaymentId, BillingProductId, BillingQuoteId, BillingScheduleId, BlobId,
-    CalendarId, CampaignBounceId, CampaignConsentId, CampaignId, CampaignSegmentId, CampaignSendId,
-    CampaignSuppressionId, CampaignUnsubscribeTokenId, CategoryId, ChatAgentId, ChatChannelId,
-    ChatMessageId, ChatProposalId, ChatToolRunId, CommentId, ContactId, CrmActivityId, CrmDealId,
-    CrmEventId, CrmPipelineId, CrmStageId, DomainEventId, DriveNodeId, EventId, FinAccountId,
-    FinCategoryId, FinEntryId, FinExpenseId, FinMatchRuleId, FinMileageId, FinMileageRateId,
-    FinPeriodId, FinPostingId, GroupId, HrApplicantId, HrApplicantNoteId, HrChecklistStepId,
-    HrChecklistTemplateId, HrDocumentId, HrEmployeeId, HrEmploymentId, HrLeavePolicyId,
-    HrLeaveRequestId, HrLetterTemplateId, HrOpeningId, HrPayrollExportId, InsightDashboardId,
-    InsightTileId, InvCountId, InvLocationId, InvMoveId, InvPoReceiptId, InvPurchaseOrderId,
-    InvReorderRuleId, InvSalesOrderId, InvSoDeliveryId, InvSoInvoiceId, InvStockHoldId,
-    InvSupplierId, LabelId, MailboxId, MeetingId, MessageId, ProjectId, ProjectMilestoneId,
-    PushSubscriptionId, SiteBookingAppointmentId, SiteBookingId, SiteCatalogCategoryId,
-    SiteCatalogId, SiteCatalogItemId, SiteCollectionId, SiteDomainPurchaseId, SiteFormId,
-    SiteFormSubmissionId, SiteId, SiteKnowledgeSourceId, SiteLeadLinkId, SiteOrderId, SitePageId,
-    SitePostId, SitePublishId, SitePublishScheduleId, SiteShopItemId, SiteStockFulfilmentId,
-    SiteStockOrderId, SiteTicketEventId, SiteTicketFulfilmentId, SiteTicketHoldId,
-    SiteTicketOrderId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId,
-    UserId,
+    AgentMemoryId, AppPasswordId, AttachmentId, BankLineId, BankMatchId, BankStatementId,
+    BaseFieldId, BaseRecordId, BaseTableId, BaseViewId, BillingBillId, BillingCustomerId,
+    BillingInvoiceId, BillingLineId, BillingPaymentId, BillingProductId, BillingQuoteId,
+    BillingScheduleId, BlobId, CalendarId, CampaignBounceId, CampaignConsentId, CampaignId,
+    CampaignSegmentId, CampaignSendId, CampaignSuppressionId, CampaignUnsubscribeTokenId,
+    CategoryId, ChatAgentId, ChatChannelId, ChatMessageId, ChatProposalId, ChatToolRunId,
+    CommentId, ContactId, CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId, CrmStageId,
+    DomainEventId, DriveNodeId, EventId, FinAccountId, FinCategoryId, FinEntryId, FinExpenseId,
+    FinMatchRuleId, FinMileageId, FinMileageRateId, FinPeriodId, FinPostingId, GroupId,
+    HrApplicantId, HrApplicantNoteId, HrChecklistStepId, HrChecklistTemplateId, HrDocumentId,
+    HrEmployeeId, HrEmploymentId, HrLeavePolicyId, HrLeaveRequestId, HrLetterTemplateId,
+    HrOpeningId, HrPayrollExportId, InsightDashboardId, InsightTileId, InvCountId, InvLocationId,
+    InvMoveId, InvPoReceiptId, InvPurchaseOrderId, InvReorderRuleId, InvSalesOrderId,
+    InvSoDeliveryId, InvSoInvoiceId, InvStockHoldId, InvSupplierId, LabelId, MailboxId, MeetingId,
+    MessageId, ProjectId, ProjectMilestoneId, PushSubscriptionId, SiteBookingAppointmentId,
+    SiteBookingId, SiteCatalogCategoryId, SiteCatalogId, SiteCatalogItemId, SiteCollectionId,
+    SiteDomainPurchaseId, SiteFormId, SiteFormSubmissionId, SiteId, SiteKnowledgeSourceId,
+    SiteLeadLinkId, SiteOrderId, SitePageId, SitePostId, SitePublishId, SitePublishScheduleId,
+    SiteShopItemId, SiteStockFulfilmentId, SiteStockOrderId, SiteTicketEventId,
+    SiteTicketFulfilmentId, SiteTicketHoldId, SiteTicketOrderId, SpaceId, SubtaskId, TaskId,
+    TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,

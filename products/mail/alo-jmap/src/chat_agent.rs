@@ -20,7 +20,7 @@
 use serde_json::{Value, json};
 
 use alo_ai::{AiConfig, InferenceError, WorkspaceSource};
-use alo_store::{AgentRecord, ChatAgent, ChatChannelId, parse_handles};
+use alo_store::{AgentRecord, ChatAgent, ChatChannelId, ChatMessageId, parse_handles};
 
 use crate::agent_turn::{Turn, TurnContext, TurnResult, take_turn as run_turn};
 use crate::push;
@@ -106,6 +106,7 @@ async fn take_turn(
     channel: &ChatChannelId,
     agent: &ChatAgent,
     question: &str,
+    asked: &ChatMessageId,
     stopped: &std::sync::atomic::AtomicBool,
 ) -> Option<Spoken> {
     let acc = &account.acc;
@@ -194,13 +195,29 @@ async fn take_turn(
         return None;
     }
     match decided {
-        Ok(TurnResult::Answer(answer)) => {
+        Ok((TurnResult::Answer(answer), read)) => {
             acc.post_as_agent(channel, &agent.id, &answer, None)
                 .await
                 .ok()?;
+            // The answer is already said; whether the exchange taught the room
+            // anything is a side effect behind the room's own switch (A6.1),
+            // and never a reason the answer could fail.
+            crate::chat_agent_memory::learn_from_turn(
+                account,
+                &config,
+                channel,
+                agent,
+                &crate::chat_agent_memory::Exchange {
+                    question,
+                    answer: &answer,
+                    read: &read,
+                    source: asked,
+                },
+            )
+            .await;
             Some(Spoken::Answered)
         }
-        Ok(TurnResult::Propose { action, say }) => {
+        Ok((TurnResult::Propose { action, say }, _)) => {
             // The sentence goes in the room so everyone can read what was
             // proposed; the action is recorded against that message, and only
             // the asker's tap can run it.
@@ -216,7 +233,7 @@ async fn take_turn(
         // A delegate of this run proposed (A5.2): its sentence and its
         // proposal are already in the room under its own id — the run's one
         // approval surface — and this agent has nothing left to say.
-        Ok(TurnResult::DelegateProposed) => Some(Spoken::Proposed),
+        Ok((TurnResult::DelegateProposed, _)) => Some(Spoken::Proposed),
         Err(InferenceError::Disabled | InferenceError::NotConfigured) => {
             let _ = acc
                 .post_as_agent(channel, &agent.id, UNCONFIGURED, None)
@@ -286,18 +303,38 @@ pub(crate) fn answer_if_asked(
     account: &Account,
     channel: &ChatChannelId,
     body: &str,
+    message: &ChatMessageId,
 ) {
     let state = state.clone();
     let account = account.clone();
     let tenant = account.tenant.clone();
     let channel = channel.clone();
     let body = body.to_owned();
+    let message = message.clone();
     tokio::spawn(async move {
         let acc = account.acc.clone();
         let Ok(present) = acc.channel_agents(&channel).await else {
             return;
         };
         for agent in asked_agents(&account, &channel, &body, &present).await {
+            // "Remember that …" is an instruction, not a question (A6.1): the
+            // fact is stored and confirmed with no model call, and no turn to
+            // register — there is nothing to think about and nothing to stop.
+            if let Some(fact) = crate::chat_agent_memory::explicit_fact(&body) {
+                let spoke = crate::chat_agent_memory::remember_explicit(
+                    &account, &channel, &agent, fact, &message,
+                )
+                .await;
+                if spoke.is_some() {
+                    let users: Vec<alo_store::UserId> = acc
+                        .channel_members(&channel)
+                        .await
+                        .map(|m| m.into_iter().map(|m| m.user).collect())
+                        .unwrap_or_default();
+                    push::notify_chat(&state, &tenant, &users).await;
+                }
+                continue;
+            }
             // Registered before the call so the room can say who is thinking,
             // and forgotten afterwards however it ended.
             let (id, stopped) = state.turns.begin(
@@ -308,7 +345,10 @@ pub(crate) fn answer_if_asked(
                 acc.user().as_str(),
             );
             push::notify_chat(&state, &tenant, &[acc.user().clone()]).await;
-            let spoke = take_turn(&state, &account, &channel, &agent, &body, &stopped).await;
+            let spoke = take_turn(
+                &state, &account, &channel, &agent, &body, &message, &stopped,
+            )
+            .await;
             state.turns.end(&tenant, &channel, &id);
             if spoke.is_some() {
                 // Tell the room its shape changed, exactly as a person's

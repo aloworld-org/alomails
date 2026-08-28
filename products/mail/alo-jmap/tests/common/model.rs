@@ -119,6 +119,13 @@ pub fn says(answer: &str) -> String {
 ///
 /// The provider id carries the tenant, because these suites share one Postgres
 /// and a provider id is unique across it.
+///
+/// Also switches the tenant's **memory learning default off** (A6.1). An
+/// answered turn otherwise ends with one extraction call, landing after the
+/// answer is already in the room — an extra `seen` entry that would arrive at
+/// a moment no assertion can time. The scripted suites pin exact call counts,
+/// so learning is something a memory test switches back on for the one room
+/// it watches, never ambient noise in everybody else's arithmetic.
 pub async fn use_model(h: &Harness, base_url: &str) {
     let id = format!("ai-{}", h.tenant.as_str());
     h.acc
@@ -134,4 +141,5 @@ pub async fn use_model(h: &Harness, base_url: &str) {
         .await
         .unwrap();
     h.acc.set_default_ai_provider(&id).await.unwrap();
+    h.acc.set_workspace_memory_default(false).await.unwrap();
 }
