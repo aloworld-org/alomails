@@ -7383,6 +7383,28 @@ export const de: Partial<Catalog> = {
   quoteStudioBulletListColumns: "Spalten der Aufzählung",
   quoteStudioParagraphColumns: "Spalten des Absatzes",
   quoteStudioQuoteColumns: "Spalten des Zitats",
+  quoteStudioListStyle: "Listenstil",
+  quoteStudioNumberingStyle: "Nummerierungsstil",
+  quoteStudioBulletStyle: "Aufzählungsstil",
+  quoteStudioChooseListStyle: "Wählen Sie einen Listenstil",
+  quoteStudioIndentItem: "Eintrag einrücken",
+  quoteStudioOutdentItem: "Einrückung verringern",
+  quoteStudioListStyleName: (style: string) =>
+    ({
+      decimal: "Zahlen, Buchstaben, römisch",
+      parenthesis: "Zahlen mit Klammern",
+      outline: "Gliederung (1.1, 1.2.1)",
+      "upper-alpha": "Großbuchstaben",
+      roman: "Römische Ziffern",
+      "leading-zero": "Führende Nullen (01, 02)",
+      disc: "Runde Aufzählungszeichen",
+      diamond: "Rauten und Pfeile",
+      square: "Quadrate",
+      arrow: "Pfeile",
+      star: "Sterne",
+      chevron: "Winkelpfeile",
+      checkbox: "Kontrollkästchen",
+    })[style] ?? style,
   quoteStudioColumnCount: (count: number) =>
     count === 1 ? "1 Spalte" : `${count} Spalten`,
   quoteStudioNumberedItemA11y: (number: number) =>

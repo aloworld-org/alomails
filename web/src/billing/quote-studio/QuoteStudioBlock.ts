@@ -1,3 +1,5 @@
+import type { ListStyleId } from "./listStyles";
+
 export type DividerThickness = "fine" | "medium" | "bold";
 export type DividerStyle = "solid" | "dashed" | "dotted";
 export type DividerWidth = 25 | 50 | 75 | 100;
@@ -16,12 +18,16 @@ export type QuoteStudioBlock =
       attribution: string;
       columns?: 1 | 2 | 3;
     }
+  // `items` is newline-separated; a leading tab per line nests that item one
+  // level (see listItems.ts). `style` names a scheme from listStyles.ts and
+  // is optional so older designs read as plain numbers / round bullets.
   | {
       id: string;
       kind: "list";
       ordered: boolean;
       items: string;
       columns?: 1 | 2 | 3;
+      style?: ListStyleId;
     }
   | {
       id: string;
@@ -58,5 +64,6 @@ export type QuoteStudioBlock =
     };
 
 export type DividerBlock = Extract<QuoteStudioBlock, { kind: "divider" }>;
+export type ListBlock = Extract<QuoteStudioBlock, { kind: "list" }>;
 export type ImageBlock = Extract<QuoteStudioBlock, { kind: "image" }>;
 export type GeneralTable = Extract<QuoteStudioBlock, { kind: "table" }>;

@@ -47,7 +47,9 @@ import {
   textColumnsClass,
 } from "./TextColumnsPicker";
 import { DividerBlockEditor } from "./DividerBlockEditor";
+import { ListBlockContent } from "./ListBlockContent";
 import { ListBlockEditor } from "./ListBlockEditor";
+import { resolveListStyle } from "./listStyles";
 import { ImageContentBlock } from "./ImageContentBlock";
 import { ImageBlockEditor } from "./ImageBlockEditor";
 import { GeneralTableBlock } from "./GeneralTableBlock";
@@ -1013,70 +1015,13 @@ export const QuoteStudioWorkspace = forwardRef<
                           )
                         ) : block.kind === "list" ? (
                           readOnly ? (
-                            block.ordered ? (
-                              <ol
-                                className={cx(
-                                  "grid list-none gap-x-10 gap-y-3",
-                                  (block.columns ?? 1) === 2 &&
-                                    "md:grid-cols-2",
-                                  (block.columns ?? 1) === 3 &&
-                                    "md:grid-cols-3",
-                                )}
-                              >
-                                {block.items
-                                  .split("\n")
-                                  .filter(Boolean)
-                                  .map((item, itemIndex) => (
-                                    <li
-                                      key={itemIndex}
-                                      className="flex min-w-0 items-start gap-3"
-                                    >
-                                      <span
-                                        className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-[var(--quote-number-marker)] text-xs font-semibold text-white"
-                                        aria-hidden="true"
-                                      >
-                                        {itemIndex + 1}
-                                      </span>
-                                      <span className="min-w-0 flex-1 pt-0.5">
-                                        <InlineRichTextContent value={item} />
-                                      </span>
-                                    </li>
-                                  ))}
-                              </ol>
-                            ) : (
-                              <ul
-                                className={cx(
-                                  "grid list-none gap-x-10 gap-y-3",
-                                  (block.columns ?? 1) === 2 &&
-                                    "md:grid-cols-2",
-                                  (block.columns ?? 1) === 3 &&
-                                    "md:grid-cols-3",
-                                )}
-                              >
-                                {block.items
-                                  .split("\n")
-                                  .filter(Boolean)
-                                  .map((item, itemIndex) => (
-                                    <li
-                                      key={itemIndex}
-                                      className="flex min-w-0 items-start gap-3"
-                                    >
-                                      <span
-                                        className="mt-2 size-2 shrink-0 rounded-full bg-[var(--quote-bullet-marker)]"
-                                        aria-hidden="true"
-                                      />
-                                      <span className="min-w-0 flex-1">
-                                        <InlineRichTextContent value={item} />
-                                      </span>
-                                    </li>
-                                  ))}
-                              </ul>
-                            )
+                            <ListBlockContent block={block} />
                           ) : (
                             <ListBlockEditor
                               ordered={block.ordered}
                               items={block.items}
                               columns={block.columns ?? 1}
+                              style={resolveListStyle(block.style, block.ordered)}
                               onChange={(patch) => update(block.id, patch)}
                             />
                           )
