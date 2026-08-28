@@ -3,12 +3,12 @@
 // optimistic read/flag state, and conversation-level actions (reply/forward on
 // the latest message; flag, archive, delete, move, mark-unread, and
 // drag-and-drop on the whole thread within the current folder).
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { strings } from "../i18n";
-import { ResizeHandle, cx, usePanelWidth, useIsMobile, useDialogs } from "../ds";
+import { ModuleSidebar, ResizeHandle, cx, usePanelWidth, useIsMobile, useDialogs } from "../ds";
 import { KEYWORD_FLAGGED, useJmapClient } from "../jmap";
 import type { Category, EmailAddress, EmailFull, SharedMailbox } from "../jmap";
 import { useAuth } from "../auth";
@@ -104,10 +104,12 @@ export function MailModule() {
     }
   });
 
-  // Phone layout: one pane at a time. Folders are an off-canvas drawer;
-  // the list and the reading pane swap on selection.
+  // Phone layout: one pane at a time. Folders are an off-canvas drawer
+  // (`ds/ModuleSidebar`); the list and the reading pane swap on selection.
   const isMobile = useIsMobile();
   const [foldersOpen, setFoldersOpen] = useState(false);
+  // Stable: the drawer's trap re-arms (and re-seizes focus) if this changes.
+  const closeFolders = useCallback(() => setFoldersOpen(false), []);
 
   function toggleFolders() {
     // On mobile the same control opens/closes the folders drawer; on
@@ -851,16 +853,13 @@ export function MailModule() {
       data-mobile={isMobile ? "true" : undefined}
       data-view={threadId !== null ? "detail" : "list"}
     >
-      {isMobile && foldersOpen && (
-        <div
-          className={styles.drawerOverlay}
-          onClick={() => setFoldersOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-      {(!isMobile || foldersOpen) && (
+      <ModuleSidebar
+        open={foldersOpen}
+        onClose={closeFolders}
+        label={strings.mailFolders}
+      >
       <FolderSidebar
-        {...(isMobile ? { className: styles.drawer } : {})}
+        {...(isMobile ? { className: "!w-full" } : {})}
         mailboxes={mailboxes}
         selectedId={flaggedView ? null : mailboxId}
         collapsed={isMobile ? false : foldersCollapsed}
@@ -890,7 +889,7 @@ export function MailModule() {
           />
         }
       />
-      )}
+      </ModuleSidebar>
       {!isMobile && !foldersCollapsed && (
         <ResizeHandle
           ariaLabel={strings.resizeFolders}

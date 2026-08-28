@@ -20,6 +20,8 @@ export { useDialogs } from "./DialogContext";
 export { DatePicker } from "./DatePicker";
 export type { Dialogs } from "./DialogContext";
 export { useMediaQuery, useIsMobile, MOBILE_MAX_WIDTH } from "./useMediaQuery";
+export { ModuleSidebar } from "./ModuleSidebar";
+export type { ModuleSidebarProps } from "./ModuleSidebar";
 export { Field } from "./Field";
 export type { FieldProps } from "./Field";
 export { Input } from "./Input";

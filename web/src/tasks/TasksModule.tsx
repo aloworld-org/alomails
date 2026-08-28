@@ -32,7 +32,7 @@ import {
   type TaskDepEdgeDto,
   type TaskProject,
 } from "../jmap";
-import { IconButton, Spinner, useIsMobile } from "../ds";
+import { IconButton, ModuleSidebar, Spinner, useIsMobile } from "../ds";
 import { useAuth } from "../auth";
 import { BoardView } from "./BoardView";
 import { ListView } from "./ListView";
@@ -129,11 +129,13 @@ export function TasksModule({
     dueDate?: string;
   } | null>(null);
 
-  // Phone layout (the MailModule folder-drawer pattern): the project sidebar
-  // becomes an off-canvas drawer, toggled from the header, closed by picking
-  // a destination or tapping the backdrop. Desktop keeps the static column.
+  // Phone layout: the project sidebar becomes an off-canvas drawer
+  // (`ds/ModuleSidebar`), toggled from the header, closed by picking a
+  // destination or dismissing it. Desktop keeps the static column.
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Stable: the drawer's trap re-arms (and re-seizes focus) if this changes.
+  const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
   // Projects links here with a stable project id. Keep the query in the URL so
   // refreshes and shared links reopen the same task workspace.
@@ -324,18 +326,16 @@ export function TasksModule({
 
   return (
     <div className="relative flex h-full min-h-0 bg-app">
-      {projectId === undefined && isMobile && sidebarOpen && (
-        <div
-          className="absolute inset-0 z-[calc(var(--z-overlay)-1)] bg-overlay"
-          onClick={() => setSidebarOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-      {projectId === undefined && (!isMobile || sidebarOpen) && (
+      {projectId === undefined && (
+        <ModuleSidebar
+          open={sidebarOpen}
+          onClose={closeSidebar}
+          label={strings.taskProjects}
+        >
         <aside
           className={
             isMobile
-              ? "absolute inset-y-0 left-0 z-[var(--z-overlay)] flex w-[min(82vw,20rem)] flex-col gap-4 overflow-y-auto border-r border-default bg-sunken p-4 shadow-lg"
+              ? "flex w-full flex-col gap-4 overflow-y-auto border-r border-default bg-sunken p-4"
               : "flex w-60 shrink-0 flex-col gap-4 overflow-y-auto border-r border-default bg-sunken p-4 max-md:w-52 max-sm:hidden"
           }
         >
@@ -401,6 +401,7 @@ export function TasksModule({
             ))}
           </div>
         </aside>
+        </ModuleSidebar>
       )}
 
       <section className="flex min-w-0 flex-1 flex-col">

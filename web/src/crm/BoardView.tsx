@@ -16,7 +16,7 @@
 import { useState } from "react";
 import { CalendarDays, Plus } from "lucide-react";
 
-import { Card } from "../ds";
+import { Card, Select, useIsMobile } from "../ds";
 import { strings } from "../i18n";
 import { dayLabel, dealValue } from "./format";
 import type { CrmDeal, CrmStage } from "./types";
@@ -35,6 +35,17 @@ interface Props {
 export function BoardView({ stages, deals, onOpen, onMove, onAdd }: Props) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [overStage, setOverStage] = useState<string | null>(null);
+
+  // Phone layout: one column at a time, chosen by a stage picker — a board
+  // scrolled sideways through 288px columns shows one and hides the count.
+  // Cross-stage moves go through the deal itself there; within the column,
+  // drag still reorders. Desktop shows every column, untouched.
+  const isMobile = useIsMobile();
+  const [phoneStageId, setPhoneStageId] = useState<string | null>(null);
+  const phoneStage =
+    stages.find((s) => s.id === phoneStageId) ?? stages[0] ?? null;
+  const visibleStages =
+    isMobile && phoneStage !== null ? [phoneStage] : stages;
 
   const inColumn = (stageId: string) =>
     deals
@@ -68,8 +79,24 @@ export function BoardView({ stages, deals, onOpen, onMove, onAdd }: Props) {
   }
 
   return (
+    <>
+      {isMobile && stages.length > 0 && phoneStage !== null && (
+        <div className={styles.stagePicker}>
+          <Select
+            value={phoneStage.id}
+            onChange={(e) => setPhoneStageId(e.target.value)}
+            aria-label={strings.crmStage}
+          >
+            {stages.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name} ({inColumn(s.id).length})
+              </option>
+            ))}
+          </Select>
+        </div>
+      )}
     <div className={styles.board}>
-      {stages.map((stage) => {
+      {visibleStages.map((stage) => {
         const cards = inColumn(stage.id);
         return (
           <div
@@ -144,5 +171,6 @@ export function BoardView({ stages, deals, onOpen, onMove, onAdd }: Props) {
         );
       })}
     </div>
+    </>
   );
 }

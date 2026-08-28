@@ -18,23 +18,7 @@
     max-width: 100%;
   }
 
-  /* Folders as an off-canvas drawer sliding in from the left. */
-  .drawer {
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    z-index: var(--z-overlay);
-    width: min(82vw, calc(var(--overlay-width-md) + var(--space-8)));
-    box-shadow: var(--shadow-lg);
-  }
-
-  .drawerOverlay {
-    position: absolute;
-    inset: 0;
-    z-index: calc(var(--z-overlay) - 1);
-    background: var(--bg-overlay);
-  }
+  /* The folders drawer itself is `ds/ModuleSidebar`. */
 }
 
 .toast {

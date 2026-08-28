@@ -70,6 +70,17 @@
   margin: 0 auto 0 0;
 }
 
+/* On a phone the board's name takes its own line and the actions wrap under
+   it — five controls beside a heading clipped "Ask for a chart" at 360px. */
+@media (max-width: 48rem) {
+  .boardBar {
+    flex-wrap: wrap;
+  }
+  .boardName {
+    flex: 1 1 100%;
+  }
+}
+
 .error {
   margin: var(--space-3) var(--space-5) 0;
   padding: var(--space-3) var(--space-4);

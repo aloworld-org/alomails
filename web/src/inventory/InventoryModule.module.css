@@ -49,6 +49,21 @@
   color: var(--accent-active);
 }
 
+/* On a phone the five tabs are wider than the screen. They scroll as a strip
+   — every tab stays one swipe away — rather than wrapping into a block that
+   pushes the table below the fold. */
+@media (max-width: 48rem) {
+  .tabs {
+    margin-left: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+  .tab {
+    white-space: nowrap;
+  }
+}
+
 .page {
   display: flex;
   flex-direction: column;
@@ -82,6 +97,18 @@
   outline: 2px solid var(--accent);
   outline-offset: -1px;
 }
+/* On a phone the search takes its own row and the action buttons share one,
+   full width — "Scan" and "New product" side by side instead of stacked at
+   ragged widths against the right edge. */
+@media (max-width: 48rem) {
+  .search {
+    flex: 1 1 100%;
+  }
+  .toolbar > button {
+    flex: 1 1 auto;
+  }
+}
+
 .toggle,
 .filterField {
   display: inline-flex;

@@ -170,6 +170,20 @@
   color: var(--accent);
 }
 
+/* The board on a phone: one column at a time, chosen by this picker. */
+.stagePicker {
+  display: flex;
+  padding: var(--space-3) var(--space-5) 0;
+}
+.stagePicker > * {
+  flex: 1;
+}
+@media (max-width: 48rem) {
+  .column {
+    width: 100%;
+  }
+}
+
 /* ---- the list -------------------------------------------------------- */
 
 /* The deal's name in its own row: the cell that opens the record. */
