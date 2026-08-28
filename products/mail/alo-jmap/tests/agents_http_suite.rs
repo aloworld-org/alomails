@@ -9,6 +9,7 @@ mod common;
 mod agent_agenda_http;
 mod agent_billing_intents_http;
 mod agent_correspondence_http;
+mod agent_crm_intents_http;
 mod agent_directory_http;
 mod agent_dm_http;
 mod agent_docs_http;
