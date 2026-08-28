@@ -42,8 +42,83 @@ const MAX_LISTED: usize = 12;
 
 type Reply = Result<Json<Value>, Problem>;
 
+/// Every read's answer, with its money made readable before it reaches the
+/// model ([`with_display`]).
 fn ok(result: Value) -> Reply {
-    Ok(Json(json!({ "ok": true, "result": result })))
+    Ok(Json(
+        json!({ "ok": true, "result": with_display(result, None) }),
+    ))
+}
+
+/// `24900` in EUR as `249.00 EUR`; `-1250` as `-12.50 EUR`.
+fn money(cents: i64, currency: &str) -> String {
+    let sign = if cents < 0 { "-" } else { "" };
+    let magnitude = cents.unsigned_abs();
+    format!(
+        "{sign}{}.{:02} {currency}",
+        magnitude / 100,
+        magnitude % 100
+    )
+}
+
+/// `1500` milli-units as `1.5`; `2000` as `2`.
+fn quantity(milli: i64) -> String {
+    let sign = if milli < 0 { "-" } else { "" };
+    let magnitude = milli.unsigned_abs();
+    let whole = magnitude / 1000;
+    let fraction = magnitude % 1000;
+    if fraction == 0 {
+        format!("{sign}{whole}")
+    } else {
+        let digits = format!("{fraction:03}");
+        format!("{sign}{whole}.{}", digits.trim_end_matches('0'))
+    }
+}
+
+/// The record views keep money as integer cents by contract. A model reads
+/// `24900` as twenty-four thousand more often than it should, so every
+/// `…Cents` field gets a `…Display` sibling in the object's own `currency`
+/// (or the nearest enclosing one), and `qtyMilli` a `quantityDisplay`. The
+/// cents stay: the display is beside the figure, never instead of it.
+fn with_display(value: Value, currency: Option<&str>) -> Value {
+    match value {
+        Value::Object(mut object) => {
+            let own = object
+                .get("currency")
+                .and_then(Value::as_str)
+                .map(ToOwned::to_owned);
+            let currency = own.as_deref().or(currency);
+            let mut extra: Vec<(String, Value)> = Vec::new();
+            for (key, field) in &object {
+                if let Some(base) = key.strip_suffix("Cents") {
+                    if let (Some(cents), Some(currency)) = (field.as_i64(), currency) {
+                        extra.push((format!("{base}Display"), json!(money(cents, currency))));
+                    }
+                } else if key == "qtyMilli"
+                    && let Some(milli) = field.as_i64()
+                {
+                    extra.push(("quantityDisplay".to_owned(), json!(quantity(milli))));
+                }
+            }
+            for (key, display) in extra {
+                object.insert(key, display);
+            }
+            let keys: Vec<String> = object.keys().cloned().collect();
+            for key in keys {
+                if let Some(nested) = object.remove(&key) {
+                    object.insert(key, with_display(nested, currency));
+                }
+            }
+            Value::Object(object)
+        }
+        Value::Array(items) => Value::Array(
+            items
+                .into_iter()
+                .map(|item| with_display(item, currency))
+                .collect(),
+        ),
+        other => other,
+    }
 }
 
 /// The customers whose name contains `wanted`, an exact match winning alone.
@@ -512,9 +587,16 @@ pub async fn execute_billing_totals(account: &Account, args: &Value) -> Reply {
             }
         }
     }
+    let currency = account
+        .acc
+        .billing_settings()
+        .await
+        .map_err(map_store_err)?
+        .base_currency;
     ok(json!({
         "from": iso_date(from),
         "to": iso_date(to),
+        "currency": currency,
         "invoiceCount": count,
         "invoicedGrossCents": invoiced,
         "invoicedNetCents": net,
@@ -649,6 +731,38 @@ mod tests {
                 intent.name
             );
         }
+    }
+
+    #[test]
+    fn money_and_quantities_are_shown_beside_their_integers() {
+        assert_eq!(money(24_900, "EUR"), "249.00 EUR");
+        assert_eq!(money(5, "EUR"), "0.05 EUR");
+        assert_eq!(money(-1_250, "USD"), "-12.50 USD");
+        assert_eq!(quantity(1_500), "1.5");
+        assert_eq!(quantity(2_000), "2");
+        assert_eq!(quantity(250), "0.25");
+        let shown = with_display(
+            json!({
+                "currency": "EUR",
+                "netCents": 24_900,
+                "lines": [{ "qtyMilli": 1_500, "unitPriceCents": 12_000 }],
+                "nested": { "currency": "USD", "grossCents": 100 },
+                "note": "untouched"
+            }),
+            None,
+        );
+        assert_eq!(shown["netDisplay"], "249.00 EUR");
+        assert_eq!(shown["netCents"], 24_900, "the integer stays");
+        assert_eq!(shown["lines"][0]["quantityDisplay"], "1.5");
+        assert_eq!(shown["lines"][0]["unitPriceDisplay"], "120.00 EUR");
+        assert_eq!(
+            shown["nested"]["grossDisplay"], "1.00 USD",
+            "the nearest currency wins"
+        );
+        assert_eq!(shown["note"], "untouched");
+        // No currency anywhere: cents stay, nothing is invented.
+        let bare = with_display(json!({ "grossCents": 100 }), None);
+        assert!(bare.get("grossDisplay").is_none());
     }
 
     #[test]
