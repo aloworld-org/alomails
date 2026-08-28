@@ -140,7 +140,13 @@ pub async fn execute_post_message(state: &AppState, account: &Account, args: &Va
         .unwrap_or_default();
     let named: Vec<UserId> = mentions.values().flatten().cloned().collect();
     crate::chat::notify_room(state, account, &message.channel, &named).await;
-    crate::chat_agent::answer_if_asked(state, account, &message.channel, &message.body);
+    crate::chat_agent::answer_if_asked(
+        state,
+        account,
+        &message.channel,
+        &message.body,
+        &message.id,
+    );
     let emails =
         crate::chat::resolve_emails(state, account, std::slice::from_ref(&message.author)).await;
     ok(json!({

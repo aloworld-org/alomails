@@ -196,6 +196,10 @@ pub const CHAT_EXCLUDED: &[Excluded] = &[
         why: "The agent runtime's own surface; a verb here would be the agent watching itself run.",
     },
     Excluded {
+        route: "/chat/channels/{id}/memory",
+        why: "The room's memory switch (ADR 0057 §6) is the members' own control over what an agent retains; an agent must not toggle what is remembered about a room.",
+    },
+    Excluded {
         route: "/chat/channels/{id}/turns/{turn}/stop",
         why: "Stopping a run is the person's brake on an agent; it must never be a tool an agent can reach.",
     },
