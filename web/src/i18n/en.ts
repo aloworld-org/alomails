@@ -83,6 +83,7 @@ export const en = {
   appLauncherAutoHint: "The apps you use most, kept up to date automatically",
   appLauncherFavorites: "Your favorites",
   appLauncherAll: "All apps",
+  appLauncherMore: "More apps",
   appLauncherEdit: "Edit favorites",
   appLauncherDone: "Done",
   appLauncherCancel: "Cancel",

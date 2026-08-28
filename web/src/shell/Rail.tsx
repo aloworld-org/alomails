@@ -2,15 +2,14 @@
 // Top: the mark and ＋New. Middle: one labelled item per registered module,
 // the active one highlighted. Bottom: ✦AI and the account menu. It never
 // scrolls and never changes between modules; only the panel to its right does.
-import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { Grip, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 import { strings } from "../i18n";
 import { cx } from "../ds";
 import { surface } from "../product";
 import { mostUsedApps } from "./appUsage";
+import { AppLauncher } from "./AppLauncher";
 import { isModuleAllowed, useDeniedModules } from "./moduleAccess";
 import { Logo } from "./Logo";
 import { UserMenu } from "./UserMenu";
@@ -40,34 +39,6 @@ export function Rail({ onAskAi, className }: RailProps) {
     ...used,
     ...apps.map((m) => m.id).filter((id) => !used.includes(id)),
   ].slice(0, 6);
-  const [open, setOpen] = useState(false);
-  const launcherTriggerRef = useRef<HTMLLIElement>(null);
-  const launcherPanelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const close = (event: PointerEvent) => {
-      const target = event.target as Node;
-      if (
-        !launcherTriggerRef.current?.contains(target) &&
-        !launcherPanelRef.current?.contains(target)
-      ) {
-        setOpen(false);
-      }
-    };
-    const escape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("pointerdown", close);
-    document.addEventListener("keydown", escape);
-    return () => {
-      document.removeEventListener("pointerdown", close);
-      document.removeEventListener("keydown", escape);
-    };
-  }, [open]);
-
   const favoriteModules = favorites.flatMap((id) => {
     const module = apps.find((app) => app.id === id);
     return module === undefined ? [] : [module];
@@ -100,87 +71,7 @@ export function Rail({ onAskAi, className }: RailProps) {
             </NavLink>
           </li>
         )}
-        <li ref={launcherTriggerRef} className={styles.launcherAnchor}>
-          <button
-            type="button"
-            className={cx(styles.item, open && styles.active)}
-            onClick={() => {
-              setOpen((current) => !current);
-            }}
-            aria-expanded={open}
-            aria-haspopup="dialog"
-            title={strings.appLauncher}
-          >
-            <Grip strokeWidth={2} />
-            <span className={styles.label}>{strings.appLauncher}</span>
-          </button>
-          {open &&
-            createPortal(
-              <div
-                ref={launcherPanelRef}
-                className={styles.launcher}
-                role="dialog"
-                aria-label={strings.appLauncher}
-              >
-                <div className="px-5 pb-4 pt-5">
-                  <strong className="block text-lg font-semibold tracking-tight text-primary">
-                    {strings.appLauncherFavorites}
-                  </strong>
-                  <span className="mt-1 block max-w-xs text-sm leading-5 text-secondary">
-                    {strings.appLauncherAutoHint}
-                  </span>
-                </div>
-                <div className={cx(styles.launcherScroll, "!px-4 !pb-5")}>
-                  <section className="rounded-2xl bg-surface p-2" aria-label={strings.appLauncherFavorites}>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {favoriteModules.map((app) => (
-                        <NavLink
-                          key={app.id}
-                          to={app.path}
-                          className={({ isActive }) =>
-                            cx(
-                              "group flex min-h-24 min-w-0 flex-col items-center justify-center gap-2 rounded-xl px-2 py-3 text-sm font-medium text-secondary transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 active:scale-100",
-                              isActive && "bg-accent-soft text-accent",
-                            )
-                          }
-                          onClick={() => setOpen(false)}
-                        >
-                          <span className="grid size-12 place-items-center rounded-xl bg-accent-soft text-primary transition-colors group-hover:text-accent">
-                            <app.Icon className="size-7" strokeWidth={1.7} />
-                          </span>
-                          <span className="max-w-full truncate">{app.label}</span>
-                        </NavLink>
-                      ))}
-                    </div>
-                  </section>
-                  <h3 className="!mx-1 !mb-2 !mt-5 border-t border-subtle !pt-5 !text-xs !font-semibold !tracking-[0.08em] !text-tertiary">
-                    {strings.appLauncherAll}
-                  </h3>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {apps.map((app) => (
-                      <NavLink
-                        key={app.id}
-                        to={app.path}
-                        className={({ isActive }) =>
-                          cx(
-                            "group flex min-h-24 min-w-0 flex-col items-center justify-center gap-2 rounded-xl px-2 py-3 text-sm font-medium text-secondary transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 active:scale-100",
-                            isActive && "bg-accent-soft text-accent",
-                          )
-                        }
-                        onClick={() => setOpen(false)}
-                      >
-                        <span className="grid size-11 place-items-center rounded-xl bg-raised text-primary transition-colors group-hover:bg-accent-soft group-hover:text-accent">
-                          <app.Icon className="size-6" strokeWidth={1.7} />
-                        </span>
-                        <span className="max-w-full truncate">{app.label}</span>
-                      </NavLink>
-                    ))}
-                  </div>
-                </div>
-              </div>,
-              document.body,
-            )}
-        </li>
+        <AppLauncher apps={apps} favoriteModules={favoriteModules} />
         {favoriteModules.map((m) => (
           <li key={m.id}>
             <NavLink

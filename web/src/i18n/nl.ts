@@ -138,6 +138,7 @@ export const nl: Partial<Catalog> = {
   appLauncher: "Apps",
   appLauncherFavorites: "Je favorieten",
   appLauncherAll: "Alle apps",
+  appLauncherMore: "Meer apps",
   appLauncherEdit: "Favorieten bewerken",
   appLauncherDone: "Klaar",
   appLauncherCancel: "Annuleren",

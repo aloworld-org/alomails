@@ -136,6 +136,7 @@ export const de: Partial<Catalog> = {
   appLauncherAutoHint: "Ihre meistgenutzten Apps, automatisch aktuell gehalten",
   appLauncherFavorites: "Ihre Favoriten",
   appLauncherAll: "Alle Apps",
+  appLauncherMore: "Weitere Apps",
   appLauncherEdit: "Favoriten bearbeiten",
   appLauncherDone: "Fertig",
   appLauncherCancel: "Abbrechen",

@@ -136,6 +136,7 @@ export const fr: Partial<Catalog> = {
   appLauncher: "Applications",
   appLauncherFavorites: "Vos favoris",
   appLauncherAll: "Toutes les applications",
+  appLauncherMore: "Plus d’applications",
   appLauncherEdit: "Modifier les favoris",
   appLauncherDone: "Terminé",
   appLauncherCancel: "Annuler",
