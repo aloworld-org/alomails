@@ -92,31 +92,36 @@ export function GeneralTableBlock({ block, readOnly, onChange }: GeneralTableBlo
             <tr>
               {block.columns.map((column, columnIndex) => (
                 <th key={column.id} className="group/table-column min-w-44 border-r border-default p-2 last:border-r-0">
-                  <div className="flex items-center gap-2">
-                    <InlineRichTextEditor value={column.label} aria-label={strings.quoteStudioColumnNameA11y(columnIndex + 1)} placeholder={strings.quoteStudioColumnNumber(columnIndex + 1)} onChange={(label) => onChange({ columns: block.columns.map((item) => item.id === column.id ? { ...item, label } : item) })} />
+                  <div className="mb-1 flex min-h-10 items-center justify-end">
                     <button type="button" className="grid size-9 shrink-0 place-items-center rounded-lg text-secondary opacity-0 transition-[color,background-color,opacity] hover:bg-danger-tint hover:text-danger focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 group-hover/table-column:opacity-100 group-focus-within/table-column:opacity-100 disabled:cursor-not-allowed disabled:opacity-35 max-md:opacity-100" aria-label={strings.quoteStudioRemoveColumnA11y(column.label || strings.quoteStudioColumnNumber(columnIndex + 1))} disabled={block.columns.length === 1} onClick={() => removeColumn(column.id)}>
                       <Trash2 className="size-4" aria-hidden="true" />
                     </button>
                   </div>
+                  <InlineRichTextEditor value={column.label} aria-label={strings.quoteStudioColumnNameA11y(columnIndex + 1)} placeholder={strings.quoteStudioColumnNumber(columnIndex + 1)} onChange={(label) => onChange({ columns: block.columns.map((item) => item.id === column.id ? { ...item, label } : item) })} />
                 </th>
               ))}
-              <th className="w-12" aria-label={strings.quoteStudioRowActions} />
             </tr>
           </thead>
-          <tbody>{block.rows.map((row, rowIndex) => (
-            <tr key={row.id} className="group/table-row border-t border-default">
-              {block.columns.map((column, columnIndex) => (
-                <td key={column.id} className="border-r border-default p-2 last:border-r-0">
-                  <InlineRichTextEditor value={row.cells[column.id] ?? ""} aria-label={strings.quoteStudioTableCellA11y(column.label || strings.quoteStudioColumnNumber(columnIndex + 1), rowIndex + 1)} placeholder={strings.quoteStudioEnterValue} onChange={(value) => onChange({ rows: block.rows.map((item) => item.id === row.id ? { ...item, cells: { ...item.cells, [column.id]: value } } : item) })} />
+          {block.rows.map((row, rowIndex) => (
+            <tbody key={row.id} className="group/table-row">
+              <tr className="border-t border-default">
+                <td colSpan={block.columns.length} className="px-2 pt-2">
+                  <div className="flex min-h-10 items-center justify-end">
+                    <button type="button" className="grid size-9 place-items-center rounded-lg text-secondary opacity-0 transition-[color,background-color,opacity] hover:bg-danger-tint hover:text-danger focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 group-hover/table-row:opacity-100 group-focus-within/table-row:opacity-100 max-md:opacity-100" aria-label={strings.quoteStudioRemoveRowA11y(rowIndex + 1)} onClick={() => onChange({ rows: block.rows.filter((item) => item.id !== row.id) })}>
+                      <Trash2 className="size-4" aria-hidden="true" />
+                    </button>
+                  </div>
                 </td>
-              ))}
-              <td className="p-2 text-center">
-                <button type="button" className="grid size-9 place-items-center rounded-lg text-secondary opacity-0 transition-[color,background-color,opacity] hover:bg-danger-tint hover:text-danger focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 group-hover/table-row:opacity-100 group-focus-within/table-row:opacity-100 max-md:opacity-100" aria-label={strings.quoteStudioRemoveRowA11y(rowIndex + 1)} onClick={() => onChange({ rows: block.rows.filter((item) => item.id !== row.id) })}>
-                  <Trash2 className="size-4" aria-hidden="true" />
-                </button>
-              </td>
-            </tr>
-          ))}</tbody>
+              </tr>
+              <tr>
+                {block.columns.map((column, columnIndex) => (
+                  <td key={column.id} className="border-r border-default p-2 last:border-r-0">
+                    <InlineRichTextEditor value={row.cells[column.id] ?? ""} aria-label={strings.quoteStudioTableCellA11y(column.label || strings.quoteStudioColumnNumber(columnIndex + 1), rowIndex + 1)} placeholder={strings.quoteStudioEnterValue} onChange={(value) => onChange({ rows: block.rows.map((item) => item.id === row.id ? { ...item, cells: { ...item.cells, [column.id]: value } } : item) })} />
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          ))}
         </table>
         {block.rows.length === 0 && <div className="px-5 py-8 text-center text-sm text-secondary">{strings.quoteStudioAddFirstRow}</div>}
       </div>

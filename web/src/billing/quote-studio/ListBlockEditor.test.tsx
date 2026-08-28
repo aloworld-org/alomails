@@ -33,4 +33,17 @@ describe("ListBlockEditor", () => {
     expect(screen.getByText("1)")).not.toBeNull();
     expect(screen.getByText("a)")).not.toBeNull();
   });
+
+  it("places item tools above the editable text", () => {
+    render(
+      <ListBlockEditor ordered={false} items="One" columns={1} style="disc" onChange={vi.fn()} />,
+    );
+    const toolbar = screen.getByRole("toolbar", {
+      name: strings.quoteStudioListItemFormatting,
+    });
+    const editor = screen.getByRole("textbox", {
+      name: strings.quoteStudioBulletItemA11y(1),
+    });
+    expect(toolbar.compareDocumentPosition(editor) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+  });
 });

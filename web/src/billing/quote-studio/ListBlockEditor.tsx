@@ -104,28 +104,16 @@ export function ListBlockEditor({
           <div
             key={index}
             className={cx(
-              "group/list-item grid grid-cols-[auto_minmax(0,1fr)_12.75rem] items-center gap-3 rounded-xl border border-default bg-surface p-3 shadow-sm transition-colors hover:border-accent/30 focus-within:border-accent/30 max-md:grid-cols-[auto_minmax(0,1fr)]",
+              "group/list-item rounded-xl border border-default bg-surface p-3 shadow-sm transition-colors hover:border-accent/30 focus-within:border-accent/30",
               item.level === 1 && "ml-6",
               item.level === 2 && "ml-12",
             )}
           >
-            <span
-              className="grid min-h-9 min-w-9 place-items-center rounded-lg bg-raised px-1.5 text-xs font-semibold tabular-nums text-secondary"
-              aria-hidden="true"
+            <div
+              role="toolbar"
+              aria-label={strings.quoteStudioListItemFormatting}
+              className="mb-2 flex min-h-10 items-center justify-end gap-1 opacity-0 transition-opacity group-hover/list-item:opacity-100 group-focus-within/list-item:opacity-100 max-md:opacity-100"
             >
-              {item.marker}
-            </span>
-            <InlineRichTextEditor
-              value={item.text}
-              aria-label={
-                ordered
-                  ? strings.quoteStudioNumberedItemA11y(index + 1)
-                  : strings.quoteStudioBulletItemA11y(index + 1)
-              }
-              placeholder={strings.quoteStudioWriteItem}
-              onChange={(value) => replace(index, value)}
-            />
-            <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover/list-item:opacity-100 group-focus-within/list-item:opacity-100 max-md:col-span-2 max-md:justify-self-end max-md:opacity-100">
               <BlockCommand
                 label={strings.quoteStudioOutdentItem}
                 disabled={item.level === 0}
@@ -161,6 +149,24 @@ export function ListBlockEditor({
               >
                 <Trash2 className="size-4" />
               </BlockCommand>
+            </div>
+            <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3">
+              <span
+                className="grid min-h-9 min-w-9 place-items-center rounded-lg bg-raised px-1.5 text-xs font-semibold tabular-nums text-secondary"
+                aria-hidden="true"
+              >
+                {item.marker}
+              </span>
+              <InlineRichTextEditor
+                value={item.text}
+                aria-label={
+                  ordered
+                    ? strings.quoteStudioNumberedItemA11y(index + 1)
+                    : strings.quoteStudioBulletItemA11y(index + 1)
+                }
+                placeholder={strings.quoteStudioWriteItem}
+                onChange={(value) => replace(index, value)}
+              />
             </div>
           </div>
         ))}
