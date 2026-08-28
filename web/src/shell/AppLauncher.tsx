@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { X } from "lucide-react";
 
 import { strings } from "../i18n";
 import type { ProductModule } from "../product";
@@ -84,41 +85,43 @@ export function AppLauncher({ apps, favoriteModules }: AppLauncherProps) {
 
       {open &&
         createPortal(
-          <div
-            ref={panelRef}
-            className="fixed left-[calc(var(--rail-width)+10px)] top-[76px] z-[1000] flex max-h-[calc(100dvh-92px)] w-[min(380px,calc(100vw-var(--rail-width)-28px))] flex-col overflow-hidden rounded-[28px] border border-[#CBD5E1]/65 bg-white text-[#102A43] shadow-[0_12px_36px_rgba(16,42,67,0.08)] max-md:bottom-[60px] max-md:left-3 max-md:top-auto max-md:max-h-[60dvh] max-md:w-[calc(100vw-24px)]"
-            role="dialog"
-            aria-label={strings.appLauncher}
-          >
-            <header className="px-6 pb-5 pt-6">
-              <h2 className="text-lg font-semibold tracking-tight text-[#102A43]">
-                {strings.appLauncherFavorites}
-              </h2>
-              <p className="mt-1.5 max-w-xs text-sm leading-5 text-slate-500">
-                {strings.appLauncherAutoHint}
-              </p>
-            </header>
-
-            <div className="min-h-0 overflow-y-auto px-6 pb-6">
-              <section aria-label={strings.appLauncherFavorites}>
-                <div className="grid grid-cols-3 gap-x-3 gap-y-4">
-                  {favoriteModules.map((app) => (
-                    <AppTile
-                      key={app.id}
-                      app={app}
-                      onSelect={() => setOpen(false)}
-                    />
-                  ))}
+          <>
+            <div
+              data-app-launcher-backdrop
+              className="fixed inset-0 z-[1190] cursor-default bg-[#102A43]/20 backdrop-blur-[1px]"
+              onPointerDown={() => setOpen(false)}
+              aria-hidden="true"
+            />
+            <div
+              ref={panelRef}
+              className="fixed bottom-4 left-[82px] top-20 z-[1200] isolate flex w-[380px] max-w-[calc(100vw-98px)] flex-col overflow-hidden rounded-3xl border border-[#CBD5E1]/70 bg-[#FFFEFC] text-[#102A43] shadow-[0_18px_48px_rgba(16,42,67,0.16)] max-md:bottom-[76px] max-md:left-3 max-md:top-3 max-md:w-[calc(100vw-24px)] max-md:max-w-none"
+              role="dialog"
+              aria-modal="true"
+              aria-label={strings.appLauncher}
+            >
+              <header className="flex shrink-0 items-start justify-between gap-4 border-b border-[#CBD5E1]/45 bg-[#FFFEFC] px-6 py-5">
+                <div className="min-w-0">
+                  <h2 className="text-lg font-semibold tracking-tight text-[#102A43]">
+                    {strings.appLauncherFavorites}
+                  </h2>
+                  <p className="mt-1 max-w-[240px] text-sm leading-5 text-slate-500">
+                    {strings.appLauncherAutoHint}
+                  </p>
                 </div>
-              </section>
+                <button
+                  type="button"
+                  className="grid size-10 shrink-0 place-items-center rounded-xl text-[#102A43] transition-colors duration-150 hover:bg-[#E76F51]/10 hover:text-[#E76F51] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#E76F51]/15"
+                  onClick={() => setOpen(false)}
+                  aria-label={strings.close}
+                >
+                  <X className="size-5" aria-hidden="true" />
+                </button>
+              </header>
 
-              {remainingApps.length > 0 && (
-                <section className="mt-6 border-t border-[#CBD5E1]/55 pt-6">
-                  <h3 className="mb-3 text-sm font-semibold text-slate-500">
-                    {strings.appLauncherMore}
-                  </h3>
-                  <div className="grid grid-cols-3 gap-x-3 gap-y-4">
-                    {remainingApps.map((app) => (
+              <div className="min-h-0 flex-1 overflow-y-auto bg-[#FFFEFC] px-6 py-5">
+                <section aria-label={strings.appLauncherFavorites}>
+                  <div className="grid grid-cols-2 gap-3">
+                    {favoriteModules.map((app) => (
                       <AppTile
                         key={app.id}
                         app={app}
@@ -127,9 +130,26 @@ export function AppLauncher({ apps, favoriteModules }: AppLauncherProps) {
                     ))}
                   </div>
                 </section>
-              )}
+
+                {remainingApps.length > 0 && (
+                  <section className="mt-6 border-t border-[#CBD5E1]/55 pt-5">
+                    <h3 className="mb-3 text-sm font-semibold text-slate-500">
+                      {strings.appLauncherMore}
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      {remainingApps.map((app) => (
+                        <AppTile
+                          key={app.id}
+                          app={app}
+                          onSelect={() => setOpen(false)}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </div>
             </div>
-          </div>,
+          </>,
           document.body,
         )}
     </li>

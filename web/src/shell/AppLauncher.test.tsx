@@ -55,9 +55,9 @@ describe("AppLauncher", () => {
     expect(dots.every((dot) => dot.className.includes("bg-[#D7DEE2]"))).toBe(
       true,
     );
-    expect(dots.every((dot) => dot.className.includes("group-hover:bg-white"))).toBe(
-      true,
-    );
+    expect(
+      dots.every((dot) => dot.className.includes("group-hover:bg-white")),
+    ).toBe(true);
     expect(label?.className).toContain("text-[#D7DEE2]");
     expect(label?.className).toContain("group-hover:text-white");
 
@@ -81,6 +81,20 @@ describe("AppLauncher", () => {
     expect(screen.getAllByRole("link", { name: "Projects" })).toHaveLength(1);
     expect(screen.getAllByRole("link", { name: "Chat" })).toHaveLength(1);
     expect(screen.getByText(strings.appLauncherMore)).toBeTruthy();
+  });
+
+  test("opens as an opaque, readable overlay with two-column app groups", () => {
+    renderLauncher();
+
+    fireEvent.click(screen.getByRole("button", { name: strings.appLauncher }));
+
+    const dialog = screen.getByRole("dialog", { name: strings.appLauncher });
+    const groups = dialog.querySelectorAll<HTMLElement>(".grid-cols-2");
+
+    expect(document.querySelector("[data-app-launcher-backdrop]")).toBeTruthy();
+    expect(dialog.className).toContain("bg-[#FFFEFC]");
+    expect(dialog.className).toContain("w-[380px]");
+    expect(groups.length).toBeGreaterThanOrEqual(2);
   });
 
   test("closes after choosing an app and with Escape", () => {
