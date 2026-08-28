@@ -45,8 +45,8 @@ export function AppLauncher({ apps, favoriteModules }: AppLauncherProps) {
     <li ref={triggerRef} className="w-full">
       <button
         type="button"
-        className={`flex w-full flex-col items-center gap-[3px] rounded-xl px-0 py-2 text-on-rail-muted transition-colors duration-150 hover:bg-rail-hover hover:text-on-rail focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#E76F51]/20 ${
-          open ? "bg-rail-active text-on-rail" : ""
+        className={`group flex w-full flex-col items-center gap-[3px] rounded-xl px-0 py-2 text-[#D7DEE2] transition-colors duration-150 hover:bg-[#2B3439] hover:text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#E76F51]/20 ${
+          open ? "bg-[#343D42] text-white" : ""
         }`}
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
@@ -54,18 +54,18 @@ export function AppLauncher({ apps, favoriteModules }: AppLauncherProps) {
         aria-label={strings.appLauncher}
         title={strings.appLauncher}
       >
-        <svg
-          className="size-[22px]"
-          viewBox="0 0 24 24"
-          fill="currentColor"
+        <span
+          className="grid size-[22px] grid-cols-3 place-items-center"
           aria-hidden="true"
         >
-          {[5, 12, 19].flatMap((y) =>
-            [5, 12, 19].map((x) => (
-              <circle key={`${x}-${y}`} cx={x} cy={y} r="1.65" />
-            )),
-          )}
-        </svg>
+          {Array.from({ length: 9 }, (_, index) => (
+            <span
+              key={index}
+              data-launcher-dot
+              className="size-1 rounded-full bg-current"
+            />
+          ))}
+        </span>
         <span className="text-[10px] font-medium tracking-[0.01em]">
           {strings.appLauncher}
         </span>
