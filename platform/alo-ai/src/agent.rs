@@ -843,6 +843,11 @@ mod tests {
                 "insight_catalog",
                 "insight_answer",
                 "insight_change",
+                // AC.3: …and what is already pinned — the boards by name and
+                // the question each tile asks, rendered from the intent
+                // registry. Adding a chart to a board is `pin_chart`, a
+                // write, and is not here.
+                "dashboard_tiles",
                 // A3.2: the Meet agent names the sittings this person was in
                 // and opens one of them in full — who was there, what was said
                 // and what has been posted in its room since. Writing the
@@ -868,7 +873,7 @@ mod tests {
                 "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 106);
+        assert_eq!(all_tools().len(), 108);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }

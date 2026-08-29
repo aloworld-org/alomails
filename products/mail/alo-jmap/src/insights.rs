@@ -51,8 +51,10 @@ use crate::state::{AppState, authenticate};
 
 /// A dashboard as JSON. Its tiles are not inlined in the list: the tab strip is
 /// one small response, and the board that is open is the one that pays for its
-/// tiles (`GET /insights/dashboards/{id}`).
-fn dashboard_json(d: &Dashboard) -> Value {
+/// tiles (`GET /insights/dashboards/{id}`). `pub(crate)` because the Insights
+/// agent's board read ([`crate::insights_intents`]) reports a board in exactly
+/// this shape, so the two views cannot drift.
+pub(crate) fn dashboard_json(d: &Dashboard) -> Value {
     json!({
         "id": d.id.as_str(),
         "name": d.name,

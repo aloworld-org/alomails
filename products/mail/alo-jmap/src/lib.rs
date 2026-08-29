@@ -147,6 +147,7 @@ pub mod insights;
 pub mod insights_ask;
 pub mod insights_eval;
 pub mod insights_gallery;
+pub mod insights_intents;
 pub mod inventory_counts;
 pub mod inventory_location_names;
 pub mod inventory_locations;

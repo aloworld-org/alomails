@@ -250,8 +250,10 @@ fn read_spec(raw: Value) -> Result<ChartSpec, Problem> {
         .map_err(|error| Problem::with(StatusCode::UNPROCESSABLE_ENTITY, error.to_string()))
 }
 
-/// The `spec` argument, raw and parsed.
-fn spec_arg(args: &Value) -> Result<(Value, ChartSpec), Problem> {
+/// The `spec` argument, raw and parsed. Shared with `pin_chart`
+/// ([`crate::insights_intents`]), so a pinned chart meets exactly the gate a
+/// reported one does.
+pub(crate) fn spec_arg(args: &Value) -> Result<(Value, ChartSpec), Problem> {
     let raw = args
         .get("spec")
         .filter(|spec| spec.is_object())
@@ -262,8 +264,10 @@ fn spec_arg(args: &Value) -> Result<(Value, ChartSpec), Problem> {
 }
 
 /// What a spec is asking, in the words the catalog uses — repeated on every
-/// answer so a figure never travels without its question.
-fn asked(spec: &ChartSpec) -> Value {
+/// answer so a figure never travels without its question. Shared with
+/// `dashboard_tiles` ([`crate::insights_intents`]), so a tile's question reads
+/// the same way an answer's does.
+pub(crate) fn asked(spec: &ChartSpec) -> Value {
     json!({
         "dataset": wire(&spec.dataset),
         "measure": wire(&spec.measure.id),

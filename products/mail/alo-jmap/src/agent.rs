@@ -24,7 +24,6 @@ use std::pin::Pin;
 use time::format_description::well_known::Rfc3339;
 
 use crate::agent_hr as hr;
-use crate::agent_insights as insights;
 use crate::agent_inventory as inventory;
 use crate::agent_sheets as sheets;
 use crate::agent_sites as sites;
@@ -474,6 +473,7 @@ pub(crate) const MODULES: &[ModuleDispatcher] = &[
     crate::docs_intents::dispatch,
     crate::drive_intents::dispatch,
     crate::finance_intents::dispatch,
+    crate::insights_intents::dispatch,
     crate::meet_intents::dispatch,
     crate::projects_intents::dispatch,
 ];
@@ -586,10 +586,6 @@ async fn dispatch(
         // those questions to a new board, which is why it waits for the
         // asker's own approval. Nothing here changes a figure or a record any
         // figure is read from.
-        "insight_catalog" => insights::execute_insight_catalog(account, args).await,
-        "insight_answer" => insights::execute_insight_answer(account, args).await,
-        "insight_change" => insights::execute_insight_change(account, args).await,
-        "insight_report" => insights::execute_insight_report(account, args).await,
         // alo Sites' tools (A2.1), on the same seam. The reads answer from the
         // published site and the draft; the two page writes land in the
         // **draft** and nowhere else, and `site_publish` is the only one of them
