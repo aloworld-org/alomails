@@ -241,16 +241,34 @@ export function InvoicesView() {
             {paged.records.map((invoice) => (
               <tr
                 key={invoice.id}
-                className={cx(invoice.overdue && styles.overdueRow)}
+                role="link"
+                tabIndex={0}
+                aria-label={`${invoice.number ?? strings.billingDraftInvoice}: ${
+                  names.get(invoice.customerId) ??
+                  strings.billingUnknownCustomer
+                }`}
+                className={cx(
+                  "group cursor-pointer focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[-2px]",
+                  invoice.overdue && styles.overdueRow,
+                )}
+                onClick={() => void navigate(invoice.id)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    void navigate(invoice.id);
+                  }
+                }}
               >
                 <td>
-                  <button
-                    type="button"
-                    className={cx(styles.rowName, styles.mono)}
-                    onClick={() => void navigate(invoice.id)}
+                  <span
+                    className={cx(
+                      styles.rowName,
+                      styles.mono,
+                      "group-hover:text-accent",
+                    )}
                   >
-                    {invoice.number ?? strings.billingNotNumbered}
-                  </button>
+                    {invoice.number ?? strings.billingDraftInvoice}
+                  </span>
                 </td>
                 <td>
                   {names.get(invoice.customerId) ??
@@ -293,7 +311,11 @@ export function InvoicesView() {
                     a settled one owes nothing any more, and the server
                     refuses both — so the button is not offered for them
                     rather than shown and then refused. */}
-                <td className={styles.rowActions}>
+                <td
+                  className={styles.rowActions}
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => event.stopPropagation()}
+                >
                   {invoice.overdue && (
                     <button
                       type="button"
