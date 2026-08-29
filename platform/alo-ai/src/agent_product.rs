@@ -26,7 +26,6 @@ use crate::agent_hr::{HR_GUIDANCE, HR_TOOL_DOC, HR_TOOLS};
 use crate::agent_insights::{INSIGHTS_GUIDANCE, INSIGHTS_TOOL_DOC, INSIGHTS_TOOLS};
 use crate::agent_inventory::{INVENTORY_GUIDANCE, INVENTORY_TOOL_DOC, INVENTORY_TOOLS};
 use crate::agent_mail::{MAIL_GUIDANCE, MAIL_TOOL_DOC, MAIL_TOOLS};
-use crate::agent_meet::{MEET_GUIDANCE, MEET_TOOL_DOC, MEET_TOOLS};
 use crate::agent_projects::{PROJECTS_GUIDANCE, PROJECTS_TOOL_DOC, PROJECTS_TOOLS};
 use crate::agent_sheets::{SHEETS_GUIDANCE, SHEETS_TOOL_DOC, SHEETS_TOOLS};
 use crate::agent_sites::{SITES_GUIDANCE, SITES_TOOL_DOC, SITES_TOOLS};
@@ -38,6 +37,7 @@ use crate::crm_intents::CRM as CRM_INTENTS;
 use crate::drive_intents::DRIVE as DRIVE_INTENTS;
 use crate::finance_intents::FINANCE as FINANCE_INTENTS;
 use crate::intent::IntentModule;
+use crate::meet_intents::MEET as MEET_INTENTS;
 
 /// One module's contribution to a product's agent: what it may do, how each
 /// tool is described, and the rules that keep a proposal from it honest.
@@ -128,10 +128,6 @@ const DOCS_SET: ToolSet = set(DOCS_TOOLS, DOCS_TOOL_DOC, DOCS_GUIDANCE);
 /// alo Insights, whose agent reads the figures through the same query engine
 /// the boards do and writes nothing but a board of questions (A2.4).
 const INSIGHTS_SET: ToolSet = set(INSIGHTS_TOOLS, INSIGHTS_TOOL_DOC, INSIGHTS_GUIDANCE);
-/// alo Meet, whose agent works on a meeting **after** it is over — the record
-/// it left behind, and the conversation it came out of (A3.2). Nothing here
-/// joins a call: the live participant is a media path and is not decided.
-const MEET_SET: ToolSet = set(MEET_TOOLS, MEET_TOOL_DOC, MEET_GUIDANCE);
 
 /// Mail's, including the address book.
 const MAIL: &[ToolSet] = &[MAIL_SET, CONTACTS_SET];
@@ -144,7 +140,6 @@ const INVENTORY: &[ToolSet] = &[INVENTORY_SET];
 const HR: &[ToolSet] = &[HR_SET];
 const SITES: &[ToolSet] = &[SITES_SET];
 const INSIGHTS: &[ToolSet] = &[INSIGHTS_SET];
-const MEET: &[ToolSet] = &[MEET_SET];
 
 /// Every product's tool sets, in the order [`AgentProduct::Workspace`] renders
 /// them.
@@ -162,6 +157,7 @@ pub const MOVED: &[(AgentProduct, &IntentModule)] = &[
     (AgentProduct::Crm, &CRM_INTENTS),
     (AgentProduct::Drive, &DRIVE_INTENTS),
     (AgentProduct::Finance, &FINANCE_INTENTS),
+    (AgentProduct::Meet, &MEET_INTENTS),
 ];
 
 /// The hand-written sets a product still carries — empty once it has moved.
@@ -182,7 +178,7 @@ fn static_sets(product: AgentProduct) -> &'static [ToolSet] {
         AgentProduct::Hr => HR,
         AgentProduct::Sites => SITES,
         AgentProduct::Insights => INSIGHTS,
-        AgentProduct::Meet => MEET,
+        AgentProduct::Meet => &[],
         // Ask alo works across products, so it is offered all of them — the
         // one agent for which that is the decision rather than the default
         // (ADR 0034).
@@ -475,7 +471,14 @@ mod tests {
         );
         assert_eq!(
             names(AgentProduct::Meet),
-            ["meetings_recent", "meeting_record", "meeting_minutes"]
+            [
+                "meetings_recent",
+                "meeting_record",
+                "upcoming_meetings",
+                "meeting_lookup",
+                "meeting_minutes",
+                "schedule_meeting",
+            ]
         );
     }
 
@@ -502,7 +505,7 @@ mod tests {
             .map(|tool| tool.name)
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
-        assert_eq!(workspace.len(), 98);
+        assert_eq!(workspace.len(), 101);
     }
 
     /// A moved module registers once (A4.1c): its row in [`MOVED`] is what puts
@@ -537,6 +540,7 @@ mod tests {
             concat!("BILLING_", "INTENTS"),
             concat!("CRM_", "INTENTS"),
             concat!("DRIVE_", "INTENTS"),
+            concat!("MEET_", "INTENTS"),
         ] {
             assert_eq!(
                 source.matches(module).count(),
@@ -643,11 +647,13 @@ mod tests {
         assert!(!offers(AgentProduct::Tasks, "project_status_summary"));
         // …and the ones A3.2 adds, which are the whole of "no second
         // mechanism": Meet may write the minutes of a sitting into the room it
-        // came out of, and it may not put a task on anybody's board or an entry
-        // in anybody's diary — those stay the Tasks and Agenda agents' own
-        // proposals, accepted one at a time. Reading a meeting's record is
-        // Meet's alone: a meeting in the diary is an appointment, and what was
-        // said inside one is not the Agenda agent's to read.
+        // came out of, and it may not put a task on anybody's board — that
+        // stays the Tasks agent's own proposals, accepted one at a time. (The
+        // diary half moved with AC.2: `schedule_meeting` runs the Agenda
+        // module's shared calendar write as the asker, so the mechanism is
+        // still one — asserted below.) Reading a meeting's record is Meet's
+        // alone: a meeting in the diary is an appointment, and what was said
+        // inside one is not the Agenda agent's to read.
         assert!(offers(AgentProduct::Meet, "meeting_record"));
         assert!(offers(AgentProduct::Meet, "meeting_minutes"));
         assert!(!offers(AgentProduct::Meet, "create_task"));
@@ -666,5 +672,18 @@ mod tests {
         assert!(!offers(AgentProduct::Tasks, "post_message"));
         assert!(!offers(AgentProduct::Chat, "send_email"));
         assert!(!offers(AgentProduct::Chat, "create_task"));
+        // …and the ones AC.2 adds: the diary ahead and one meeting's notes
+        // are the Meet agent's to read, and scheduling one is its own verb —
+        // which runs the Agenda module's shared calendar write as the asker,
+        // so `create_event` itself still belongs to Agenda alone and Meet
+        // still cannot put a task on anybody's board.
+        assert!(offers(AgentProduct::Meet, "upcoming_meetings"));
+        assert!(offers(AgentProduct::Meet, "meeting_lookup"));
+        assert!(offers(AgentProduct::Meet, "schedule_meeting"));
+        assert!(!offers(AgentProduct::Agenda, "schedule_meeting"));
+        assert!(!offers(AgentProduct::Agenda, "upcoming_meetings"));
+        assert!(!offers(AgentProduct::Meet, "create_event"));
+        assert!(!offers(AgentProduct::Meet, "whats_on"));
+        assert!(!offers(AgentProduct::Meet, "create_task"));
     }
 }

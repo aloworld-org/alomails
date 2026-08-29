@@ -476,6 +476,7 @@ pub(crate) const MODULES: &[ModuleDispatcher] = &[
     crate::crm_intents::dispatch,
     crate::drive_intents::dispatch,
     crate::finance_intents::dispatch,
+    crate::meet_intents::dispatch,
 ];
 
 /// [`execute_tool`]'s boundary check and audit cannot be bypassed by a caller
@@ -622,18 +623,8 @@ async fn dispatch(
         "site_page_draft" => sites::execute_site_page_draft(account, args).await,
         "site_page_edit" => sites::execute_site_page_edit(account, args).await,
         "site_publish" => sites::execute_site_publish(account, args).await,
-        // alo Meet's tools (A3.2), on the same seam — and every one of them
-        // works on a meeting that is already over. The two reads name the
-        // sittings this person was allowed to see and open one of them in full
-        // (who was there, the transcript, what was typed during it, and what
-        // has been posted in its room since); the one write posts the minutes
-        // into that room, as the asker's own message. There is deliberately no
-        // way here to create a task or a calendar entry out of what a meeting
-        // agreed: those stay the Tasks and Agenda agents' own proposals, which
-        // the user accepts one at a time (ADR 0023).
-        "meetings_recent" => crate::agent_meet::execute_meetings_recent(account, args).await,
-        "meeting_record" => crate::agent_meet::execute_meeting_record(account, args, state).await,
-        "meeting_minutes" => crate::agent_meet::execute_meeting_minutes(account, args).await,
+        // Meet's verbs, the record reads and the minutes included, are
+        // dispatched by its module row above (AC.2).
         // Unreachable given the allowlist check, but the match stays total.
         _ => Err(Problem::with(StatusCode::BAD_REQUEST, "unknown tool")),
     }
@@ -1147,7 +1138,10 @@ async fn execute_create_task(account: &Account, args: &Value) -> Result<Json<Val
 /// Schedule a calendar event from approved args, on the caller's personal
 /// calendar. Reuses the same tenant-scoped `create_event` the `/calendar/events`
 /// route uses (which checks edit permission on the calendar) — no new path.
-async fn execute_create_event(account: &Account, args: &Value) -> Result<Json<Value>, Problem> {
+pub(crate) async fn execute_create_event(
+    account: &Account,
+    args: &Value,
+) -> Result<Json<Value>, Problem> {
     let title = args
         .get("title")
         .and_then(Value::as_str)

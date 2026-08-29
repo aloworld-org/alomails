@@ -166,6 +166,7 @@ pub mod inventory_suppliers;
 pub mod invite_route;
 pub mod jtypes;
 pub mod junk_learn;
+pub mod meet_intents;
 pub mod meet_routes;
 pub mod meet_token;
 // Writing outbound MIME moved down to `alo-store`, beside the reader and for

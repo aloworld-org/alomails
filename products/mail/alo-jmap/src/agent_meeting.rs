@@ -286,7 +286,10 @@ pub async fn execute_reschedule_event(
 /// # Errors
 /// 422 when nothing was named, when nothing matches, or when several sittings
 /// do — the last listing their days, so the next turn can say which.
-async fn resolve_meeting(account: &Account, args: &Value) -> Result<CalendarEvent, Problem> {
+pub(crate) async fn resolve_meeting(
+    account: &Account,
+    args: &Value,
+) -> Result<CalendarEvent, Problem> {
     let wanted = string_arg(args, "meeting")
         .ok_or_else(|| unprocessable("say which meeting, by its title"))?;
     let (from, to) = match string_arg(args, "on") {

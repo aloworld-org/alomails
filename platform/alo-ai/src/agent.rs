@@ -840,6 +840,11 @@ mod tests {
                 // and is not here.
                 "meetings_recent",
                 "meeting_record",
+                // AC.2: …and the meetings still ahead — the diary's listing
+                // and one entry of it with its notes. Scheduling one is
+                // `schedule_meeting`, a write, and is not here.
+                "upcoming_meetings",
+                "meeting_lookup",
                 // A2.1: the Website agent reads the published site, one page of
                 // the draft, and what search engines will find missing. Putting
                 // any of it on the internet is `site_publish`, which is not
@@ -853,7 +858,7 @@ mod tests {
                 "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 98);
+        assert_eq!(all_tools().len(), 101);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }
