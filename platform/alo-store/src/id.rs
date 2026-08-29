@@ -468,6 +468,12 @@ opaque_id!(
     AgentInstructionId
 );
 opaque_id!(
+    /// One goal — multi-step work across agents as an object: Ask alo's plan,
+    /// its progress, one approval surface, Stop (ADR 0058 §7). Addressed by id
+    /// so an approval can resume exactly the goal that was waiting on it.
+    AgentGoalId
+);
+opaque_id!(
     /// One journal entry — everything one document event did to the books, in
     /// one transaction (alo Finance, ADR 0035, wave B4). An entry is written
     /// whole and never edited: a correction is another entry pointing back at

@@ -338,12 +338,29 @@ pub async fn decide_proposal(
                 // The record says approved and the act failed. Say so rather
                 // than swallowing it: the room saw the tap, and a silent
                 // failure here is how someone believes a task exists that
-                // does not.
+                // does not. A goal waiting on it ends too — the rest of its
+                // plan would be built on a step that did not happen.
+                crate::chat_goals::proposal_settled(
+                    &state,
+                    &account,
+                    &decided,
+                    crate::chat_goals::ProposalOutcome::FailedToRun,
+                )
+                .await;
                 notify(&state, &account, &decided.channel).await;
                 return Err(problem);
             }
         }
     }
+    // The goal waiting behind this card, if any (A8.3): an approval hands it
+    // back to the run and the remaining steps continue; a refusal ends it —
+    // which is exactly what the room was told would happen.
+    let outcome = if body.approve {
+        crate::chat_goals::ProposalOutcome::Ran
+    } else {
+        crate::chat_goals::ProposalOutcome::Declined
+    };
+    crate::chat_goals::proposal_settled(&state, &account, &decided, outcome).await;
     // The whole room watched it pending; the whole room sees it settled.
     notify(&state, &account, &decided.channel).await;
     let mut value = proposal_json(&decided);
@@ -447,10 +464,25 @@ pub async fn hand_proposal(
         Ok(Json(done)) => done,
         Err(problem) => {
             // Approved and failed: say so, exactly as a plain approval does.
+            crate::chat_goals::proposal_settled(
+                &state,
+                &account,
+                &decided,
+                crate::chat_goals::ProposalOutcome::FailedToRun,
+            )
+            .await;
             notify(&state, &account, &decided.channel).await;
             return Err(problem);
         }
     };
+    // Handing IS approving: a goal waiting on this card resumes the same way.
+    crate::chat_goals::proposal_settled(
+        &state,
+        &account,
+        &decided,
+        crate::chat_goals::ProposalOutcome::Ran,
+    )
+    .await;
     notify(&state, &account, &decided.channel).await;
     let mut value = proposal_json(&decided);
     if let Some(object) = value.as_object_mut() {

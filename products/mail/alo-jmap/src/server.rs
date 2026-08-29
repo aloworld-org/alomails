@@ -21,12 +21,12 @@ use crate::{
     billing_reminder, billing_reports, billing_schedules, billing_send, billing_sepa,
     billing_settings, blob, calendar, campaign_audience, campaign_consent, campaign_preview,
     campaign_record, campaign_segments, campaign_suppression, campaign_unsubscribe, carddav, chat,
-    chat_agent_memory, chat_agent_routes, contacts, crm_activities, crm_deals, crm_handoff,
-    crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads, delegates,
-    docs, drive, filters, finance_approvals, finance_bank, finance_bank_match, finance_chart,
-    finance_expenses, finance_mileage, finance_periods, finance_receipts, finance_report_aged,
-    finance_report_balance, finance_report_pl, finance_report_vat, flagdue, hr_checklists,
-    hr_documents, hr_employees, hr_holidays, hr_leave_balances, hr_leave_policies,
+    chat_agent_memory, chat_agent_routes, chat_goals, contacts, crm_activities, crm_deals,
+    crm_handoff, crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads,
+    delegates, docs, drive, filters, finance_approvals, finance_bank, finance_bank_match,
+    finance_chart, finance_expenses, finance_mileage, finance_periods, finance_receipts,
+    finance_report_aged, finance_report_balance, finance_report_pl, finance_report_vat, flagdue,
+    hr_checklists, hr_documents, hr_employees, hr_holidays, hr_leave_balances, hr_leave_policies,
     hr_leave_requests, hr_letters, hr_org, hr_payroll, hr_recruitment, imap_import_route, insights,
     insights_ask, insights_eval, insights_gallery, inventory_counts, inventory_locations,
     inventory_moves, inventory_order_book, inventory_po, inventory_po_print, inventory_po_receipts,
@@ -334,6 +334,10 @@ pub fn app_with_site_boundaries(
         .route(
             "/chat/channels/{id}/turns",
             get(chat_agent_routes::list_turns),
+        )
+        .route(
+            "/chat/channels/{id}/goals",
+            get(chat_goals::list_channel_goals),
         )
         .route(
             "/chat/channels/{id}/turns/{turn}/stop",

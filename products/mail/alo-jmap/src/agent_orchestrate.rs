@@ -33,9 +33,17 @@
 //!   the rest of the plan waits behind it. Two pending proposals from one
 //!   question would be two buttons whose order matters and which nothing
 //!   enforces.
+//! * **The plan is a goal record** (A8.3, ADR 0058 §7). The run keeps its
+//!   progress on an `agent_goals` row: which step it is on, and — when a step
+//!   proposed — the one proposal it waits behind. That row is what makes
+//!   "the rest of this waits until you approve that" true rather than polite:
+//!   approving the proposal hands the goal back to [`resume_goal`] and the
+//!   remaining steps run; turning it down ends the goal. Coordination happens
+//!   through the object, never through agents talking.
 //! * **Stop actually stops.** The flag [`crate::chat_turns`] hands out is read
 //!   between every step and again after every model call, which is what makes
-//!   stopping a *run* different from declining to post one answer.
+//!   stopping a *run* different from declining to post one answer — and a
+//!   resumed segment registers a turn of its own, so Stop reaches it too.
 //!
 //! **Each step speaks as its own agent, and joins the room to do it.** An agent
 //! that takes part in a conversation is in that conversation (ADR 0034: agents
@@ -49,7 +57,10 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use alo_ai::{AgentPlan, AiConfig, InferenceError, PlanAgent, PlanAsk, PlanStep};
-use alo_store::{AgentProduct, ChatAgent, ChatAgentId, ChatChannelId, UserId};
+use alo_store::{
+    AgentGoal, AgentGoalId, AgentProduct, ChatAgent, ChatAgentId, ChatChannelId, GoalEnd, GoalStep,
+    UserId,
+};
 
 use crate::agent_turn::{OUT_OF_HANDOFFS, RunEnv, TurnResult, delegate_turn};
 use crate::chat_agent::{Spoken, UNCONFIGURED, UNREACHABLE};
@@ -165,11 +176,38 @@ pub(crate) async fn orchestrate(
         // same words every other agent uses.
         Err(_) => return Orchestrated::NotRouted,
     };
+    // The plan becomes a goal record before any of it runs (A8.3): the object
+    // an approval later resumes, and the card a room reads progress off.
+    // Best-effort — a workspace whose bookkeeping insert failed still gets its
+    // run, exactly as it did before goals existed; there is just nothing to
+    // resume.
+    let plan: Vec<GoalStep> = steps
+        .iter()
+        .map(|step| GoalStep {
+            agent: step.agent.clone(),
+            ask: step.ask.clone(),
+        })
+        .collect();
+    let goal = account
+        .acc
+        .create_goal(run.channel, &run.alo.id, run.question, &plan)
+        .await
+        .ok();
     // ONE budget for the whole run (A5.2): the steps spend its handoff slots,
     // and whatever a step reads or hands off further comes out of the same
     // counters — the plan is the delegation, so it is bounded like one.
     let env = RunEnv::new(state, account, run.config);
-    Orchestrated::Ran(run_plan(&voice, run, &env, &roster, &steps).await)
+    Orchestrated::Ran(
+        run_plan(
+            &voice,
+            run,
+            &env,
+            &roster,
+            &steps,
+            goal.as_ref().map(|g| &g.id),
+        )
+        .await,
+    )
 }
 
 /// The agents this run may route to: the ones this person can see, minus the
@@ -197,38 +235,69 @@ pub(crate) async fn roster(account: &Account, alo: &ChatAgent) -> Vec<ChatAgent>
         .collect()
 }
 
-/// Post the plan, then take each step until one of them changes something, one
-/// of them fails, the budget refuses another, or somebody presses Stop.
+/// Post the plan, then run its steps from the top.
 async fn run_plan(
     voice: &Voice<'_>,
     run: &Run<'_>,
     env: &RunEnv<'_>,
     roster: &[ChatAgent],
     steps: &[PlanStep],
+    goal: Option<&AgentGoalId>,
 ) -> Option<Spoken> {
     // The plan goes in the room **before** any of it runs. That is what makes
     // it a plan rather than a summary, and what gives somebody watching the
     // chance to stop it.
     voice.say(&run.alo.id, &render_plan(steps)).await?;
+    run_steps(voice, run, env, roster, steps, 0, goal).await
+}
 
+/// End the goal, when there is one. Best-effort by design: the goal is the
+/// run's record, and a record that could not be written must never stop the
+/// run being spoken in the room.
+async fn goal_ends(voice: &Voice<'_>, goal: Option<&AgentGoalId>, end: GoalEnd, note: &str) {
+    if let Some(goal) = goal {
+        let note = (!note.is_empty()).then_some(note);
+        let _ = voice.account.acc.finish_goal(goal, end, note).await;
+    }
+}
+
+/// Take each step from `from` until one of them changes something, one of them
+/// fails, the budget refuses another, or somebody presses Stop — keeping the
+/// goal record in step with what the room sees (A8.3). Called with `from = 0`
+/// by a fresh plan and with the goal's own cursor by [`resume_goal`].
+async fn run_steps(
+    voice: &Voice<'_>,
+    run: &Run<'_>,
+    env: &RunEnv<'_>,
+    roster: &[ChatAgent],
+    steps: &[PlanStep],
+    from: usize,
+    goal: Option<&AgentGoalId>,
+) -> Option<Spoken> {
+    let acc = &voice.account.acc;
     let total = steps.len();
-    for (done, step) in steps.iter().enumerate() {
+    for (done, step) in steps.iter().enumerate().skip(from) {
         if run.is_stopped() {
+            goal_ends(voice, goal, GoalEnd::Stopped, "").await;
             voice.say(&run.alo.id, &stopped_after(done, total)).await;
             return Some(Spoken::Stopped);
         }
         // A step is a handoff and spends a handoff slot (A5.2). A full plan
-        // always fits — the planner is capped below the budget — so this only
+        // always fits — the planner is capped at the budget — so this only
         // bites when an earlier step's own handoffs spent the rest, and then
         // the room is told rather than the bound being quietly exceeded.
         if !env.take_handoff() {
+            goal_ends(voice, goal, GoalEnd::Failed, "the run's budget was spent").await;
             voice.say(&run.alo.id, OUT_OF_HANDOFFS).await;
             return Some(Spoken::Excused);
         }
         let Some(delegate) = roster.iter().find(|agent| agent.handle == step.agent) else {
-            // Unreachable: the plan was parsed against this roster. Stated
-            // anyway, because a silent `continue` here would be a step that
-            // vanished without the room being told.
+            // A resumed goal re-reads the roster, so an agent whose module was
+            // switched off while the goal waited lands here rather than being
+            // reached around the gate; on a fresh plan it is unreachable (the
+            // plan was parsed against this roster) but still said, because a
+            // silent `continue` would be a step that vanished.
+            goal_ends(voice, goal, GoalEnd::Failed, "an agent could not be asked").await;
             voice.say(&run.alo.id, &could_not_ask(&step.agent)).await;
             return Some(Spoken::Excused);
         };
@@ -241,6 +310,7 @@ async fn run_plan(
             .await
             .is_err()
         {
+            goal_ends(voice, goal, GoalEnd::Failed, "an agent could not be asked").await;
             voice
                 .say(&run.alo.id, &could_not_ask(&delegate.handle))
                 .await;
@@ -267,24 +337,32 @@ async fn run_plan(
         // un-made, but its words can be kept out of the room, and the room is
         // told the run ended rather than left waiting on a plan.
         if run.is_stopped() {
+            goal_ends(voice, goal, GoalEnd::Stopped, "").await;
             voice.say(&run.alo.id, &stopped_after(done, total)).await;
             return Some(Spoken::Stopped);
         }
         match took {
             Ok(TurnResult::Answer(answer)) => {
                 voice.say(&delegate.id, &answer).await?;
+                if let Some(goal) = goal {
+                    let _ = acc.advance_goal(goal, done + 1).await;
+                }
             }
             Ok(TurnResult::Propose { action, say }) => {
                 // **The one approval surface.** The step that wants a change is
                 // where the run stops: its proposal is the only thing pending,
-                // and everything after it waits behind that one tap.
+                // everything after it waits behind that one tap — and the goal
+                // records which tap, so the approval knows what to resume.
                 let said = voice.say(&delegate.id, &say).await?;
-                voice
+                let card = voice
                     .account
                     .acc
                     .propose_action(&said, &action.tool, &action.args)
                     .await
                     .ok()?;
+                if let Some(goal) = goal {
+                    let _ = acc.goal_awaits(goal, &card).await;
+                }
                 if done + 1 < total {
                     voice.say(&run.alo.id, WAITING_ON_APPROVAL).await;
                 }
@@ -293,24 +371,142 @@ async fn run_plan(
             // A step's own delegate proposed (A5.2): the proposal is already
             // in the room under that delegate's id, and it is the same one
             // surface — the run stops behind it exactly as it does for a
-            // step's own write.
-            Ok(TurnResult::DelegateProposed) => {
+            // step's own write, and the goal waits on it the same way.
+            Ok(TurnResult::DelegateProposed(card)) => {
+                if let Some(goal) = goal {
+                    let _ = acc.goal_awaits(goal, &card).await;
+                }
                 if done + 1 < total {
                     voice.say(&run.alo.id, WAITING_ON_APPROVAL).await;
                 }
                 return Some(Spoken::Proposed);
             }
             Err(InferenceError::Disabled | InferenceError::NotConfigured) => {
+                goal_ends(voice, goal, GoalEnd::Failed, "no AI provider is configured").await;
                 voice.say(&run.alo.id, UNCONFIGURED).await;
                 return Some(Spoken::Excused);
             }
             Err(_) => {
+                goal_ends(
+                    voice,
+                    goal,
+                    GoalEnd::Failed,
+                    "the model could not be reached",
+                )
+                .await;
                 voice.say(&run.alo.id, UNREACHABLE).await;
                 return Some(Spoken::Excused);
             }
         }
     }
+    goal_ends(voice, goal, GoalEnd::Done, "").await;
     Some(Spoken::Answered)
+}
+
+/// Said when an approval hands a goal back and there is more plan to run —
+/// so the room knows the tap did more than settle a card.
+fn carrying_on(done: usize, total: usize) -> String {
+    format!("Carrying on — step {} of {total}.", done + 1)
+}
+
+/// Carry a goal on after the proposal it waited behind was approved and
+/// executed (A8.3).
+///
+/// The remaining steps run through the very machinery the original segment
+/// used — [`run_steps`], the same roster gate, a fresh [`RunEnv`] budget (an
+/// approval is a person back in the loop, and the leash starts over) — and the
+/// segment registers a turn of its own, so the room sees Ask alo thinking and
+/// Stop reaches a resumed run exactly as it reaches a fresh one.
+///
+/// Spawned, not awaited: the approval's HTTP response must not wait on a model.
+/// Every early return below ends the goal with its reason; the one silent path
+/// is `resume_goal` itself refusing, which means the goal moved under us —
+/// somebody stopped it between the tap and here — and their ending stands.
+pub(crate) fn resume_goal(state: &AppState, account: &Account, goal: AgentGoal) {
+    let state = state.clone();
+    let account = account.clone();
+    tokio::spawn(async move {
+        let acc = &account.acc;
+        let Ok(goal) = acc.resume_goal(&goal.id).await else {
+            return;
+        };
+        // The approved step was the last: there is nothing left to run.
+        if goal.cursor >= goal.steps.len() {
+            let _ = acc.finish_goal(&goal.id, GoalEnd::Done, None).await;
+            return;
+        }
+        let Ok(alo) = acc.agent(&goal.agent).await else {
+            let _ = acc
+                .finish_goal(&goal.id, GoalEnd::Failed, Some("its agent is gone"))
+                .await;
+            return;
+        };
+        let voice = Voice::new(&state, &account, &goal.channel).await;
+        let config = match acc.default_ai_config().await {
+            Ok(Some(row)) => AiConfig {
+                base_url: row.base_url,
+                model: row.model,
+                api_key: row.api_key,
+                enabled: row.enabled,
+            },
+            _ => {
+                goal_ends(
+                    &voice,
+                    Some(&goal.id),
+                    GoalEnd::Failed,
+                    "no AI provider is configured",
+                )
+                .await;
+                voice.say(&alo.id, UNCONFIGURED).await;
+                return;
+            }
+        };
+        let today = crate::chat_agent::today_for(acc).await;
+        // A turn of its own: visible in the room's turn list, stoppable by the
+        // asker — who is the caller, because only the asker decides a proposal.
+        let (turn, stopped) = state.turns.begin(
+            &account.tenant,
+            &goal.channel,
+            alo.id.as_str(),
+            &alo.handle,
+            acc.user().as_str(),
+        );
+        let run = Run {
+            channel: &goal.channel,
+            alo: &alo,
+            question: &goal.request,
+            today: &today,
+            config: &config,
+            stopped: &stopped,
+        };
+        let roster = roster(&account, &alo).await;
+        let steps: Vec<PlanStep> = goal
+            .steps
+            .iter()
+            .map(|step| PlanStep {
+                agent: step.agent.clone(),
+                ask: step.ask.clone(),
+            })
+            .collect();
+        let env = RunEnv::new(&state, &account, &config);
+        if voice
+            .say(&alo.id, &carrying_on(goal.cursor, steps.len()))
+            .await
+            .is_some()
+        {
+            run_steps(
+                &voice,
+                &run,
+                &env,
+                &roster,
+                &steps,
+                goal.cursor,
+                Some(&goal.id),
+            )
+            .await;
+        }
+        state.turns.end(&account.tenant, &goal.channel, &turn);
+    });
 }
 
 /// The plan as the room reads it: one numbered line per step, naming the agent

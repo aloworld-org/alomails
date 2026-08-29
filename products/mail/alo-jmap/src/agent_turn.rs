@@ -246,7 +246,9 @@ pub(crate) enum TurnResult {
     /// delegate's own id (A5.2) — the run's one approval surface. There is
     /// nothing left for the caller to post, and nothing further may run: a
     /// second pending proposal would be a second button whose order matters.
-    DelegateProposed,
+    /// Carries the proposal's id, so a goal can wait behind a write however
+    /// deep in the run it was wanted (A8.3).
+    DelegateProposed(alo_store::ChatProposalId),
 }
 
 /// Run one turn to a result, executing its reading tools along the way.
@@ -496,7 +498,7 @@ async fn run_handoff(
         Ok(TurnResult::Propose { action, say }) => match turn.context.channel {
             Some(channel) => match propose_in_room(env, channel, &delegate.id, &action, &say).await
             {
-                Some(()) => Handoff::Over(TurnResult::DelegateProposed),
+                Some(card) => Handoff::Over(TurnResult::DelegateProposed(card)),
                 // The room would not take it — the delegate's module gate, a
                 // room gone archived. The old words are the safe floor: the
                 // person is pointed at the agent that can do it.
@@ -508,7 +510,7 @@ async fn run_handoff(
         },
         // A deeper delegate already proposed: the surface exists, bubble the
         // end of the run up the chain.
-        Ok(TurnResult::DelegateProposed) => Handoff::Over(TurnResult::DelegateProposed),
+        Ok(TurnResult::DelegateProposed(card)) => Handoff::Over(TurnResult::DelegateProposed(card)),
         Err(_) => Handoff::Fold(format!(
             "the handoff to @{} did not run: the model could not be reached",
             delegate.handle
@@ -637,14 +639,13 @@ async fn propose_in_room(
     delegate: &ChatAgentId,
     action: &alo_ai::ProposedAction,
     say: &str,
-) -> Option<()> {
+) -> Option<alo_store::ChatProposalId> {
     let said = join_and_say(env, channel, delegate, say).await?;
     env.account
         .acc
         .propose_action(&said, &action.tool, &action.args)
         .await
-        .ok()?;
-    Some(())
+        .ok()
 }
 
 /// What a decision means for the turn: the turn is over, or there is a read to
@@ -763,7 +764,7 @@ mod tests {
     fn a_read_still_wanted_at_the_bound_becomes_an_answer() {
         match finish(step(action("stock_answer"))) {
             TurnResult::Answer(text) => assert!(text.contains("narrow it down")),
-            TurnResult::Propose { .. } | TurnResult::DelegateProposed => {
+            TurnResult::Propose { .. } | TurnResult::DelegateProposed(_) => {
                 panic!("a read must never become a proposal")
             }
         }
@@ -776,7 +777,7 @@ mod tests {
                 assert_eq!(action.tool, "create_task");
                 assert_eq!(say, "doing it");
             }
-            TurnResult::Answer(_) | TurnResult::DelegateProposed => {
+            TurnResult::Answer(_) | TurnResult::DelegateProposed(_) => {
                 panic!("a write must still wait for a tap")
             }
         }
@@ -804,7 +805,7 @@ mod tests {
         });
         match finish(wanted) {
             TurnResult::Answer(text) => assert!(text.contains("ask the remaining part")),
-            TurnResult::Propose { .. } | TurnResult::DelegateProposed => {
+            TurnResult::Propose { .. } | TurnResult::DelegateProposed(_) => {
                 panic!("a handoff must never become a proposal")
             }
         }
@@ -929,7 +930,7 @@ mod tests {
                     assert!(!entry.is_read(), "{} was put behind a button", entry.name);
                     assert_eq!(action.tool, entry.name);
                 }
-                Step::Done(TurnResult::Answer(_) | TurnResult::DelegateProposed) => {
+                Step::Done(TurnResult::Answer(_) | TurnResult::DelegateProposed(_)) => {
                     panic!("{} became an answer with no tool run", entry.name)
                 }
                 Step::Handoff { .. } => {
@@ -976,7 +977,7 @@ mod tests {
     fn an_answer_passes_straight_through() {
         match finish(step(AgentDecision::Answer("42 in stock [1].".to_owned()))) {
             TurnResult::Answer(text) => assert_eq!(text, "42 in stock [1]."),
-            TurnResult::Propose { .. } | TurnResult::DelegateProposed => {
+            TurnResult::Propose { .. } | TurnResult::DelegateProposed(_) => {
                 panic!("an answer is not a proposal")
             }
         }

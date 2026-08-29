@@ -6,6 +6,7 @@
 
 mod common;
 
+mod agent_goals;
 mod agent_ground;
 mod agent_tool_runs;
 mod app_passwords_tenancy;

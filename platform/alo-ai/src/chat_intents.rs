@@ -204,6 +204,10 @@ pub const CHAT_EXCLUDED: &[Excluded] = &[
         why: "Stopping a run is the person's brake on an agent; it must never be a tool an agent can reach.",
     },
     Excluded {
+        route: "/chat/channels/{id}/goals",
+        why: "The goal card (ADR 0058 §7) is the runtime's own progress surface; a verb here would be the agent watching itself run.",
+    },
+    Excluded {
         route: "/chat/agents",
         why: "Registering agents is the workspace's configuration, kept by a person.",
     },

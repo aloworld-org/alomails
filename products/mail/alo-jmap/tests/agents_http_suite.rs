@@ -23,6 +23,7 @@ mod agent_drive_intents_http;
 mod agent_evaluation_http;
 mod agent_events_http;
 mod agent_finance_intents_http;
+mod agent_goals_http;
 mod agent_hr_intents_http;
 mod agent_insights_http;
 mod agent_insights_intents_http;

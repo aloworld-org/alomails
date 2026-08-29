@@ -35,13 +35,15 @@ use crate::agent::extract_json;
 use crate::agent_product::headline;
 use crate::{AiConfig, ChatMessage, InferenceError, chat};
 
-/// How many steps one orchestrated run may have (A3.1).
+/// How many steps one orchestrated run may have (A3.1, widened by A8.3).
 ///
-/// Three, matching the read budget of a single turn: the shapes worth having
-/// are "ask one agent", "ask one and then act on the answer", and "ask two and
-/// then act". Beyond that a request is really several requests, and saying so
-/// is a better answer than a run nobody can follow.
-pub const MAX_PLAN_STEPS: usize = 3;
+/// Four, the goal shape's width (ADR 0058 §7): look the record up, act on it,
+/// tell the people it concerns, put the follow-through in the diary — four
+/// products, one step each. It stays at the run's handoff budget, never above
+/// it, so a maximal plan still fits its own run; beyond this a request is
+/// really several requests, and saying so is a better answer than a run
+/// nobody can follow.
+pub const MAX_PLAN_STEPS: usize = 4;
 
 /// An agent the plan may route to — one row of the roster.
 ///
@@ -375,7 +377,7 @@ mod tests {
         assert!(system.contains("- @inventory: You are the alo Inventory agent"));
         // An agent nobody put on the roster is not describable to the model.
         assert!(!system.contains("@finance"));
-        assert!(system.contains("At most 3 steps"));
+        assert!(system.contains("At most 4 steps"));
         assert!(system.ends_with("no preamble."));
         assert!(msgs[1].content.contains("are we in contact with ABC?"));
         assert!(msgs[1].content.contains("2026-08-15"));
@@ -456,7 +458,7 @@ mod tests {
         match plan(text).unwrap() {
             AgentPlan::Steps(steps) => {
                 assert_eq!(steps.len(), MAX_PLAN_STEPS);
-                assert_eq!(steps[2].ask, "three");
+                assert_eq!(steps[3].ask, "four");
             }
             other => panic!("expected steps, got {other:?}"),
         }

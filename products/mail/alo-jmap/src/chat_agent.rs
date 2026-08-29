@@ -142,20 +142,7 @@ pub(crate) async fn take_turn(
         }
     };
 
-    // A room turn has no browser to ask, so it uses what the person's own
-    // sessions have already told us. Unknown stays unknown: the prompt then
-    // makes the model declare which hour it assumed.
-    let today = {
-        let date = time::OffsetDateTime::now_utc().date().to_string();
-        match acc.user_timezone().await.unwrap_or_default() {
-            Some(zone) => format!(
-                "{date}, and the person asking is in the {zone} timezone. Every datetime                  you produce must be an instant that means the time THEY said on THEIR clock."
-            ),
-            None => format!(
-                "{date}. The person's timezone is unknown, so any datetime you produce is                  read as UTC — say which hour you assumed in your `say` line."
-            ),
-        }
-    };
+    let today = today_for(acc).await;
     // **Ask alo orchestrates rather than owns** (ADR 0034, A3.1): it routes the
     // question to the product agents and runs their answers as a visible plan,
     // each step under its own agent's scope. It falls back to the ordinary turn
@@ -260,7 +247,7 @@ pub(crate) async fn take_turn(
         // A delegate of this run proposed (A5.2): its sentence and its
         // proposal are already in the room under its own id — the run's one
         // approval surface — and this agent has nothing left to say.
-        Ok((TurnResult::DelegateProposed, _)) => Some(Spoken::Proposed),
+        Ok((TurnResult::DelegateProposed(_), _)) => Some(Spoken::Proposed),
         Err(InferenceError::Disabled | InferenceError::NotConfigured) => {
             let _ = acc
                 .post_as_agent(channel, &agent.id, UNCONFIGURED, None)
@@ -273,6 +260,23 @@ pub(crate) async fn take_turn(
                 .await;
             Some(Spoken::Excused)
         }
+    }
+}
+
+/// Today's date and the asker's clock, as a room turn tells the model. A room
+/// turn has no browser to ask, so it uses what the person's own sessions have
+/// already told us; unknown stays unknown, and the prompt then makes the model
+/// declare which hour it assumed. Shared with a goal's resumed run (A8.3),
+/// which happens at approval time and must be told the clock the same way.
+pub(crate) async fn today_for(acc: &alo_store::AccountStore) -> String {
+    let date = time::OffsetDateTime::now_utc().date().to_string();
+    match acc.user_timezone().await.unwrap_or_default() {
+        Some(zone) => format!(
+            "{date}, and the person asking is in the {zone} timezone. Every datetime                  you produce must be an instant that means the time THEY said on THEIR clock."
+        ),
+        None => format!(
+            "{date}. The person's timezone is unknown, so any datetime you produce is                  read as UTC — say which hour you assumed in your `say` line."
+        ),
     }
 }
 

@@ -238,7 +238,7 @@ pub async fn agent(
         // Unreachable in practice: the palette's turn is offered no roster, so
         // no delegate ever runs, let alone proposes. Stated for the compiler,
         // and shaped as "nothing came of it" rather than an invented sentence.
-        Ok(TurnResult::DelegateProposed) => Ok(Json(json!({
+        Ok(TurnResult::DelegateProposed(_)) => Ok(Json(json!({
             "answer": Value::Null, "action": Value::Null,
             "reason": Value::Null, "sources": sources_json
         }))),

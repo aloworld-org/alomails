@@ -92,6 +92,7 @@ pub mod chat_agent;
 pub mod chat_agent_memory;
 pub mod chat_agent_names;
 pub mod chat_agent_routes;
+pub mod chat_goals;
 pub mod chat_intents;
 pub mod chat_turns;
 pub mod contacts;

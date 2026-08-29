@@ -11,6 +11,7 @@ pub mod account;
 pub mod account_imap;
 pub mod account_mapi;
 pub mod account_sieve;
+pub mod agent_goals;
 pub mod agent_ground;
 pub mod agent_instructions;
 pub mod agent_memories;
@@ -293,6 +294,7 @@ pub use account::AccountStore;
 pub use account_imap::{ImapEntry, ImapMailbox, ImapSearchRow};
 pub use account_mapi::{MapiDirectoryEntry, MapiMessageRow};
 pub use account_sieve::{OutboundAction, SieveDelivery, SieveScriptMeta};
+pub use agent_goals::{AgentGoal, GoalEnd, GoalStatus, GoalStep};
 pub use agent_ground::GroundSource;
 pub use agent_instructions::{
     AgentInstruction, DueInstruction, INSTRUCTION_MAX_MINUTES, INSTRUCTION_MIN_MINUTES,
@@ -525,11 +527,11 @@ pub use hr_payroll_mapping::{
     mapping_for_country as payroll_mapping_for_country,
 };
 pub use id::{
-    AgentInstructionId, AgentMemoryId, AppPasswordId, AttachmentId, BankLineId, BankMatchId,
-    BankStatementId, BaseFieldId, BaseRecordId, BaseTableId, BaseViewId, BillingBillId,
-    BillingCustomerId, BillingInvoiceId, BillingLineId, BillingPaymentId, BillingProductId,
-    BillingQuoteId, BillingScheduleId, BlobId, CalendarId, CampaignBounceId, CampaignConsentId,
-    CampaignId, CampaignSegmentId, CampaignSendId, CampaignSuppressionId,
+    AgentGoalId, AgentInstructionId, AgentMemoryId, AppPasswordId, AttachmentId, BankLineId,
+    BankMatchId, BankStatementId, BaseFieldId, BaseRecordId, BaseTableId, BaseViewId,
+    BillingBillId, BillingCustomerId, BillingInvoiceId, BillingLineId, BillingPaymentId,
+    BillingProductId, BillingQuoteId, BillingScheduleId, BlobId, CalendarId, CampaignBounceId,
+    CampaignConsentId, CampaignId, CampaignSegmentId, CampaignSendId, CampaignSuppressionId,
     CampaignUnsubscribeTokenId, CategoryId, ChatAgentId, ChatChannelId, ChatMessageId,
     ChatProposalId, ChatToolRunId, CommentId, ContactId, CrmActivityId, CrmDealId, CrmEventId,
     CrmPipelineId, CrmStageId, DomainEventId, DriveNodeId, EventId, FinAccountId, FinCategoryId,
