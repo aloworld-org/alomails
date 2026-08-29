@@ -84,6 +84,10 @@ export interface QuoteContentStudioHandle {
   copyTo: (quoteId: string) => Promise<void>;
 }
 
+export function quoteStudioWorkspaceOverflow(preview: boolean) {
+  return preview ? "overflow-hidden" : "overflow-visible";
+}
+
 export const QuoteStudioWorkspace = forwardRef<
   QuoteContentStudioHandle,
   {
@@ -435,7 +439,8 @@ export const QuoteStudioWorkspace = forwardRef<
       <section
         ref={root}
         className={cx(
-          "overflow-hidden bg-[var(--quote-background)]",
+          "bg-[var(--quote-background)]",
+          quoteStudioWorkspaceOverflow(preview),
           preview
             ? "rounded-none"
             : "rounded-2xl border border-default shadow-sm",
@@ -736,14 +741,13 @@ export const QuoteStudioWorkspace = forwardRef<
                   <div key={block.id}>
                     <article
                       className={cx(
-                        "group/quote-block bg-[var(--quote-background)] text-[var(--quote-text)]",
-                        readOnly
-                          ? "overflow-visible"
-                          : "overflow-hidden rounded-xl border border-[var(--quote-table-header)] shadow-sm",
+                        "group/quote-block overflow-visible bg-[var(--quote-background)] text-[var(--quote-text)]",
+                        !readOnly &&
+                          "rounded-xl border border-[var(--quote-table-header)] shadow-sm",
                       )}
                     >
                       {!readOnly && (
-                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--quote-table-header)] bg-raised/40 px-4 py-2.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2 rounded-t-xl border-b border-[var(--quote-table-header)] bg-raised/40 px-4 py-2.5">
                           {block.kind === "pricing" ? (
                             <label className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
                               <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-tertiary">

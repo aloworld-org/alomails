@@ -25,7 +25,22 @@ describe("ListStyleGallery", () => {
   it("offers the bullet library for a bullet list", () => {
     render(<ListStyleGallery ordered={false} value="disc" onChange={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: strings.quoteStudioBulletStyle }));
+    const dialog = screen.getByRole("dialog", { name: strings.quoteStudioBulletStyle });
     expect(screen.getAllByRole("radio")).toHaveLength(7);
-    expect(screen.getByRole("radio", { name: strings.quoteStudioListStyleName("checkbox") }).textContent).toContain("☐");
+    expect(dialog.className).toContain("fixed");
+    expect(dialog.className).toContain("sm:right-0");
+    expect(dialog.className).toContain("overflow-y-auto");
+    expect(dialog.className).not.toContain("left-0");
+
+    const checkbox = screen.getByRole("radio", {
+      name: strings.quoteStudioListStyleName("checkbox"),
+    });
+    expect(checkbox.textContent).toContain("☐");
+    expect(checkbox.getAttribute("title")).toBeNull();
+
+    const selected = screen.getByRole("radio", {
+      name: strings.quoteStudioListStyleName("disc"),
+    });
+    expect(selected.querySelector("svg")).toBeTruthy();
   });
 });
