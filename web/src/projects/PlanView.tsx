@@ -23,7 +23,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Flag, Plus, X } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 
-import { Button, Spinner } from "../ds";
+import { Badge, Button, Select, Spinner } from "../ds";
 import { strings } from "../i18n";
 import { useJmapClient } from "../jmap";
 import type { Task } from "../jmap";
@@ -37,8 +37,6 @@ import type { Milestone, Project, ProjectPlan } from "./types";
 const styles = {
   page: "flex min-h-0 flex-col gap-4 overflow-auto px-5 py-4",
   toolbar: "flex flex-wrap items-center gap-3",
-  select:
-    "w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent",
   toolbarSpacer: "flex-1",
   timeline: "relative mx-6 h-14",
   timelineTrack: "absolute inset-x-0 top-2.5 h-0.5 bg-subtle",
@@ -54,9 +52,6 @@ const styles = {
   milestoneHead: "flex flex-wrap items-start gap-3 px-5 py-4",
   rowName: "text-left text-base font-semibold text-link hover:text-accent",
   muted: "text-tertiary",
-  chip: "inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium",
-  chipGood: "bg-[var(--success-tint)] text-success",
-  chipBad: "bg-[var(--danger-tint)] text-danger",
   milestoneTasks: "m-0 list-none border-t border-subtle bg-raised/40 p-0",
   milestoneTask:
     "flex min-h-11 items-center gap-3 border-b border-subtle px-5 py-2.5 text-sm text-primary last:border-b-0",
@@ -329,24 +324,22 @@ export function PlanView({
                       {milestone.name}
                     </button>
                     {projectId === ALL_PROJECTS && (
-                      <span
-                        className={`${styles.chip} bg-subtle text-secondary`}
-                      >
+                      <Badge>
                         {projectById.get(milestone.projectId)?.name ??
                           strings.projectsProject}
-                      </span>
+                      </Badge>
                     )}
                     <span className={styles.muted}>
                       {dayLabel(milestone.dueOn)}
                     </span>
                     {milestone.done ? (
-                      <span className={`${styles.chip} ${styles.chipGood}`}>
+                      <Badge tone="success">
                         {strings.projectsMilestoneReached}
-                      </span>
+                      </Badge>
                     ) : milestone.late ? (
-                      <span className={`${styles.chip} ${styles.chipBad}`}>
+                      <Badge tone="danger">
                         {strings.projectsMilestoneLate}
-                      </span>
+                      </Badge>
                     ) : null}
                     <div className="ml-auto flex min-w-36 flex-col gap-1.5">
                       <span className="text-right text-xs text-secondary">
@@ -441,13 +434,12 @@ export function PlanView({
                     {/* The board's own task, put into the plan without leaving
                         the plan — and a task under one milestone is under no
                         other, which is why this is a single choice. */}
-                    <select
-                      className={styles.select}
+                    <Select
                       value=""
                       aria-label={strings.projectsPlanPlaceTask(task.title)}
+                      placeholder={strings.projectsPlanPlace}
                       onChange={(e) => void place(task.id, e.target.value)}
                     >
-                      <option value="">{strings.projectsPlanPlace}</option>
                       {plan.milestones.map((milestone) =>
                         milestone.projectId === task.projectId ? (
                           <option key={milestone.id} value={milestone.id}>
@@ -455,7 +447,7 @@ export function PlanView({
                           </option>
                         ) : null,
                       )}
-                    </select>
+                    </Select>
                   </li>
                 ))}
               </ul>

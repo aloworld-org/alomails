@@ -14,7 +14,7 @@
 import { Briefcase, CopyPlus, FolderKanban, PencilLine, Play, Plus, Square, Star } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { Button, IconButton, Spinner } from "../ds";
+import { Button, IconButton, Spinner, Table, Td, Th } from "../ds";
 import { strings } from "../i18n";
 import { amountLabel, dayLabel, durationLabel, elapsedMinutes, percentLabel, rateLabel } from "./format";
 import { EmptyState } from "./parts";
@@ -128,7 +128,7 @@ export function ProjectsView({
       <section className="overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm">
         <div className="flex items-center justify-between gap-4 border-b border-subtle px-5 py-4 max-sm:items-start">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-accent">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">
               <FolderKanban className="size-5" aria-hidden="true" />
             </span>
             <div className="min-w-0">
@@ -159,24 +159,19 @@ export function ProjectsView({
           </div>
         </div>
         {/* Scrolls horizontally on purpose — the table keeps its readable
-            column widths and the strip pans; the responsive e2e sweep exempts
-            marked containers from its element-width invariant. */}
-        <div className="overflow-x-auto" data-allow-overflow="">
-          <table className="w-full min-w-[76rem] border-collapse text-sm">
+            column widths and the strip pans; `Table`'s region carries the
+            overflow marker the responsive e2e sweep exempts. */}
+        <Table label={strings.projectsTabList} flat>
           <thead>
-            <tr className="bg-raised/60 text-left text-xs font-semibold uppercase tracking-wide text-tertiary">
-              <th scope="col" className="px-5 py-3">{strings.projectsProject}</th>
-              <th scope="col" className="px-4 py-3">{strings.projectsCustomer}</th>
-              <th scope="col" className="px-4 py-3 text-right">
-                {strings.projectsRate}
-              </th>
-              <th scope="col" className="px-4 py-3 text-right">
-                {strings.projectsHoursLogged}
-              </th>
-              <th scope="col" className="px-4 py-3">{strings.projectsBudget}</th>
-              <th scope="col" className="px-4 py-3">{strings.projectsLastWorked}</th>
-              <th scope="col" className="px-4 py-3">{strings.projectsWorkspaceTasks}</th>
-              <th scope="col" className="px-5 py-3" aria-label={strings.projectsActions} />
+            <tr>
+              <Th className="min-w-64">{strings.projectsProject}</Th>
+              <Th>{strings.projectsCustomer}</Th>
+              <Th numeric>{strings.projectsRate}</Th>
+              <Th numeric>{strings.projectsHoursLogged}</Th>
+              <Th>{strings.projectsBudget}</Th>
+              <Th>{strings.projectsLastWorked}</Th>
+              <Th>{strings.projectsWorkspaceTasks}</Th>
+              <Th hideLabel>{strings.projectsActions}</Th>
             </tr>
           </thead>
           <tbody>
@@ -187,17 +182,17 @@ export function ProjectsView({
               return (
                 <tr
                   key={project.id}
-                  className={`group border-t border-subtle transition-colors ${
-                    isRunning ? "bg-[var(--accent-soft)]" : "hover:bg-raised/50"
+                  className={`group transition-colors ${
+                    isRunning ? "bg-accent-soft" : "hover:bg-raised/50"
                   }`}
                 >
-                  <td className="px-5 py-4">
+                  <td>
                     <button
                       type="button"
                       className="flex items-center gap-3 text-left text-sm font-semibold text-primary no-underline outline-none hover:text-accent focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-accent"
                       onClick={() => onOpenTasks(project)}
                     >
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-accent">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">
                         <Briefcase className="size-4" aria-hidden="true" />
                       </span>
                       <span className="min-w-0">
@@ -227,7 +222,7 @@ export function ProjectsView({
                       </span>
                     </button>
                   </td>
-                  <td className="px-4 py-4">
+                  <td>
                     <span
                       className={
                         client === null
@@ -240,10 +235,10 @@ export function ProjectsView({
                         : (customer ?? strings.projectsCustomerUnknown)}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-4 text-right font-medium tabular-nums text-primary">
+                  <Td numeric className="font-medium">
                     {client === null ? "\u2014" : rateLabel(client.rateCents, client.currency)}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-4 text-right font-medium tabular-nums text-primary">
+                  </Td>
+                  <Td numeric className="font-medium">
                     {durationLabel(project.hours.minutes)}
                     {project.hours.billableMinutes !== project.hours.minutes && (
                       <div className="mt-1 text-xs font-normal text-tertiary">
@@ -252,8 +247,8 @@ export function ProjectsView({
                         )}
                       </div>
                     )}
-                  </td>
-                  <td className="min-w-40 px-4 py-4">
+                  </Td>
+                  <td className="min-w-40">
                     <ProjectBudget consumptionBp={project.hours.budgetConsumptionBp} />
                     {client !== null && client.budgetCents !== null && (
                       <span className="mt-1 block text-xs text-tertiary">
@@ -261,12 +256,14 @@ export function ProjectsView({
                       </span>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-4 text-secondary">
-                    {project.hours.lastWorkedOn === null
-                      ? strings.projectsNeverWorked
-                      : dayLabel(project.hours.lastWorkedOn)}
+                  <td className="whitespace-nowrap">
+                    <span className="text-secondary">
+                      {project.hours.lastWorkedOn === null
+                        ? strings.projectsNeverWorked
+                        : dayLabel(project.hours.lastWorkedOn)}
+                    </span>
                   </td>
-                  <td className="min-w-48 px-4 py-4">
+                  <td className="min-w-48">
                     <div className="flex flex-wrap items-center gap-1.5">
                       {(project.work?.overdueTasks ?? 0) > 0 && (
                         <span className="inline-flex rounded-full bg-danger/10 px-2.5 py-1 text-xs font-semibold text-danger">
@@ -290,7 +287,7 @@ export function ProjectsView({
                       </span>
                     )}
                   </td>
-                  <td className="px-5 py-4">
+                  <td>
                     <div className="flex items-center justify-end gap-2">
                       {project.kind === "team" && (
                         <IconButton
@@ -349,8 +346,7 @@ export function ProjectsView({
               );
             })}
           </tbody>
-        </table>
-        </div>
+        </Table>
       </section>
     </div>
   );

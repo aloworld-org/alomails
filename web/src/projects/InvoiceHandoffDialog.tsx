@@ -1,6 +1,7 @@
 import { CalendarDays, Check, FileText, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import { Button, IconButton, Input, Modal } from "../ds";
 import { strings } from "../i18n";
 import { amountLabel, durationLabel } from "./format";
 import { projectsMessage, useProjectsApi } from "./api";
@@ -93,45 +94,39 @@ export function InvoiceHandoffDialog({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-modal flex items-center justify-center bg-scrim p-4"
-      role="presentation"
-      onMouseDown={onClose}
-    >
-      <section
-        className="flex max-h-[min(44rem,calc(100vh-2rem))] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-subtle bg-surface shadow-xl"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="invoice-handoff-title"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <header className="flex items-start justify-between gap-4 border-b border-subtle px-6 py-5">
-          <div className="flex min-w-0 gap-3">
-            <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">
-              <FileText size={19} />
-            </span>
-            <div>
-              <h2
-                id="invoice-handoff-title"
-                className="text-lg font-semibold text-primary"
-              >
-                {strings.projectsCreateInvoice}
-              </h2>
-              <p className="mt-1 text-sm text-secondary">
-                {strings.projectsCreateInvoiceSubtitle}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg text-secondary !no-underline hover:bg-raised hover:text-primary hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            onClick={onClose}
-            aria-label={strings.close}
+    <Modal
+      title={strings.projectsCreateInvoice}
+      onClose={onClose}
+      wide
+      icon={<FileText size={19} />}
+      actions={
+        <IconButton
+          label={strings.close}
+          icon={<X size={18} />}
+          onClick={onClose}
+        />
+      }
+      footer={
+        <>
+          <span className="flex-1" />
+          <Button variant="ghost" onClick={onClose} disabled={saving}>
+            {strings.cancel}
+          </Button>
+          <Button
+            disabled={selectedIds.length === 0 || saving}
+            onClick={() => void createDraft()}
           >
-            <X size={19} />
-          </button>
-        </header>
-        <div className="min-h-0 flex-1 overflow-y-auto p-6">
+            {saving
+              ? strings.billingSaving
+              : strings.projectsCreateDraftInvoice}
+          </Button>
+        </>
+      }
+    >
+      <p className="m-0 text-sm text-secondary">
+        {strings.projectsCreateInvoiceSubtitle}
+      </p>
+      <div>
           <div className="mb-5 flex flex-wrap items-end justify-between gap-3 rounded-xl border border-subtle bg-raised p-4">
             <div className="min-w-0">
               <p className="font-semibold text-primary">{project.name}</p>
@@ -148,12 +143,12 @@ export function InvoiceHandoffDialog({
                   className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-secondary"
                   size={17}
                 />
-                <input
+                <Input
                   type="date"
                   value={cutoff}
                   max={new Date().toISOString().slice(0, 10)}
                   onChange={(event) => setCutoff(event.target.value)}
-                  className="min-h-10 rounded-lg border border-subtle bg-surface py-2 pl-10 pr-3 text-sm text-primary focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-soft"
+                  className="!pl-10"
                 />
               </span>
             </label>
@@ -221,27 +216,7 @@ export function InvoiceHandoffDialog({
               {error}
             </p>
           )}
-        </div>
-        <footer className="flex items-center justify-end gap-3 border-t border-subtle px-6 py-4">
-          <button
-            type="button"
-            className="inline-flex min-h-10 items-center rounded-lg bg-raised px-4 py-2 text-sm font-medium text-primary !no-underline hover:bg-default hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            onClick={onClose}
-          >
-            {strings.cancel}
-          </button>
-          <button
-            type="button"
-            className="inline-flex min-h-10 items-center rounded-lg bg-accent px-5 py-2 text-sm font-semibold text-on-accent !no-underline hover:bg-accent-hover hover:!no-underline disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-            disabled={selectedIds.length === 0 || saving}
-            onClick={() => void createDraft()}
-          >
-            {saving
-              ? strings.billingSaving
-              : strings.projectsCreateDraftInvoice}
-          </button>
-        </footer>
-      </section>
-    </div>
+      </div>
+    </Modal>
   );
 }

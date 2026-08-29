@@ -77,7 +77,7 @@ export function ProjectScopePicker({
           onClick={() => setOpen((current) => !current)}
         >
           <span
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-accent"
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent"
             aria-hidden="true"
           >
             {selected === null ? (

@@ -25,10 +25,10 @@ import { useState } from "react";
 import { Briefcase } from "lucide-react";
 
 import { hundredthsToInput, parseHundredths, useCustomers } from "../billing";
-import { useDialogs } from "../ds";
+import { Field, Input, Select, useDialogs } from "../ds";
 import { strings } from "../i18n";
 import { projectsMessage, useProjectsApi } from "./api";
-import { DialogFrame, Field } from "./parts";
+import { DialogFrame } from "./parts";
 import type { Project } from "./types";
 
 /** Minutes typed as whole hours, and back. A budget is stated in hours by
@@ -147,39 +147,50 @@ export function ClientDialog({
       {!teamProject && <p className="text-xs text-tertiary">{strings.projectsPersonalBoard}</p>}
 
       <Field label={strings.projectsCustomer} hint={strings.projectsCustomerHint}>
-        <select
-          className="w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent"
-          value={customerId}
-          disabled={!teamProject}
-          onChange={(e) => setCustomerId(e.target.value)}
-        >
-          <option value="">{strings.projectsCustomerPick}</option>
-          {customers.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+        {(control) => (
+          <Select
+            id={control.id}
+            aria-describedby={control["aria-describedby"]}
+            fullWidth
+            placeholder={strings.projectsCustomerPick}
+            value={customerId}
+            disabled={!teamProject}
+            onChange={(e) => setCustomerId(e.target.value)}
+          >
+            {customers.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
+        )}
       </Field>
 
       <div className="flex flex-wrap gap-3 [&>*]:min-w-40 [&>*]:flex-1">
         <Field label={strings.projectsRate} hint={strings.projectsRateHint} error={rateError}>
-          <input
-            className="w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent"
-            inputMode="decimal"
-            value={rate}
-            disabled={!teamProject}
-            onChange={(e) => setRate(e.target.value)}
-          />
+          {(control) => (
+            <Input
+              id={control.id}
+              aria-describedby={control["aria-describedby"]}
+              invalid={control.invalid}
+              inputMode="decimal"
+              value={rate}
+              disabled={!teamProject}
+              onChange={(e) => setRate(e.target.value)}
+            />
+          )}
         </Field>
         <Field label={strings.projectsStartsOn}>
-          <input
-            className="w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent"
-            type="date"
-            value={startsOn}
-            disabled={!teamProject}
-            onChange={(e) => setStartsOn(e.target.value)}
-          />
+          {(control) => (
+            <Input
+              id={control.id}
+              aria-describedby={control["aria-describedby"]}
+              type="date"
+              value={startsOn}
+              disabled={!teamProject}
+              onChange={(e) => setStartsOn(e.target.value)}
+            />
+          )}
         </Field>
       </div>
 
@@ -189,22 +200,30 @@ export function ClientDialog({
           hint={strings.projectsBudgetHint}
           error={budgetHoursError}
         >
-          <input
-            className="w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent"
-            inputMode="numeric"
-            value={budgetHours}
-            disabled={!teamProject}
-            onChange={(e) => setBudgetHours(e.target.value)}
-          />
+          {(control) => (
+            <Input
+              id={control.id}
+              aria-describedby={control["aria-describedby"]}
+              invalid={control.invalid}
+              inputMode="numeric"
+              value={budgetHours}
+              disabled={!teamProject}
+              onChange={(e) => setBudgetHours(e.target.value)}
+            />
+          )}
         </Field>
         <Field label={strings.projectsBudgetAmount} error={budgetAmountError}>
-          <input
-            className="w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent"
-            inputMode="decimal"
-            value={budgetAmount}
-            disabled={!teamProject}
-            onChange={(e) => setBudgetAmount(e.target.value)}
-          />
+          {(control) => (
+            <Input
+              id={control.id}
+              aria-describedby={control["aria-describedby"]}
+              invalid={control.invalid}
+              inputMode="decimal"
+              value={budgetAmount}
+              disabled={!teamProject}
+              onChange={(e) => setBudgetAmount(e.target.value)}
+            />
+          )}
         </Field>
       </div>
     </DialogFrame>

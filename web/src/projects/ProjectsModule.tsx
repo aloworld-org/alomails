@@ -99,7 +99,7 @@ function ProjectWorkspaceRoute({
 const projectTabClass = ({ isActive }: { isActive: boolean }) =>
   `inline-flex min-h-11 shrink-0 items-center rounded-t-lg border-b-2 px-4 py-2.5 text-sm !no-underline transition-colors hover:!no-underline focus:!no-underline active:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
     isActive
-      ? "border-accent bg-[var(--accent-soft)] font-semibold !text-accent"
+      ? "border-accent bg-accent-soft font-semibold !text-accent"
       : "border-transparent bg-transparent font-medium !text-secondary hover:bg-raised hover:!text-primary"
   }`;
 

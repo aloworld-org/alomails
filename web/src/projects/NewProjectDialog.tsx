@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { BriefcaseBusiness, Building2, Check, ChevronDown, UserRound } from "lucide-react";
 
+import { Field, Input } from "../ds";
 import { strings } from "../i18n";
-import { DialogFrame, Field } from "./parts";
+import { DialogFrame } from "./parts";
 import { ProjectStatusSchedule } from "./ProjectStatusSchedule";
 
 export interface NewProjectDraft {
@@ -133,7 +134,9 @@ export function NewProjectDialog({ customers, onClose, onCreate }: {
   return (
     <DialogFrame Icon={BriefcaseBusiness} title={strings.projectsNewTitle} subtitle={strings.projectsNewSubtitle} error={error} busy={busy} canSubmit={canSubmit} submitLabel={strings.projectsCreate} onClose={onClose} onSubmit={() => void create()}>
       <Field label={strings.projectsName}>
-        <input autoFocus className="min-h-11 w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent" value={name} placeholder={strings.projectsNamePlaceholder} maxLength={120} onChange={(event) => setName(event.target.value)} />
+        {(control) => (
+          <Input id={control.id} aria-describedby={control["aria-describedby"]} autoFocus value={name} placeholder={strings.projectsNamePlaceholder} maxLength={120} onChange={(event) => setName(event.target.value)} />
+        )}
       </Field>
       <fieldset className="m-0 border-0 p-0">
         <legend className="mb-2 text-sm font-medium text-secondary">{strings.projectsWorkType}</legend>
@@ -167,20 +170,28 @@ export function NewProjectDialog({ customers, onClose, onCreate }: {
       </fieldset>
       {kind === "client" && (
         <Field label={strings.projectsCustomer} hint={strings.projectsNewCustomerHint}>
-          <CustomerPicker customers={customers} value={customerId} onChange={setCustomerId} />
+          {/* The picker is a composite that names itself (`aria-label` on its
+              combobox button), so the Field's id has nothing to bind to. */}
+          {() => <CustomerPicker customers={customers} value={customerId} onChange={setCustomerId} />}
         </Field>
       )}
       <div className="border-t border-subtle pt-1">
         <p className="mb-1 text-sm font-semibold text-primary">{strings.projectsDetailsTitle}</p>
         <p className="text-xs leading-5 text-secondary">{strings.projectsDetailsSubtitle}</p>
       </div>
+      {/* Multi-line: stays a bare textarea until ds/ has a multi-line control.
+          The Field still binds it. */}
       <Field label={strings.projectsDescription}>
-        <textarea
-          className="min-h-24 w-full resize-y rounded-md border border-default bg-surface px-3 py-2 text-sm leading-6 text-primary focus-visible:outline-2 focus-visible:outline-accent"
-          value={description}
-          maxLength={2000}
-          onChange={(event) => setDescription(event.target.value)}
-        />
+        {(control) => (
+          <textarea
+            id={control.id}
+            aria-describedby={control["aria-describedby"]}
+            className="min-h-24 w-full resize-y rounded-md border border-default bg-surface px-3 py-2 text-sm leading-6 text-primary focus-visible:outline-2 focus-visible:outline-accent"
+            value={description}
+            maxLength={2000}
+            onChange={(event) => setDescription(event.target.value)}
+          />
+        )}
       </Field>
       <ProjectStatusSchedule status={status} startsOn={startsOn} targetOn={targetOn} datesValid={datesValid} onStatusChange={setStatus} onStartsOnChange={setStartsOn} onTargetOnChange={setTargetOn} />
     </DialogFrame>

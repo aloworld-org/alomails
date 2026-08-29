@@ -2750,6 +2750,7 @@ export const nl: Partial<Catalog> = {
   projectsWeekEmptyBody:
     "Voeg je eerste tijdregistratie toe. Kies een project, vul de duur en notitie in en bekijk ze daarna in dit weekoverzicht.",
   projectsWeekTitle: "Weekstaat",
+  projectsWeekEntriesLabel: "Tijdregels van deze week",
   projectsWeekPurpose:
     "Registreer je werk, controleer de week en dien ze daarna ter goedkeuring in.",
   projectsWeekAllScope: "Je volledige week over alle projecten.",

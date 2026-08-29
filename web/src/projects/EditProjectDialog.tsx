@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { BriefcaseBusiness } from "lucide-react";
 
+import { Field, Input } from "../ds";
 import { strings } from "../i18n";
-import { DialogFrame, Field } from "./parts";
+import { DialogFrame } from "./parts";
 import { ProjectStatusSchedule } from "./ProjectStatusSchedule";
 import type { Project, ProjectDraft } from "./types";
 
@@ -50,10 +51,16 @@ export function EditProjectDialog({ project, onClose, onSave }: {
       onSubmit={() => void save()}
     >
       <Field label={strings.projectsName}>
-        <input autoFocus className="min-h-11 w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent" value={name} maxLength={120} onChange={(event) => setName(event.target.value)} />
+        {(control) => (
+          <Input id={control.id} aria-describedby={control["aria-describedby"]} autoFocus value={name} maxLength={120} onChange={(event) => setName(event.target.value)} />
+        )}
       </Field>
+      {/* Multi-line: stays a bare textarea until ds/ has a multi-line control
+          (projects is the eighth area waiting). The Field still binds it. */}
       <Field label={strings.projectsDescription}>
-        <textarea className="min-h-24 w-full resize-y rounded-md border border-default bg-surface px-3 py-2 text-sm leading-6 text-primary focus-visible:outline-2 focus-visible:outline-accent" value={description} maxLength={2000} onChange={(event) => setDescription(event.target.value)} />
+        {(control) => (
+          <textarea id={control.id} aria-describedby={control["aria-describedby"]} className="min-h-24 w-full resize-y rounded-md border border-default bg-surface px-3 py-2 text-sm leading-6 text-primary focus-visible:outline-2 focus-visible:outline-accent" value={description} maxLength={2000} onChange={(event) => setDescription(event.target.value)} />
+        )}
       </Field>
       <ProjectStatusSchedule status={status} startsOn={startsOn} targetOn={targetOn} datesValid={datesValid} onStatusChange={setStatus} onStartsOnChange={setStartsOn} onTargetOnChange={setTargetOn} />
     </DialogFrame>

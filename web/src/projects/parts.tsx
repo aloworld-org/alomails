@@ -2,11 +2,17 @@
 // the approvals inbox and the engagement form are visibly one module — and
 // visibly the same module family as Billing and CRM, whose parts these mirror.
 // Presentational only: no data loading, no rules, no arithmetic.
-import type { FormEvent, ReactNode } from "react";
+//
+// Since D2.10b the primitives underneath are the design system's: the dialog
+// frame is a `ds/Modal` rather than this module's own scrim and panel, and the
+// state word draws as a `ds/Badge`. The module's own `Field` is gone entirely —
+// `ds/Field` binds the label to the control and announces the error, which is
+// the part the hand-rolled column never had.
+import { useId, type FormEvent, type ReactNode } from "react";
 import { Plus, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-import { Button } from "../ds";
+import { Badge, Button, IconButton, Modal } from "../ds";
 import { strings } from "../i18n";
 import { percentLabel, weekStatusLabel } from "./format";
 import type { WeekStatus } from "./types";
@@ -14,7 +20,7 @@ import type { WeekStatus } from "./types";
 /** A failure the page could not hide: shown, never swallowed. */
 export function ErrorBanner({ message }: { message: string }) {
   return (
-    <p className="mx-5 my-3 rounded-md bg-[var(--danger-tint)] px-3.5 py-2.5 text-sm text-danger" role="alert">
+    <p className="mx-5 my-3 rounded-md bg-danger-tint px-3.5 py-2.5 text-sm text-danger" role="alert">
       {message}
     </p>
   );
@@ -55,17 +61,22 @@ export function EmptyState({
   );
 }
 
-/** The coloured word for where a week stands, as the server decided it. */
+/** The coloured word for where a week stands, as the server decided it.
+ *
+ *  A `ds/Badge`: only the drawing is the design system's — the four week
+ *  statuses stay this module's vocabulary, folded onto `Badge`'s tones.
+ *  `submitted` reads as the accent rather than its former navy, which is the
+ *  same fold inventory's order states made. */
 export function WeekChip({ status }: { status: WeekStatus }) {
   const tone =
     status === "approved"
-      ? "bg-[var(--success-tint)] text-success"
+      ? "success"
       : status === "rejected"
-        ? "bg-[var(--danger-tint)] text-danger"
+        ? "danger"
         : status === "submitted"
-          ? "bg-[var(--navy-50)] text-[var(--navy-600)]"
-          : "bg-raised text-secondary";
-  return <span className={`inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${tone}`}>{weekStatusLabel(status)}</span>;
+          ? "accent"
+          : "neutral";
+  return <Badge tone={tone}>{weekStatusLabel(status)}</Badge>;
 }
 
 /**
@@ -112,33 +123,18 @@ export function BudgetBar({
   );
 }
 
-/** One labelled control in a form. `hint` explains a rule the server owns;
- *  `error` is what the edge could not turn into what the server takes. */
-export function Field({
-  label,
-  hint,
-  error,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  error?: string | undefined;
-  children: ReactNode;
-}) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-sm font-medium text-secondary">{label}</span>
-      {children}
-      {error !== undefined && <span className="text-xs text-danger">{error}</span>}
-      {error === undefined && hint !== undefined && <span className="text-xs text-tertiary">{hint}</span>}
-    </label>
-  );
-}
-
-/** The modal chrome a Projects form sits in: header, scrolling body, and a
- *  footer whose primary action is the form's submit. `extraAction` is the
- *  destructive-but-not-primary one (detaching an engagement, deleting an
- *  entry), kept at the far left so it is never the button under a thumb. */
+/** The modal chrome a Projects form sits in: a `ds/Modal` whose body is the
+ *  form and whose footer submits it. Body and footer are siblings inside the
+ *  panel, so the submit button is tied to the form by id rather than nested in
+ *  it — which is also what keeps Enter in any field working.
+ *
+ *  What the panel this replaced never had: a **focus trap** — Tab walked
+ *  straight out of all six dialogs onto the page behind them — and focus given
+ *  back to the opener on close.
+ *
+ *  `extraAction` is the destructive-but-not-primary action (detaching an
+ *  engagement, deleting an entry), kept at the far left so it is never the
+ *  button under a thumb. */
 export function DialogFrame({
   Icon,
   title,
@@ -164,45 +160,25 @@ export function DialogFrame({
   onSubmit: () => void;
   children: ReactNode;
 }) {
+  const formId = useId();
   function submit(e: FormEvent) {
     e.preventDefault();
     if (!busy && canSubmit) onSubmit();
   }
   return (
-    <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-overlay p-4" role="presentation" onMouseDown={onClose}>
-      <form
-        className="flex max-h-[90vh] min-h-0 w-full max-w-[35rem] flex-col rounded-xl bg-surface shadow-lg"
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        onSubmit={submit}
-        onMouseDown={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") onClose();
-        }}
-      >
-        <div className="flex items-start gap-3 border-b border-subtle px-5 py-4">
-          <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-[var(--accent-soft)] text-accent" aria-hidden="true">
-            <Icon size={19} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h2 className="m-0 text-lg font-semibold text-primary">{title}</h2>
-            <p className="m-0 mt-0.5 text-sm text-tertiary">{subtitle}</p>
-          </div>
-          <button
-            type="button"
-            className="rounded-sm p-1 text-tertiary hover:bg-raised hover:text-primary"
-            onClick={onClose}
-            aria-label={strings.projectsCancel}
-          >
-            <X size={18} />
-          </button>
-        </div>
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5">
-          {error !== null && <ErrorBanner message={error} />}
-          {children}
-        </div>
-        <div className="flex items-center gap-2 border-t border-subtle px-5 py-4">
+    <Modal
+      title={title}
+      onClose={onClose}
+      icon={<Icon size={19} />}
+      actions={
+        <IconButton
+          label={strings.projectsCancel}
+          icon={<X size={18} />}
+          onClick={onClose}
+        />
+      }
+      footer={
+        <>
           {extraAction !== undefined && (
             <Button variant="ghost" onClick={extraAction.onClick} disabled={busy}>
               {extraAction.label}
@@ -212,11 +188,20 @@ export function DialogFrame({
           <Button variant="ghost" onClick={onClose} disabled={busy}>
             {strings.projectsCancel}
           </Button>
-          <Button type="submit" disabled={busy || !canSubmit}>
+          <Button type="submit" form={formId} disabled={busy || !canSubmit}>
             {submitLabel}
           </Button>
-        </div>
+        </>
+      }
+    >
+      {/* The sentence under the title. `ds/Modal`'s header is the name and the
+          controls, so the question this dialog is asking reads as the first
+          line of the body rather than as a second heading. */}
+      <p className="m-0 text-sm text-tertiary">{subtitle}</p>
+      {error !== null && <ErrorBanner message={error} />}
+      <form id={formId} className="flex flex-col gap-4" onSubmit={submit}>
+        {children}
       </form>
-    </div>
+    </Modal>
   );
 }

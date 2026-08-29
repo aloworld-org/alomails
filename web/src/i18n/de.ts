@@ -3459,6 +3459,7 @@ export const de: Partial<Catalog> = {
   projectsWeekEmptyBody:
     "Erfassen Sie Ihren ersten Zeiteintrag. Wählen Sie ein Projekt, geben Sie Dauer und Notiz ein, und er erscheint in dieser Wochenübersicht.",
   projectsWeekTitle: "Wöchentlicher Stundenzettel",
+  projectsWeekEntriesLabel: "Zeiteinträge dieser Woche",
   projectsWeekPurpose:
     "Erfassen Sie Ihre Arbeit, prüfen Sie die Woche und reichen Sie sie dann zur Genehmigung ein.",
   projectsWeekAllScope: "Ihre ganze Woche über alle Projekte.",

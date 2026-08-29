@@ -2795,6 +2795,7 @@ export const fr: Partial<Catalog> = {
   projectsWeekEmptyBody:
     "Ajoutez votre première saisie de temps. Choisissez un projet, indiquez la durée et une note, puis retrouvez-la dans ce récapitulatif hebdomadaire.",
   projectsWeekTitle: "Feuille de temps hebdomadaire",
+  projectsWeekEntriesLabel: "Temps saisis cette semaine",
   projectsWeekPurpose:
     "Saisissez votre travail, vérifiez la semaine, puis soumettez-la pour approbation.",
   projectsWeekAllScope: "Votre semaine complète pour tous les projets.",

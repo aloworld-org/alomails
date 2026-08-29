@@ -18,11 +18,11 @@
 import { useState } from "react";
 import { Clock } from "lucide-react";
 
-import { useDialogs } from "../ds";
+import { Checkbox, Field, Input, useDialogs } from "../ds";
 import { strings } from "../i18n";
 import { projectsMessage, useProjectsApi } from "./api";
 import { dayLabel, durationInput, parseDuration } from "./format";
-import { DialogFrame, Field } from "./parts";
+import { DialogFrame } from "./parts";
 import type { Project, TimeEntry } from "./types";
 
 export function EntryDialog({
@@ -121,40 +121,50 @@ export function EntryDialog({
           {/* Focused on open: this is the one field a cell was clicked to fill
               in, and anything else costs the person a second click per day of
               the week. */}
-          <input
-            className="w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent"
-            autoFocus
-            inputMode="text"
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
-          />
+          {(control) => (
+            <Input
+              id={control.id}
+              aria-describedby={control["aria-describedby"]}
+              invalid={control.invalid}
+              autoFocus
+              inputMode="text"
+              value={duration}
+              onChange={(e) => setDuration(e.target.value)}
+            />
+          )}
         </Field>
         <Field label={strings.projectsDay}>
-          <input
-            className="w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent"
-            type="date"
-            value={day}
-            onChange={(e) => setDay(e.target.value)}
-          />
+          {(control) => (
+            <Input
+              id={control.id}
+              aria-describedby={control["aria-describedby"]}
+              type="date"
+              value={day}
+              onChange={(e) => setDay(e.target.value)}
+            />
+          )}
         </Field>
       </div>
 
-      <label className="inline-flex items-center gap-2 text-sm text-secondary">
-        <input
-          type="checkbox"
-          checked={billable}
-          onChange={(e) => setBillable(e.target.checked)}
-        />
-        {strings.projectsBillable}
-      </label>
+      <Checkbox
+        checked={billable}
+        onChange={setBillable}
+        label={strings.projectsBillable}
+      />
 
+      {/* Multi-line: stays a bare textarea until ds/ has a multi-line control.
+          The Field still binds it and announces the hint. */}
       <Field label={strings.projectsNote} hint={strings.projectsNoteHint}>
-        <textarea
-          className="min-h-20 w-full resize-y rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent"
-          value={note}
-          maxLength={500}
-          onChange={(e) => setNote(e.target.value)}
-        />
+        {(control) => (
+          <textarea
+            id={control.id}
+            aria-describedby={control["aria-describedby"]}
+            className="min-h-20 w-full resize-y rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent"
+            value={note}
+            maxLength={500}
+            onChange={(e) => setNote(e.target.value)}
+          />
+        )}
       </Field>
     </DialogFrame>
   );

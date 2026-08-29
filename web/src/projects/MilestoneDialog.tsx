@@ -14,10 +14,10 @@
 import { useState } from "react";
 import { Flag } from "lucide-react";
 
-import { useDialogs } from "../ds";
+import { Field, Input, useDialogs } from "../ds";
 import { strings } from "../i18n";
 import { projectsMessage, useProjectsApi } from "./api";
-import { DialogFrame, Field } from "./parts";
+import { DialogFrame } from "./parts";
 import type { Milestone } from "./types";
 
 export function MilestoneDialog({
@@ -105,21 +105,27 @@ export function MilestoneDialog({
       onSubmit={() => void save()}
     >
       <Field label={strings.projectsMilestoneName} hint={strings.projectsMilestoneNameHint}>
-        <input
-          className="w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent"
-          autoFocus
-          value={name}
-          maxLength={120}
-          onChange={(e) => setName(e.target.value)}
-        />
+        {(control) => (
+          <Input
+            id={control.id}
+            aria-describedby={control["aria-describedby"]}
+            autoFocus
+            value={name}
+            maxLength={120}
+            onChange={(e) => setName(e.target.value)}
+          />
+        )}
       </Field>
       <Field label={strings.projectsMilestoneDue} hint={strings.projectsMilestoneDueHint}>
-        <input
-          className="w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent"
-          type="date"
-          value={dueOn}
-          onChange={(e) => setDueOn(e.target.value)}
-        />
+        {(control) => (
+          <Input
+            id={control.id}
+            aria-describedby={control["aria-describedby"]}
+            type="date"
+            value={dueOn}
+            onChange={(e) => setDueOn(e.target.value)}
+          />
+        )}
       </Field>
     </DialogFrame>
   );

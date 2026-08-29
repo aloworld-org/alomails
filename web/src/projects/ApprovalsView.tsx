@@ -16,7 +16,7 @@ import { useEffect, useState } from "react";
 import { ArrowRight, CheckCircle2, Inbox } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { Button, Spinner, useDialogs } from "../ds";
+import { Button, Spinner, Table, Td, Th, useDialogs } from "../ds";
 import { strings } from "../i18n";
 import { projectsMessage, useProjectsApi } from "./api";
 import { dayLabel, durationLabel, momentLabel } from "./format";
@@ -163,27 +163,16 @@ export function ApprovalsView({
           body={strings.projectsApprovalsEmptyBody}
         />
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-subtle bg-surface">
-          <table className="w-full border-collapse text-sm [&_th]:whitespace-nowrap [&_th]:border-b [&_th]:border-subtle [&_th]:px-3.5 [&_th]:py-2.5 [&_th]:text-left [&_th]:font-medium [&_th]:text-tertiary [&_td]:border-b [&_td]:border-subtle [&_td]:px-3.5 [&_td]:py-2.5 [&_td]:align-middle [&_td]:text-primary [&_tbody_tr:hover]:bg-raised">
+        <Table label={strings.projectsTabApprovals} interactiveRows>
             <thead>
               <tr>
-                <th scope="col">{strings.projectsPerson}</th>
-                <th scope="col">{strings.projectsWeek}</th>
-                <th scope="col">{strings.projectsProject}</th>
-                <th
-                  scope="col"
-                  className="whitespace-nowrap text-right tabular-nums"
-                >
-                  {strings.projectsHoursLogged}
-                </th>
-                <th
-                  scope="col"
-                  className="whitespace-nowrap text-right tabular-nums"
-                >
-                  {strings.projectsBillableHours}
-                </th>
-                <th scope="col">{strings.projectsSubmittedAt}</th>
-                <th scope="col" aria-label={strings.projectsActions} />
+                <Th>{strings.projectsPerson}</Th>
+                <Th>{strings.projectsWeek}</Th>
+                <Th>{strings.projectsProject}</Th>
+                <Th numeric>{strings.projectsHoursLogged}</Th>
+                <Th numeric>{strings.projectsBillableHours}</Th>
+                <Th>{strings.projectsSubmittedAt}</Th>
+                <Th hideLabel>{strings.projectsActions}</Th>
               </tr>
             </thead>
             <tbody>
@@ -222,12 +211,8 @@ export function ApprovalsView({
                       ))}
                     </div>
                   </td>
-                  <td className="whitespace-nowrap text-right tabular-nums">
-                    {durationLabel(week.minutes)}
-                  </td>
-                  <td className="whitespace-nowrap text-right tabular-nums">
-                    {durationLabel(week.billableMinutes)}
-                  </td>
+                  <Td numeric>{durationLabel(week.minutes)}</Td>
+                  <Td numeric>{durationLabel(week.billableMinutes)}</Td>
                   <td className="text-tertiary">
                     {week.submittedAt === null
                       ? ""
@@ -255,8 +240,7 @@ export function ApprovalsView({
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
+        </Table>
       )}
     </div>
   );

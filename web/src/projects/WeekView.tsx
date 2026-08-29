@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 
-import { Button, Spinner } from "../ds";
+import { Button, IconButton, Modal, Spinner, Table, Td, Th } from "../ds";
 import { strings } from "../i18n";
 import { projectsMessage, useProjectsApi } from "./api";
 import { EntryDialog } from "./EntryDialog";
@@ -58,22 +58,13 @@ const styles = {
   toolbar: "flex flex-wrap items-center gap-3",
   periodLabel: "min-w-[15ch] text-base font-medium text-primary",
   toolbarSpacer: "flex-1",
-  tableWrap:
-    "overflow-x-auto rounded-2xl border border-default bg-surface shadow-sm",
-  grid: "w-full min-w-[64rem] border-collapse text-sm [&_th]:whitespace-nowrap [&_th]:border-b [&_th]:border-subtle [&_th]:bg-raised/60 [&_th]:px-4 [&_th]:py-3 [&_th]:text-right [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-tertiary [&_th:first-child]:min-w-64 [&_th:first-child]:text-left [&_td]:border-b [&_td]:border-subtle [&_td]:px-2 [&_td]:py-2.5",
-  gridToday: "text-accent",
-  gridProject: "flex !px-4 flex-col gap-0.5",
+  gridProject: "flex flex-col gap-0.5",
   gridProjectName: "font-medium",
   internal: "italic text-tertiary",
   gridCell:
     "w-full min-w-20 rounded-lg border border-transparent bg-transparent px-3 py-2 text-right text-sm tabular-nums text-primary transition-colors hover:border-default hover:bg-raised disabled:cursor-default disabled:text-tertiary",
   gridCellFilled: "font-medium",
   muted: "text-tertiary",
-  numeric: "whitespace-nowrap text-right tabular-nums",
-  gridTotals:
-    "[&_td]:border-b-0 [&_td]:border-t-2 [&_td]:border-default [&_td]:p-2.5 [&_td]:text-right [&_td]:font-semibold [&_td]:tabular-nums [&_td:first-child]:pl-3.5 [&_td:first-child]:text-left",
-  table:
-    "w-full min-w-[62rem] border-collapse text-sm [&_th]:whitespace-nowrap [&_th]:border-b [&_th]:border-subtle [&_th]:bg-raised/60 [&_th]:px-5 [&_th]:py-3 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-tertiary [&_td]:border-b [&_td]:border-subtle [&_td]:px-5 [&_td]:py-3.5 [&_td]:align-middle [&_tbody_tr:last-child_td]:border-b-0 [&_tbody_tr:hover]:bg-raised/50",
   rowActions: "flex items-center justify-end gap-2",
   weekFoot:
     "sticky bottom-0 z-10 flex flex-wrap items-center gap-4 rounded-2xl border border-default bg-surface/95 px-5 py-4 shadow-lg backdrop-blur",
@@ -395,21 +386,24 @@ export function WeekView({
               </span>
             </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className={styles.grid}>
+          <Table label={strings.projectsTabWeek} flat>
               <thead>
                 <tr>
-                  <th scope="col">{strings.projectsProject}</th>
+                  <Th className="min-w-64">{strings.projectsProject}</Th>
                   {days.map((day) => (
-                    <th
-                      key={day}
-                      scope="col"
-                      className={day === today ? styles.gridToday : undefined}
-                    >
-                      {dayLabel(day, { weekday: "short", day: "numeric" })}
-                    </th>
+                    <Th key={day} numeric>
+                      {/* Today's column heading keeps its accent: the span's
+                          own colour wins over the table's header ink. */}
+                      {day === today ? (
+                        <span className="text-accent">
+                          {dayLabel(day, { weekday: "short", day: "numeric" })}
+                        </span>
+                      ) : (
+                        dayLabel(day, { weekday: "short", day: "numeric" })
+                      )}
+                    </Th>
                   ))}
-                  <th scope="col">{strings.projectsTotal}</th>
+                  <Th numeric>{strings.projectsTotal}</Th>
                 </tr>
               </thead>
               <tbody>
@@ -464,89 +458,76 @@ export function WeekView({
                           </td>
                         );
                       })}
-                      <td className={styles.numeric}>
+                      <Td numeric className="font-semibold">
                         {durationLabel(rowMinutes)}
-                      </td>
+                      </Td>
                     </tr>
                   );
                 })}
               </tbody>
               <tfoot>
-                <tr className={styles.gridTotals}>
-                  <td>{strings.projectsTotal}</td>
+                <tr>
+                  <Td className="font-semibold">{strings.projectsTotal}</Td>
                   {days.map((day) => (
-                    <td key={day}>
+                    <Td key={day} numeric className="font-semibold">
                       {durationLabel(
                         minutesOf(entries.filter((e) => e.workDate === day)),
                       )}
-                    </td>
+                    </Td>
                   ))}
                   {/* The week's own figure, as the server counted it. */}
-                  <td>{durationLabel(totals?.minutes ?? 0)}</td>
+                  <Td numeric className="font-semibold">
+                    {durationLabel(totals?.minutes ?? 0)}
+                  </Td>
                 </tr>
               </tfoot>
-            </table>
-          </div>
+          </Table>
         </section>
       )}
 
       {choosingProject && !locked && (
-        <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-overlay p-4">
-          <section
-            role="dialog"
-            aria-modal="true"
-            className="w-full max-w-2xl rounded-2xl border border-default bg-surface p-5 shadow-xl"
-            aria-labelledby="week-project-picker-title"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2
-                  id="week-project-picker-title"
-                  className="font-semibold text-primary"
-                >
-                  {strings.projectsChooseTimeProject}
-                </h2>
-                <p className="mt-1 text-sm text-secondary">
-                  {strings.projectsChooseTimeProjectHint}
-                </p>
-              </div>
+        <Modal
+          title={strings.projectsChooseTimeProject}
+          onClose={() => setChoosingProject(false)}
+          wide
+          actions={
+            <IconButton
+              label={strings.close}
+              icon={<X size={18} />}
+              onClick={() => setChoosingProject(false)}
+            />
+          }
+        >
+          <p className="m-0 text-sm text-secondary">
+            {strings.projectsChooseTimeProjectHint}
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {projects.map((project) => (
               <button
+                key={project.id}
                 type="button"
-                className="flex size-9 shrink-0 items-center justify-center rounded-lg text-secondary transition-colors hover:bg-raised hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                aria-label={strings.close}
-                onClick={() => setChoosingProject(false)}
+                className="flex min-h-14 items-center justify-between gap-3 rounded-xl border border-default bg-surface px-4 py-3 text-left transition-colors hover:border-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                onClick={() => startEntry(project.id)}
               >
-                <X size={18} />
-              </button>
-            </div>
-            <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {projects.map((project) => (
-                <button
-                  key={project.id}
-                  type="button"
-                  className="flex min-h-14 items-center justify-between gap-3 rounded-xl border border-default bg-surface px-4 py-3 text-left transition-colors hover:border-accent hover:bg-[var(--accent-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                  onClick={() => startEntry(project.id)}
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate font-medium text-primary">
-                      {project.name}
-                    </span>
-                    <span className="mt-0.5 block truncate text-xs text-secondary">
-                      {project.client === null
-                        ? strings.projectsInternal
-                        : strings.projectsCustomer}
-                    </span>
+                <span className="min-w-0">
+                  <span className="block truncate font-medium text-primary">
+                    {project.name}
                   </span>
-                  <ChevronRight
-                    size={17}
-                    className="shrink-0 text-secondary"
-                    aria-hidden="true"
-                  />
-                </button>
-              ))}
-            </div>
-          </section>
-        </div>
+                  <span className="mt-0.5 block truncate text-xs text-secondary">
+                    {project.client === null
+                      ? strings.projectsInternal
+                      : strings.projectsCustomer}
+                  </span>
+                </span>
+                <ChevronRight
+                  size={17}
+                  className="shrink-0 text-secondary"
+                  aria-hidden="true"
+                />
+              </button>
+            ))}
+          </div>
+        </Modal>
       )}
 
       {/* Every entry of the week, one row each. The grid answers "how much, on
@@ -554,29 +535,30 @@ export function WeekView({
           it is where the second entry in a cell is reached, since a cell with
           two sittings in it cannot mean both at once. */}
       {entries.length > 0 && (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
+        <Table label={strings.projectsWeekEntriesLabel} interactiveRows>
             <thead>
               <tr>
-                <th scope="col">{strings.projectsDay}</th>
-                <th scope="col">{strings.projectsProject}</th>
-                <th scope="col">{strings.projectsTask}</th>
-                <th scope="col">{strings.projectsNote}</th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.projectsDuration}
-                </th>
-                <th scope="col" aria-label={strings.projectsActions} />
+                <Th>{strings.projectsDay}</Th>
+                <Th>{strings.projectsProject}</Th>
+                <Th>{strings.projectsTask}</Th>
+                <Th>{strings.projectsNote}</Th>
+                <Th numeric>{strings.projectsDuration}</Th>
+                <Th hideLabel>{strings.projectsActions}</Th>
               </tr>
             </thead>
             <tbody>
               {entries.map((entry) => (
                 <tr key={entry.id}>
-                  <td className={styles.muted}>
-                    {dayLabel(entry.workDate, {
-                      weekday: "short",
-                      day: "numeric",
-                      month: "short",
-                    })}
+                  {/* The table's own cell ink is the primary colour; the span's
+                      wins, which is how a muted cell stays muted. */}
+                  <td>
+                    <span className={styles.muted}>
+                      {dayLabel(entry.workDate, {
+                        weekday: "short",
+                        day: "numeric",
+                        month: "short",
+                      })}
+                    </span>
                   </td>
                   <td>{projectName(entry.projectId)}</td>
                   <td>
@@ -591,15 +573,15 @@ export function WeekView({
                       <span className={styles.muted}>—</span>
                     )}
                   </td>
-                  <td className={styles.muted}>
-                    {entry.note === "" ? strings.projectsNoNote : entry.note}
-                    {!entry.billable && ` · ${strings.projectsNotBillable}`}
-                    {entry.proposed && ` · ${strings.projectsProposedEntry}`}
-                    {entry.billed && ` · ${strings.projectsBilledEntry}`}
+                  <td>
+                    <span className={styles.muted}>
+                      {entry.note === "" ? strings.projectsNoNote : entry.note}
+                      {!entry.billable && ` · ${strings.projectsNotBillable}`}
+                      {entry.proposed && ` · ${strings.projectsProposedEntry}`}
+                      {entry.billed && ` · ${strings.projectsBilledEntry}`}
+                    </span>
                   </td>
-                  <td className={styles.numeric}>
-                    {durationLabel(entry.minutes)}
-                  </td>
+                  <Td numeric>{durationLabel(entry.minutes)}</Td>
                   <td>
                     <div className={styles.rowActions}>
                       {entry.proposed ? (
@@ -652,8 +634,7 @@ export function WeekView({
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
+        </Table>
       )}
 
       <div className={styles.weekFoot}>

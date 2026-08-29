@@ -26,7 +26,7 @@ import {
   quarterOf,
   type Period,
 } from "../billing";
-import { Button, Spinner } from "../ds";
+import { Button, Input, Spinner, Table, Td, Th } from "../ds";
 import { strings, useLocale } from "../i18n";
 import { saveTextFile } from "../platform/download";
 import { projectsMessage, useProjectsApi } from "./api";
@@ -152,8 +152,8 @@ export function ReportView({
         <div className="grid gap-4 lg:grid-cols-[minmax(13rem,1fr)_minmax(13rem,1fr)_auto] lg:items-end">
           <label className="grid gap-2 text-sm font-semibold text-primary">
             {strings.projectsReportFrom}
-            <input
-              className="min-h-11 w-full rounded-xl border border-default bg-surface px-4 py-2.5 text-base font-normal text-primary accent-accent focus-visible:outline-2 focus-visible:outline-accent"
+            <Input
+              className="font-normal"
               type="date"
               value={form.from}
               onChange={(e) => setForm({ ...form, from: e.target.value })}
@@ -162,8 +162,8 @@ export function ReportView({
           </label>
           <label className="grid gap-2 text-sm font-semibold text-primary">
             {strings.projectsReportTo}
-            <input
-              className="min-h-11 w-full rounded-xl border border-default bg-surface px-4 py-2.5 text-base font-normal text-primary accent-accent focus-visible:outline-2 focus-visible:outline-accent"
+            <Input
+              className="font-normal"
               type="date"
               value={form.to}
               onChange={(e) => setForm({ ...form, to: e.target.value })}
@@ -254,49 +254,18 @@ function ReportTable({
 }) {
   const locale = useLocale();
   return (
-    <div className="overflow-x-auto rounded-lg border border-subtle bg-surface">
-      <table className="w-full border-collapse text-sm [&_th]:whitespace-nowrap [&_th]:border-b [&_th]:border-subtle [&_th]:px-3.5 [&_th]:py-2.5 [&_th]:text-left [&_th]:font-medium [&_th]:text-tertiary [&_td]:border-b [&_td]:border-subtle [&_td]:px-3.5 [&_td]:py-2.5 [&_td]:align-middle [&_td]:text-primary [&_tbody_tr:hover]:bg-raised">
+    <Table label={strings.projectsReportPortfolioTitle} interactiveRows>
         <thead>
           <tr>
-            <th scope="col">{strings.projectsProject}</th>
-            <th scope="col">{strings.projectsCustomer}</th>
-            <th
-              scope="col"
-              className="whitespace-nowrap text-right tabular-nums"
-            >
-              {strings.projectsHoursLogged}
-            </th>
-            <th
-              scope="col"
-              className="whitespace-nowrap text-right tabular-nums"
-            >
-              {strings.projectsBillableHours}
-            </th>
-            <th
-              scope="col"
-              className="whitespace-nowrap text-right tabular-nums"
-            >
-              {strings.projectsReportColValue}
-            </th>
-            <th
-              scope="col"
-              className="whitespace-nowrap text-right tabular-nums"
-            >
-              {strings.projectsReportColInvoiced}
-            </th>
-            <th
-              scope="col"
-              className="whitespace-nowrap text-right tabular-nums"
-            >
-              {strings.projectsReportColToInvoice}
-            </th>
-            <th
-              scope="col"
-              className="whitespace-nowrap text-right tabular-nums"
-            >
-              {strings.projectsReportColToDate}
-            </th>
-            <th scope="col">{strings.projectsReportColBudget}</th>
+            <Th>{strings.projectsProject}</Th>
+            <Th>{strings.projectsCustomer}</Th>
+            <Th numeric>{strings.projectsHoursLogged}</Th>
+            <Th numeric>{strings.projectsBillableHours}</Th>
+            <Th numeric>{strings.projectsReportColValue}</Th>
+            <Th numeric>{strings.projectsReportColInvoiced}</Th>
+            <Th numeric>{strings.projectsReportColToInvoice}</Th>
+            <Th numeric>{strings.projectsReportColToDate}</Th>
+            <Th>{strings.projectsReportColBudget}</Th>
           </tr>
         </thead>
         <tbody>
@@ -318,36 +287,32 @@ function ReportTable({
         </tbody>
         <tfoot>
           <tr>
-            <th scope="row" colSpan={2}>
+            <Th scope="row" colSpan={2}>
               {strings.projectsReportTotals}
-            </th>
-            <td className="whitespace-nowrap text-right tabular-nums">
-              {durationLabel(report.totals.minutes)}
-            </td>
-            <td className="whitespace-nowrap text-right tabular-nums">
-              {durationLabel(report.totals.billableMinutes)}
-            </td>
-            <td className="whitespace-nowrap text-right tabular-nums">
+            </Th>
+            <Td numeric>{durationLabel(report.totals.minutes)}</Td>
+            <Td numeric>{durationLabel(report.totals.billableMinutes)}</Td>
+            <Td numeric>
               <Money
                 rows={report.totals.byCurrency}
                 pick={(row) => row.netCents}
                 locale={locale}
               />
-            </td>
-            <td className="whitespace-nowrap text-right tabular-nums">
+            </Td>
+            <Td numeric>
               <Money
                 rows={report.totals.byCurrency}
                 pick={(row) => row.billedNetCents}
                 locale={locale}
               />
-            </td>
-            <td className="whitespace-nowrap text-right tabular-nums">
+            </Td>
+            <Td numeric>
               <Money
                 rows={report.totals.byCurrency}
                 pick={(row) => row.unbilledNetCents}
                 locale={locale}
               />
-            </td>
+            </Td>
             {/* No total of hours-to-date and no total of budgets: a budget
                 belongs to an engagement, and a sum of them is a plan nobody
                 made. */}
@@ -355,8 +320,7 @@ function ReportTable({
             <td />
           </tr>
         </tfoot>
-      </table>
-    </div>
+    </Table>
   );
 }
 
@@ -417,27 +381,23 @@ function ProjectRow({
       <td className={customer === null ? "italic text-tertiary" : undefined}>
         {customer ?? strings.projectsCustomerUnknown}
       </td>
-      <td className="whitespace-nowrap text-right tabular-nums">
-        {durationLabel(project.minutes)}
-      </td>
-      <td className="whitespace-nowrap text-right tabular-nums">
-        {durationLabel(project.billableMinutes)}
-      </td>
-      <td className="whitespace-nowrap text-right tabular-nums">
+      <Td numeric>{durationLabel(project.minutes)}</Td>
+      <Td numeric>{durationLabel(project.billableMinutes)}</Td>
+      <Td numeric>
         <Money
           rows={project.byCurrency}
           pick={(row) => row.netCents}
           locale={locale}
         />
-      </td>
-      <td className="whitespace-nowrap text-right tabular-nums">
+      </Td>
+      <Td numeric>
         <Money
           rows={project.byCurrency}
           pick={(row) => row.billedNetCents}
           locale={locale}
         />
-      </td>
-      <td className="whitespace-nowrap text-right tabular-nums">
+      </Td>
+      <Td numeric>
         {sourceProject !== null && hasUnbilledValue ? (
           <Button
             type="button"
@@ -460,10 +420,8 @@ function ProjectRow({
             locale={locale}
           />
         )}
-      </td>
-      <td className="whitespace-nowrap text-right tabular-nums">
-        {durationLabel(project.toDateMinutes)}
-      </td>
+      </Td>
+      <Td numeric>{durationLabel(project.toDateMinutes)}</Td>
       <td>
         <BudgetBar
           consumptionBp={
