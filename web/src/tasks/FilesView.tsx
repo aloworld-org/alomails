@@ -190,7 +190,7 @@ export function FilesView({ projectId, onOpen, onCreate }: Props) {
             </span>
           </button>
           {taskMenuOpen && (
-            <div className="absolute inset-x-0 top-full z-dropdown mt-1 max-h-60 overflow-y-auto rounded-lg border border-default bg-surface p-1 shadow-lg" role="listbox">
+            <div className="absolute inset-x-0 top-full z-[var(--z-overlay)] mt-1 max-h-60 overflow-y-auto rounded-lg border border-default bg-surface p-1 shadow-lg" role="listbox">
               {tasks.map((task) => (
                 <button
                   key={task.id}

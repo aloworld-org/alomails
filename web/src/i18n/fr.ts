@@ -429,6 +429,8 @@ export const fr: Partial<Catalog> = {
   taskAiOff: "L’IA est désactivée, aucune suggestion n’a pu être faite.",
   taskClose: "Fermer",
   taskDelete: "Supprimer",
+  taskDetailDialog: "Détails de la tâche",
+  taskStatus: "Statut",
   taskTimeTracking: "Suivi du temps",
   taskTimeTrackingHint:
     "Enregistrez cette tâche directement dans votre feuille de temps.",

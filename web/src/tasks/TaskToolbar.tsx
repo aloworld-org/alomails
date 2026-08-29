@@ -2,10 +2,11 @@
 // the loaded tasks (see viewConfig). Each is a small popover that closes on an
 // outside click or Escape. No control invents data — they only hide, order, or
 // bucket what the API returned.
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Check, ListFilter, ArrowUpDown, Rows3, SlidersHorizontal } from "lucide-react";
 
+import { useDismiss } from "../ds";
 import { strings } from "../i18n";
 import type { TaskPriority } from "../jmap";
 import { isFiltering, type GroupKey, type SortKey, type ViewConfig } from "./viewConfig";
@@ -17,6 +18,14 @@ interface Props {
   summary?: ReactNode;
 }
 
+/** A view-config dropdown: stays open across choices, holds `menuitemradio`/
+ *  `menuitemcheckbox` items and a section heading. Read against `ds/Menu` and
+ *  `ds/ChoicePicker` before staying local (D2.11b): `Menu` is a menu of
+ *  *actions* — it closes on every choice and its items carry no checked state —
+ *  and `ChoicePicker` is a form field holding one value, drawn as a combobox.
+ *  Neither says "reshape the list and keep adjusting"; forcing either would
+ *  have meant growing it a second personality. The dismissal, the one piece of
+ *  behaviour every popover must share, comes from `ds/useDismiss`. */
 function Dropdown({
   label,
   icon,
@@ -30,21 +39,8 @@ function Dropdown({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return undefined;
-    function down(e: PointerEvent) {
-      if (ref.current !== null && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    function key(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("pointerdown", down);
-    document.addEventListener("keydown", key);
-    return () => {
-      document.removeEventListener("pointerdown", down);
-      document.removeEventListener("keydown", key);
-    };
-  }, [open]);
+  const close = useCallback(() => setOpen(false), []);
+  useDismiss(open, ref, close);
   return (
     <div className="relative" ref={ref}>
       <button
@@ -60,7 +56,7 @@ function Dropdown({
         {active === true && <span className="absolute right-1 top-1 size-1.5 rounded-full bg-accent" aria-hidden />}
       </button>
       {open && (
-        <div className="absolute left-0 top-[calc(100%+0.25rem)] z-40 flex min-w-48 flex-col gap-px rounded-lg border border-default bg-surface p-1.5 shadow-lg" role="menu">
+        <div className="absolute left-0 top-[calc(100%+0.25rem)] z-[var(--z-overlay)] flex min-w-48 flex-col gap-px rounded-lg border border-default bg-surface p-1.5 shadow-lg" role="menu">
           {children}
         </div>
       )}

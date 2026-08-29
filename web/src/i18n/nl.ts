@@ -422,6 +422,8 @@ export const nl: Partial<Catalog> = {
   taskAiOff: "AI staat uit, er kon niets worden voorgesteld.",
   taskClose: "Sluiten",
   taskDelete: "Verwijderen",
+  taskDetailDialog: "Taakdetails",
+  taskStatus: "Status",
   taskTimeTracking: "Tijdregistratie",
   taskTimeTrackingHint: "Registreer deze taak rechtstreeks in je urenstaat.",
   taskTimerRunningOnTask: "De tijd voor deze taak wordt bijgehouden.",

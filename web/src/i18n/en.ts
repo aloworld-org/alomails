@@ -477,6 +477,8 @@ export const en = {
   taskAiOff: "AI is off, so nothing could be suggested.",
   taskClose: "Close",
   taskDelete: "Delete",
+  taskDetailDialog: "Task details",
+  taskStatus: "Status",
   taskTimeTracking: "Time tracking",
   taskTimeTrackingHint: "Track this task directly into your timesheet.",
   taskTimerRunningOnTask: "Time is being tracked on this task.",

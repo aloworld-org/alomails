@@ -18,7 +18,9 @@
 // order rather than in the order they appear in `class`. So the panel's height
 // and the body's padding, gap and overflow are each chosen once, as whole
 // mutually exclusive strings, rather than layered and hoped over.
-import { useEffect, useRef, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
+
+import { useModalStack } from "./useModalStack";
 
 export interface ModalProps {
   /** Names the dialog for assistive technology, and renders as its heading. */
@@ -51,35 +53,6 @@ export interface ModalProps {
   tall?: boolean | "page" | undefined;
   children: ReactNode;
 }
-
-/** Everything that can hold focus inside the panel, in tab order. */
-const FOCUSABLE =
-  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-/** The focusable controls of the panel, in tab order, minus the ones that are
- *  not on the page. A `hidden` control matches the selector above and cannot
- *  take focus, so it has to be filtered in both places that walk the list —
- *  the trap always did, and the opening focus did not, which meant a dialog
- *  whose first element was a hidden file input (`contacts`, D2.06: the picker
- *  the Import button clicks) opened with focus still on the page behind it.
- *  `focus()` on a hidden element is a silent no-op, so nothing said so.
- *
- *  `offsetParent` would be the natural visibility test and is always null in
- *  jsdom, which would silently empty this list and disable the trap under
- *  test. Attributes work in both. */
-function focusableIn(node: HTMLElement): HTMLElement[] {
-  return [...node.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
-    (el) =>
-      !el.hasAttribute("hidden") && el.getAttribute("aria-hidden") !== "true",
-  );
-}
-
-/** The open modals, bottom to top. Escape and the tab trap belong to the top
- *  one only (D2.11): a modal can open another — Tasks' create form opens the
- *  Drive picker — and both listen on the document, where `stopPropagation`
- *  does not stop the other listener on the same node. Without this, one
- *  Escape closed both dialogs at once. */
-const openModals: HTMLElement[] = [];
 
 /** The scrim. It fills the viewport and centres the panel; the padding is what
  *  keeps a full-height dialog off the edges of the window, and what
@@ -133,55 +106,10 @@ export function Modal({
   const panel = useRef<HTMLDivElement>(null);
   const shape = tall === true ? "tall" : tall === "page" ? "page" : "auto";
 
-  useEffect(() => {
-    // Where focus was, so it can be given back. Without this, dismissing a
-    // dialog drops the caret at the top of the document and a keyboard user
-    // has to travel back to whatever they were doing.
-    const opener = document.activeElement as HTMLElement | null;
-    const node = panel.current;
-    // Not `a?.focus() ?? b.focus()`: `focus()` returns undefined, so the
-    // fallback ran every time and pulled focus straight back to the panel.
-    const firstControl = node === null ? undefined : focusableIn(node)[0];
-    if (firstControl) firstControl.focus();
-    else node?.focus();
-    if (node !== null) openModals.push(node);
-
-    function onKey(event: KeyboardEvent) {
-      // Not the top of the stack → the key belongs to the modal above.
-      if (node !== null && openModals[openModals.length - 1] !== node) return;
-      if (event.key === "Escape") {
-        event.stopPropagation();
-        onClose();
-        return;
-      }
-      if (event.key !== "Tab" || node === null) return;
-      // The trap. Tab from the last control returns to the first, and
-      // Shift+Tab from the first goes to the last, so focus cannot leave a
-      // dialog that is covering the page.
-      const focusable = focusableIn(node);
-      if (focusable.length === 0) return;
-      const first = focusable[0]!;
-      const last = focusable[focusable.length - 1]!;
-      const active = document.activeElement;
-      if (event.shiftKey && active === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && active === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    }
-
-    document.addEventListener("keydown", onKey, true);
-    return () => {
-      document.removeEventListener("keydown", onKey, true);
-      if (node !== null) {
-        const at = openModals.lastIndexOf(node);
-        if (at !== -1) openModals.splice(at, 1);
-      }
-      opener?.focus?.();
-    };
-  }, [onClose]);
+  // Focus in on open and back on close, the tab trap, and Escape-for-the-top-
+  // layer-only all live in the shared hook, so a layer that cannot be a Modal
+  // (the task detail slide-over) inherits them rather than reimplementing them.
+  useModalStack(panel, onClose);
 
   return (
     <div

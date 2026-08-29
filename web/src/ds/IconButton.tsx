@@ -47,13 +47,22 @@ const TONE = {
     rest: "text-on-rail-muted hover:bg-rail-hover hover:text-on-rail",
     active: "bg-rail-hover text-on-rail",
   },
+  // A destructive action — delete, remove. `default`'s geometry with the
+  // danger ink on its tint under the pointer, so the button says what it will
+  // do before it is pressed. Added for the task detail's delete (D2.11b),
+  // which drew this by hand; `Button` already had the variant.
+  danger: {
+    box: "size-control",
+    rest: "text-secondary hover:bg-danger-tint hover:text-danger",
+    active: "bg-danger-tint text-danger",
+  },
 } as const;
 
 interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /** Accessible name — required; an icon alone is not a label. */
   label: string;
   icon: ReactNode;
-  tone?: "default" | "rail";
+  tone?: "default" | "rail" | "danger";
   size?: "sm" | "md";
   /** For a button that is genuinely on or off — a flag, a pinned pane. Omit it
    *  and the button is an action, not a toggle: `aria-pressed` used to be set

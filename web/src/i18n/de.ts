@@ -553,6 +553,8 @@ export const de: Partial<Catalog> = {
   taskAiOff: "KI ist ausgeschaltet, daher konnte nichts vorgeschlagen werden.",
   taskClose: "Schließen",
   taskDelete: "Löschen",
+  taskDetailDialog: "Aufgabendetails",
+  taskStatus: "Status",
   taskTimeTracking: "Zeiterfassung",
   taskTimeTrackingHint:
     "Erfassen Sie diese Aufgabe direkt in Ihrem Stundenzettel.",

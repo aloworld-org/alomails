@@ -35,11 +35,29 @@ import {
   type TaskLabelDto,
   type TaskPriority,
 } from "../jmap";
-import { DatePicker, Spinner } from "../ds";
+import {
+  Button,
+  DatePicker,
+  IconButton,
+  Input,
+  Select,
+  Spinner,
+  useModalStack,
+} from "../ds";
 import { Avatar, COLUMNS, LABEL_PALETTE, statusColor } from "./parts";
 import { projectsMessage, useProjectsApi } from "../projects/api";
 import { announceTimerChanged, onTimerChanged } from "../projects/timerBus";
 import type { RunningTimer } from "../projects/types";
+
+/** The scrim, anchoring the panel to the right edge rather than centring it —
+ *  the one drawing decision that keeps this from being a `ds/Modal`. */
+const OVERLAY =
+  "fixed inset-0 z-[var(--z-modal)] flex justify-end bg-overlay";
+
+/** The panel. Both the loading and the loaded return render this same shell in
+ *  the same position, so React keeps one DOM node across the switch — the
+ *  modal stack reads the panel once, on mount, and must not see it replaced. */
+const PANEL = "flex h-full w-full max-w-xl flex-col bg-surface shadow-xl";
 
 /** Human file size (kB/MB) for the attachment rows. */
 function fileSize(bytes: number): string {
@@ -108,6 +126,12 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
   const [runningTimer, setRunningTimer] = useState<RunningTimer | null>(null);
   const [timerBusy, setTimerBusy] = useState(false);
   const [timerError, setTimerError] = useState<string | null>(null);
+  const panel = useRef<HTMLDivElement>(null);
+
+  // Escape closes it, Tab cannot leave it, and focus returns to the opener —
+  // the panel had none of the three (D2.11b). Joining the shared stack also
+  // means a dialog opened over this panel takes Escape first.
+  useModalStack(panel, onClose);
 
   const loadTimer = useCallback(async () => {
     try {
@@ -162,10 +186,19 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
 
   if (data === null) {
     return (
-      <div className="fixed inset-0 z-[var(--z-modal)] flex justify-end bg-overlay" onMouseDown={onClose}>
+      <div
+        className={OVERLAY}
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) onClose();
+        }}
+      >
         <div
-          className="flex h-full w-full max-w-xl flex-col bg-surface shadow-xl"
-          onMouseDown={(e) => e.stopPropagation()}
+          ref={panel}
+          className={PANEL}
+          role="dialog"
+          aria-modal="true"
+          aria-label={strings.taskDetailDialog}
+          tabIndex={-1}
         >
           <div className="flex flex-1 items-center justify-center">
             <Spinner size={20} />
@@ -337,14 +370,26 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
           : "bg-tertiary";
 
   return (
-    <div className="fixed inset-0 z-[var(--z-modal)] flex justify-end bg-overlay" onMouseDown={onClose}>
+    <div
+      className={OVERLAY}
+      // A click on the backdrop dismisses; a click that started inside the
+      // panel and ended on the backdrop — a drag while selecting text — does
+      // not, which is why this tests the target (Modal's rule).
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div
-        className="flex h-full w-full max-w-xl flex-col bg-surface shadow-xl"
-        onMouseDown={(e) => e.stopPropagation()}
+        ref={panel}
+        className={PANEL}
+        role="dialog"
+        aria-modal="true"
+        aria-label={strings.taskDetailDialog}
+        tabIndex={-1}
       >
         <div className="flex shrink-0 items-center gap-2 border-b border-subtle px-5 py-4">
-          <select
-            className="h-10 rounded-lg border border-default bg-surface px-3 text-sm font-medium text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/15"
+          <Select
+            aria-label={strings.taskStatus}
             value={t.status}
             onChange={(e) => void changeStatus(e.target.value)}
           >
@@ -353,27 +398,23 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
                 {c.label()}
               </option>
             ))}
-          </select>
-          <button
-            type="button"
-            className="ml-auto rounded-lg p-2 text-tertiary hover:bg-raised hover:text-danger"
+          </Select>
+          <IconButton
+            tone="danger"
+            className="ml-auto"
+            label={strings.taskDelete}
+            icon={<Trash2 size={16} />}
             onClick={async () => {
               await client.deleteTask(t.id);
               onChanged();
               onClose();
             }}
-            aria-label={strings.taskDelete}
-          >
-            <Trash2 size={16} />
-          </button>
-          <button
-            type="button"
-            className="rounded-lg p-2 text-tertiary hover:bg-raised hover:text-primary"
+          />
+          <IconButton
+            label={strings.taskClose}
+            icon={<X size={18} />}
             onClick={onClose}
-            aria-label={strings.taskClose}
-          >
-            <X size={18} />
-          </button>
+          />
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 py-5">
@@ -454,8 +495,8 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
               <span className="inline-flex items-center gap-2 text-sm text-secondary [&>svg]:text-tertiary">
                 <User size={15} /> {strings.taskAssignee}
               </span>
-              <input
-                className="rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-primary outline-none hover:bg-raised focus:border-accent focus:bg-surface"
+              <Input
+                variant="cell"
                 defaultValue={t.assignee ?? ""}
                 placeholder={strings.taskAssigneePlaceholder}
                 inputMode="email"
@@ -487,8 +528,9 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
               <span className="inline-flex items-center gap-2 text-sm text-secondary">
                 <span className={`size-2 rounded-full ${prioClass}`} aria-hidden /> {strings.taskPriority}
               </span>
-              <select
-                className="rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-primary outline-none hover:bg-raised focus:border-accent focus:bg-surface"
+              <Select
+                variant="ghost"
+                className="justify-self-start"
                 value={t.priority}
                 onChange={(e) => void save({ priority: e.target.value as TaskPriority })}
               >
@@ -496,7 +538,7 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
                 <option value="low">{strings.taskPrioLow}</option>
                 <option value="medium">{strings.taskPrioMedium}</option>
                 <option value="high">{strings.taskPrioHigh}</option>
-              </select>
+              </Select>
             </label>
             <div className="grid min-h-10 grid-cols-[8.5rem_minmax(0,1fr)] items-start gap-3 py-1">
               <span className="inline-flex items-center gap-2 pt-1.5 text-sm text-secondary [&>svg]:text-tertiary">
@@ -533,7 +575,7 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
                     <Plus size={12} /> {strings.taskAddLabel}
                   </button>
                   {labelMenu && (
-                    <div className="absolute right-0 top-[calc(100%+0.375rem)] z-dropdown flex max-h-72 min-w-64 flex-col gap-1 overflow-y-auto rounded-xl border border-default bg-surface p-2 shadow-lg">
+                    <div className="absolute right-0 top-[calc(100%+0.375rem)] z-[var(--z-overlay)] flex max-h-72 min-w-64 flex-col gap-1 overflow-y-auto rounded-xl border border-default bg-surface p-2 shadow-lg">
                       {allLabels.map((l) => {
                         const on = labelIds.has(l.id);
                         return (
@@ -558,8 +600,9 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
                         );
                       })}
                       <div className="mt-1 flex gap-2 border-t border-subtle pt-2">
-                        <input
-                          className="min-w-0 flex-1 rounded-lg border border-default bg-surface px-3 py-2 text-sm text-primary outline-none placeholder:text-tertiary focus:border-accent focus:ring-2 focus:ring-accent/15"
+                        <Input
+                          className="min-w-0 flex-1"
+                          aria-label={strings.taskNewLabelPlaceholder}
                           value={newLabel}
                           onChange={(e) => setNewLabel(e.target.value)}
                           placeholder={strings.taskNewLabelPlaceholder}
@@ -567,14 +610,14 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
                             if (e.key === "Enter") void createAndAddLabel();
                           }}
                         />
-                        <button
-                          type="button"
-                          className="shrink-0 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-on-accent hover:bg-accent-hover disabled:opacity-50"
+                        <Button
+                          size="sm"
+                          className="shrink-0"
                           onClick={() => void createAndAddLabel()}
                           disabled={!newLabel.trim()}
                         >
                           {strings.taskCreateLabel}
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   )}
@@ -618,7 +661,7 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
                   <Plus size={12} /> {strings.taskAddBlocker}
                 </button>
                 {blockMenu && (
-                  <div className="absolute left-0 top-[calc(100%+0.375rem)] z-dropdown flex max-h-72 min-w-64 flex-col gap-1 overflow-y-auto rounded-xl border border-default bg-surface p-2 shadow-lg">
+                  <div className="absolute left-0 top-[calc(100%+0.375rem)] z-[var(--z-overlay)] flex max-h-72 min-w-64 flex-col gap-1 overflow-y-auto rounded-xl border border-default bg-surface p-2 shadow-lg">
                     {blockerCandidates.length === 0 ? (
                       <div className="px-3 py-4 text-center text-sm text-tertiary">
                         {strings.taskNoBlockerCandidates}
@@ -681,18 +724,23 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
             <div className="flex flex-col gap-1">
               {data.subtasks.map((s) => (
                 <div key={s.id} className="group flex min-h-9 items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-raised">
-                  <input
-                    type="checkbox"
-                    className="size-4 accent-accent"
-                    checked={s.done}
-                    onChange={async (e) => {
-                      await client.setSubtask(t.id, s.id, e.target.checked);
-                      await load();
-                    }}
-                  />
-                  <span className={`min-w-0 flex-1 text-sm text-primary ${s.done ? "text-tertiary line-through" : ""}`}>
-                    {s.title}
-                  </span>
+                  {/* A wrapping label, so the title is the box's name — clicking
+                      the words ticks the box and a screen reader says which
+                      subtask this is rather than "checkbox". */}
+                  <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2">
+                    <input
+                      type="checkbox"
+                      className="size-4 shrink-0 accent-accent"
+                      checked={s.done}
+                      onChange={async (e) => {
+                        await client.setSubtask(t.id, s.id, e.target.checked);
+                        await load();
+                      }}
+                    />
+                    <span className={`min-w-0 flex-1 text-sm text-primary ${s.done ? "text-tertiary line-through" : ""}`}>
+                      {s.title}
+                    </span>
+                  </label>
                   <button
                     type="button"
                     className="inline-flex shrink-0 rounded-md p-1.5 text-tertiary opacity-0 hover:bg-surface hover:text-danger group-hover:opacity-100 focus:opacity-100"
@@ -707,8 +755,8 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
                 </div>
               ))}
             </div>
-            <input
-              className="w-full rounded-xl border border-default bg-surface px-3 py-2.5 text-sm text-primary outline-none placeholder:text-tertiary focus:border-accent focus:ring-2 focus:ring-accent/15"
+            <Input
+              aria-label={strings.taskAddSubtask}
               value={newSub}
               placeholder={strings.taskAddSubtask}
               onChange={(e) => setNewSub(e.target.value)}
