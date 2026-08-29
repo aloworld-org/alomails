@@ -35,7 +35,9 @@ use time::{Date, Duration, Month};
 use alo_store::billing_invoices::{InvoiceStatus, NewInvoice};
 use alo_store::billing_payments::NewPayment;
 use alo_store::billing_quotes::{AcceptedAs, QuoteStatus};
-use alo_store::{BillingCustomerId, BillingInvoiceId, BillingQuoteId, Customer, NewLine};
+use alo_store::{
+    BillingCustomerId, BillingInvoiceId, BillingPaymentId, BillingQuoteId, Customer, NewLine,
+};
 
 use crate::agent_args::{integer, string_arg, unprocessable};
 use crate::billing::{iso_date, map_store_err};
@@ -334,6 +336,36 @@ pub(crate) async fn record_payment(
         "payment": crate::billing_payments::payment_json(&recorded),
         "invoice": crate::billing_invoices::document_json(&document, today()),
     }))
+}
+
+/// `DELETE /billing/invoices/{id}`'s act: discard a draft and its lines. The
+/// store refuses an issued document (`409`) — a draft never consumed a
+/// number, so only a draft can vanish without a hole in the series.
+pub(crate) async fn discard_invoice_draft(
+    account: &Account,
+    id: &BillingInvoiceId,
+) -> Result<(), Problem> {
+    account
+        .acc
+        .delete_billing_invoice(id)
+        .await
+        .map_err(map_store_err)
+}
+
+/// `DELETE /billing/invoices/{id}/payments/{payment_id}`'s act: remove the
+/// payment, post the reversal, and answer the document owed again — the
+/// record view after the ledger changed, so no caller needs a second read.
+pub(crate) async fn remove_payment(
+    account: &Account,
+    invoice: &BillingInvoiceId,
+    payment: &BillingPaymentId,
+) -> Result<Value, Problem> {
+    account
+        .acc
+        .delete_billing_payment(invoice, payment)
+        .await
+        .map_err(map_store_err)?;
+    invoice_record(account, invoice).await
 }
 
 // ---- resolution, and the executors on top of the cores -------------------
@@ -844,6 +876,88 @@ pub async fn execute_record_payment(account: &Account, args: &Value) -> Reply {
     ok(result)
 }
 
+/// The draft a `discard_invoice_draft` names: by raw id first (the shape an
+/// action record's undo carries), then by number, then the customer's newest
+/// draft. Whether it is actually a draft is the store's refusal to make.
+async fn resolve_draft(account: &Account, args: &Value) -> Result<BillingInvoiceId, Problem> {
+    if let Some(named) = string_arg(args, "invoice").filter(|n| !n.trim().is_empty()) {
+        let raw = BillingInvoiceId::new(named.trim().to_owned());
+        if account
+            .acc
+            .billing_invoice(&raw)
+            .await
+            .map_err(map_store_err)?
+            .is_some()
+        {
+            return Ok(raw);
+        }
+        return account
+            .acc
+            .billing_invoice_id_by_number(&named)
+            .await
+            .map_err(map_store_err)?
+            .ok_or_else(|| unprocessable(format!("no invoice named \"{}\"", named.trim())));
+    }
+    let Some(name) = string_arg(args, "customer") else {
+        return Err(unprocessable("name the draft by its id or by the customer"));
+    };
+    let customer = one_customer(account, &name).await?;
+    account
+        .acc
+        .billing_invoices(Some(InvoiceStatus::Draft))
+        .await
+        .map_err(map_store_err)?
+        .into_iter()
+        .find(|i| i.invoice.customer_id == customer.id)
+        .map(|i| i.invoice.id)
+        .ok_or_else(|| unprocessable(format!("{} has no draft invoice to discard", customer.name)))
+}
+
+/// `discard_invoice_draft` — a write, and the inverse of
+/// `create_invoice_draft` (A8.2): the Undo button runs this with the id the
+/// action record kept.
+pub async fn execute_discard_invoice_draft(account: &Account, args: &Value) -> Reply {
+    let id = resolve_draft(account, args).await?;
+    discard_invoice_draft(account, &id).await?;
+    ok(json!({ "kind": "invoice", "id": id.as_str(), "discarded": true }))
+}
+
+/// `delete_payment` — a write, and the inverse of `record_payment` (A8.2):
+/// named by the payment's own id from an action record, or by the invoice
+/// for its newest payment. The store refuses anything but the newest, and
+/// refuses a payment a matched bank line settles.
+pub async fn execute_delete_payment(account: &Account, args: &Value) -> Reply {
+    let (invoice, payment) = match string_arg(args, "payment").filter(|p| !p.trim().is_empty()) {
+        Some(named) => {
+            let payment = BillingPaymentId::new(named.trim().to_owned());
+            let invoice = account
+                .acc
+                .billing_payment_invoice(&payment)
+                .await
+                .map_err(map_store_err)?
+                .ok_or_else(|| unprocessable("no payment by that id"))?;
+            (invoice, payment)
+        }
+        None => {
+            let invoice = resolve_invoice(account, args).await?;
+            let newest = account
+                .acc
+                .billing_payments(&invoice)
+                .await
+                .map_err(map_store_err)?
+                .into_iter()
+                .next()
+                .ok_or_else(|| unprocessable("that invoice has no payment to take back"))?;
+            (invoice, newest.id)
+        }
+    };
+    ok(json!({
+        "kind": "invoice",
+        "invoice": remove_payment(account, &invoice, &payment).await?,
+        "removedPayment": payment.as_str(),
+    }))
+}
+
 /// The module's verbs by name (A4.1c) — Billing's one row in the agent's
 /// dispatcher list, `crate::agent::MODULES`. `None` is "not mine": the
 /// dispatcher then asks the next module, so two modules never need to know of
@@ -865,6 +979,8 @@ pub(crate) fn dispatch<'a>(
         "send_quote" => Box::pin(execute_send_quote(account, args)),
         "issue_invoice" => Box::pin(execute_issue_invoice(account, args)),
         "record_payment" => Box::pin(execute_record_payment(account, args)),
+        "discard_invoice_draft" => Box::pin(execute_discard_invoice_draft(account, args)),
+        "delete_payment" => Box::pin(execute_delete_payment(account, args)),
         "create_invoice_draft" => Box::pin(crate::agent_billing::execute_create_invoice_draft(
             account, args,
         )),
@@ -960,6 +1076,11 @@ mod tests {
         ("send_quote", "billing_intents::send_quote("),
         ("issue_invoice", "billing_intents::issue_invoice("),
         ("record_payment", "billing_intents::record_payment("),
+        (
+            "discard_invoice_draft",
+            "billing_intents::discard_invoice_draft(",
+        ),
+        ("delete_payment", "billing_intents::remove_payment("),
     ];
 
     /// The route modules whose handlers may adapt a Billing verb.

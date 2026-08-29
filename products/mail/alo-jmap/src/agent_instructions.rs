@@ -46,6 +46,8 @@ fn instruction_json(row: &AgentInstruction, owner_like: bool, caller: &str) -> V
             json!({ "kind": "schedule", "everyMinutes": every_minutes })
         }
         InstructionTrigger::Event { kind } => json!({ "kind": "event", "event": kind }),
+        // One firing, at `nextRun`, and the card goes with it (A8.2).
+        InstructionTrigger::Once => json!({ "kind": "once" }),
     };
     json!({
         "id": row.id.as_str(),
@@ -153,9 +155,26 @@ fn parse_trigger(body: &Value) -> Result<(InstructionTrigger, Option<OffsetDateT
                 None,
             ))
         }
+        Some("once") => {
+            let at = trigger
+                .get("at")
+                .and_then(Value::as_str)
+                .map(|at| OffsetDateTime::parse(at, &Rfc3339))
+                .transpose()
+                .map_err(|_| {
+                    Problem::with(
+                        StatusCode::UNPROCESSABLE_ENTITY,
+                        "at must be an RFC 3339 instant",
+                    )
+                })?;
+            // A moment in the past is allowed on purpose: an overdue ask is
+            // still an ask, and the next sweep is when it runs. No moment at
+            // all means the same thing — as soon as the sweeper looks.
+            Ok((InstructionTrigger::Once, at))
+        }
         _ => Err(Problem::with(
             StatusCode::UNPROCESSABLE_ENTITY,
-            "trigger.kind must be 'schedule' or 'event'",
+            "trigger.kind must be 'schedule', 'event' or 'once'",
         )),
     }
 }
@@ -243,6 +262,75 @@ pub async fn cancel_instruction(
             other => map_store_err(other),
         })?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+/// `POST /chat/agents/{id}/tasks` `{"task": …}` → assign a task to an agent
+/// (ADR 0058 §6, A8.2): **a task whose assignee is an agent is a standing
+/// instruction with a due date.** No second mechanism — the assignment is a
+/// one-shot instruction in the caller's own DM with the agent, its words the
+/// task's own title, its moment the task's due date (an overdue or dateless
+/// task fires on the next sweep). The firing is then an ordinary turn as the
+/// caller: reads post into the DM, writes propose back to them, exactly as
+/// handing the task to a colleague would end in a message from that
+/// colleague.
+///
+/// The DM rather than a shared room, because the assignment runs with the
+/// **caller's** access on a clock; a room-visible assignment is the room
+/// instruction card, which already exists.
+///
+/// # Errors
+/// 404 when the agent is not the caller's to see, or the task is not — the
+/// same answer an id never issued gets; 422 when the agent is retired or the
+/// DM already holds its twenty instructions.
+pub async fn assign_task(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let v: Value = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let task_id = v
+        .get("task")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|task| !task.is_empty())
+        .ok_or_else(|| Problem::with(StatusCode::UNPROCESSABLE_ENTITY, "task is required"))?;
+    // The task first, through the caller's own visibility (its project's, or
+    // it is assigned to them): a task that is not theirs to see does not
+    // become an agent's work either.
+    let task = account
+        .acc
+        .task(&alo_store::TaskId::new(task_id.to_owned()))
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "not found"))?;
+    let agent_id = ChatAgentId::new(id);
+    // The caller's one-to-one with the agent — created on first use, the
+    // same room every time after; refuses an unknown, denied or retired
+    // agent with the DM's own answers.
+    let channel = account
+        .acc
+        .open_agent_dm(&agent_id)
+        .await
+        .map_err(map_store_err)?;
+    let made = account
+        .acc
+        .create_agent_instruction(
+            &agent_id,
+            &channel,
+            &task.title,
+            &InstructionTrigger::Once,
+            task.due_at,
+        )
+        .await
+        .map_err(map_store_err)?;
+    let owner_like = owner_like(&account, &channel).await?;
+    Ok(Json(instruction_json(
+        &made,
+        owner_like,
+        account.acc.user().as_str(),
+    )))
 }
 
 /// Fire every instruction that has come due — called on the scheduled-mail

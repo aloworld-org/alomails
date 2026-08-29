@@ -921,7 +921,10 @@ mod tests {
                 "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 134);
+        // …and the census, so a verb cannot appear or vanish unnoticed:
+        // A8.2 added Billing's two inverse writes (`discard_invoice_draft`,
+        // `delete_payment`).
+        assert_eq!(all_tools().len(), 136);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }

@@ -253,6 +253,30 @@ impl AccountStore {
         Ok(rows.into_iter().map(row_to_run).collect())
     }
 
+    /// One action record, if it is the caller's own — the row the Undo
+    /// button reads before it acts (A8.2).
+    ///
+    /// Scoped to `asked_by = caller` for the same reason the lists are: a run
+    /// is an act taken through one person's access, and undoing it is theirs
+    /// alone. Another tenant's id, a colleague's run and an id never issued
+    /// all get the same [`StoreError::NotFound`] — no oracle.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when no such run is the caller's;
+    /// [`StoreError::Db`] on a database failure.
+    pub async fn agent_tool_run(&self, id: &ChatToolRunId) -> Result<AgentToolRun> {
+        let row: Option<RunRow> = sqlx::query_as(&format!(
+            "{SELECT_RUNS} WHERE tenant_id = $1 AND asked_by = $2 AND id = $3"
+        ))
+        .bind(self.tenant.as_str())
+        .bind(self.user.as_str())
+        .bind(id.as_str())
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        row.map(row_to_run).ok_or(StoreError::NotFound)
+    }
+
     /// What **one** agent has run for this person, most recent first — the
     /// "what it has done" half of the agent directory (A3.3).
     ///

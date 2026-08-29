@@ -84,7 +84,7 @@ fn tools_json(product: AgentProduct) -> Vec<Value> {
 /// proposal it settled. The preview is not an exception to the rule above —
 /// this list is only ever the caller's own runs, and a proposal's preview was
 /// already shown to a whole room before anybody tapped.
-fn run_json(run: &AgentToolRun) -> Value {
+pub(crate) fn run_json(run: &AgentToolRun) -> Value {
     json!({
         "id": run.id.as_str(),
         "tool": run.tool,

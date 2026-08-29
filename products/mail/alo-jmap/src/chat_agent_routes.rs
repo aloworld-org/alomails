@@ -353,6 +353,113 @@ pub async fn decide_proposal(
     Ok(Json(value))
 }
 
+#[derive(Deserialize)]
+pub struct HandBody {
+    /// The agent to finish it — an id from the room's roster.
+    agent: String,
+}
+
+/// `POST /chat/proposals/{id}/hand` `{agent}` → hand an open proposal to an
+/// agent: "@billing, you finish this" (ADR 0058 §6, A8.2).
+///
+/// **Only the asker may hand it**, for the same reason only they may approve
+/// it — handing IS deciding, and the run carries their reach. What handing
+/// adds over a plain approval is who acts: the execution is attributed to the
+/// agent it was handed to, so the action record reads "the agent did it, on
+/// the asker's behalf" — which may be a different agent than the one that
+/// proposed it, when Ask alo proposed something a product agent should own.
+///
+/// The agent must be the caller's to see, awake, and **in the room** — a
+/// handoff the room cannot see is not a handoff. And it must be one whose
+/// product owns the verb, checked *before* the card is decided, so handing a
+/// billing write to the tasks agent refuses cleanly and leaves the card open
+/// rather than burning it on an execution the boundary would refuse.
+///
+/// # Errors
+/// 404 proposal or agent not visible, 403 not the asker, 422 already
+/// decided / agent retired / agent not in the room / not the agent's verb,
+/// plus whatever the executor raises.
+pub async fn hand_proposal(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(body): Json<HandBody>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let id = ChatProposalId::new(id);
+    let agent_id = ChatAgentId::new(body.agent);
+    // The module gate (A1.5): an agent of an app the caller may not open is
+    // 404, the same answer an id never issued gets.
+    let agent = account.acc.agent(&agent_id).await.map_err(map_store_err)?;
+    if agent.disabled {
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            format!("@{} is retired and takes no work", agent.handle),
+        ));
+    }
+    let held = account.acc.proposal(&id).await.map_err(map_store_err)?;
+    let present = account
+        .acc
+        .channel_agents(&held.channel)
+        .await
+        .map_err(map_store_err)?
+        .into_iter()
+        .any(|a| a.id.as_str() == agent_id.as_str());
+    if !present {
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            format!("@{} is not in this room — add it first", agent.handle),
+        ));
+    }
+    // The boundary's own product rule, asked first: a refusal here leaves
+    // the card pending for the right agent, or for the asker's own tap.
+    if !alo_ai::offers(agent.product, &held.tool) {
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            format!(
+                "{} is not a verb @{} has — hand it to the agent whose product it belongs to",
+                held.tool, agent.handle
+            ),
+        ));
+    }
+    // Handing IS deciding: asker-only and once-only, enforced by the store
+    // exactly as for a plain approval; two hands cannot both win.
+    let decided = account
+        .acc
+        .decide_proposal(&id, true)
+        .await
+        .map_err(map_store_err)?;
+    let run = crate::agent::ToolRun {
+        approval: crate::agent::Approval::Asker,
+        agent: Some(&agent_id),
+        channel: Some(&decided.channel),
+        proposal: Some(&decided.id),
+    };
+    let result = match crate::agent::execute_tool(
+        &state,
+        &account,
+        &decided.tool,
+        &decided.args,
+        &run,
+    )
+    .await
+    {
+        Ok(Json(done)) => done,
+        Err(problem) => {
+            // Approved and failed: say so, exactly as a plain approval does.
+            notify(&state, &account, &decided.channel).await;
+            return Err(problem);
+        }
+    };
+    notify(&state, &account, &decided.channel).await;
+    let mut value = proposal_json(&decided);
+    if let Some(object) = value.as_object_mut() {
+        object.insert("result".to_owned(), result);
+        object.insert("handedTo".to_owned(), json!(agent_id.as_str()));
+    }
+    Ok(Json(value))
+}
+
 /// Tell a room its shape changed. Best-effort: a write that succeeded is never
 /// reported as failed because a notification could not be delivered.
 async fn notify(state: &AppState, account: &crate::state::Account, channel: &ChatChannelId) {

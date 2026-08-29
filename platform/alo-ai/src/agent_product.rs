@@ -415,7 +415,9 @@ mod tests {
                 "draft_payment_reminder",
                 "send_quote",
                 "issue_invoice",
-                "record_payment"
+                "record_payment",
+                "discard_invoice_draft",
+                "delete_payment"
             ]
         );
         assert_eq!(
@@ -541,7 +543,7 @@ mod tests {
             .map(|tool| tool.name)
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
-        assert_eq!(workspace.len(), 134);
+        assert_eq!(workspace.len(), 136);
     }
 
     /// A moved module registers once (A4.1c): its row in [`MOVED`] is what puts

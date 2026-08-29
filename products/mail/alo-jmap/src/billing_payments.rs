@@ -37,8 +37,6 @@ use alo_store::billing_payments::{Payment, Settlement};
 use alo_store::{BillingInvoiceId, BillingPaymentId, NewPayment};
 
 use crate::billing::{iso, iso_date, map_store_err, parse_body, parse_iso_date};
-use crate::billing_document::today;
-use crate::billing_invoices::document_json;
 use crate::error::Problem;
 use crate::state::{AppState, authenticate};
 
@@ -199,21 +197,10 @@ pub async fn delete_payment(
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     let id = BillingInvoiceId::new(id);
-    account
-        .acc
-        .delete_billing_payment(&id, &BillingPaymentId::new(payment_id))
-        .await
-        .map_err(map_store_err)?;
-    let document = account
-        .acc
-        .billing_invoice(&id)
-        .await
-        .map_err(map_store_err)?
-        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such invoice"))?;
-    Ok(Json(json!({
-        "status": "ok",
-        "invoice": document_json(&document, today()),
-    })))
+    let invoice =
+        crate::billing_intents::remove_payment(&account, &id, &BillingPaymentId::new(payment_id))
+            .await?;
+    Ok(Json(json!({ "status": "ok", "invoice": invoice })))
 }
 
 #[cfg(test)]

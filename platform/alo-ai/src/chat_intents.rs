@@ -255,6 +255,14 @@ pub const CHAT_EXCLUDED: &[Excluded] = &[
         route: "/chat/instructions/{id}",
         why: "Cancel is the author's and the room owner's brake on a standing instruction; it must never be a tool an agent can reach.",
     },
+    Excluded {
+        route: "/chat/proposals/{id}/hand",
+        why: "Handing an open proposal to an agent (A8.2) is the asker's decision on the approval surface; an agent that could hand work to an agent would be approving writes.",
+    },
+    Excluded {
+        route: "/chat/agents/{id}/tasks",
+        why: "Assigning a task to an agent (A8.2) commissions a standing instruction, and an agent must not commission itself or another.",
+    },
 ];
 
 /// The Chat paragraph of the agent's general instructions.

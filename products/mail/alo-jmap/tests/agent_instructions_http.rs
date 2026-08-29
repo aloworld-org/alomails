@@ -702,3 +702,198 @@ async fn another_tenants_instructions_do_not_exist_here() {
         "{listed}"
     );
 }
+
+/// **A task assigned to an agent is a standing instruction with a due date**
+/// (ADR 0058 §6, A8.2): one-shot, in the caller's own DM with the agent, its
+/// words the task's title, its moment the task's due date. A dateless task
+/// fires on the next sweep — and the firing is an ordinary turn as the
+/// caller, after which the one-shot row is gone.
+#[tokio::test]
+async fn a_task_assigned_to_an_agent_is_a_once_instruction() {
+    let h = harness("instr-assign").await;
+    let agent = h
+        .acc
+        .create_agent(
+            "tasks",
+            "tasks",
+            Some("the tasks agent"),
+            AgentProduct::Tasks,
+        )
+        .await
+        .unwrap();
+
+    // A dated task first: the instruction's moment is the task's due date.
+    let due = minutes_from_now(24 * 60);
+    let (status, task) = post(
+        &h.app,
+        &h.token,
+        "/tasks",
+        json!({ "title": "Chase the Northstar invoice", "dueAt": due }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{task}");
+    let task_id = task["id"].as_str().unwrap().to_owned();
+
+    let (status, card) = post(
+        &h.app,
+        &h.token,
+        &format!("/chat/agents/{}/tasks", agent.as_str()),
+        json!({ "task": task_id }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{card}");
+    assert_eq!(card["trigger"]["kind"], "once", "{card}");
+    assert_eq!(card["text"], "Chase the Northstar invoice");
+    assert!(card["canCancel"].as_bool().unwrap(), "{card}");
+    let moment = OffsetDateTime::parse(card["nextRun"].as_str().unwrap(), &Rfc3339).unwrap();
+    let wanted = OffsetDateTime::parse(&due, &Rfc3339).unwrap();
+    assert!(
+        (moment - wanted).abs() < time::Duration::seconds(2),
+        "the moment is the due date: {card}"
+    );
+
+    // The card lives in the caller's DM with the agent, and a sweep before
+    // its moment fires nothing.
+    let (status, dm) = post(
+        &h.app,
+        &h.token,
+        &format!("/chat/agents/{}/dm", agent.as_str()),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{dm}");
+    let dm = dm["id"].as_str().unwrap().to_owned();
+    let (_, listed) = get(
+        &h.app,
+        &h.token,
+        &format!("/chat/channels/{dm}/instructions"),
+    )
+    .await;
+    assert_eq!(listed["instructions"].as_array().unwrap().len(), 1);
+    let state = sweeper_state(&h);
+    alo_jmap::agent_instructions::run_due(&state).await;
+    let (_, still) = get(
+        &h.app,
+        &h.token,
+        &format!("/chat/channels/{dm}/instructions"),
+    )
+    .await;
+    assert_eq!(
+        still["instructions"].as_array().unwrap().len(),
+        1,
+        "not due yet: {still}"
+    );
+
+    // A dateless task fires on the next sweep: the agent speaks in the DM
+    // with the task's own words as its question, and the one-shot is gone.
+    let (model, seen) = scripted_model(vec![says("On it — I'll sort the filing today.")]).await;
+    use_model(&h, &model).await;
+    let (status, task) = post(
+        &h.app,
+        &h.token,
+        "/tasks",
+        json!({ "title": "Sort the expense filing" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{task}");
+    let (status, card) = post(
+        &h.app,
+        &h.token,
+        &format!("/chat/agents/{}/tasks", agent.as_str()),
+        json!({ "task": task["id"].as_str().unwrap() }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{card}");
+    alo_jmap::agent_instructions::run_due(&state).await;
+    let spoken = await_agent_messages(&h, &dm, 1).await;
+    assert!(
+        spoken[0]["body"]
+            .as_str()
+            .unwrap()
+            .contains("I'll sort the filing"),
+        "the firing spoke in the DM: {spoken:?}"
+    );
+    let prompt = {
+        let shown = seen.lock().unwrap();
+        shown
+            .first()
+            .map(|req| req["messages"].to_string())
+            .unwrap_or_default()
+    };
+    assert!(
+        prompt.contains("Sort the expense filing"),
+        "the turn ran the task's own words: {prompt}"
+    );
+    let (_, after) = get(
+        &h.app,
+        &h.token,
+        &format!("/chat/channels/{dm}/instructions"),
+    )
+    .await;
+    assert_eq!(
+        after["instructions"].as_array().unwrap().len(),
+        1,
+        "the fired one-shot went with its firing; the dated one stands: {after}"
+    );
+    assert_eq!(
+        after["instructions"][0]["text"],
+        "Chase the Northstar invoice"
+    );
+}
+
+/// A task or an agent that is not the caller's to see cannot be joined into
+/// an assignment — the same nothing an id never issued gets, from either
+/// side of the pair.
+#[tokio::test]
+async fn assigning_across_tenants_finds_nothing() {
+    let h = harness("instr-assign-iso-a").await;
+    let other = harness_on(Arc::clone(&h.store), "instr-assign-iso-b").await;
+    let (status, task) = post(&h.app, &h.token, "/tasks", json!({ "title": "Ours alone" })).await;
+    assert_eq!(status, StatusCode::OK, "{task}");
+    let task_id = task["id"].as_str().unwrap().to_owned();
+    let agent = h
+        .acc
+        .create_agent("tasks", "tasks", None, AgentProduct::Tasks)
+        .await
+        .unwrap();
+    let their_agent = other
+        .acc
+        .create_agent("tasks", "tasks", None, AgentProduct::Tasks)
+        .await
+        .unwrap();
+
+    // Their agent, our task id: their door finds no such task.
+    let (status, body) = post(
+        &other.app,
+        &other.token,
+        &format!("/chat/agents/{}/tasks", their_agent.as_str()),
+        json!({ "task": task_id }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
+    // Our agent id through their door: no such agent either.
+    let (status, body) = post(
+        &other.app,
+        &other.token,
+        &format!("/chat/agents/{}/tasks", agent.as_str()),
+        json!({ "task": task_id }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
+    // And nothing was stood up anywhere in our tenant.
+    let (status, dm) = post(
+        &h.app,
+        &h.token,
+        &format!("/chat/agents/{}/dm", agent.as_str()),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{dm}");
+    let (_, listed) = get(
+        &h.app,
+        &h.token,
+        &format!("/chat/channels/{}/instructions", dm["id"].as_str().unwrap()),
+    )
+    .await;
+    assert!(listed["instructions"].as_array().unwrap().is_empty());
+}

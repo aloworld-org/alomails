@@ -540,6 +540,28 @@ impl AccountStore {
         Ok(())
     }
 
+    /// The invoice one payment sits on, if the payment is this tenant's —
+    /// what the `delete_payment` intent needs when an undo names only the
+    /// payment (A8.2): the store's delete takes both halves, and the caller
+    /// holding just the payment id must not guess the document.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on a database failure.
+    pub async fn billing_payment_invoice(
+        &self,
+        payment_id: &BillingPaymentId,
+    ) -> Result<Option<BillingInvoiceId>> {
+        let row: Option<(String,)> = sqlx::query_as(
+            "SELECT invoice_id FROM billing_payments WHERE tenant_id = $1 AND id = $2",
+        )
+        .bind(self.tenant.as_str())
+        .bind(payment_id.as_str())
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(row.map(|(id,)| BillingInvoiceId::new(id)))
+    }
+
     /// The payments recorded against one of this tenant's invoices, newest
     /// first.
     ///

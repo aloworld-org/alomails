@@ -471,11 +471,7 @@ pub async fn delete_invoice(
     Path(id): Path<String>,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
-    account
-        .acc
-        .delete_billing_invoice(&BillingInvoiceId::new(id))
-        .await
-        .map_err(map_store_err)?;
+    crate::billing_intents::discard_invoice_draft(&account, &BillingInvoiceId::new(id)).await?;
     Ok(Json(json!({ "status": "ok" })))
 }
 

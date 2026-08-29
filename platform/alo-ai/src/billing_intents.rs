@@ -277,6 +277,53 @@ pub const BILLING_INTENTS: &[IntentSpec] = &[
         undo: Some("delete_payment"),
         routes: &["/billing/invoices/{id}/payments"],
     },
+    // ---- the inverse verbs (A8.2): what the Undo button runs --------------
+    IntentSpec {
+        name: "discard_invoice_draft",
+        purpose: "Discard a DRAFT invoice — its lines go with it. A draft never carried a number, so nothing is missing from the series afterwards; an issued invoice cannot be discarded and says so. Named by its id (from an action's undo), or by the customer for their newest draft.",
+        effect: Effect::Write,
+        args: &[
+            Arg::optional(
+                "invoice",
+                "text",
+                "the draft's id, exactly as an action record or lookup returned it",
+            ),
+            CUSTOMER_OPT,
+        ],
+        answers: &[
+            "discard the draft invoice",
+            "throw away the draft for X",
+            "undo the invoice draft",
+        ],
+        preview: Some(
+            "The draft invoice will be discarded — it never carried a number, so the series keeps no gap.",
+        ),
+        undo: None,
+        routes: &["/billing/invoices/{id}"],
+    },
+    IntentSpec {
+        name: "delete_payment",
+        purpose: "Take back a payment recorded wrongly: the newest payment on an invoice is removed, its ledger entry reversed, and the invoice owed again. Named by the payment's id (from an action's undo), or by the invoice for its newest payment.",
+        effect: Effect::Write,
+        args: &[
+            Arg::optional(
+                "payment",
+                "text",
+                "the payment's id, exactly as an action record returned it",
+            ),
+            INVOICE_OPT,
+        ],
+        answers: &[
+            "remove the payment on INV-…",
+            "that payment was a mistake",
+            "undo the payment",
+        ],
+        preview: Some(
+            "The payment will be removed and its invoice owed again — the ledger keeps the reversal, nothing is edited.",
+        ),
+        undo: None,
+        routes: &["/billing/invoices/{id}/payments/{payment_id}"],
+    },
 ];
 
 /// The Billing routes deliberately without a verb, each with its reason.
@@ -324,10 +371,6 @@ pub const BILLING_EXCLUDED: &[Excluded] = &[
     Excluded {
         route: "/billing/invoices/{id}/send",
         why: "Composes a mail draft with the PDF; the agent's draft_payment_reminder covers chasing, sending an invoice is a later intent.",
-    },
-    Excluded {
-        route: "/billing/invoices/{id}/payments/{payment_id}",
-        why: "Deleting a recorded payment is a correction a person makes; the undo of record_payment, a later intent.",
     },
     Excluded {
         route: "/billing/bills/import",

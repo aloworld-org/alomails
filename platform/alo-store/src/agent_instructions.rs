@@ -53,6 +53,10 @@ pub enum InstructionTrigger {
     /// When the tenant's event stream gains an event of this kind — a verb
     /// the intent registry names, e.g. `issue_invoice`.
     Event { kind: String },
+    /// Once, at its moment (`next_run`), and then the row goes with the
+    /// firing — a task assigned to an agent is exactly this, with the task's
+    /// due date as the moment (ADR 0058 §6, A8.2).
+    Once,
 }
 
 /// One standing instruction, as the card reads it.
@@ -135,6 +139,7 @@ fn row_to_instruction(row: InstructionRow) -> Result<AgentInstruction> {
                 StoreError::Validation("an event trigger without a kind".to_owned())
             })?,
         },
+        "once" => InstructionTrigger::Once,
         other => {
             return Err(StoreError::Validation(format!(
                 "unknown instruction trigger {other}"
@@ -247,6 +252,13 @@ impl AccountStore {
                 }
                 (Some(kind.as_str()), None, None)
             }
+            // A one-shot's moment may be in the past — an overdue task is
+            // still assigned, and the next sweep is when it fires.
+            InstructionTrigger::Once => (
+                None,
+                None,
+                Some(first_at.unwrap_or_else(OffsetDateTime::now_utc)),
+            ),
         };
         let held: (i64,) = sqlx::query_as(
             "SELECT count(*) FROM agent_instructions WHERE tenant_id = $1 AND channel_id = $2",
@@ -278,6 +290,7 @@ impl AccountStore {
         .bind(match trigger {
             InstructionTrigger::Schedule { .. } => "schedule",
             InstructionTrigger::Event { .. } => "event",
+            InstructionTrigger::Once => "once",
         })
         .bind(event_kind)
         .bind(repeat_minutes)
@@ -511,8 +524,27 @@ impl Store {
         .fetch_all(self.pool())
         .await
         .map_err(StoreError::Db)?;
+        // A one-shot is claimed by deletion: the row IS the pending firing,
+        // so taking it out and firing it are one atomic step — no second
+        // sweep can claim it, and no fired assignment lingers as a card.
+        let once: Vec<DueRow> = sqlx::query_as(&format!(
+            "DELETE FROM agent_instructions i \
+              WHERE (i.tenant_id, i.id) IN ( \
+                SELECT i2.tenant_id, i2.id FROM agent_instructions i2 \
+                  JOIN chat_channels c ON c.tenant_id = i2.tenant_id AND c.id = i2.channel_id \
+                 WHERE i2.trigger_kind = 'once' AND i2.paused_at IS NULL \
+                   AND i2.next_run <= now() \
+                   {CLAIM_GUARDS} \
+                 ORDER BY i2.next_run LIMIT $1) \
+              RETURNING i.tenant_id, i.id, i.agent_id, i.channel_id, i.author_id, i.text"
+        ))
+        .bind(limit)
+        .fetch_all(self.pool())
+        .await
+        .map_err(StoreError::Db)?;
         let mut due = due_of(scheduled);
         due.extend(due_of(evented));
+        due.extend(due_of(once));
         Ok(due)
     }
 }

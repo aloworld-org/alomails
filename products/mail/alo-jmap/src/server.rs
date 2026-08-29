@@ -15,12 +15,12 @@ use crate::error::Problem;
 use crate::push::PushHub;
 use crate::state::{AppState, Limits};
 use crate::{
-    admin, agent, agent_directory, agent_instructions, ai, api, app_passwords, audit, audit_record,
-    autoconfig, base, billing_bills, billing_customers, billing_fx, billing_invoices,
-    billing_payments, billing_products, billing_quote_designs, billing_quotes, billing_reminder,
-    billing_reports, billing_schedules, billing_send, billing_sepa, billing_settings, blob,
-    calendar, campaign_audience, campaign_consent, campaign_preview, campaign_record,
-    campaign_segments, campaign_suppression, campaign_unsubscribe, carddav, chat,
+    admin, agent, agent_actions, agent_directory, agent_instructions, ai, api, app_passwords,
+    audit, audit_record, autoconfig, base, billing_bills, billing_customers, billing_fx,
+    billing_invoices, billing_payments, billing_products, billing_quote_designs, billing_quotes,
+    billing_reminder, billing_reports, billing_schedules, billing_send, billing_sepa,
+    billing_settings, blob, calendar, campaign_audience, campaign_consent, campaign_preview,
+    campaign_record, campaign_segments, campaign_suppression, campaign_unsubscribe, carddav, chat,
     chat_agent_memory, chat_agent_routes, contacts, crm_activities, crm_deals, crm_handoff,
     crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads, delegates,
     docs, drive, filters, finance_approvals, finance_bank, finance_bank_match, finance_chart,
@@ -139,6 +139,11 @@ pub fn app_with_site_boundaries(
             "/ai/agent/execute",
             post(agent::agent_execute).layer(DefaultBodyLimit::max(ai::MAX_ASK_BYTES)),
         )
+        // The caller's own action record, and its Undo (ADR 0058 §6, A8.2):
+        // one button takes back a person's tap and an agent's approved
+        // proposal alike, by running the inverse verb the registry declared.
+        .route("/ai/actions", get(agent_actions::list_actions))
+        .route("/ai/actions/{id}/undo", post(agent_actions::undo_action))
         // Snooze: hide conversations until a chosen time (a background sweeper wakes them).
         .route("/snooze", post(snooze::snooze))
         // Send later: hold a draft until a chosen time (a background sweeper sends it).
@@ -390,6 +395,18 @@ pub fn app_with_site_boundaries(
         .route(
             "/chat/proposals/{id}",
             post(chat_agent_routes::decide_proposal),
+        )
+        // Hand an open proposal to an agent (A8.2): the asker's decision,
+        // the agent's execution, one action record saying both.
+        .route(
+            "/chat/proposals/{id}/hand",
+            post(chat_agent_routes::hand_proposal),
+        )
+        // Assign a task to an agent (A8.2): a one-shot standing instruction
+        // in the caller's DM with the agent, due when the task is.
+        .route(
+            "/chat/agents/{id}/tasks",
+            post(agent_instructions::assign_task),
         )
         .route(
             "/chat/messages/{id}",
