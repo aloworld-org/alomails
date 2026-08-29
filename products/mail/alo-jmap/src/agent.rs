@@ -26,10 +26,8 @@ use time::format_description::well_known::Rfc3339;
 use crate::agent_hr as hr;
 use crate::agent_insights as insights;
 use crate::agent_inventory as inventory;
-use crate::agent_projects as projects;
 use crate::agent_sheets as sheets;
 use crate::agent_sites as sites;
-use crate::agent_timesheet as timesheet;
 use crate::ai::MAX_ASK_BYTES;
 use crate::error::Problem;
 use crate::state::{Account, AppState, authenticate};
@@ -477,6 +475,7 @@ pub(crate) const MODULES: &[ModuleDispatcher] = &[
     crate::drive_intents::dispatch,
     crate::finance_intents::dispatch,
     crate::meet_intents::dispatch,
+    crate::projects_intents::dispatch,
 ];
 
 /// [`execute_tool`]'s boundary check and audit cannot be bypassed by a caller
@@ -532,9 +531,6 @@ async fn dispatch(
         "draft_reply" => execute_draft_reply(account, args, state).await,
         "send_email" => execute_send(account, args, state).await,
         "move_to_folder" => execute_move_to_folder(account, args).await,
-        // alo Projects' tools (B3.10a), on the same seam. `log_time` writes a
-        // *proposed* entry the user accepts in their own timesheet; the summary
-        // writes nothing at all.
         // alo Sheets' tools (A2.2), on the same seam. The three reads answer
         // with the addresses of the cells they read; the two writes edit the
         // stored workbook and therefore wait for the asker's own approval —
@@ -564,14 +560,8 @@ async fn dispatch(
         // Chat's verbs, `catch_up_room` and `find_in_chat` included, are
         // dispatched by its module row above (AC.1).
         "find_contact" => crate::agent_reads::execute_find_contact(account, args).await,
-        "log_time" => projects::execute_log_time(account, args).await,
-        "project_status_summary" => projects::execute_project_status_summary(account, args).await,
-        // B3.10b: a period of the caller's own Agenda turned into proposals,
-        // in its own module because it decides about a diary rather than a
-        // record.
-        "draft_timesheet_from_calendar" => {
-            timesheet::execute_draft_timesheet_from_calendar(account, args).await
-        }
+        // Projects' verbs, the proposed hour and the calendar draft included,
+        // are dispatched by its module row above (AA.3).
         // alo Inventory's tools (B5.10), on the same seam. What
         // `reorder_proposals` writes is a **draft** order per supplier: it
         // carries no number and has been sent to nobody until a person

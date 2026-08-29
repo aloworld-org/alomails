@@ -182,6 +182,7 @@ pub use alo_store::mime_read;
 pub mod module_access;
 pub mod projects;
 pub mod projects_clients;
+pub mod projects_intents;
 pub mod projects_invoices;
 pub mod projects_plan;
 pub mod projects_reports;

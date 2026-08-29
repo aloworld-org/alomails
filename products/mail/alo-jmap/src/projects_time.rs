@@ -64,7 +64,7 @@ const MAX_PERIOD_DAYS: i64 = 366;
 /// when a timer or a calendar event produced it. A reader can see both rather
 /// than being told a story about one, exactly as an activity's `happenedAt` and
 /// `createdAt` are both shown.
-fn entry_json(e: &TimeEntry, task_title: Option<&str>) -> Value {
+pub(crate) fn entry_json(e: &TimeEntry, task_title: Option<&str>) -> Value {
     json!({
         "id": e.id.as_str(),
         "projectId": e.project_id.as_str(),
@@ -101,7 +101,7 @@ fn timer_json(t: Option<&RunningTimer>) -> Value {
 }
 
 /// A period's minute totals as JSON. Minutes, never money.
-fn totals_json(t: TimeTotals) -> Value {
+pub(crate) fn totals_json(t: TimeTotals) -> Value {
     json!({
         "minutes": t.minutes,
         "billableMinutes": t.billable_minutes,

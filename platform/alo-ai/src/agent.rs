@@ -816,7 +816,15 @@ mod tests {
                 "deal_lookup",
                 "pipeline_summary",
                 "company_history",
+                // AA.3: Projects' verbs — the portfolio, one project's
+                // standing, the team's open work and the asker's own week,
+                // rendered from the intent registry. Logging an hour and
+                // drafting a week from the calendar are writes and are not
+                // here.
+                "active_projects",
                 "project_status_summary",
+                "who_is_on_what",
+                "time_this_week",
                 // AA.2: Finance's verbs — the six reads that let "@finance how
                 // much have we invoiced this year?" answer from the books,
                 // rendered from the intent registry.
@@ -860,7 +868,7 @@ mod tests {
                 "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 103);
+        assert_eq!(all_tools().len(), 106);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }
@@ -1030,7 +1038,8 @@ mod tests {
         assert!(at("- find_file:") < at("- open_quotes:"));
         assert!(at("- open_quotes:") < at("- create_invoice_draft:"));
         assert!(at("- create_invoice_draft:") < at("- create_deal:"));
-        assert!(at("- create_deal:") < at("- log_time:"));
+        assert!(at("- create_deal:") < at("- active_projects:"));
+        assert!(at("- active_projects:") < at("- log_time:"));
         assert!(at("- log_time:") < at("- categorise_transactions:"));
         assert!(at("- categorise_transactions:") < at("- reorder_proposals:"));
         assert!(at("- reorder_proposals:") < at("- who_is_off:"));
@@ -1039,8 +1048,8 @@ mod tests {
         // reads the whole menu before it reads how to fill an order from it.
         assert!(at("- site_publish:") < at("For a billing verb"));
         assert!(at("For a billing verb") < at("For a CRM verb"));
-        assert!(at("For a CRM verb") < at("For a projects tool"));
-        assert!(at("For a projects tool") < at("For a Finance verb"));
+        assert!(at("For a CRM verb") < at("For a Projects verb"));
+        assert!(at("For a Projects verb") < at("For a Finance verb"));
         assert!(at("For a Finance verb") < at("For an inventory tool"));
         assert!(at("For an inventory tool") < at("For an HR tool"));
         assert!(at("For an HR tool") < at("For a website tool"));

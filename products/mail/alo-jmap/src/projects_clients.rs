@@ -97,7 +97,7 @@ fn hours_json(hours: &ProjectHours, budget_minutes: Option<i64>) -> Value {
 
 /// One engagement as JSON: the board, its client facts (or `null`), and what it
 /// has cost in hours.
-fn project_json(
+pub(crate) fn project_json(
     project: &TaskProject,
     client: Option<&ProjectClient>,
     hours: &ProjectHours,

@@ -216,15 +216,13 @@ pub async fn execute_draft_timesheet_from_calendar(
         written.push((draft, entry));
     }
 
-    Ok(Json(json!({
-        "ok": true,
-        "result": {
-            "kind": "timesheetDraft",
-            "id": project.id.as_str(),
-            "title": project.name,
-            "from": iso_date(from),
-            "to": iso_date(to),
-            "drafted": written
+    crate::billing_intents::ok(json!({
+        "kind": "timesheetDraft",
+        "id": project.id.as_str(),
+        "title": project.name,
+        "from": iso_date(from),
+        "to": iso_date(to),
+        "drafted": written
                 .iter()
                 .map(|(draft, entry)| json!({
                     "id": entry.id.as_str(),
@@ -248,8 +246,7 @@ pub async fn execute_draft_timesheet_from_calendar(
                     "reason": skipped.reason,
                 }))
                 .collect::<Vec<_>>(),
-        }
-    })))
+    }))
 }
 
 /// Which occurrences already have an entry of the caller's in this period.

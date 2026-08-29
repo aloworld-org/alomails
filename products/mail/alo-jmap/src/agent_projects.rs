@@ -46,6 +46,7 @@ use alo_store::{
 
 use crate::agent_args::{pick, string_arg, unprocessable};
 use crate::billing::{iso_date, map_store_err, parse_iso_date};
+use crate::billing_intents::ok;
 use crate::error::Problem;
 use crate::state::Account;
 
@@ -83,24 +84,21 @@ pub async fn execute_log_time(account: &Account, args: &Value) -> Result<Json<Va
         ..NewTimeEntry::worked(ProjectId::new(project.id.as_str()), work_date, minutes)
     };
     let entry = account.acc.log_time(&new).await.map_err(map_store_err)?;
-    Ok(Json(json!({
-        "ok": true,
-        "result": {
-            "kind": "timeEntry",
-            "id": entry.id.as_str(),
-            "title": project.name,
-            "projectId": entry.project_id.as_str(),
-            "taskId": entry.task_id.as_ref().map(TaskId::as_str),
-            "workDate": iso_date(entry.work_date),
-            "minutes": entry.minutes,
-            "billable": entry.billable,
-            "note": entry.note,
-            // Always true here, and stated rather than implied: the client that
-            // renders this result tells the user their timesheet now has
-            // something to accept.
-            "proposed": entry.is_proposed(),
-        }
-    })))
+    ok(json!({
+        "kind": "timeEntry",
+        "id": entry.id.as_str(),
+        "title": project.name,
+        "projectId": entry.project_id.as_str(),
+        "taskId": entry.task_id.as_ref().map(TaskId::as_str),
+        "workDate": iso_date(entry.work_date),
+        "minutes": entry.minutes,
+        "billable": entry.billable,
+        "note": entry.note,
+        // Always true here, and stated rather than implied: the client that
+        // renders this result tells the user their timesheet now has
+        // something to accept.
+        "proposed": entry.is_proposed(),
+    }))
 }
 
 /// `project_status_summary` — where one project stands: hours, budget, plan and
@@ -148,18 +146,15 @@ pub async fn execute_project_status_summary(
         .map_err(map_store_err)?;
     let today = OffsetDateTime::now_utc().date();
 
-    Ok(Json(json!({
-        "ok": true,
-        "result": {
-            "kind": "projectStatus",
-            "id": project.id.as_str(),
-            "title": project.name,
-            "hours": hours_json(&hours),
-            "budget": budget_json(client.as_ref(), &hours, customer),
-            "milestones": plan_json(&milestones, today),
-            "tasks": work_json(&tasks, OffsetDateTime::now_utc()),
-        }
-    })))
+    ok(json!({
+        "kind": "projectStatus",
+        "id": project.id.as_str(),
+        "title": project.name,
+        "hours": hours_json(&hours),
+        "budget": budget_json(client.as_ref(), &hours, customer),
+        "milestones": plan_json(&milestones, today),
+        "tasks": work_json(&tasks, OffsetDateTime::now_utc()),
+    }))
 }
 
 /// The hours to date, in minutes — the project-grain aggregate, with no
