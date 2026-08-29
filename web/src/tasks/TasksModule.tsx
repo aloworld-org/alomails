@@ -437,7 +437,7 @@ export function TasksModule({
             <div className="flex min-w-0 items-center gap-3.5">
               {projectId !== undefined && (
                 <span
-                  className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--accent-tint)] text-accent shadow-sm ring-1 ring-inset ring-accent/10"
+                  className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-accent-tint text-accent shadow-sm ring-1 ring-inset ring-accent/10"
                   aria-hidden="true"
                 >
                   <FolderKanban size={22} />
@@ -527,7 +527,7 @@ export function TasksModule({
                 type="button"
                 role="tab"
                 aria-selected={view === t.id}
-                className={`shrink-0 rounded-xl text-sm !no-underline transition-colors hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${view === t.id ? "bg-[var(--accent-soft)] font-semibold !text-accent shadow-sm ring-1 ring-inset ring-accent/10" : "bg-transparent font-medium !text-secondary hover:bg-raised hover:!text-primary"}`}
+                className={`shrink-0 rounded-xl text-sm !no-underline transition-colors hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${view === t.id ? "bg-accent-soft font-semibold !text-accent shadow-sm ring-1 ring-inset ring-accent/10" : "bg-transparent font-medium !text-secondary hover:bg-raised hover:!text-primary"}`}
                 onClick={() => openView(t.id)}
               >
                 <span className="inline-flex min-h-11 items-center gap-2.5 px-4 py-2.5">
@@ -566,7 +566,7 @@ export function TasksModule({
           ) : projectId !== undefined && engagementError !== null ? (
             <section className="mx-auto flex min-h-[28rem] w-full max-w-2xl flex-col items-center justify-center px-6 py-12 text-center">
               <span
-                className="flex size-14 items-center justify-center rounded-2xl bg-[var(--danger-tint)] text-danger"
+                className="flex size-14 items-center justify-center rounded-2xl bg-danger-tint text-danger"
                 aria-hidden="true"
               >
                 <CircleAlert size={26} />

@@ -14,9 +14,10 @@ import {
   Plus,
 } from "lucide-react";
 
+import { Badge } from "../ds";
 import { strings } from "../i18n";
 import type { Task } from "../jmap";
-import { Avatar, LabelChips, dueLabel, isOverdue, statusColor } from "./parts";
+import { Avatar, LabelChips, PriorityChip, dueLabel, isOverdue, statusColor } from "./parts";
 import { TaskToolbar } from "./TaskToolbar";
 import {
   filterTasks,
@@ -45,35 +46,20 @@ function assigneeName(email: string, me?: string): string {
   return first.charAt(0).toUpperCase() + first.slice(1);
 }
 
+/** The priority column, as `ds/Badge` (D2.11): done wears success with its
+ *  tick, and the three priorities map onto danger/warning/neutral — the same
+ *  mapping as `parts`' `PriorityChip`, whose hand-drawn twin this was. */
 function PriorityCell({ task }: { task: Task }) {
   if (task.status === "done") {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--success-tint)] px-2.5 py-1 text-xs font-semibold text-success">
+      <Badge tone="success" className="gap-1.5">
         <CheckCircle2 size={13} aria-hidden="true" />
         {strings.taskColDone}
-      </span>
+      </Badge>
     );
   }
   if (task.priority === "none") return <span className="text-tertiary">—</span>;
-  const tone =
-    task.priority === "high"
-      ? "bg-[var(--danger-tint)] text-danger"
-      : task.priority === "medium"
-        ? "bg-[#fdf0d8] text-[#8a5a08]"
-        : "bg-raised text-secondary";
-  const label =
-    task.priority === "high"
-      ? strings.taskPrioHigh
-      : task.priority === "medium"
-        ? strings.taskPrioMedium
-        : strings.taskPrioLow;
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${tone}`}
-    >
-      {label}
-    </span>
-  );
+  return <PriorityChip priority={task.priority} />;
 }
 
 export function ListView({
@@ -148,7 +134,7 @@ export function ListView({
           {strings.taskSummaryActive(ordered.length - completed)}
         </span>
         <span
-          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium ${overdue > 0 ? "bg-[var(--danger-tint)] text-danger" : "text-secondary"}`}
+          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium ${overdue > 0 ? "bg-danger-tint text-danger" : "text-secondary"}`}
         >
           <Clock3 size={15} aria-hidden="true" />
           {strings.taskSummaryOverdue(overdue)}
@@ -175,7 +161,7 @@ export function ListView({
         return (
           <section
             key={group.key}
-            className={`transition-[background-color,box-shadow] ${groupIndex > 0 ? "border-t border-subtle" : ""} ${dropGroup === group.key ? "bg-[var(--accent-soft)] shadow-[inset_3px_0_0_var(--accent)]" : "bg-surface"}`}
+            className={`transition-[background-color,box-shadow] ${groupIndex > 0 ? "border-t border-subtle" : ""} ${dropGroup === group.key ? "bg-accent-soft shadow-[inset_3px_0_0_var(--accent)]" : "bg-surface"}`}
             onDragOver={(event) => {
               if (dragId === null || group.status === undefined) return;
               event.preventDefault();
@@ -313,7 +299,7 @@ export function ListView({
                 {onAdd !== undefined && group.status !== undefined && (
                   <button
                     type="button"
-                    className="mx-4 my-2 flex min-h-9 w-[calc(100%-2rem)] items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-tertiary transition-colors hover:bg-[var(--accent-soft)] hover:text-accent"
+                    className="mx-4 my-2 flex min-h-9 w-[calc(100%-2rem)] items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-tertiary transition-colors hover:bg-accent-soft hover:text-accent"
                     onClick={() => onAdd(group.status as string)}
                   >
                     <Plus size={15} /> {strings.taskAdd}

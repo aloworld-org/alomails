@@ -4,7 +4,7 @@
  * That is the whole point (ADR 0046): one definition, two spellings. To change
  * a colour, change tokens.css and re-run the generator.
  *
- * 75 utilities derived from 75 semantic tokens.
+ * 77 utilities derived from 77 semantic tokens.
  */
 @import "tailwindcss";
 
@@ -68,6 +68,8 @@
   --color-success: var(--success);
   --color-success-tint: var(--success-tint);
   --color-warning: var(--warning);
+  --color-warning-tint: var(--warning-tint);
+  --color-warning-ink: var(--warning-ink);
   --color-unread: var(--unread);
   --font-ui: var(--font-ui);
   --font-body: var(--font-body);

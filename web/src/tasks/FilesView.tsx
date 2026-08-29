@@ -164,7 +164,7 @@ export function FilesView({ projectId, onOpen, onCreate }: Props) {
       <section className="overflow-visible rounded-2xl border border-subtle bg-surface shadow-sm">
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-subtle px-5 py-4">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--accent-soft)] text-accent" aria-hidden="true">
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent" aria-hidden="true">
               <Paperclip size={19} />
             </span>
             <div className="min-w-0">
@@ -233,9 +233,9 @@ export function FilesView({ projectId, onOpen, onCreate }: Props) {
           <span className="flex min-h-11 items-center justify-center gap-2 px-4"><HardDrive size={17} />{strings.taskChooseFromDrive}</span>
         </button>
       </div>
-      {uploadError && <p className="m-0 border-b border-subtle bg-[var(--danger-tint)] px-5 py-3 text-sm font-medium text-danger">{strings.taskFilesUploadError}</p>}
+      {uploadError && <p className="m-0 border-b border-subtle bg-danger-tint px-5 py-3 text-sm font-medium text-danger">{strings.taskFilesUploadError}</p>}
       {files.length === 0 && (
-        <div className={`m-5 flex min-h-72 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed px-6 text-center transition-[border-color,background-color,transform] ${dragging ? "scale-[1.005] border-accent bg-[var(--accent-soft)]" : "border-default bg-raised/20"}`}>
+        <div className={`m-5 flex min-h-72 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed px-6 text-center transition-[border-color,background-color,transform] ${dragging ? "scale-[1.005] border-accent bg-accent-soft" : "border-default bg-raised/20"}`}>
           <span className={`grid size-14 place-items-center rounded-2xl text-accent transition-colors ${dragging ? "bg-surface shadow-sm" : "bg-accent-tint"}`}><Upload size={25} /></span>
           <div>
             <p className="m-0 text-sm font-semibold text-primary">{strings.taskFilesEmpty}</p>

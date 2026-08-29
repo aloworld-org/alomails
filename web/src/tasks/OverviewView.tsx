@@ -219,10 +219,10 @@ function StatTile({ Icon, tone, label, value, sub }: TileProps) {
     tone === "done"
       ? "bg-success/10 text-success"
       : tone === "prog"
-        ? "bg-[var(--accent-tint)] text-accent-hover"
+        ? "bg-accent-tint text-accent-hover"
         : tone === "todo"
           ? "bg-raised text-secondary"
-          : "bg-[var(--accent-tint)] text-accent-hover";
+          : "bg-accent-tint text-accent-hover";
   return (
     <div className="flex flex-col items-start gap-1 rounded-xl border border-subtle bg-surface px-5 py-4 shadow-sm">
       <span className={`mb-1 inline-flex size-[38px] items-center justify-center rounded-full ${iconCls}`}>

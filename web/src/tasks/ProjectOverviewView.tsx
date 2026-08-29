@@ -336,7 +336,7 @@ export function ProjectOverviewView({
             </div>
             <button
               type="button"
-              className="inline-flex min-h-10 items-center rounded-lg bg-raised px-4 py-2 text-sm font-medium text-primary !no-underline transition-colors hover:bg-[var(--border-subtle)] hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="inline-flex min-h-10 items-center rounded-lg bg-raised px-4 py-2 text-sm font-medium text-primary !no-underline transition-colors hover:bg-subtle hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               onClick={onOpenTasks}
             >
               {strings.taskOvViewAll}
@@ -345,7 +345,7 @@ export function ProjectOverviewView({
 
           {upcoming.length === 0 ? (
             <div className="flex min-h-52 flex-col items-center justify-center px-6 py-10 text-center">
-              <span className="mb-3 inline-flex size-12 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-accent">
+              <span className="mb-3 inline-flex size-12 items-center justify-center rounded-xl bg-accent-soft text-accent">
                 <CheckCircle2 size={22} />
               </span>
               <p className="font-semibold text-primary">{strings.taskEmptyTitle}</p>
@@ -433,7 +433,7 @@ export function ProjectOverviewView({
             ) : (
               <div className="mt-4 rounded-xl bg-raised p-4">
                 <div className="flex items-start gap-3">
-                  <span className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-accent"><Flag size={17} /></span>
+                  <span className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent"><Flag size={17} /></span>
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-primary">{nextMilestone.name}</p>
                     <p className="mt-1 flex items-center gap-1.5 text-sm text-secondary"><CalendarDays size={14} /> {friendlyDate(nextMilestone.dueOn)}</p>
@@ -585,7 +585,7 @@ function Metric({ icon, label, value, detail, warning = false }: { icon: ReactNo
           <p className="mt-2 text-2xl font-semibold tabular-nums text-primary">{value}</p>
           <p className={`mt-1 truncate text-xs ${warning ? "text-accent" : "text-secondary"}`}>{detail}</p>
         </div>
-        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-accent">{icon}</span>
+        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">{icon}</span>
       </div>
     </div>
   );

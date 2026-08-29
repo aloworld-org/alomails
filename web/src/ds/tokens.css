@@ -117,6 +117,15 @@
      two states read as one pair. */
   --success-tint: #e7f1eb;
   --warning: #f59e0b;
+  /* The pair a warning badge draws — ground and ink. `--warning` itself is a
+     mark colour (dots, borders): amber has ~2:1 contrast on a pale ground and
+     cannot be text, which is why this is two tokens where danger and success
+     are one doing both jobs. It was missing for as long as the warning state
+     existed: two Tasks files each hand-wrote the pair (`#fdf0d8`/`#9a6a12`
+     and `#fdf0d8`/`#8a5a08` — the same ground twice, two accidental inks),
+     reconciled here to the darker ink (D2.11). */
+  --warning-tint: #fdf0d8;
+  --warning-ink: #8a5a08;
   --unread: var(--verdigris-500); /* unread dot — terracotta */
 
   /* Focus: a soft terracotta ring (brief, on-brand). The stylesheets outside

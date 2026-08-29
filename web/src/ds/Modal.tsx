@@ -74,6 +74,13 @@ function focusableIn(node: HTMLElement): HTMLElement[] {
   );
 }
 
+/** The open modals, bottom to top. Escape and the tab trap belong to the top
+ *  one only (D2.11): a modal can open another — Tasks' create form opens the
+ *  Drive picker — and both listen on the document, where `stopPropagation`
+ *  does not stop the other listener on the same node. Without this, one
+ *  Escape closed both dialogs at once. */
+const openModals: HTMLElement[] = [];
+
 /** The scrim. It fills the viewport and centres the panel; the padding is what
  *  keeps a full-height dialog off the edges of the window, and what
  *  `--modal-max-height` subtracts. */
@@ -137,8 +144,11 @@ export function Modal({
     const firstControl = node === null ? undefined : focusableIn(node)[0];
     if (firstControl) firstControl.focus();
     else node?.focus();
+    if (node !== null) openModals.push(node);
 
     function onKey(event: KeyboardEvent) {
+      // Not the top of the stack → the key belongs to the modal above.
+      if (node !== null && openModals[openModals.length - 1] !== node) return;
       if (event.key === "Escape") {
         event.stopPropagation();
         onClose();
@@ -165,6 +175,10 @@ export function Modal({
     document.addEventListener("keydown", onKey, true);
     return () => {
       document.removeEventListener("keydown", onKey, true);
+      if (node !== null) {
+        const at = openModals.lastIndexOf(node);
+        if (at !== -1) openModals.splice(at, 1);
+      }
       opener?.focus?.();
     };
   }, [onClose]);

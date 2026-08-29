@@ -29,6 +29,11 @@ interface AvatarProps {
   name: string;
   email?: string | undefined;
   size?: "sm" | "md" | "lg" | "xl";
+  /** A tooltip naming the person, for the places the name is not printed
+   *  beside the mark — a board card's assignee (D2.11). The mark stays
+   *  `aria-hidden` either way: a screen reader gets the name from the row or
+   *  card it sits in, not from a hover attribute. */
+  title?: string | undefined;
 }
 
 const TINTS = [
@@ -54,7 +59,7 @@ function tintFor(key: string): string {
   return TINTS[Math.abs(hash) % TINTS.length]!;
 }
 
-export function Avatar({ name, email, size = "md" }: AvatarProps) {
+export function Avatar({ name, email, size = "md", title }: AvatarProps) {
   return (
     <span
       className={`${BASE} ${SIZE[size]}`}
@@ -62,6 +67,7 @@ export function Avatar({ name, email, size = "md" }: AvatarProps) {
       // rather than a class: a utility cannot be generated for a value the
       // build has never seen.
       style={{ background: tintFor(email ?? name) }}
+      title={title}
       aria-hidden="true"
     >
       {initials(name)}

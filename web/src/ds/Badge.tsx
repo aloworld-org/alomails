@@ -36,10 +36,15 @@ const TONE = {
   accent: "bg-accent-tint text-accent",
   danger: "bg-danger-tint text-danger",
   success: "bg-success-tint text-success",
+  /* Added for Tasks (D2.11), whose priorities are a three-step scale: folding
+   * `medium` onto `danger` — inventory's move for its order states — would
+   * have made two different priorities one colour. The ink is `--warning-ink`,
+   * not `--warning`: amber is a mark colour and cannot carry text. */
+  warning: "bg-warning-tint text-warning-ink",
 } as const;
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
-  tone?: "neutral" | "accent" | "danger" | "success" | undefined;
+  tone?: "neutral" | "accent" | "danger" | "success" | "warning" | undefined;
 }
 
 export function Badge({ tone = "neutral", className, ...rest }: BadgeProps) {

@@ -3,6 +3,7 @@
 // fields whether they render in a card or a list row.
 import { Calendar, Link2 } from "lucide-react";
 
+import { Avatar as DsAvatar, Badge } from "../ds";
 import { strings } from "../i18n";
 import type { Task, TaskLabelDto, TaskPriority } from "../jmap";
 
@@ -56,15 +57,6 @@ export function statusColor(status: string): string {
   return STATUS_COLORS[status] ?? "#e76f51";
 }
 
-/** Two-letter initials from an email/name for the assignee avatar. */
-export function initials(email: string): string {
-  const name = email.split("@")[0] ?? email;
-  const parts = name.split(/[.\-_]+/).filter(Boolean);
-  const first = parts[0]?.[0] ?? name[0] ?? "?";
-  const second = parts[1]?.[0] ?? "";
-  return (first + second).toUpperCase();
-}
-
 /** A friendly due-date label; today/tomorrow spelled out. */
 export function dueLabel(iso: string): string {
   const d = new Date(iso);
@@ -81,20 +73,21 @@ export function isOverdue(iso: string): boolean {
   return new Date(iso).getTime() < Date.now();
 }
 
+/** A priority as a `ds/Badge`. The three steps map onto the design system's
+ *  tones — high is danger, medium is warning (the tone D2.11 added for it),
+ *  low is neutral. The two hand-drawn versions of this (here and ListView's)
+ *  disagreed on low — one greenish, one grey — which was an accident, not a
+ *  decision; neutral is the reconciliation. */
 export function PriorityChip({ priority }: { priority: TaskPriority }) {
   if (priority === "none") return null;
-  const cls = priority === "high"
-    ? "bg-[#fbe0d8] text-[#b23c22]"
-    : priority === "medium"
-      ? "bg-[#fdf0d8] text-[#9a6a12]"
-      : "bg-[#eef6f2] text-secondary";
+  const tone = priority === "high" ? "danger" : priority === "medium" ? "warning" : "neutral";
   const label =
     priority === "high"
       ? strings.taskPrioHigh
       : priority === "medium"
         ? strings.taskPrioMedium
         : strings.taskPrioLow;
-  return <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize ${cls}`}>{label}</span>;
+  return <Badge tone={tone}>{label}</Badge>;
 }
 
 export function DueChip({ iso, done }: { iso: string; done: boolean }) {
@@ -105,21 +98,15 @@ export function DueChip({ iso, done }: { iso: string; done: boolean }) {
   );
 }
 
-const AVATAR_COLORS = ["#e76f51", "#4b83c4", "#2e8b57", "#9b6dd6", "#e0a63b", "#d1568f", "#3aa8a0"];
-
-/** A stable colour per person, so assignees read as distinct at a glance. */
-function avatarColor(email: string): string {
-  let h = 0;
-  for (const ch of email) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return AVATAR_COLORS[h % AVATAR_COLORS.length] ?? "#e76f51";
-}
-
+/** The assignee's mark, drawn by `ds/Avatar` (D2.11 — the local seven-colour
+ *  hash it replaces was this module's own palette in hard-coded hex). The name
+ *  it takes initials from is derived from the email's local part
+ *  ("jane.doe@…" → "jane doe"), which keeps the two-letter initials the local
+ *  version drew; the email keys the tint, so a person keeps one colour. */
 export function Avatar({ email }: { email: string }) {
-  return (
-    <span className="inline-flex size-[22px] shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white" style={{ background: avatarColor(email) }} title={email}>
-      {initials(email)}
-    </span>
-  );
+  const local = email.split("@")[0] ?? email;
+  const name = local.split(/[.\-_]+/).filter(Boolean).join(" ") || email;
+  return <DsAvatar name={name} email={email} size="sm" title={email} />;
 }
 
 /** The link-back marker shown when a task came from an email or event. */

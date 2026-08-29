@@ -39,7 +39,7 @@ export function CalendarView({ tasks, onOpen, onAdd }: Props) {
       <section className="overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm">
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-subtle px-5 py-4">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--accent-soft)] text-accent" aria-hidden="true">
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent" aria-hidden="true">
               <CalendarDays size={19} />
             </span>
             <div className="min-w-0">
@@ -57,7 +57,7 @@ export function CalendarView({ tasks, onOpen, onAdd }: Props) {
               <button type="button" className="text-secondary transition-colors hover:bg-raised hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent" onClick={() => setAnchor((a) => addMonths(a, -1))} aria-label={strings.agendaPrev}>
                 <span className="grid size-9 place-items-center"><ChevronLeft size={17} /></span>
               </button>
-              <span className="h-5 w-px bg-[var(--border-subtle)]" aria-hidden="true" />
+              <span className="h-5 w-px bg-subtle" aria-hidden="true" />
               <button type="button" className="text-secondary transition-colors hover:bg-raised hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent" onClick={() => setAnchor((a) => addMonths(a, 1))} aria-label={strings.agendaNext}>
                 <span className="grid size-9 place-items-center"><ChevronRight size={17} /></span>
               </button>
@@ -82,7 +82,7 @@ export function CalendarView({ tasks, onOpen, onAdd }: Props) {
           return (
             <div
               key={day.toISOString()}
-              className={`group/day relative flex cursor-pointer flex-col gap-1 overflow-hidden border-b border-r border-subtle p-2 transition-colors hover:bg-raised focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent ${otherMonth ? "bg-app text-tertiary" : weekend ? "bg-raised/25" : "bg-surface"} ${isToday ? "bg-[var(--accent-soft)]" : ""}`}
+              className={`group/day relative flex cursor-pointer flex-col gap-1 overflow-hidden border-b border-r border-subtle p-2 transition-colors hover:bg-raised focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent ${otherMonth ? "bg-app text-tertiary" : weekend ? "bg-raised/25" : "bg-surface"} ${isToday ? "bg-accent-soft" : ""}`}
               role="button"
               tabIndex={0}
               aria-label={strings.taskCreateOnDate(day.toLocaleDateString(locale))}

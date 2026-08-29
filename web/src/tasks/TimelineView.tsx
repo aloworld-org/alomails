@@ -83,7 +83,7 @@ export function TimelineView({ tasks, edges = [], onOpen }: Props) {
       <section className="overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm">
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-subtle px-5 py-4">
           <div className="flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-[var(--accent-soft)] text-accent" aria-hidden="true">
+            <span className="grid size-10 place-items-center rounded-xl bg-accent-soft text-accent" aria-hidden="true">
               <CalendarDays size={19} />
             </span>
             <div>
@@ -117,7 +117,7 @@ export function TimelineView({ tasks, edges = [], onOpen }: Props) {
                   return (
                     <div
                       key={i}
-                      className={`relative flex shrink-0 flex-col items-center justify-center border-l border-subtle text-[11px] tabular-nums ${weekend ? "bg-raised/70" : ""} ${isToday ? "bg-[var(--accent-soft)] text-accent" : "text-tertiary"}`}
+                      className={`relative flex shrink-0 flex-col items-center justify-center border-l border-subtle text-[11px] tabular-nums ${weekend ? "bg-raised/70" : ""} ${isToday ? "bg-accent-soft text-accent" : "text-tertiary"}`}
                       style={{ width: COL }}
                     >
                       <span className="text-[10px] font-semibold uppercase">{weekdayFmt.format(d)}</span>
@@ -133,7 +133,7 @@ export function TimelineView({ tasks, edges = [], onOpen }: Props) {
           {dates.map((d, i) => {
             const weekend = d.getDay() === 0 || d.getDay() === 6;
             const isToday = d.getTime() === today.getTime();
-            return <span key={i} className={`h-full shrink-0 border-l border-subtle ${weekend ? "bg-raised/40" : ""} ${isToday ? "bg-[var(--accent-soft)]" : ""}`} style={{ width: COL }} />;
+            return <span key={i} className={`h-full shrink-0 border-l border-subtle ${weekend ? "bg-raised/40" : ""} ${isToday ? "bg-accent-soft" : ""}`} style={{ width: COL }} />;
           })}
         </div>
         {arrows.length > 0 && (
