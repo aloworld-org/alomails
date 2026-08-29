@@ -12,6 +12,8 @@
 //! Corpus scope: plain timed events, all-day events, UTC / zoned (`TZID=`) /
 //! floating times, and (since M3.2) recurrence — weekly-with-exceptions,
 //! monthly-by-day, RDATE extras, and a Europe/Brussels DST-crossing series.
+//! Since AS.2 every zoned canonical form also carries the served `VTIMEZONE`
+//! (one per referenced zone, observances bounded to the object's span).
 //! Zoned wall-clock times are stored as UTC instants beside their IANA zone
 //! (jiff owns tz math) and served back in `;TZID=` wall-clock form; floating
 //! times are read as UTC — documented in `docs/interop.md`, pinned here.
@@ -76,11 +78,38 @@ const CORPUS: &[Fixture] = &[
                 DTSTART;TZID=Europe/Brussels:20260610T140000\r\n\
                 DTEND;TZID=Europe/Brussels:20260610T153000\r\n\
                 SUMMARY:Client visit\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n",
+        // Serving adds the VTIMEZONE for the referenced zone (AS.2): the one
+        // rule in force across the event — CEST, entered at the 2026-03-29
+        // switch (01:00Z = 02:00 in the prior +0100 offset).
         canonical: "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//alo//calendar//EN\r\n\
+                BEGIN:VTIMEZONE\r\nTZID:Europe/Brussels\r\n\
+                BEGIN:DAYLIGHT\r\nDTSTART:20260329T020000\r\n\
+                TZOFFSETFROM:+0100\r\nTZOFFSETTO:+0200\r\nTZNAME:CEST\r\nEND:DAYLIGHT\r\n\
+                END:VTIMEZONE\r\n\
                 BEGIN:VEVENT\r\nUID:corpus-zoned\r\nDTSTAMP:20260102T030405Z\r\n\
                 DTSTART;TZID=Europe/Brussels:20260610T140000\r\n\
                 DTEND;TZID=Europe/Brussels:20260610T153000\r\n\
                 SUMMARY:Client visit\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n",
+    },
+    Fixture {
+        // A fixed-offset zone (Etc/GMT-2 is UTC+2 — POSIX sign inversion —
+        // with no transitions ever): its VTIMEZONE is a single STANDARD
+        // observance holding since forever, the epoch by convention.
+        name: "fixed-offset zone (TZID=Etc/GMT-2)",
+        input: "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//Fixed//EN\r\n\
+                BEGIN:VEVENT\r\nUID:corpus-fixed-zone\r\nDTSTAMP:20260810T120000Z\r\n\
+                DTSTART;TZID=Etc/GMT-2:20260610T140000\r\n\
+                DTEND;TZID=Etc/GMT-2:20260610T153000\r\n\
+                SUMMARY:Fixed-zone call\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n",
+        canonical: "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//alo//calendar//EN\r\n\
+                BEGIN:VTIMEZONE\r\nTZID:Etc/GMT-2\r\n\
+                BEGIN:STANDARD\r\nDTSTART:19700101T000000\r\n\
+                TZOFFSETFROM:+0200\r\nTZOFFSETTO:+0200\r\nTZNAME:+02\r\nEND:STANDARD\r\n\
+                END:VTIMEZONE\r\n\
+                BEGIN:VEVENT\r\nUID:corpus-fixed-zone\r\nDTSTAMP:20260102T030405Z\r\n\
+                DTSTART;TZID=Etc/GMT-2:20260610T140000\r\n\
+                DTEND;TZID=Etc/GMT-2:20260610T153000\r\n\
+                SUMMARY:Fixed-zone call\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n",
     },
     Fixture {
         // A weekly series with two cancelled instances; the comma-separated
@@ -126,7 +155,21 @@ const CORPUS: &[Fixture] = &[
                 EXDATE;TZID=Europe/Brussels:20261102T090000\r\n\
                 RDATE;TZID=Europe/Brussels:20261022T090000\r\n\
                 SUMMARY:Monday review\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n",
+        // The served VTIMEZONE covers the series' span plus a year (the rule
+        // is COUNT-bounded, treated like open-ended): the CEST rule in force,
+        // the 2026-10-25 switch the series crosses, and the two switches of
+        // the following year.
         canonical: "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//alo//calendar//EN\r\n\
+                BEGIN:VTIMEZONE\r\nTZID:Europe/Brussels\r\n\
+                BEGIN:DAYLIGHT\r\nDTSTART:20260329T020000\r\n\
+                TZOFFSETFROM:+0100\r\nTZOFFSETTO:+0200\r\nTZNAME:CEST\r\nEND:DAYLIGHT\r\n\
+                BEGIN:STANDARD\r\nDTSTART:20261025T030000\r\n\
+                TZOFFSETFROM:+0200\r\nTZOFFSETTO:+0100\r\nTZNAME:CET\r\nEND:STANDARD\r\n\
+                BEGIN:DAYLIGHT\r\nDTSTART:20270328T020000\r\n\
+                TZOFFSETFROM:+0100\r\nTZOFFSETTO:+0200\r\nTZNAME:CEST\r\nEND:DAYLIGHT\r\n\
+                BEGIN:STANDARD\r\nDTSTART:20271031T030000\r\n\
+                TZOFFSETFROM:+0200\r\nTZOFFSETTO:+0100\r\nTZNAME:CET\r\nEND:STANDARD\r\n\
+                END:VTIMEZONE\r\n\
                 BEGIN:VEVENT\r\nUID:corpus-dst-series\r\nDTSTAMP:20260102T030405Z\r\n\
                 DTSTART;TZID=Europe/Brussels:20261019T090000\r\n\
                 DTEND;TZID=Europe/Brussels:20261019T093000\r\n\
@@ -257,7 +300,19 @@ async fn client_series_with_overrides_round_trips_byte_stable() {
                     DTSTART;TZID=Europe/Brussels:20260914T150000\r\n\
                     DTEND;TZID=Europe/Brussels:20260914T153000\r\n\
                     SUMMARY:Standup (moved)\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n",
+            // The served form defines the zone itself (AS.2) — the client's
+            // shipped VTIMEZONE is not echoed; alo's own bounded one is
+            // emitted: the open-ended weekly extends the span a year, so the
+            // rule in force plus the next two switches appear.
             canonical: "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//alo//calendar//EN\r\n\
+                    BEGIN:VTIMEZONE\r\nTZID:Europe/Brussels\r\n\
+                    BEGIN:DAYLIGHT\r\nDTSTART:20260329T020000\r\n\
+                    TZOFFSETFROM:+0100\r\nTZOFFSETTO:+0200\r\nTZNAME:CEST\r\nEND:DAYLIGHT\r\n\
+                    BEGIN:STANDARD\r\nDTSTART:20261025T030000\r\n\
+                    TZOFFSETFROM:+0200\r\nTZOFFSETTO:+0100\r\nTZNAME:CET\r\nEND:STANDARD\r\n\
+                    BEGIN:DAYLIGHT\r\nDTSTART:20270328T020000\r\n\
+                    TZOFFSETFROM:+0100\r\nTZOFFSETTO:+0200\r\nTZNAME:CEST\r\nEND:DAYLIGHT\r\n\
+                    END:VTIMEZONE\r\n\
                     BEGIN:VEVENT\r\nUID:corpus-series-ov\r\nDTSTAMP:20260102T030405Z\r\n\
                     DTSTART;TZID=Europe/Brussels:20260907T090000\r\n\
                     DTEND;TZID=Europe/Brussels:20260907T093000\r\n\

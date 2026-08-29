@@ -1,10 +1,14 @@
 //! Minimal iCalendar (RFC 5545) serialization for the calendar's `VEVENT`s —
 //! the calendar sibling of [`crate::vcard`]. Slice-2 scope: `UID`, `SUMMARY`,
 //! `DESCRIPTION`, `LOCATION`, `DTSTART`/`DTEND` as UTC (`…Z`) or all-day
-//! (`VALUE=DATE`). A `TZID`-qualified or floating time is read as UTC — a
-//! documented cut (`docs/interop.md`); clients that write UTC round-trip
-//! exactly. Text values are escaped/unescaped per §3.3.11 and long lines are
-//! folded at 75 octets on write and unfolded on read.
+//! (`VALUE=DATE`). A `TZID`-qualified time is converted from its IANA zone;
+//! a floating time is read as UTC — a documented cut (`docs/interop.md`);
+//! clients that write UTC round-trip exactly. A served document whose
+//! date-times carry a `TZID` includes one `VTIMEZONE` per zone (§3.6.5),
+//! built from jiff's zone data; incoming `VTIMEZONE` blocks stay ignored —
+//! the IANA name is the definition. Text values are escaped/unescaped per
+//! §3.3.11 and long lines are folded at 75 octets on write and unfolded on
+//! read.
 
 use time::{Date, Month, OffsetDateTime, Time, UtcOffset};
 
@@ -30,6 +34,7 @@ pub fn to_ics_at(event: &CalendarEvent, dtstamp: OffsetDateTime) -> String {
         "VERSION:2.0".to_owned(),
         format!("PRODID:{PRODID}"),
     ];
+    lines.extend(vtimezone_lines(&[event]));
     lines.extend(vevent_lines(event, None, dtstamp));
     lines.push("END:VCALENDAR".to_owned());
     fold_join(&lines)
@@ -56,6 +61,8 @@ pub fn to_ics_series_at(
         "VERSION:2.0".to_owned(),
         format!("PRODID:{PRODID}"),
     ];
+    let events: Vec<&CalendarEvent> = std::iter::once(master).chain(overrides).collect();
+    lines.extend(vtimezone_lines(&events));
     lines.extend(vevent_lines(master, None, dtstamp));
     for ov in overrides {
         lines.extend(vevent_lines(ov, None, dtstamp));
@@ -74,6 +81,7 @@ pub fn to_imip(event: &CalendarEvent, organizer: &str, method: &str) -> String {
         format!("PRODID:{PRODID}"),
         format!("METHOD:{method}"),
     ];
+    lines.extend(vtimezone_lines(&[event]));
     lines.extend(vevent_lines(
         event,
         Some(organizer),
@@ -117,6 +125,117 @@ pub fn to_vfreebusy(
     lines.push("END:VFREEBUSY".to_owned());
     lines.push("END:VCALENDAR".to_owned());
     fold_join(&lines)
+}
+
+/// The `VTIMEZONE` definitions (RFC 5545 §3.6.5) for every zone the given
+/// `VEVENT`s will serialize with a `;TZID=` parameter (§3.2.19): one block per
+/// zone, holding the `STANDARD`/`DAYLIGHT` observances in force across the
+/// events' span — the rule at the span's start plus each transition inside it,
+/// built from jiff's zone data. For an open-ended (or `COUNT`-bounded)
+/// recurrence the span extends one year past the last referenced instant, so a
+/// client's near-future expansion stays covered; beyond that the IANA `TZID`
+/// name remains the definition (docs/interop.md). Events serialized in UTC,
+/// all-day, or with an unresolvable zone contribute nothing.
+fn vtimezone_lines(events: &[&CalendarEvent]) -> Vec<String> {
+    // tzid → (zone, span) over every date-time the VEVENTs will emit zoned;
+    // a BTreeMap so multi-zone documents render in a deterministic order.
+    let mut zones: std::collections::BTreeMap<
+        &str,
+        (jiff::tz::TimeZone, OffsetDateTime, OffsetDateTime),
+    > = std::collections::BTreeMap::new();
+    for event in events {
+        // The same filter `vevent_lines` applies: only these events actually
+        // write `;TZID=` properties.
+        let Some((tzid, zone)) = event
+            .timezone
+            .as_deref()
+            .filter(|_| !event.all_day)
+            .and_then(|name| crate::tz::zone(name).map(|z| (name, z)))
+        else {
+            continue;
+        };
+        let mut lo = event.starts_at.min(event.ends_at);
+        let mut hi = event.starts_at.max(event.ends_at);
+        for t in event
+            .rdates
+            .iter()
+            .chain(event.exdates.iter())
+            .chain(event.recurrence_id.iter())
+        {
+            lo = lo.min(*t);
+            hi = hi.max(*t);
+        }
+        if let Some(rrule) = &event.recurrence {
+            hi = hi.max(recurrence_horizon(rrule, hi));
+        }
+        zones
+            .entry(tzid)
+            .and_modify(|(_, a, b)| {
+                *a = (*a).min(lo);
+                *b = (*b).max(hi);
+            })
+            .or_insert((zone, lo, hi));
+    }
+    let mut lines = Vec::new();
+    for (tzid, (zone, lo, hi)) in zones {
+        let observances = crate::tz::observances(&zone, lo, hi);
+        // No observances means the span is outside jiff's range; an empty
+        // VTIMEZONE is invalid, so fall back to the bare TZID name.
+        if observances.is_empty() {
+            continue;
+        }
+        lines.push("BEGIN:VTIMEZONE".to_owned());
+        lines.push(format!("TZID:{tzid}"));
+        for ob in observances {
+            let kind = if ob.dst { "DAYLIGHT" } else { "STANDARD" };
+            lines.push(format!("BEGIN:{kind}"));
+            // DTSTART is the onset as local time in the offset in force
+            // before the change (§3.6.5: TZOFFSETFROM applies); a rule that
+            // has always held (fixed-offset zone) starts at the epoch by
+            // convention.
+            let onset = match ob.utc_onset {
+                Some(utc) => fmt_wall(utc + time::Duration::seconds(ob.offset_from_secs.into())),
+                None => "19700101T000000".to_owned(),
+            };
+            lines.push(format!("DTSTART:{onset}"));
+            lines.push(format!("TZOFFSETFROM:{}", fmt_offset(ob.offset_from_secs)));
+            lines.push(format!("TZOFFSETTO:{}", fmt_offset(ob.offset_to_secs)));
+            lines.push(format!("TZNAME:{}", escape(&ob.abbreviation)));
+            lines.push(format!("END:{kind}"));
+        }
+        lines.push("END:VTIMEZONE".to_owned());
+    }
+    lines
+}
+
+/// How far a recurring event needs zone coverage: a bounded rule's `UNTIL`
+/// instant, or one year past `last` (the latest instant the event itself
+/// references) for an open-ended or `COUNT`-bounded rule — enough that a
+/// client expanding the near future finds every transition defined.
+fn recurrence_horizon(rrule: &str, last: OffsetDateTime) -> OffsetDateTime {
+    for part in rrule.split(';') {
+        let part = part.trim();
+        if part.len() >= 6 && part[..6].eq_ignore_ascii_case("UNTIL=") {
+            let value = &part[6..];
+            if let Some((dt, _)) = parse_dt(value, !value.contains('T'), None) {
+                return last.max(dt);
+            }
+        }
+    }
+    last + time::Duration::days(366)
+}
+
+/// A UTC offset as the `TZOFFSETFROM`/`TZOFFSETTO` value form (§3.3.14):
+/// `±HHMM`, with trailing seconds only when non-zero.
+fn fmt_offset(secs: i32) -> String {
+    let sign = if secs < 0 { '-' } else { '+' };
+    let a = secs.unsigned_abs();
+    let (h, m, s) = (a / 3600, (a % 3600) / 60, a % 60);
+    if s == 0 {
+        format!("{sign}{h:02}{m:02}")
+    } else {
+        format!("{sign}{h:02}{m:02}{s:02}")
+    }
 }
 
 /// The `VEVENT` body shared by [`to_ics`] and [`to_imip`]; an `organizer`, when
@@ -1249,6 +1368,190 @@ mod tests {
         assert_eq!(back.timezone, e.timezone);
         assert_eq!(back.rdates, e.rdates);
         assert_eq!(back.exdates, e.exdates);
+    }
+
+    #[test]
+    fn zoned_event_serves_a_vtimezone_block() {
+        // A June one-off in Brussels: exactly one DAYLIGHT observance (the
+        // CEST rule in force), entered from CET at the 2026-03-29 01:00Z
+        // switch — DTSTART is that onset in the prior offset's local time.
+        let start = OffsetDateTime::new_utc(
+            Date::from_calendar_date(2026, time::Month::June, 10).unwrap(),
+            Time::from_hms(12, 0, 0).unwrap(), // 14:00 Brussels (CEST)
+        );
+        let e = CalendarEvent {
+            id: EventId::new("vtz-1".to_owned()),
+            calendar_id: CalendarId::new("cal".to_owned()),
+            summary: "Visit".into(),
+            description: None,
+            location: None,
+            starts_at: start,
+            ends_at: start + time::Duration::hours(1),
+            all_day: false,
+            recurrence: None,
+            attendees: vec![],
+            exdates: vec![],
+            timezone: Some("Europe/Brussels".to_owned()),
+            rdates: vec![],
+            recurrence_id: None,
+            reminder_minutes: None,
+            attendee_status: vec![],
+        };
+        let ics = to_ics(&e);
+        assert!(ics.contains(
+            "BEGIN:VTIMEZONE\r\nTZID:Europe/Brussels\r\n\
+             BEGIN:DAYLIGHT\r\nDTSTART:20260329T020000\r\n\
+             TZOFFSETFROM:+0100\r\nTZOFFSETTO:+0200\r\nTZNAME:CEST\r\n\
+             END:DAYLIGHT\r\nEND:VTIMEZONE"
+        ));
+        // The VTIMEZONE precedes the VEVENT and never confuses the parser:
+        // the document still round-trips to the same event.
+        assert!(ics.find("BEGIN:VTIMEZONE").unwrap() < ics.find("BEGIN:VEVENT").unwrap());
+        let back = from_ics(&ics, "fb").unwrap();
+        assert_eq!(back.starts_at, e.starts_at);
+        assert_eq!(back.timezone, e.timezone);
+        // A scheduling message carries the same definition.
+        assert!(to_imip(&e, "owner@alomails.com", "REQUEST").contains("BEGIN:VTIMEZONE"));
+    }
+
+    #[test]
+    fn open_ended_zoned_series_covers_the_next_dst_switch() {
+        // A weekly Brussels series started in June with no UNTIL: the span
+        // extends a year, so both rules appear — the CEST rule in force and
+        // the CET rule at the 2026-10-25 switch (03:00 local in the prior
+        // +0200 offset), and the next spring switch after that.
+        let start = OffsetDateTime::new_utc(
+            Date::from_calendar_date(2026, time::Month::June, 8).unwrap(),
+            Time::from_hms(7, 0, 0).unwrap(),
+        );
+        let e = CalendarEvent {
+            id: EventId::new("vtz-2".to_owned()),
+            calendar_id: CalendarId::new("cal".to_owned()),
+            summary: "Weekly".into(),
+            description: None,
+            location: None,
+            starts_at: start,
+            ends_at: start + time::Duration::minutes(30),
+            all_day: false,
+            recurrence: Some("FREQ=WEEKLY".to_owned()),
+            attendees: vec![],
+            exdates: vec![],
+            timezone: Some("Europe/Brussels".to_owned()),
+            rdates: vec![],
+            recurrence_id: None,
+            reminder_minutes: None,
+            attendee_status: vec![],
+        };
+        let ics = to_ics(&e);
+        assert!(ics.contains(
+            "BEGIN:STANDARD\r\nDTSTART:20261025T030000\r\n\
+             TZOFFSETFROM:+0200\r\nTZOFFSETTO:+0100\r\nTZNAME:CET\r\nEND:STANDARD"
+        ));
+        assert!(
+            ics.contains("DTSTART:20270328T020000"),
+            "next spring: {ics}"
+        );
+        // A bounded rule stops at its UNTIL: nothing past the switch it ends
+        // before.
+        let bounded = CalendarEvent {
+            recurrence: Some("FREQ=WEEKLY;UNTIL=20260930T070000Z".to_owned()),
+            ..e
+        };
+        let ics = to_ics(&bounded);
+        assert!(ics.contains("TZNAME:CEST"));
+        assert!(
+            !ics.contains("TZNAME:CET\r\n"),
+            "ends before the switch: {ics}"
+        );
+    }
+
+    #[test]
+    fn utc_all_day_and_unknown_zones_emit_no_vtimezone() {
+        let start = OffsetDateTime::new_utc(
+            Date::from_calendar_date(2026, time::Month::June, 10).unwrap(),
+            Time::from_hms(12, 0, 0).unwrap(),
+        );
+        let plain = CalendarEvent {
+            id: EventId::new("vtz-3".to_owned()),
+            calendar_id: CalendarId::new("cal".to_owned()),
+            summary: "Plain".into(),
+            description: None,
+            location: None,
+            starts_at: start,
+            ends_at: start + time::Duration::hours(1),
+            all_day: false,
+            recurrence: None,
+            attendees: vec![],
+            exdates: vec![],
+            timezone: None,
+            rdates: vec![],
+            recurrence_id: None,
+            reminder_minutes: None,
+            attendee_status: vec![],
+        };
+        assert!(!to_ics(&plain).contains("VTIMEZONE"));
+        // All-day: the zone is not used, so none is defined.
+        let all_day = CalendarEvent {
+            all_day: true,
+            timezone: Some("Europe/Brussels".to_owned()),
+            ..plain.clone()
+        };
+        assert!(!to_ics(&all_day).contains("VTIMEZONE"));
+        // An unresolvable name serializes as UTC (the documented fallback), so
+        // no definition either.
+        let unknown = CalendarEvent {
+            timezone: Some("Romance Standard Time".to_owned()),
+            ..plain
+        };
+        let ics = to_ics(&unknown);
+        assert!(!ics.contains("VTIMEZONE"));
+        assert!(ics.contains("DTSTART:20260610T120000Z"));
+    }
+
+    #[test]
+    fn fixed_offset_zone_emits_a_single_standard_block() {
+        // Etc/GMT-2 (UTC+2, no transitions ever): one STANDARD observance
+        // holding since forever — the epoch by convention.
+        let start = OffsetDateTime::new_utc(
+            Date::from_calendar_date(2026, time::Month::June, 10).unwrap(),
+            Time::from_hms(12, 0, 0).unwrap(),
+        );
+        let e = CalendarEvent {
+            id: EventId::new("vtz-4".to_owned()),
+            calendar_id: CalendarId::new("cal".to_owned()),
+            summary: "Fixed".into(),
+            description: None,
+            location: None,
+            starts_at: start,
+            ends_at: start + time::Duration::hours(1),
+            all_day: false,
+            recurrence: None,
+            attendees: vec![],
+            exdates: vec![],
+            timezone: Some("Etc/GMT-2".to_owned()),
+            rdates: vec![],
+            recurrence_id: None,
+            reminder_minutes: None,
+            attendee_status: vec![],
+        };
+        let ics = to_ics(&e);
+        assert!(ics.contains(
+            "BEGIN:VTIMEZONE\r\nTZID:Etc/GMT-2\r\n\
+             BEGIN:STANDARD\r\nDTSTART:19700101T000000\r\n\
+             TZOFFSETFROM:+0200\r\nTZOFFSETTO:+0200"
+        ));
+        assert_eq!(ics.matches("BEGIN:STANDARD").count(), 1);
+        assert!(!ics.contains("BEGIN:DAYLIGHT"));
+    }
+
+    #[test]
+    fn offsets_format_as_hhmm_with_optional_seconds() {
+        assert_eq!(fmt_offset(3600), "+0100");
+        assert_eq!(fmt_offset(-14400), "-0400");
+        assert_eq!(fmt_offset(0), "+0000");
+        assert_eq!(fmt_offset(5400), "+0130");
+        // Pre-1900 LMT offsets carry seconds (§3.3.14 allows them).
+        assert_eq!(fmt_offset(1050), "+001730");
     }
 
     #[test]
