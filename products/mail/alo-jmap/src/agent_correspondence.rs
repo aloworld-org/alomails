@@ -30,7 +30,7 @@
 //!   which is why `find_contact` is a Mail tool, so resolving a company name is
 //!   the same door and not a wider one.
 //! - **A message that was listed is not a message that was read.** Each entry
-//!   says `opened` plainly, and the guidance in [`alo_ai::agent_mail`] forbids
+//!   says `opened` plainly, and the guidance in [`alo_ai::mail_intents`] forbids
 //!   speaking to the contents of one that was not. A subject line is evidence of
 //!   a subject and of nothing else.
 //! - **Direction is a fact, not an inference from the words.** A message whose

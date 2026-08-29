@@ -106,9 +106,9 @@ const NO_TOOLS_YET: &str = "You have no tools in this product yet, so you ANSWER
 /// The rules that apply whatever the product, and the output contract.
 ///
 /// Rules that belong to **one** product live in that product's guidance — the
-/// `source` numbering of an email moved to [`crate::agent_mail`] in A1.2,
-/// because an agent with no email tool was being told how to fill in an
-/// argument it would never have.
+/// `source` numbering of an email moved to Mail's own module in A1.2 (today
+/// [`crate::mail_intents`]), because an agent with no email tool was being
+/// told how to fill in an argument it would never have.
 const AGENT_SYSTEM_RULES: &str = "\
 Resolve any relative date or time (today, tomorrow 3pm, next Friday) against the current date given below into an absolute value (YYYY-MM-DD for a task due, RFC 3339 UTC for an event). \
 If the request needs an action no tool covers, ANSWER instead and say you cannot do that yet. Write the answer/say text in the user's language. Output ONLY the JSON object — no markdown, no code fences, no preamble.";
@@ -749,12 +749,17 @@ mod tests {
         assert_eq!(
             reads,
             [
-                // A2.8: the Mail agent's answer half — the exchange with one
-                // person or company, and one message of it in full. Everything
-                // else Mail has acts on an email rather than reading one, and
-                // is a write.
+                // A2.8, AC.4: the Mail agent's answer half, rendered from the
+                // intent registry — the exchange with one person or company,
+                // one message of it in full, what waits unread, one message's
+                // whole conversation, who the asker's own mail went to, and
+                // the address book. Everything else Mail has acts on an email
+                // rather than reading one, and is a write.
                 "correspondence",
                 "message_read",
+                "unread_summary",
+                "thread_lookup",
+                "who_i_emailed",
                 "find_contact",
                 "whats_on",
                 "am_i_free",
@@ -888,7 +893,7 @@ mod tests {
                 "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 114);
+        assert_eq!(all_tools().len(), 117);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }
@@ -1050,8 +1055,11 @@ mod tests {
         // Ask alo reads the products in the order `ALL_AGENT_PRODUCTS` lists
         // them, and each product's guidance after all of the tool lines.
         let at = |needle: &str| prompt.find(needle).unwrap_or(usize::MAX);
-        assert!(at("- draft_email:") < at("- find_contact:"));
-        assert!(at("- find_contact:") < at("- whats_on:"));
+        // Mail's verbs render reads first (AC.4), the address book among
+        // them, and its last write still comes before Agenda's first tool.
+        assert!(at("- correspondence:") < at("- find_contact:"));
+        assert!(at("- find_contact:") < at("- draft_email:"));
+        assert!(at("- move_to_folder:") < at("- whats_on:"));
         assert!(at("- whats_on:") < at("- create_task:"));
         assert!(at("- create_task:") < at("- catch_up_room:"));
         assert!(at("- catch_up_room:") < at("- find_file:"));

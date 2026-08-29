@@ -473,6 +473,7 @@ pub(crate) const MODULES: &[ModuleDispatcher] = &[
     crate::finance_intents::dispatch,
     crate::insights_intents::dispatch,
     crate::inventory_intents::dispatch,
+    crate::mail_intents::dispatch,
     crate::meet_intents::dispatch,
     crate::projects_intents::dispatch,
     crate::sheets_intents::dispatch,
@@ -512,25 +513,10 @@ async fn dispatch(
         "chase_task" => crate::agent_tasks::execute_chase_task(account, args, state).await,
         "capture_actions" => crate::agent_tasks::execute_capture_actions(account, args).await,
         "create_event" => execute_create_event(account, args).await,
-        // alo Mail's answer half (A2.8). Both read the asker's own mailbox and
-        // change nothing: `correspondence` is the exchange with one person or
-        // company in both directions, and `message_read` opens one message of it
-        // in full. They exist so a question about a correspondent is answered
-        // from the messages rather than from whatever a search matched — every
-        // Mail tool below this pair acts on an email instead of reading one.
-        "correspondence" => {
-            crate::agent_correspondence::execute_correspondence(account, args, state).await
-        }
-        "message_read" => crate::agent_correspondence::execute_message_read(account, args).await,
-        "mark_read" => execute_set_keyword(account, args, "$seen", "read").await,
-        "flag_email" => execute_set_keyword(account, args, "$flagged", "flagged").await,
-        "archive_email" => execute_move_to_role(account, args, "archive", "Archive").await,
-        "trash_email" => execute_move_to_role(account, args, "trash", "Trash").await,
-        "snooze_email" => execute_snooze(account, args).await,
-        "draft_email" => execute_draft_email(account, args, state).await,
-        "draft_reply" => execute_draft_reply(account, args, state).await,
-        "send_email" => execute_send(account, args, state).await,
-        "move_to_folder" => execute_move_to_folder(account, args).await,
+        // Mail's verbs, the correspondence pair and the nine email actions
+        // included, are dispatched by its module row above (AC.4); their
+        // executors stay in this file because the draft, submission and
+        // folder plumbing they reuse lives here.
         // Sheets' verbs, the five A2.2 tools included, are dispatched by its
         // module row above (AB.3).
         // Docs' verbs, the four A2.3 tools included, are dispatched by its
@@ -549,8 +535,8 @@ async fn dispatch(
         "meeting_prep" => crate::agent_meeting::execute_meeting_prep(account, args).await,
         "reschedule_event" => crate::agent_meeting::execute_reschedule_event(account, args).await,
         // Chat's verbs, `catch_up_room` and `find_in_chat` included, are
-        // dispatched by its module row above (AC.1).
-        "find_contact" => crate::agent_reads::execute_find_contact(account, args).await,
+        // dispatched by its module row above (AC.1) — and the address book's
+        // `find_contact` by Mail's (AC.4).
         // Projects' verbs, the proposed hour and the calendar draft included,
         // are dispatched by its module row above (AA.3), and Inventory's, the
         // draft reorders and the stock answer included, by its own (AA.4).
@@ -633,7 +619,7 @@ fn message_id_arg(args: &Value) -> Result<MessageId, Problem> {
 }
 
 /// Set or clear a keyword ($seen for read, $flagged for flag) on an email.
-async fn execute_set_keyword(
+pub(crate) async fn execute_set_keyword(
     account: &Account,
     args: &Value,
     keyword: &str,
@@ -666,7 +652,7 @@ async fn execute_set_keyword(
 /// created on first use, the same on-demand idiom every other standard role uses
 /// (Inbox, Drafts, Snoozed, Scheduled): a first move on an account that never had
 /// the folder should succeed, not fail.
-async fn execute_move_to_role(
+pub(crate) async fn execute_move_to_role(
     account: &Account,
     args: &Value,
     role: &str,
@@ -684,7 +670,10 @@ async fn execute_move_to_role(
 /// the destination is resolved by name among the account's existing folders and
 /// is never created — a folder the user did not name back is a clean error, not
 /// a new empty folder from a typo.
-async fn execute_move_to_folder(account: &Account, args: &Value) -> Result<Json<Value>, Problem> {
+pub(crate) async fn execute_move_to_folder(
+    account: &Account,
+    args: &Value,
+) -> Result<Json<Value>, Problem> {
     let msg = message_id_arg(args)?;
     let wanted = args
         .get("folder")
@@ -763,7 +752,10 @@ async fn movable_folder_names(account: &Account) -> Vec<String> {
 
 /// Snooze an email until a chosen time: hide it from the Inbox into Snoozed; the
 /// store's sweeper returns it to the Inbox (unread) once the wake time passes.
-async fn execute_snooze(account: &Account, args: &Value) -> Result<Json<Value>, Problem> {
+pub(crate) async fn execute_snooze(
+    account: &Account,
+    args: &Value,
+) -> Result<Json<Value>, Problem> {
     let msg = message_id_arg(args)?;
     let epoch = args
         .get("until")
@@ -798,7 +790,7 @@ async fn execute_snooze(account: &Account, args: &Value) -> Result<Json<Value>, 
 /// `From` is always the caller's own canonical address (resolved server-side, so
 /// a draft can never impersonate another author, even before it is sent); only
 /// the recipient, subject, and body come from the approved proposal.
-async fn execute_draft_email(
+pub(crate) async fn execute_draft_email(
     account: &Account,
     args: &Value,
     state: &AppState,
@@ -836,7 +828,7 @@ async fn execute_draft_email(
 /// in the same thread (`Re:` once, not stacked), and carries `In-Reply-To` +
 /// `References` so mail clients thread it. The body is the approved text; `From`
 /// is the caller's own address, exactly as for a new draft.
-async fn execute_draft_reply(
+pub(crate) async fn execute_draft_reply(
     account: &Account,
     args: &Value,
     state: &AppState,
@@ -935,7 +927,7 @@ fn compose(
 /// then moves it to Sent. The agent therefore can never send an arbitrary
 /// message (a non-draft is refused there) and there is no second send path to
 /// drift from the audited one.
-async fn execute_send(
+pub(crate) async fn execute_send(
     account: &Account,
     args: &Value,
     state: &AppState,
@@ -999,7 +991,7 @@ async fn execute_send(
 /// angle brackets, else a bare token that looks like an address. A stray comma
 /// inside a quoted display name only yields a junk fragment with no `@`, which is
 /// dropped — the real address in the same entry is still recovered.
-fn addr_specs(header_value: &str) -> Vec<String> {
+pub(crate) fn addr_specs(header_value: &str) -> Vec<String> {
     let mut out = Vec::new();
     for part in header_value.split(',') {
         let part = part.trim();

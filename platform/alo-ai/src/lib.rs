@@ -20,9 +20,7 @@ use egress::{is_blocked_ip, split_authority};
 
 mod agent;
 pub mod agent_agenda;
-pub mod agent_contacts;
 pub mod agent_hr;
-pub mod agent_mail;
 pub mod agent_memory;
 pub mod agent_plan;
 pub mod agent_product;
@@ -40,6 +38,7 @@ pub mod insights;
 pub mod insights_intents;
 pub mod intent;
 pub mod inventory_intents;
+pub mod mail_intents;
 pub mod meet_intents;
 pub mod projects_intents;
 pub mod sheet_charts;
@@ -56,9 +55,7 @@ pub use agent::{
     system_prompt_for,
 };
 pub use agent_agenda::AGENDA_TOOLS;
-pub use agent_contacts::CONTACTS_TOOLS;
 pub use agent_hr::HR_TOOLS;
-pub use agent_mail::MAIL_TOOLS;
 pub use agent_memory::{MEMORY_FACTS_MAX, extract_memories, memory_messages, parse_memories};
 pub use agent_plan::{
     AgentPlan, MAX_PLAN_STEPS, PlanAgent, PlanAsk, PlanStep, parse_plan, plan_messages,

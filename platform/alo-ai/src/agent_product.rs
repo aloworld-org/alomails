@@ -20,9 +20,7 @@
 use alo_store::{ALL_AGENT_PRODUCTS, AgentProduct};
 
 use crate::agent_agenda::{AGENDA_GUIDANCE, AGENDA_TOOL_DOC, AGENDA_TOOLS};
-use crate::agent_contacts::{CONTACTS_GUIDANCE, CONTACTS_TOOL_DOC, CONTACTS_TOOLS};
 use crate::agent_hr::{HR_GUIDANCE, HR_TOOL_DOC, HR_TOOLS};
-use crate::agent_mail::{MAIL_GUIDANCE, MAIL_TOOL_DOC, MAIL_TOOLS};
 use crate::agent_sites::{SITES_GUIDANCE, SITES_TOOL_DOC, SITES_TOOLS};
 use crate::agent_tasks::{TASKS_GUIDANCE, TASKS_TOOL_DOC, TASKS_TOOLS};
 use crate::agent_tool::AgentTool;
@@ -35,6 +33,7 @@ use crate::finance_intents::FINANCE as FINANCE_INTENTS;
 use crate::insights_intents::INSIGHTS as INSIGHTS_INTENTS;
 use crate::intent::IntentModule;
 use crate::inventory_intents::INVENTORY as INVENTORY_INTENTS;
+use crate::mail_intents::MAIL as MAIL_INTENTS;
 use crate::meet_intents::MEET as MEET_INTENTS;
 use crate::projects_intents::PROJECTS as PROJECTS_INTENTS;
 use crate::sheets_intents::SHEETS as SHEETS_INTENTS;
@@ -42,9 +41,9 @@ use crate::sheets_intents::SHEETS as SHEETS_INTENTS;
 /// One module's contribution to a product's agent: what it may do, how each
 /// tool is described, and the rules that keep a proposal from it honest.
 ///
-/// A product is usually one of these. Mail is two — the address book
-/// ([`crate::agent_contacts`]) is Mail's, and lives in its own module because
-/// it is its own subject matter, not because it is its own agent.
+/// A product is one of these. Until AC.4 Mail was two — the address book
+/// carried its own hand-written set — which is why a product maps to a *list*
+/// of sets rather than to one.
 #[derive(Debug, Clone, Copy)]
 pub struct ToolSet {
     /// Hand-written tools, each carrying its own read/write effect (ADR 0047
@@ -108,17 +107,11 @@ const fn intents(module: &'static IntentModule) -> ToolSet {
     }
 }
 
-const MAIL_SET: ToolSet = set(MAIL_TOOLS, MAIL_TOOL_DOC, MAIL_GUIDANCE);
-/// The address book is Mail's, in its own module because it is its own subject
-/// matter — not because it is its own agent.
-const CONTACTS_SET: ToolSet = set(CONTACTS_TOOLS, CONTACTS_TOOL_DOC, CONTACTS_GUIDANCE);
 const AGENDA_SET: ToolSet = set(AGENDA_TOOLS, AGENDA_TOOL_DOC, AGENDA_GUIDANCE);
 const TASKS_SET: ToolSet = set(TASKS_TOOLS, TASKS_TOOL_DOC, TASKS_GUIDANCE);
 const HR_SET: ToolSet = set(HR_TOOLS, HR_TOOL_DOC, HR_GUIDANCE);
 const SITES_SET: ToolSet = set(SITES_TOOLS, SITES_TOOL_DOC, SITES_GUIDANCE);
 
-/// Mail's, including the address book.
-const MAIL: &[ToolSet] = &[MAIL_SET, CONTACTS_SET];
 const AGENDA: &[ToolSet] = &[AGENDA_SET];
 const TASKS: &[ToolSet] = &[TASKS_SET];
 const HR: &[ToolSet] = &[HR_SET];
@@ -143,6 +136,7 @@ pub const MOVED: &[(AgentProduct, &IntentModule)] = &[
     (AgentProduct::Finance, &FINANCE_INTENTS),
     (AgentProduct::Insights, &INSIGHTS_INTENTS),
     (AgentProduct::Inventory, &INVENTORY_INTENTS),
+    (AgentProduct::Mail, &MAIL_INTENTS),
     (AgentProduct::Meet, &MEET_INTENTS),
     (AgentProduct::Projects, &PROJECTS_INTENTS),
     (AgentProduct::Sheets, &SHEETS_INTENTS),
@@ -151,7 +145,7 @@ pub const MOVED: &[(AgentProduct, &IntentModule)] = &[
 /// The hand-written sets a product still carries — empty once it has moved.
 fn static_sets(product: AgentProduct) -> &'static [ToolSet] {
     match product {
-        AgentProduct::Mail => MAIL,
+        AgentProduct::Mail => &[],
         AgentProduct::Agenda => AGENDA,
         AgentProduct::Tasks => TASKS,
         AgentProduct::Chat => &[],
@@ -303,6 +297,10 @@ mod tests {
             [
                 "correspondence",
                 "message_read",
+                "unread_summary",
+                "thread_lookup",
+                "who_i_emailed",
+                "find_contact",
                 "mark_read",
                 "flag_email",
                 "archive_email",
@@ -312,7 +310,6 @@ mod tests {
                 "draft_reply",
                 "send_email",
                 "move_to_folder",
-                "find_contact",
             ]
         );
         assert_eq!(
@@ -514,7 +511,7 @@ mod tests {
             .map(|tool| tool.name)
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
-        assert_eq!(workspace.len(), 114);
+        assert_eq!(workspace.len(), 117);
     }
 
     /// A moved module registers once (A4.1c): its row in [`MOVED`] is what puts
@@ -551,6 +548,7 @@ mod tests {
             concat!("DOCS_", "INTENTS"),
             concat!("DRIVE_", "INTENTS"),
             concat!("INVENTORY_", "INTENTS"),
+            concat!("MAIL_", "INTENTS"),
             concat!("MEET_", "INTENTS"),
             concat!("PROJECTS_", "INTENTS"),
             concat!("SHEETS_", "INTENTS"),

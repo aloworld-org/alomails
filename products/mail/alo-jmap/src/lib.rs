@@ -170,6 +170,7 @@ pub mod inventory_suppliers;
 pub mod invite_route;
 pub mod jtypes;
 pub mod junk_learn;
+pub mod mail_intents;
 pub mod meet_intents;
 pub mod meet_routes;
 pub mod meet_token;

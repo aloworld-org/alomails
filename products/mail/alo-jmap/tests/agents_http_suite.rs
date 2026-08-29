@@ -25,6 +25,7 @@ mod agent_insights_intents_http;
 mod agent_instructions_http;
 mod agent_inventory_intents_http;
 mod agent_isolation_http;
+mod agent_mail_intents_http;
 mod agent_meet_http;
 mod agent_meet_intents_http;
 mod agent_memory_http;
