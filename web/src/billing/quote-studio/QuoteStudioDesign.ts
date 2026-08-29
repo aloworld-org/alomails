@@ -3,6 +3,7 @@ import type {
   QuoteTableLayout,
   QuoteTotalsDetail,
   QuoteTotalsPlacement,
+  QuoteTotalsStyle,
 } from "../quoteTableOptions";
 import type { HeaderStyle } from "./HeaderStylePreview";
 import type { QuoteStudioBlock } from "./QuoteStudioBlock";
@@ -93,6 +94,7 @@ export interface QuoteStudioDesign {
   lineContent: Record<string, QuoteLineContent>;
   totalsPlacement: QuoteTotalsPlacement;
   totalsDetail: QuoteTotalsDetail;
+  totalsStyle: QuoteTotalsStyle;
   showCurrencyCode: boolean;
   emphasizeTotal: boolean;
   showTaxNote: boolean;

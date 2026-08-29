@@ -44,6 +44,15 @@ export function TotalsPanel({
           options.totalsPlacement === "footer" &&
           "!w-full !self-stretch !rounded-t-none !border-x-0 !border-b-0 !bg-transparent !px-0 max-sm:!rounded-xl max-sm:!border max-sm:!bg-raised/40 max-sm:!px-5",
         options.enabled && "max-sm:!w-full max-sm:!self-stretch",
+        options.enabled &&
+          options.totalsStyle === "minimal" &&
+          "!rounded-none !border-0 !bg-transparent !px-0 !shadow-none",
+        options.enabled &&
+          options.totalsStyle === "framed" &&
+          "!border-2 !border-primary/20 !bg-surface",
+        options.enabled &&
+          options.totalsStyle === "accent" &&
+          "!border-accent/30 !bg-surface",
       )}
       aria-live="polite"
     >
@@ -74,6 +83,9 @@ export function TotalsPanel({
           className={cx(
             styles.totalsRow,
             (!options.enabled || options.emphasizeTotal) && styles.totalsGross,
+            options.enabled &&
+              options.totalsStyle === "accent" &&
+              "!mt-2 !rounded-lg !border-0 !bg-accent !px-3 !py-2.5 !text-on-accent [&_dd]:!text-on-accent [&_dt]:!text-on-accent",
           )}
         >
           <dt>{strings.billingTotalsGross}</dt>

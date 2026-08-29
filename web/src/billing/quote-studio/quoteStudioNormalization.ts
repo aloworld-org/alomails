@@ -46,6 +46,7 @@ export const EMPTY_QUOTE_STUDIO_DESIGN: QuoteStudioDesign = {
   lineContent: {},
   totalsPlacement: "summary",
   totalsDetail: "summary",
+  totalsStyle: "soft",
   showCurrencyCode: false,
   emphasizeTotal: true,
   showTaxNote: false,

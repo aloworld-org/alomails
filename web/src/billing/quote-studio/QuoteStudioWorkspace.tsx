@@ -32,6 +32,7 @@ import {
   type QuoteLineContent,
   type QuoteTotalsDetail,
   type QuoteTotalsPlacement,
+  type QuoteTotalsStyle,
 } from "../quoteTableOptions";
 import type { BillingCustomer, BillingQuote, BillingSettings } from "../types";
 import { DividerLine } from "./DividerLine";
@@ -100,6 +101,7 @@ export const QuoteStudioWorkspace = forwardRef<
       presentation?: {
         placement: QuoteTotalsPlacement;
         detail: QuoteTotalsDetail;
+        style: QuoteTotalsStyle;
         showCurrencyCode: boolean;
         emphasizeTotal: boolean;
         showTaxNote: boolean;
@@ -881,6 +883,7 @@ export const QuoteStudioWorkspace = forwardRef<
                               showDescriptions: design.showProductDescriptions,
                               totalsPlacement: design.totalsPlacement,
                               totalsDetail: design.totalsDetail,
+                              totalsStyle: design.totalsStyle,
                               showCurrencyCode: design.showCurrencyCode,
                               emphasizeTotal: design.emphasizeTotal,
                               showTaxNote: design.showTaxNote,
@@ -901,6 +904,7 @@ export const QuoteStudioWorkspace = forwardRef<
                               tableSubtotal(block.rowKeys, {
                                 placement: design.totalsPlacement,
                                 detail: design.totalsDetail,
+                                style: design.totalsStyle,
                                 showCurrencyCode: design.showCurrencyCode,
                                 emphasizeTotal: design.emphasizeTotal,
                                 showTaxNote: design.showTaxNote,

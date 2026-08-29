@@ -28,6 +28,7 @@ export function createQuoteTemplateDesign(
       theme: "minimal",
       tableLayout: "compact",
       totalsPlacement: "footer",
+      totalsStyle: "minimal",
       blocks: [
         {
           id: templateBlockId("heading"),
@@ -59,6 +60,7 @@ export function createQuoteTemplateDesign(
       tableLayout: "detailed",
       showProductDescriptions: true,
       totalsPlacement: "full",
+      totalsStyle: "framed",
       blocks: [
         {
           id: templateBlockId("heading"),
@@ -99,6 +101,7 @@ export function createQuoteTemplateDesign(
     theme: "modern",
     tableLayout: "detailed",
     totalsPlacement: "summary",
+    totalsStyle: "accent",
     showCurrencyCode: true,
     blocks: [
       {

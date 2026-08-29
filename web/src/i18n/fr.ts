@@ -7474,6 +7474,16 @@ export const fr: Partial<Catalog> = {
   quoteStudioFullWidthHelp: "Équilibre l’ensemble du tableau",
   quoteStudioTableFooter: "Pied de tableau",
   quoteStudioTableFooterHelp: "Visuellement rattaché aux lignes",
+  quoteStudioTotalsStyle: "Style du total",
+  quoteStudioTotalsStyleName: (
+    style: "soft" | "minimal" | "framed" | "accent",
+  ) =>
+    ({
+      soft: "Carte douce",
+      minimal: "Minimal",
+      framed: "Encadré",
+      accent: "Accent Alo",
+    })[style],
   quoteStudioAmountDetails: "Détails du montant",
   quoteStudioTotalOnly: "Total uniquement",
   quoteStudioTotalOnlyHelp: "Le récapitulatif le plus court",

@@ -11,7 +11,7 @@ function Consumer() {
   const options = useQuoteTableOptions();
   return (
     <button type="button" onClick={() => options.updateLineContent("line-1", { description: "Updated" })}>
-      {options.layout}:{options.totalsPlacement}:{String(options.showImages)}
+      {options.layout}:{options.totalsPlacement}:{options.totalsStyle}:{String(options.showImages)}
     </button>
   );
 }
@@ -26,6 +26,7 @@ describe("QuoteTableOptionsProvider", () => {
       showDescriptions: true,
       totalsPlacement: "footer",
       totalsDetail: "breakdown",
+      totalsStyle: "accent",
       showCurrencyCode: true,
       emphasizeTotal: true,
       showTaxNote: true,
@@ -40,7 +41,7 @@ describe("QuoteTableOptionsProvider", () => {
     );
     fireEvent.click(screen.getByRole("button"));
 
-    expect(screen.getByText("catalogue:footer:true")).toBeTruthy();
+    expect(screen.getByText("catalogue:footer:accent:true")).toBeTruthy();
     expect(updateLineContent).toHaveBeenCalledWith("line-1", { description: "Updated" });
   });
 });

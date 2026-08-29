@@ -26,5 +26,12 @@ describe("quote studio normalization", () => {
     expect(design.colors.text).toBe("#102a43");
     expect(design.headerDetails.companyName).toBe("Alo");
     expect(design.headerDetails.email).toBe("");
+    expect(design.totalsStyle).toBe("soft");
+  });
+
+  it("preserves a saved totals presentation style", () => {
+    const design = normalizeSavedQuoteDesign({ totalsStyle: "accent" });
+
+    expect(design.totalsStyle).toBe("accent");
   });
 });

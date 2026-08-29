@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 export type QuoteTableLayout = "compact" | "detailed" | "catalogue";
 export type QuoteTotalsPlacement = "summary" | "full" | "footer";
 export type QuoteTotalsDetail = "total" | "summary" | "breakdown";
+export type QuoteTotalsStyle = "soft" | "minimal" | "framed" | "accent";
 
 export interface QuoteLineContent {
   description: string;
@@ -21,6 +22,7 @@ export interface QuoteTableOptionsValue {
   showDescriptions: boolean;
   totalsPlacement: QuoteTotalsPlacement;
   totalsDetail: QuoteTotalsDetail;
+  totalsStyle: QuoteTotalsStyle;
   showCurrencyCode: boolean;
   emphasizeTotal: boolean;
   showTaxNote: boolean;
@@ -35,6 +37,7 @@ const QuoteTableOptions = createContext<QuoteTableOptionsValue>({
   showDescriptions: false,
   totalsPlacement: "summary",
   totalsDetail: "summary",
+  totalsStyle: "soft",
   showCurrencyCode: false,
   emphasizeTotal: true,
   showTaxNote: false,

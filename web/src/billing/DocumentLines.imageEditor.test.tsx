@@ -19,6 +19,7 @@ function renderLines(updateLineContent = vi.fn()) {
     showDescriptions: true,
     totalsPlacement: "summary",
     totalsDetail: "summary",
+    totalsStyle: "soft",
     showCurrencyCode: false,
     emphasizeTotal: true,
     showTaxNote: false,

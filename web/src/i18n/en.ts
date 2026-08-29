@@ -7542,6 +7542,16 @@ export const en = {
   quoteStudioFullWidthHelp: "Balances the entire table",
   quoteStudioTableFooter: "Table footer",
   quoteStudioTableFooterHelp: "Feels attached to the rows",
+  quoteStudioTotalsStyle: "Total style",
+  quoteStudioTotalsStyleName: (
+    style: "soft" | "minimal" | "framed" | "accent",
+  ) =>
+    ({
+      soft: "Soft card",
+      minimal: "Minimal",
+      framed: "Framed",
+      accent: "Alo accent",
+    })[style],
   quoteStudioAmountDetails: "Amount details",
   quoteStudioTotalOnly: "Total only",
   quoteStudioTotalOnlyHelp: "The shortest summary",

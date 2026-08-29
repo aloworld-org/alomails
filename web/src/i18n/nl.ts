@@ -7398,6 +7398,16 @@ export const nl: Partial<Catalog> = {
   quoteStudioFullWidthHelp: "Verdeelt de ruimte over de hele tabel",
   quoteStudioTableFooter: "Tabelvoet",
   quoteStudioTableFooterHelp: "Sluit visueel aan op de rijen",
+  quoteStudioTotalsStyle: "Totaalstijl",
+  quoteStudioTotalsStyleName: (
+    style: "soft" | "minimal" | "framed" | "accent",
+  ) =>
+    ({
+      soft: "Zachte kaart",
+      minimal: "Minimalistisch",
+      framed: "Omlijnd",
+      accent: "Alo-accent",
+    })[style],
   quoteStudioAmountDetails: "Bedragdetails",
   quoteStudioTotalOnly: "Alleen totaal",
   quoteStudioTotalOnlyHelp: "Het kortste overzicht",

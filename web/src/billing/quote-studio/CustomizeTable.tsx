@@ -232,7 +232,7 @@ export function CustomizeTable({
                 }))
               }
             >
-              <TotalsPreview placement={placement} />
+              <TotalsPreview placement={placement} style={design.totalsStyle} />
               <span className="mt-4 flex items-start justify-between gap-4 px-1 pb-1">
                 <span>
                   <strong className="block text-sm font-semibold text-primary">
@@ -255,6 +255,36 @@ export function CustomizeTable({
                   )}
                 </span>
               </span>
+            </button>
+          ))}
+        </div>
+
+        <h4 className="mt-10 border-t border-subtle pt-7 text-xs font-semibold uppercase tracking-wide text-tertiary">
+          {strings.quoteStudioTotalsStyle}
+        </h4>
+        <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {(["soft", "minimal", "framed", "accent"] as const).map((style) => (
+            <button
+              key={style}
+              type="button"
+              className={cx(
+                "group relative min-h-28 rounded-2xl border !p-3 transition-colors hover:border-accent hover:bg-accent-soft/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
+                design.totalsStyle === style
+                  ? "border-accent bg-accent-soft ring-1 ring-accent/20"
+                  : "border-default bg-surface",
+              )}
+              aria-label={strings.quoteStudioTotalsStyleName(style)}
+              aria-pressed={design.totalsStyle === style}
+              onClick={() =>
+                onChange((current) => ({ ...current, totalsStyle: style }))
+              }
+            >
+              <TotalsPreview placement="full" style={style} />
+              {design.totalsStyle === style && (
+                <span className="absolute right-2.5 top-2.5 grid size-5 place-items-center rounded-full bg-accent text-on-accent shadow-sm ring-2 ring-surface">
+                  <Check className="size-3.5" aria-hidden="true" />
+                </span>
+              )}
             </button>
           ))}
         </div>

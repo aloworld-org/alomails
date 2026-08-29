@@ -7510,6 +7510,16 @@ export const de: Partial<Catalog> = {
   quoteStudioFullWidthHelp: "Nutzt die gesamte Tabellenbreite ausgewogen",
   quoteStudioTableFooter: "Tabellenfuß",
   quoteStudioTableFooterHelp: "Schließt optisch an die Zeilen an",
+  quoteStudioTotalsStyle: "Summenstil",
+  quoteStudioTotalsStyleName: (
+    style: "soft" | "minimal" | "framed" | "accent",
+  ) =>
+    ({
+      soft: "Dezente Karte",
+      minimal: "Minimalistisch",
+      framed: "Gerahmt",
+      accent: "Alo-Akzent",
+    })[style],
   quoteStudioAmountDetails: "Betragsdetails",
   quoteStudioTotalOnly: "Nur Gesamtsumme",
   quoteStudioTotalOnlyHelp: "Die kürzeste Übersicht",

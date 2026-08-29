@@ -42,6 +42,7 @@ import { printSheet } from "./printSheet";
 import type {
   QuoteTotalsDetail,
   QuoteTotalsPlacement,
+  QuoteTotalsStyle,
 } from "./quoteTableOptions";
 import { TotalsPanel } from "./TotalsPanel";
 import styles from "./billingStyles";
@@ -109,6 +110,7 @@ interface Props<T extends StoredDocument, A> {
           presentation?: {
             placement: QuoteTotalsPlacement;
             detail: QuoteTotalsDetail;
+            style: QuoteTotalsStyle;
             showCurrencyCode: boolean;
             emphasizeTotal: boolean;
             showTaxNote: boolean;
@@ -298,6 +300,7 @@ export function DocumentEditor<T extends StoredDocument, A>({
     presentation = {
       placement: "summary" as QuoteTotalsPlacement,
       detail: "summary" as QuoteTotalsDetail,
+      style: "soft" as QuoteTotalsStyle,
       showCurrencyCode: false,
       emphasizeTotal: true,
       showTaxNote: false,
@@ -373,29 +376,52 @@ export function DocumentEditor<T extends StoredDocument, A>({
       >
         <div
           className={cx(
-            "bg-raised/45 px-5 py-4",
+            "px-5 py-4",
             presentation.placement === "summary" &&
-              "w-full max-w-md rounded-xl border border-default shadow-sm",
+              "w-full max-w-md rounded-xl border shadow-sm",
             presentation.placement === "full" &&
-              "w-full rounded-xl border border-default",
+              "w-full rounded-xl border",
             presentation.placement === "footer" &&
-              "w-full rounded-b-xl border border-t-0 border-default",
+              "w-full rounded-b-xl border border-t-0",
+            presentation.style === "soft" && "border-default bg-raised/45",
+            presentation.style === "minimal" &&
+              "!rounded-none !border-0 bg-transparent !px-0 !shadow-none",
+            presentation.style === "framed" &&
+              "border-2 border-primary/20 bg-surface",
+            presentation.style === "accent" &&
+              "border-accent/30 bg-surface",
           )}
         >
           <dl
             className={cx(
-              "grid grid-cols-[1fr_auto] gap-x-8 gap-y-2",
+              "flex flex-col gap-2",
               presentation.placement === "summary" && "ml-auto max-w-sm",
               presentation.placement === "full" && "mx-auto max-w-2xl",
             )}
           >
             {rowsToShow.map((row) => (
-              <div className="contents" key={row.label}>
+              <div
+                className={cx(
+                  "grid grid-cols-[1fr_auto] items-center gap-x-8",
+                  row.total &&
+                    presentation.style !== "accent" &&
+                    "mt-1 border-t border-default pt-3",
+                  row.total &&
+                    presentation.style === "framed" &&
+                    "!border-primary/20",
+                  row.total &&
+                    presentation.style === "accent" &&
+                    "mt-1 rounded-lg bg-accent px-3 py-2.5",
+                )}
+                key={row.label}
+              >
                 <dt
                   className={cx(
                     "text-secondary",
+                    row.total && "font-semibold text-primary",
                     row.total &&
-                      "border-t border-default pt-3 font-semibold text-primary",
+                      presentation.style === "accent" &&
+                      "text-on-accent",
                   )}
                 >
                   {row.label}
@@ -403,8 +429,11 @@ export function DocumentEditor<T extends StoredDocument, A>({
                 <dd
                   className={cx(
                     "text-right tabular-nums text-primary",
-                    row.total && "border-t border-default pt-3 font-semibold",
+                    row.total && "font-semibold",
                     row.total && presentation.emphasizeTotal && "text-base",
+                    row.total &&
+                      presentation.style === "accent" &&
+                      "text-on-accent",
                   )}
                 >
                   {row.value}
