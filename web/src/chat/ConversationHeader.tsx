@@ -1,4 +1,4 @@
-import { Archive, Bot, ChevronDown, ChevronLeft, Hash, MoreHorizontal, Pencil, UserPlus, Video } from "lucide-react";
+import { AlarmClock, Archive, Bot, ChevronDown, ChevronLeft, Hash, MoreHorizontal, Pencil, UserPlus, Video } from "lucide-react";
 
 import { Avatar, IconButton } from "../ds";
 import { strings } from "../i18n";
@@ -13,6 +13,7 @@ type Props = {
   onBack: () => void;
   onMeet: () => void;
   onPeople: () => void;
+  onInstructions: () => void;
   onRename: () => void;
   onArchive: () => void;
 };
@@ -20,7 +21,7 @@ type Props = {
 // Phone widths compact the chrome — tighter padding, smaller controls, the
 // decorative dividers and the # glyph dropped — so the room's NAME keeps the
 // remaining width. At 360px the desktop paddings alone left the title 0px.
-export function ConversationHeader({ room, mobile, liveMeeting, onBack, onMeet, onPeople, onRename, onArchive }: Props) {
+export function ConversationHeader({ room, mobile, liveMeeting, onBack, onMeet, onPeople, onInstructions, onRename, onArchive }: Props) {
   if (room.kind === "dm" || room.kind === "agent_dm") {
     const name = directMessageName(room);
     return (
@@ -36,6 +37,8 @@ export function ConversationHeader({ room, mobile, liveMeeting, onBack, onMeet, 
             <button type="button" className={`flex size-11 items-center justify-center rounded-lg border-0 bg-transparent text-primary transition-colors hover:bg-raised max-md:size-9 ${liveMeeting !== null ? "text-accent" : ""}`} onClick={onMeet} aria-label={liveMeeting !== null ? strings.meetJoin : strings.meetStart} title={liveMeeting !== null ? strings.meetJoin : strings.meetStart}><Video size={22} strokeWidth={1.9} /></button>
             <span className="block h-10 w-px shrink-0 bg-[#ded5ca] max-md:hidden" aria-hidden="true" />
             <button type="button" className="flex size-11 items-center justify-center rounded-lg border-0 bg-transparent text-primary transition-colors hover:bg-raised max-md:size-9" onClick={onPeople} title={strings.chatMembersAndAgents}><UserPlus size={23} strokeWidth={1.9} /><span className="sr-only">{strings.chatMembersAndAgents}</span></button>
+            <span className="block h-10 w-px shrink-0 bg-[#ded5ca] max-md:hidden" aria-hidden="true" />
+            <button type="button" className="flex size-11 items-center justify-center rounded-lg border-0 bg-transparent text-primary transition-colors hover:bg-raised max-md:size-9" onClick={onInstructions} title={strings.agentInstructionsTitle}><AlarmClock size={22} strokeWidth={1.9} /><span className="sr-only">{strings.agentInstructionsTitle}</span></button>
             <span className="block h-10 w-px shrink-0 bg-[#ded5ca] max-md:hidden" aria-hidden="true" />
             <button type="button" className="flex size-11 items-center justify-center rounded-lg border-0 bg-transparent text-primary transition-colors hover:bg-raised max-md:size-9" onClick={onArchive} aria-label={strings.chatArchiveAction} title={strings.chatArchiveAction}><Archive size={22} strokeWidth={1.9} /></button>
           </div>
@@ -59,6 +62,7 @@ export function ConversationHeader({ room, mobile, liveMeeting, onBack, onMeet, 
       <div className={`flex shrink-0 items-center ${mobile ? "gap-1" : "gap-3"}`}>
         <IconButton size="md" className={squareIcon} label={liveMeeting !== null ? strings.meetJoin : strings.meetStart} icon={<Video size={22} />} onClick={onMeet} active={liveMeeting !== null} />
         <button type="button" className={squareButton} onClick={onPeople} title={strings.chatMembersAndAgents}><UserPlus size={24} /><span className="sr-only">{strings.chatMembersAndAgents}</span></button>
+        <button type="button" className={squareButton} onClick={onInstructions} title={strings.agentInstructionsTitle}><AlarmClock size={23} /><span className="sr-only">{strings.agentInstructionsTitle}</span></button>
         {room.kind === "channel" && room.archivedAt === null && <>
           <IconButton size="md" className={squareIcon} label={strings.chatRename} icon={<Pencil size={22} />} onClick={onRename} />
           <IconButton size="md" className={squareIcon} label={strings.chatArchiveAction} icon={<MoreHorizontal size={24} />} onClick={onArchive} />

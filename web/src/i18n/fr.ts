@@ -5892,6 +5892,40 @@ export const fr: Partial<Catalog> = {
   agentMemoryForgetFact: (fact: string): string => `Oublier « ${fact} »`,
   agentMemoryLoadFailed: "Impossible de charger ce que l’agent retient.",
   agentMemoryForgetFailed: "Impossible d’oublier ce fait.",
+  agentInstructionsTitle: "Instructions permanentes",
+  agentInstructionsIntro:
+    "Demandé une fois, à l’avance. Chaque instruction s’exécute au nom de la personne qui l’a demandée, et tout le monde ici peut lire cette liste.",
+  agentInstructionsEmpty:
+    "Aucune instruction pour l’instant. Choisissez un agent, dites ce qu’il doit faire, choisissez la fréquence — il exécutera vos mots selon ce rythme et publiera ici.",
+  agentInstructionHourly: "S’exécute toutes les heures",
+  agentInstructionDaily: "S’exécute tous les jours",
+  agentInstructionWeekly: "S’exécute toutes les semaines",
+  agentInstructionEveryHours: (hours: number): string =>
+    `S’exécute toutes les ${hours} heures`,
+  agentInstructionEveryMinutes: (minutes: number): string =>
+    `S’exécute toutes les ${minutes} minutes`,
+  agentInstructionOnEvent: (verb: string): string =>
+    `S’exécute après chaque « ${verb} »`,
+  agentInstructionNextRun: (at: string): string => `Prochaine exécution ${at}`,
+  agentInstructionAskedBy: (who: string): string => `Demandé par ${who}`,
+  agentInstructionPaused:
+    "En pause — la personne qui l’a demandée a quitté le salon.",
+  agentInstructionCancel: "Annuler",
+  agentInstructionCancelThis: (text: string): string => `Annuler « ${text} »`,
+  agentInstructionAgentLabel: "Agent",
+  agentInstructionTextLabel: "Que doit-il faire ?",
+  agentInstructionTextPlaceholder:
+    "p. ex. lister les factures arrivées en retard",
+  agentInstructionScheduleLabel: "Fréquence",
+  agentInstructionOptionHourly: "Toutes les heures",
+  agentInstructionOption4Hours: "Toutes les 4 heures",
+  agentInstructionOptionDaily: "Tous les jours",
+  agentInstructionOptionWeekly: "Toutes les semaines",
+  agentInstructionAdd: "Ajouter l’instruction",
+  agentInstructionsLoadFailed:
+    "Impossible de charger les instructions permanentes.",
+  agentInstructionCreateFailed: "Impossible d’ajouter cette instruction.",
+  agentInstructionCancelFailed: "Impossible d’annuler cette instruction.",
   chatAgentTag: "agent",
   chatAgentsAvailable: "Disponibles à ajouter",
   chatAgentsHere: "Agents dans cette conversation",

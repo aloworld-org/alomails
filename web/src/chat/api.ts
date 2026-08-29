@@ -16,6 +16,7 @@ import { useAuth } from "../auth";
 import { API_BASE } from "../platform/runtime";
 import type {
   Agent,
+  AgentInstruction,
   AgentMemory,
   Channel,
   ChannelDetail,
@@ -23,6 +24,7 @@ import type {
   FeedMessage,
   Message,
   NewChannel,
+  NewInstruction,
   Person,
   Proposal,
   Turn,
@@ -170,6 +172,38 @@ export class ChatApi {
    *  anyone else. */
   async forgetMemory(id: string): Promise<void> {
     await this.#send(`/chat/memories/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }).then(ChatApi.#rejectFailed);
+  }
+
+  /** The room's standing instructions — readable by everyone who can read
+   *  the room, each card saying whether this reader's Cancel would be
+   *  honoured. */
+  async channelInstructions(id: string): Promise<AgentInstruction[]> {
+    const body = await this.#read<{ instructions: AgentInstruction[] }>(
+      `/chat/channels/${encodeURIComponent(id)}/instructions`,
+    );
+    return body.instructions ?? [];
+  }
+
+  /** Stand an instruction up in the room, this caller as author. The server
+   *  holds every rule — member only, agent present and awake, twenty per
+   *  channel, words ≤ 400 — and refuses with the rule named. */
+  async createInstruction(
+    id: string,
+    draft: NewInstruction,
+  ): Promise<AgentInstruction> {
+    return this.#write<AgentInstruction>(
+      "POST",
+      `/chat/channels/${encodeURIComponent(id)}/instructions`,
+      draft,
+    );
+  }
+
+  /** Cancel a standing instruction. The author's own brake, or the room
+   *  owner's; the server answers 403 for anyone else. */
+  async cancelInstruction(id: string): Promise<void> {
+    await this.#send(`/chat/instructions/${encodeURIComponent(id)}`, {
       method: "DELETE",
     }).then(ChatApi.#rejectFailed);
   }

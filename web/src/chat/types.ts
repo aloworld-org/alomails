@@ -135,6 +135,43 @@ export interface AgentMemory {
   canForget: boolean;
 }
 
+/** What fires a standing instruction: a clock, or a module event the intent
+ *  registry names. */
+export type InstructionTrigger =
+  | { kind: "schedule"; everyMinutes: number }
+  | { kind: "event"; event: string };
+
+/** A standing instruction in a room — a person asked once, in advance, and
+ *  the agent runs it on the trigger, as the author. */
+export interface AgentInstruction {
+  id: string;
+  agentId: string;
+  agentHandle: string;
+  /** The author's words, run verbatim on every firing. */
+  text: string;
+  trigger: InstructionTrigger;
+  /** When the schedule next fires; `null` for event triggers. */
+  nextRun: string | null;
+  lastFiredAt: string | null;
+  /** Set when the author left the room — the card says so, nothing fires. */
+  paused: boolean;
+  /** The author's address, so the card names whose words these are. */
+  author: string | null;
+  createdAt: string;
+  /** Whether the server will honour a Cancel from this reader: the author,
+   *  or the room's owner (either side of a one-to-one). */
+  canCancel: boolean;
+}
+
+/** What to stand up: the agent, the words, and the trigger. */
+export interface NewInstruction {
+  agentId: string;
+  text: string;
+  trigger:
+    | { kind: "schedule"; everyMinutes: number; firstAt?: string }
+    | { kind: "event"; event: string };
+}
+
 /** An action an agent proposed, waiting for a tap. */
 export interface Proposal {
   id: string;

@@ -5825,6 +5825,41 @@ export const nl: Partial<Catalog> = {
   agentMemoryForgetFact: (fact: string): string => `“${fact}” vergeten`,
   agentMemoryLoadFailed: "Wat de agent onthoudt kon niet worden geladen.",
   agentMemoryForgetFailed: "Dat kon niet worden vergeten.",
+  agentInstructionsTitle: "Vaste instructies",
+  agentInstructionsIntro:
+    "Eén keer gevraagd, vooraf. Elke instructie wordt uitgevoerd namens degene die erom vroeg, en iedereen hier kan deze lijst lezen.",
+  agentInstructionsEmpty:
+    "Nog niets ingesteld. Kies een agent, zeg wat die moet doen en hoe vaak — uw woorden worden volgens dat schema uitgevoerd en hier geplaatst.",
+  agentInstructionHourly: "Wordt elk uur uitgevoerd",
+  agentInstructionDaily: "Wordt elke dag uitgevoerd",
+  agentInstructionWeekly: "Wordt elke week uitgevoerd",
+  agentInstructionEveryHours: (hours: number): string =>
+    `Wordt elke ${hours} uur uitgevoerd`,
+  agentInstructionEveryMinutes: (minutes: number): string =>
+    `Wordt elke ${minutes} minuten uitgevoerd`,
+  agentInstructionOnEvent: (verb: string): string =>
+    `Wordt uitgevoerd na elke “${verb}”`,
+  agentInstructionNextRun: (at: string): string => `Volgende uitvoering ${at}`,
+  agentInstructionAskedBy: (who: string): string => `Gevraagd door ${who}`,
+  agentInstructionPaused:
+    "Gepauzeerd — degene die erom vroeg heeft het gesprek verlaten.",
+  agentInstructionCancel: "Annuleren",
+  agentInstructionCancelThis: (text: string): string =>
+    `“${text}” annuleren`,
+  agentInstructionAgentLabel: "Agent",
+  agentInstructionTextLabel: "Wat moet de agent doen?",
+  agentInstructionTextPlaceholder:
+    "bv. de facturen opsommen die te laat zijn",
+  agentInstructionScheduleLabel: "Hoe vaak",
+  agentInstructionOptionHourly: "Elk uur",
+  agentInstructionOption4Hours: "Elke 4 uur",
+  agentInstructionOptionDaily: "Elke dag",
+  agentInstructionOptionWeekly: "Elke week",
+  agentInstructionAdd: "Instructie toevoegen",
+  agentInstructionsLoadFailed:
+    "De vaste instructies konden niet worden geladen.",
+  agentInstructionCreateFailed: "Die instructie kon niet worden toegevoegd.",
+  agentInstructionCancelFailed: "Dat kon niet worden geannuleerd.",
   chatAgentTag: "agent",
   chatAgentsAvailable: "Beschikbaar om toe te voegen",
   chatAgentsHere: "Agents in dit gesprek",

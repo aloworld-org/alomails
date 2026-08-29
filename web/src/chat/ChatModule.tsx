@@ -19,6 +19,7 @@ import {
 import { strings } from "../i18n";
 import { useAuth } from "../auth";
 import { saveBlob } from "../drive/parts";
+import { AgentInstructionsPanel } from "../agents";
 import { RoomPeople } from "./RoomPeople";
 import { useJmapClient } from "../jmap/useJmapClient";
 import { useDismiss, useIsMobile } from "../ds";
@@ -80,6 +81,9 @@ export function ChatModule() {
   const [caret, setCaret] = useState(0);
   const [hasSelection, setHasSelection] = useState(false);
   const [showingPeople, setShowingPeople] = useState(false);
+  // The room's standing-instruction cards (A7.2), its own dialog beside the
+  // people one.
+  const [showingInstructions, setShowingInstructions] = useState(false);
   // One composer popover at a time: opening either closes the other, so two
   // menus can never sit open over each other.
   const [composerMenu, setComposerMenu] = useState<"share" | "emoji" | null>(
@@ -342,7 +346,7 @@ export function ChatModule() {
             <ConversationHeader room={open} mobile={isMobile} liveMeeting={liveMeeting} onBack={() => setOpenId(null)} onMeet={() => {
               if (liveMeeting !== null) { setInMeeting(liveMeeting.id); return; }
               void meet.start({ channel: open.id, title: channelLabel(open) }).then((meeting) => { setLiveMeeting(meeting); setInMeeting(meeting.id); }).catch(() => setError(strings.meetJoinFailed));
-            }} onPeople={() => setShowingPeople(true)} onRename={() => void renameRoom(open)} onArchive={() => void archiveRoom(open)} />
+            }} onPeople={() => setShowingPeople(true)} onInstructions={() => setShowingInstructions(true)} onRename={() => void renameRoom(open)} onArchive={() => void archiveRoom(open)} />
 
             <ActiveTurns turns={turns} onStop={(turn) => { if (openId !== null) void api.stopTurn(openId, turn.id).then(() => loadTurns(openId)); }} />
 
@@ -381,6 +385,13 @@ export function ChatModule() {
 
       {switcher !== null && (
         <ChatSwitcher query={switcher} rooms={switcherHits} onQuery={setSwitcher} onClose={() => setSwitcher(null)} onChoose={(id) => { setOpenId(id); setSwitcher(null); }} />
+      )}
+
+      {showingInstructions && openId !== null && (
+        <AgentInstructionsPanel
+          channel={openId}
+          onClose={() => setShowingInstructions(false)}
+        />
       )}
 
       {showingPeople && openId !== null && (

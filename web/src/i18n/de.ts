@@ -1811,6 +1811,42 @@ export const de: Partial<Catalog> = {
   agentMemoryForgetFact: (fact: string): string => `„${fact}“ vergessen`,
   agentMemoryLoadFailed: "Die gemerkten Fakten konnten nicht geladen werden.",
   agentMemoryForgetFailed: "Das konnte nicht vergessen werden.",
+  agentInstructionsTitle: "Daueranweisungen",
+  agentInstructionsIntro:
+    "Einmal gebeten, im Voraus. Jede Anweisung läuft im Namen der Person, die darum gebeten hat, und alle hier können diese Liste lesen.",
+  agentInstructionsEmpty:
+    "Noch nichts eingerichtet. Wählen Sie einen Agenten, sagen Sie, was er tun soll, und wie oft — er führt Ihre Worte nach diesem Rhythmus aus und schreibt hier.",
+  agentInstructionHourly: "Läuft jede Stunde",
+  agentInstructionDaily: "Läuft jeden Tag",
+  agentInstructionWeekly: "Läuft jede Woche",
+  agentInstructionEveryHours: (hours: number): string =>
+    `Läuft alle ${hours} Stunden`,
+  agentInstructionEveryMinutes: (minutes: number): string =>
+    `Läuft alle ${minutes} Minuten`,
+  agentInstructionOnEvent: (verb: string): string =>
+    `Läuft nach jedem „${verb}“`,
+  agentInstructionNextRun: (at: string): string => `Nächster Lauf ${at}`,
+  agentInstructionAskedBy: (who: string): string => `Eingerichtet von ${who}`,
+  agentInstructionPaused:
+    "Pausiert — die Person, die darum gebeten hat, hat den Raum verlassen.",
+  agentInstructionCancel: "Beenden",
+  agentInstructionCancelThis: (text: string): string =>
+    `„${text}“ beenden`,
+  agentInstructionAgentLabel: "Agent",
+  agentInstructionTextLabel: "Was soll er tun?",
+  agentInstructionTextPlaceholder:
+    "z. B. die überfälligen Rechnungen auflisten",
+  agentInstructionScheduleLabel: "Wie oft",
+  agentInstructionOptionHourly: "Jede Stunde",
+  agentInstructionOption4Hours: "Alle 4 Stunden",
+  agentInstructionOptionDaily: "Jeden Tag",
+  agentInstructionOptionWeekly: "Jede Woche",
+  agentInstructionAdd: "Anweisung hinzufügen",
+  agentInstructionsLoadFailed:
+    "Die Daueranweisungen konnten nicht geladen werden.",
+  agentInstructionCreateFailed:
+    "Die Anweisung konnte nicht hinzugefügt werden.",
+  agentInstructionCancelFailed: "Das konnte nicht abgebrochen werden.",
   chatSearchPlaceholder: "Nachrichten, Personen, Kanäle durchsuchen…",
   chatSearchClear: "Suche leeren",
   chatSearchNothing: "Nichts gefunden.",
