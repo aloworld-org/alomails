@@ -8,7 +8,7 @@ export const BADGE_TONE = {
   neutral: "neutral",
   info: "accent",
   good: "success",
-  warn: "danger",
+  warn: "warning",
   muted: "neutral",
 } as const satisfies Record<ChipTone, NonNullable<BadgeProps["tone"]>>;
 

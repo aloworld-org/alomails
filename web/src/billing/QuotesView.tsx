@@ -225,10 +225,7 @@ export function QuotesView() {
                 aria-label={`${quote.number ?? strings.billingDraftQuote}: ${
                   names.get(quote.customerId) ?? strings.billingUnknownCustomer
                 }`}
-                className={cx(
-                  "group cursor-pointer focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[-2px]",
-                  quote.status === "sent" && quote.expired && styles.overdueRow,
-                )}
+                className="group cursor-pointer focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[-2px]"
                 onClick={() => void navigate(quote.id)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {

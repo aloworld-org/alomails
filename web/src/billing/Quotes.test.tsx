@@ -273,7 +273,12 @@ describe("the quote list", () => {
     expect(table.getByText("Jul 31, 2026")).toBeTruthy();
     expect(table.getByText(strings.billingQuoteStatusSent)).toBeTruthy();
     // The computed flag, worded apart from the "Expired" status.
-    expect(table.getByText(strings.billingQuoteLapsed)).toBeTruthy();
+    const lapsed = table.getByText(strings.billingQuoteLapsed);
+    expect(lapsed.className).toContain("bg-warning-tint");
+    const row = table.getByRole("link", {
+      name: new RegExp(SENT.number as string),
+    });
+    expect(row.className).not.toContain("danger-tint");
     expect(table.queryByText(strings.billingQuoteStatusExpired)).toBeNull();
   });
 
