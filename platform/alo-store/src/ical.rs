@@ -10,7 +10,7 @@ use time::{Date, Month, OffsetDateTime, Time, UtcOffset};
 
 use crate::calendar_availability::CalendarBusySpan;
 use crate::id::{CalendarId, EventId};
-use crate::model::CalendarEvent;
+use crate::model::{CalendarEvent, OccurrenceOverride};
 
 const PRODID: &str = "-//alo//calendar//EN";
 
@@ -40,12 +40,22 @@ pub fn to_ics_at(event: &CalendarEvent, dtstamp: OffsetDateTime) -> String {
 /// occurrence), so a CalDAV client renders per-occurrence edits. With no
 /// overrides this equals [`to_ics`].
 pub fn to_ics_series(master: &CalendarEvent, overrides: &[CalendarEvent]) -> String {
+    to_ics_series_at(master, overrides, OffsetDateTime::now_utc())
+}
+
+/// [`to_ics_series`] with a caller-supplied `DTSTAMP` instant — the same
+/// deterministic seam as [`to_ics_at`], so the round-trip corpus can pin a
+/// multi-`VEVENT` series byte-for-byte.
+pub fn to_ics_series_at(
+    master: &CalendarEvent,
+    overrides: &[CalendarEvent],
+    dtstamp: OffsetDateTime,
+) -> String {
     let mut lines = vec![
         "BEGIN:VCALENDAR".to_owned(),
         "VERSION:2.0".to_owned(),
         format!("PRODID:{PRODID}"),
     ];
-    let dtstamp = OffsetDateTime::now_utc();
     lines.extend(vevent_lines(master, None, dtstamp));
     for ov in overrides {
         lines.extend(vevent_lines(ov, None, dtstamp));
@@ -210,10 +220,130 @@ fn fold_join(lines: &[String]) -> String {
 }
 
 /// Parse the first `VEVENT` in an iCalendar document into an event, using
-/// `fallback_id` as the `UID` if the document omits one.
+/// `fallback_id` as the `UID` if the document omits one. The parsed event
+/// deliberately keeps `recurrence_id: None` (see [`recurrence_id_of`]); a
+/// multi-`VEVENT` series is read whole by [`from_ics_series`].
 pub fn from_ics(text: &str, fallback_id: &str) -> Option<CalendarEvent> {
+    parse_vevents(text, fallback_id)
+        .into_iter()
+        .next()
+        .map(|v| v.event)
+}
+
+/// A client-authored series as one CalDAV resource (RFC 4791 §4.1): the master
+/// `VEVENT` plus the per-occurrence state carried by its `RECURRENCE-ID`
+/// instances (RFC 5545 §3.8.4.4). Cancelled instances have already been folded
+/// into the master's `exdates`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParsedSeries {
+    /// The series master (or the one-off, for a single-`VEVENT` document).
+    pub master: CalendarEvent,
+    /// One entry per overridden occurrence: the original slot and the fields
+    /// that replace it there.
+    pub overrides: Vec<(OffsetDateTime, OccurrenceOverride)>,
+}
+
+/// Parse every `VEVENT` of an iCalendar document as one series: the `VEVENT`
+/// without a `RECURRENCE-ID` is the master, each one with a `RECURRENCE-ID`
+/// is an override at that slot, and an instance marked `STATUS:CANCELLED`
+/// becomes an `EXDATE` on the master instead. This is what a phone PUTs after
+/// a per-occurrence edit (RFC 5545 §3.8.4.4, RFC 4791 §4.1).
+///
+/// Tolerances: a document holding only override instances keeps the first as
+/// the event (the single-`VEVENT` reader's behaviour); a duplicated slot keeps
+/// the last `VEVENT` (upsert semantics); a `RANGE=THISANDFUTURE` parameter is
+/// read as a single-instance override (documented in `docs/interop.md`).
+pub fn from_ics_series(text: &str, fallback_id: &str) -> Option<ParsedSeries> {
+    let parsed = parse_vevents(text, fallback_id);
+    let master_at = parsed
+        .iter()
+        .position(|v| v.recurrence_id.is_none())
+        .unwrap_or(0);
+    let mut master: Option<CalendarEvent> = None;
+    let mut overrides: Vec<(OffsetDateTime, OccurrenceOverride)> = Vec::new();
+    let mut cancelled_slots: Vec<OffsetDateTime> = Vec::new();
+    for (i, v) in parsed.into_iter().enumerate() {
+        if i == master_at {
+            master = Some(v.event);
+            continue;
+        }
+        // A second master-shaped VEVENT is not this resource's to store; skip
+        // it rather than guess which of the two the client meant.
+        let Some(slot) = v.recurrence_id else {
+            continue;
+        };
+        if v.cancelled {
+            cancelled_slots.push(slot);
+            continue;
+        }
+        overrides.retain(|(s, _)| *s != slot);
+        overrides.push((
+            slot,
+            OccurrenceOverride {
+                summary: v.event.summary,
+                description: v.event.description,
+                location: v.event.location,
+                starts_at: v.event.starts_at,
+                ends_at: v.event.ends_at,
+                all_day: v.event.all_day,
+            },
+        ));
+    }
+    let mut master = master?;
+    for slot in cancelled_slots {
+        if !master.exdates.contains(&slot) {
+            master.exdates.push(slot);
+        }
+    }
+    Some(ParsedSeries { master, overrides })
+}
+
+/// One parsed `VEVENT` block: the event fields plus the series metadata that
+/// distinguishes a master from a `RECURRENCE-ID` override instance.
+struct ParsedVevent {
+    /// The block's fields as an event (`recurrence_id` deliberately `None` —
+    /// the slot is reported separately below).
+    event: CalendarEvent,
+    /// The original slot this instance overrides (RFC 5545 §3.8.4.4), if any.
+    recurrence_id: Option<OffsetDateTime>,
+    /// `STATUS:CANCELLED` — on an override instance, a skipped slot.
+    cancelled: bool,
+}
+
+/// Split a document into its top-level `VEVENT` blocks and parse each.
+/// Everything outside `BEGIN:VEVENT`…`END:VEVENT` (`VCALENDAR` properties,
+/// `VTIMEZONE` definitions and their `STANDARD`/`DAYLIGHT` rules) is skipped —
+/// the IANA `TZID` name is the zone definition here, not the shipped block.
+fn parse_vevents(text: &str, fallback_id: &str) -> Vec<ParsedVevent> {
     let unfolded = unfold(text);
-    let mut in_event = false;
+    let mut out = Vec::new();
+    let mut block: Option<Vec<&str>> = None;
+    for line in unfolded.lines() {
+        let upper = line.to_ascii_uppercase();
+        match block.as_mut() {
+            None => {
+                if upper == "BEGIN:VEVENT" {
+                    block = Some(Vec::new());
+                }
+            }
+            Some(lines) => {
+                if upper == "END:VEVENT" {
+                    let done = std::mem::take(lines);
+                    block = None;
+                    if let Some(v) = parse_vevent(&done, fallback_id) {
+                        out.push(v);
+                    }
+                } else {
+                    lines.push(line);
+                }
+            }
+        }
+    }
+    out
+}
+
+/// Parse one unfolded `VEVENT` block (its lines, without the BEGIN/END pair).
+fn parse_vevent(block: &[&str], fallback_id: &str) -> Option<ParsedVevent> {
     let mut uid: Option<String> = None;
     let mut summary = String::new();
     let mut description: Option<String> = None;
@@ -226,22 +356,14 @@ pub fn from_ics(text: &str, fallback_id: &str) -> Option<CalendarEvent> {
     let mut timezone: Option<String> = None;
     let mut rdates: Vec<OffsetDateTime> = Vec::new();
     let mut reminder_minutes: Option<i32> = None;
+    let mut recurrence_id: Option<OffsetDateTime> = None;
+    let mut cancelled = false;
     // A VALARM is a nested block: read only its TRIGGER, and never let its
     // properties (e.g. DESCRIPTION) bleed into the event's.
     let mut in_alarm = false;
 
-    for line in unfolded.lines() {
+    for line in block {
         let upper = line.to_ascii_uppercase();
-        if upper == "BEGIN:VEVENT" {
-            in_event = true;
-            continue;
-        }
-        if upper == "END:VEVENT" {
-            break;
-        }
-        if !in_event {
-            continue;
-        }
         if upper == "BEGIN:VALARM" {
             in_alarm = true;
             continue;
@@ -325,6 +447,12 @@ pub fn from_ics(text: &str, fallback_id: &str) -> Option<CalendarEvent> {
                     attendees.push(addr.to_owned());
                 }
             }
+            // The slot an override instance replaces. Any RANGE parameter is
+            // ignored (read as this one instance; docs/interop.md).
+            "RECURRENCE-ID" => {
+                recurrence_id = parse_dt(value.trim(), is_date, tzid).map(|(dt, _)| dt);
+            }
+            "STATUS" => cancelled = value.trim().eq_ignore_ascii_case("CANCELLED"),
             _ => {}
         }
     }
@@ -334,27 +462,31 @@ pub fn from_ics(text: &str, fallback_id: &str) -> Option<CalendarEvent> {
     if summary.trim().is_empty() {
         summary = "(no title)".to_owned();
     }
-    Some(CalendarEvent {
-        id: EventId::new(uid.unwrap_or_else(|| fallback_id.to_owned())),
-        // iCalendar carries no calendar grouping; the caller (CalDAV collection
-        // or RSVP → personal) sets which calendar this lands on.
-        calendar_id: CalendarId::new(String::new()),
-        summary,
-        description: description.filter(|s| !s.is_empty()),
-        location: location.filter(|s| !s.is_empty()),
-        starts_at,
-        ends_at,
-        all_day,
-        recurrence,
-        attendees,
-        exdates,
-        timezone,
-        rdates,
-        // A parsed VEVENT is a master/one-off; RECURRENCE-ID overrides are not
-        // read here (see docs/interop.md — CalDAV override sync is a later slice).
-        recurrence_id: None,
-        reminder_minutes,
-        attendee_status: Vec::new(),
+    Some(ParsedVevent {
+        event: CalendarEvent {
+            id: EventId::new(uid.unwrap_or_else(|| fallback_id.to_owned())),
+            // iCalendar carries no calendar grouping; the caller (CalDAV
+            // collection or RSVP → personal) sets which calendar this lands on.
+            calendar_id: CalendarId::new(String::new()),
+            summary,
+            description: description.filter(|s| !s.is_empty()),
+            location: location.filter(|s| !s.is_empty()),
+            starts_at,
+            ends_at,
+            all_day,
+            recurrence,
+            attendees,
+            exdates,
+            timezone,
+            rdates,
+            // The slot travels beside the event (`ParsedVevent.recurrence_id`),
+            // never on it: callers of [`from_ics`] read a master/one-off.
+            recurrence_id: None,
+            reminder_minutes,
+            attendee_status: Vec::new(),
+        },
+        recurrence_id,
+        cancelled,
     })
 }
 
@@ -1218,5 +1350,104 @@ mod tests {
         let back = from_ics(ics, "fb-id").unwrap();
         assert_eq!(back.id.as_str(), "fb-id");
         assert_eq!(back.summary, "No uid");
+    }
+
+    /// A two-`VEVENT` weekly series as a phone PUTs it after moving one
+    /// occurrence: the master keeps its rule, the override lands at its slot.
+    fn series_ics(override_first: bool) -> String {
+        let master = "BEGIN:VEVENT\r\nUID:ser-1\r\nDTSTAMP:20260101T000000Z\r\n\
+                      DTSTART:20260907T090000Z\r\nDTEND:20260907T093000Z\r\n\
+                      RRULE:FREQ=WEEKLY\r\nSUMMARY:Standup\r\nEND:VEVENT\r\n";
+        let ov = "BEGIN:VEVENT\r\nUID:ser-1\r\nDTSTAMP:20260101T000000Z\r\n\
+                  RECURRENCE-ID:20260914T090000Z\r\n\
+                  DTSTART:20260914T150000Z\r\nDTEND:20260914T153000Z\r\n\
+                  SUMMARY:Standup (moved)\r\nEND:VEVENT\r\n";
+        let (a, b) = if override_first {
+            (ov, master)
+        } else {
+            (master, ov)
+        };
+        format!(
+            "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//S//EN\r\n{a}{b}END:VCALENDAR\r\n"
+        )
+    }
+
+    #[test]
+    fn from_ics_series_reads_master_and_override_in_either_order() {
+        for override_first in [false, true] {
+            let s = from_ics_series(&series_ics(override_first), "fb").unwrap();
+            assert_eq!(s.master.id.as_str(), "ser-1");
+            assert_eq!(s.master.recurrence.as_deref(), Some("FREQ=WEEKLY"));
+            assert_eq!(s.master.summary, "Standup");
+            assert_eq!(s.overrides.len(), 1);
+            let (slot, ov) = &s.overrides[0];
+            assert_eq!(fmt_utc(*slot), "20260914T090000Z");
+            assert_eq!(fmt_utc(ov.starts_at), "20260914T150000Z");
+            assert_eq!(ov.summary, "Standup (moved)");
+        }
+    }
+
+    #[test]
+    fn from_ics_series_cancelled_instance_becomes_exdate() {
+        let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\n\
+                   BEGIN:VEVENT\r\nUID:ser-2\r\nDTSTART:20260907T090000Z\r\n\
+                   DTEND:20260907T093000Z\r\nRRULE:FREQ=WEEKLY\r\nSUMMARY:Standup\r\nEND:VEVENT\r\n\
+                   BEGIN:VEVENT\r\nUID:ser-2\r\nRECURRENCE-ID:20260921T090000Z\r\n\
+                   DTSTART:20260921T090000Z\r\nDTEND:20260921T093000Z\r\n\
+                   STATUS:CANCELLED\r\nSUMMARY:Standup\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+        let s = from_ics_series(ics, "fb").unwrap();
+        assert!(
+            s.overrides.is_empty(),
+            "a cancelled instance is no override"
+        );
+        assert_eq!(s.master.exdates.len(), 1);
+        assert_eq!(fmt_utc(s.master.exdates[0]), "20260921T090000Z");
+    }
+
+    #[test]
+    fn from_ics_series_single_vevent_equals_from_ics() {
+        let ics = "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:one\r\n\
+                   DTSTART:20260901T100000Z\r\nDTEND:20260901T110000Z\r\n\
+                   SUMMARY:One-off\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+        let s = from_ics_series(ics, "fb").unwrap();
+        assert!(s.overrides.is_empty());
+        assert_eq!(Some(s.master), from_ics(ics, "fb"));
+    }
+
+    #[test]
+    fn from_ics_series_ignores_vtimezone_and_dedupes_slots() {
+        // Apple-style: a VTIMEZONE block (whose STANDARD/DAYLIGHT rules carry
+        // their own DTSTART/RRULE lines) precedes the events; a duplicated
+        // override slot keeps the last VEVENT.
+        let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\n\
+                   BEGIN:VTIMEZONE\r\nTZID:Europe/Brussels\r\n\
+                   BEGIN:DAYLIGHT\r\nDTSTART:19810329T020000\r\n\
+                   RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU\r\nTZOFFSETFROM:+0100\r\n\
+                   TZOFFSETTO:+0200\r\nEND:DAYLIGHT\r\n\
+                   BEGIN:STANDARD\r\nDTSTART:19961027T030000\r\n\
+                   RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU\r\nTZOFFSETFROM:+0200\r\n\
+                   TZOFFSETTO:+0100\r\nEND:STANDARD\r\nEND:VTIMEZONE\r\n\
+                   BEGIN:VEVENT\r\nUID:ser-3\r\nDTSTART;TZID=Europe/Brussels:20260907T090000\r\n\
+                   DTEND;TZID=Europe/Brussels:20260907T093000\r\nRRULE:FREQ=WEEKLY\r\n\
+                   SUMMARY:Weekly\r\nEND:VEVENT\r\n\
+                   BEGIN:VEVENT\r\nUID:ser-3\r\nRECURRENCE-ID;TZID=Europe/Brussels:20260914T090000\r\n\
+                   DTSTART;TZID=Europe/Brussels:20260914T100000\r\n\
+                   DTEND;TZID=Europe/Brussels:20260914T103000\r\nSUMMARY:First edit\r\nEND:VEVENT\r\n\
+                   BEGIN:VEVENT\r\nUID:ser-3\r\nRECURRENCE-ID;TZID=Europe/Brussels:20260914T090000\r\n\
+                   DTSTART;TZID=Europe/Brussels:20260914T140000\r\n\
+                   DTEND;TZID=Europe/Brussels:20260914T143000\r\nSUMMARY:Second edit\r\nEND:VEVENT\r\n\
+                   END:VCALENDAR\r\n";
+        let s = from_ics_series(ics, "fb").unwrap();
+        // The VTIMEZONE's rules never bleed into the master.
+        assert_eq!(s.master.summary, "Weekly");
+        assert_eq!(s.master.recurrence.as_deref(), Some("FREQ=WEEKLY"));
+        assert_eq!(s.master.timezone.as_deref(), Some("Europe/Brussels"));
+        // 09:00 Brussels (CEST, UTC+2) → 07:00Z; the duplicate slot keeps the
+        // last edit.
+        assert_eq!(s.overrides.len(), 1);
+        let (slot, ov) = &s.overrides[0];
+        assert_eq!(fmt_utc(*slot), "20260914T070000Z");
+        assert_eq!(ov.summary, "Second edit");
+        assert_eq!(fmt_utc(ov.starts_at), "20260914T120000Z");
     }
 }

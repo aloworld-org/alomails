@@ -252,12 +252,19 @@ async fn propfind(
                     Err(_) => return status(StatusCode::INTERNAL_SERVER_ERROR),
                 };
                 for e in &events {
-                    responses.push_str(&event_propstat(uid, e, false, &[]));
+                    // The ETag covers the override set, so it is loaded even
+                    // without calendar-data (cheap: only recurring series hit
+                    // the query).
+                    let ovs = overrides_for_ics(acc, e).await;
+                    responses.push_str(&event_propstat(uid, e, false, &ovs));
                 }
             }
         }
         Resource::CalObject(_coll, id) => match fetch_event(acc, id).await {
-            Some(e) => responses.push_str(&event_propstat(uid, &e, false, &[])),
+            Some(e) => {
+                let ovs = overrides_for_ics(acc, &e).await;
+                responses.push_str(&event_propstat(uid, &e, false, &ovs));
+            }
             None => return status(StatusCode::NOT_FOUND),
         },
         Resource::NotFound => return status(StatusCode::NOT_FOUND),
@@ -373,7 +380,7 @@ fn event_propstat(
     overrides: &[CalendarEvent],
 ) -> String {
     let href = event_href(uid, e);
-    let etag = event_etag(e);
+    let etag = event_etag(e, overrides);
     let mut props = format!(
         "<d:getetag>{etag}</d:getetag>\
          <d:getcontenttype>text/calendar; charset=utf-8; component=VEVENT</d:getcontenttype>"
@@ -513,7 +520,8 @@ async fn cal_sync_collection(acc: &AccountStore, uid: &str, coll: &str, body: &s
         if let Some(e) = fetch_event(acc, id).await
             && e.calendar_id.as_str() == cal_id
         {
-            responses.push_str(&event_propstat(uid, &e, false, &[]));
+            let ovs = overrides_for_ics(acc, &e).await;
+            responses.push_str(&event_propstat(uid, &e, false, &ovs));
         }
     }
     for id in &changes.destroyed {
@@ -637,7 +645,7 @@ async fn get_object(acc: &AccountStore, resource: &Resource, head: bool) -> Resp
                 serve(
                     head,
                     ical::to_ics_series(&e, &ovs),
-                    &event_etag(&e),
+                    &event_etag(&e, &ovs),
                     "text/calendar; charset=utf-8",
                 )
             }
@@ -727,14 +735,22 @@ async fn put_event_object(
         return status(StatusCode::PRECONDITION_FAILED);
     }
     if let Some(want) = headers.get(header::IF_MATCH).and_then(|v| v.to_str().ok()) {
-        let current = existing.as_ref().map(event_etag);
+        let current = match &existing {
+            Some(e) => Some(event_etag(e, &overrides_for_ics(acc, e).await)),
+            None => None,
+        };
         if current.as_deref() != Some(want.trim()) {
             return status(StatusCode::PRECONDITION_FAILED);
         }
     }
-    let Some(mut event) = ical::from_ics(&String::from_utf8_lossy(body), id) else {
+    // The whole resource is read (RFC 4791 §4.1): the master VEVENT plus any
+    // RECURRENCE-ID override instances a phone-originated per-occurrence edit
+    // carries (RFC 5545 §3.8.4.4); a STATUS:CANCELLED instance has already
+    // been folded into the master's EXDATEs by the parser.
+    let Some(series) = ical::from_ics_series(&String::from_utf8_lossy(body), id) else {
         return status(StatusCode::BAD_REQUEST);
     };
+    let mut event = series.master;
     // The href is authoritative: store under the path id (= iCalendar UID).
     event.id = EventId::new(id.to_owned());
     // The event lands on the collection's calendar (iCalendar carries no
@@ -748,8 +764,32 @@ async fn put_event_object(
     } else {
         CalendarId::new(resolve_collection(uid, coll))
     };
-    match acc.put_event(&EventId::new(id.to_owned()), &event).await {
-        Ok(created) => created_or_updated(created, &event_etag(&event)),
+    // Overrides ride only on a recurring master — on a one-off they would
+    // never be served, so the stored set is cleared instead of fed.
+    let overrides = if event.recurrence.is_some() || !event.rdates.is_empty() {
+        series.overrides
+    } else {
+        Vec::new()
+    };
+    match acc.put_event(&event.id, &event).await {
+        Ok(created) => {
+            // The PUT body is the whole resource: reconcile the stored
+            // override set to what the client sent — an override it no longer
+            // includes is removed (replace_overrides is edit-gated too, but
+            // put_event just proved edit access; an error here is a race).
+            if let Err(err) = acc.replace_overrides(&event.id, &overrides).await {
+                return match err {
+                    alo_store::StoreError::NotFound => {
+                        cal_write_denial(acc, event.calendar_id.as_str()).await
+                    }
+                    _ => status(StatusCode::INTERNAL_SERVER_ERROR),
+                };
+            }
+            // The response ETag must equal what a later GET computes: hash
+            // over the served override set.
+            let ovs = overrides_for_ics(acc, &event).await;
+            created_or_updated(created, &event_etag(&event, &ovs))
+        }
         // The store refuses a calendar the caller can't edit as NotFound. On
         // the wire that is 403 when the collection is visible (a read-only
         // grant — the denial is a permission, not existence) and 404 when it
@@ -807,8 +847,12 @@ async fn delete_object(acc: &AccountStore, resource: &Resource, headers: &Header
         Resource::CalObject(_coll, id) => {
             if let Some(want) = want {
                 match fetch_event(acc, id).await {
-                    Some(e) if event_etag(&e) == want.trim() => {}
-                    Some(_) => return status(StatusCode::PRECONDITION_FAILED),
+                    Some(e) => {
+                        let ovs = overrides_for_ics(acc, &e).await;
+                        if event_etag(&e, &ovs) != want.trim() {
+                            return status(StatusCode::PRECONDITION_FAILED);
+                        }
+                    }
                     None => return status(StatusCode::NOT_FOUND),
                 }
             }
@@ -907,9 +951,12 @@ async fn cal_collection_tag(acc: &AccountStore) -> String {
     format!("{CAL_SYNC_PREFIX}{modseq}")
 }
 
-/// A per-event ETag from a hash of the event's fields — deliberately NOT the
-/// serialized iCalendar, whose `DTSTAMP` changes each render and would churn.
-fn event_etag(e: &CalendarEvent) -> String {
+/// A per-event ETag from a hash of the event's fields and its per-occurrence
+/// override set — deliberately NOT the serialized iCalendar, whose `DTSTAMP`
+/// changes each render and would churn. The overrides are part of the served
+/// body, so an edit touching only one instance must move the tag — otherwise
+/// a second device would keep serving its cached copy of the series.
+fn event_etag(e: &CalendarEvent, overrides: &[CalendarEvent]) -> String {
     let mut hasher = DefaultHasher::new();
     e.summary.hash(&mut hasher);
     e.description.hash(&mut hasher);
@@ -923,6 +970,19 @@ fn event_etag(e: &CalendarEvent) -> String {
     // clients re-sync it.
     for ex in &e.exdates {
         ex.unix_timestamp().hash(&mut hasher);
+    }
+    // Overrides arrive slot-sorted (`override_occurrences`), so the hash is
+    // stable across reads.
+    for ov in overrides {
+        ov.recurrence_id
+            .map(|t| t.unix_timestamp())
+            .hash(&mut hasher);
+        ov.summary.hash(&mut hasher);
+        ov.description.hash(&mut hasher);
+        ov.location.hash(&mut hasher);
+        ov.starts_at.unix_timestamp().hash(&mut hasher);
+        ov.ends_at.unix_timestamp().hash(&mut hasher);
+        ov.all_day.hash(&mut hasher);
     }
     format!("\"{:016x}\"", hasher.finish())
 }

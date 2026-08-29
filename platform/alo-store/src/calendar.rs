@@ -552,6 +552,83 @@ impl AccountStore {
         Ok(())
     }
 
+    /// Reconciles the stored per-occurrence overrides of a series to exactly
+    /// the given set — a CalDAV PUT carries the whole resource (RFC 4791
+    /// §4.1), so each `(slot, override)` is upserted and any stored override
+    /// at a slot the client no longer sends is removed. An empty set clears
+    /// them all (and is a cheap no-op when nothing was stored). The caller
+    /// must be able to edit the series' calendar.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the series is not visible/editable to the
+    /// caller; [`StoreError::Db`] on failure.
+    pub async fn replace_overrides(
+        &self,
+        series: &EventId,
+        overrides: &[(OffsetDateTime, OccurrenceOverride)],
+    ) -> Result<()> {
+        // Resolve through the account door (view access) and confirm edit
+        // access to the series' calendar — the override_occurrence gate.
+        let Some(master) = self.event(series).await? else {
+            return Err(StoreError::NotFound);
+        };
+        if !self.can_edit_calendar(&master.calendar_id).await? {
+            return Err(StoreError::NotFound);
+        }
+        let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
+        let kept: Vec<OffsetDateTime> = overrides.iter().map(|(slot, _)| *slot).collect();
+        let removed = sqlx::query(
+            "DELETE FROM calendar_event_overrides \
+             WHERE tenant_id = $1 AND series_id = $2 AND NOT (recurrence_id = ANY($3))",
+        )
+        .bind(self.tenant.as_str())
+        .bind(series.as_str())
+        .bind(&kept)
+        .execute(&mut *tx)
+        .await
+        .map_err(StoreError::Db)?;
+        if overrides.is_empty() && removed.rows_affected() == 0 {
+            // Nothing stored, nothing sent: no state change to record (the
+            // dropped transaction rolls back the no-op delete).
+            return Ok(());
+        }
+        for (slot, ov) in overrides {
+            sqlx::query(
+                "INSERT INTO calendar_event_overrides \
+                     (tenant_id, user_id, series_id, recurrence_id, summary, description, \
+                      location, starts_at, ends_at, all_day) \
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) \
+                 ON CONFLICT (tenant_id, series_id, recurrence_id) DO UPDATE SET \
+                     summary = EXCLUDED.summary, description = EXCLUDED.description, \
+                     location = EXCLUDED.location, starts_at = EXCLUDED.starts_at, \
+                     ends_at = EXCLUDED.ends_at, all_day = EXCLUDED.all_day, updated_at = now()",
+            )
+            .bind(self.tenant.as_str())
+            .bind(self.user.as_str())
+            .bind(series.as_str())
+            .bind(slot)
+            .bind(&ov.summary)
+            .bind(&ov.description)
+            .bind(&ov.location)
+            .bind(ov.starts_at)
+            .bind(ov.ends_at)
+            .bind(ov.all_day)
+            .execute(&mut *tx)
+            .await
+            .map_err(StoreError::Db)?;
+        }
+        // The series' sync state advances so CalDAV/JMAP clients re-read it.
+        changes::bump_and_record(
+            &mut tx,
+            self.tenant.as_str(),
+            self.user.as_str(),
+            &[Change::updated(TYPE_EVENT, series.as_str())],
+        )
+        .await?;
+        tx.commit().await.map_err(StoreError::Db)?;
+        Ok(())
+    }
+
     /// Records a guest's RSVP status on the organizer's copy of an event (from an
     /// inbound iMIP `REPLY`): merges `email -> partstat` into the event's status
     /// map, leaving other guests untouched. The caller must be able to edit the
@@ -612,6 +689,10 @@ impl AccountStore {
         let Some(ovs) = map.get(series.as_str()) else {
             return Ok(Vec::new());
         };
+        // Slot order, so serialization (and the ETag hashed over it) is
+        // deterministic across reads.
+        let mut ovs: Vec<_> = ovs.clone();
+        ovs.sort_by_key(|(slot, _)| *slot);
         Ok(ovs
             .iter()
             .map(|(slot, ov)| CalendarEvent {

@@ -834,3 +834,95 @@ async fn recurring_series_syncs_zoned_and_time_range_expands() {
         "a series spent before the window is narrowed out: {xml}"
     );
 }
+
+/// AS.1: a phone-originated per-occurrence edit — a PUT whose body carries the
+/// master plus `RECURRENCE-ID` instances (RFC 5545 §3.8.4.4, RFC 4791 §4.1) —
+/// is captured: the override is stored and served back, a `STATUS:CANCELLED`
+/// instance becomes an `EXDATE`, an override the client stops sending is
+/// removed, and an instance-only edit moves the ETag (so other devices
+/// re-fetch).
+#[tokio::test]
+async fn put_captures_phone_originated_per_occurrence_edits() {
+    let h = harness("caldav-ovr").await;
+    let uid = &h.account_id;
+    let cal = format!("/dav/calendars/{uid}/default/");
+    let e = format!("series-ovr-{uid}");
+    let path = format!("{cal}{e}.ics");
+
+    let master = format!(
+        "BEGIN:VEVENT\r\nUID:{e}\r\nDTSTAMP:20260101T000000Z\r\n\
+         DTSTART:20260907T090000Z\r\nDTEND:20260907T093000Z\r\n\
+         RRULE:FREQ=WEEKLY\r\nSUMMARY:Standup\r\nEND:VEVENT\r\n"
+    );
+    let moved = format!(
+        "BEGIN:VEVENT\r\nUID:{e}\r\nDTSTAMP:20260101T000000Z\r\n\
+         RECURRENCE-ID:20260914T090000Z\r\n\
+         DTSTART:20260914T150000Z\r\nDTEND:20260914T153000Z\r\n\
+         SUMMARY:Standup (moved)\r\nEND:VEVENT\r\n"
+    );
+    let doc = |events: &str| {
+        format!(
+            "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//caldav//EN\r\n{events}END:VCALENDAR\r\n"
+        )
+    };
+
+    // PUT master + moved instance, as Apple Calendar / DAVx5 write it.
+    let (status, headers, _) = dav(&h, "PUT", &path, None, &doc(&format!("{master}{moved}"))).await;
+    assert_eq!(status, StatusCode::CREATED);
+    let etag1 = headers.get("etag").unwrap().to_str().unwrap().to_owned();
+
+    // GET serves the master plus the override, moved.
+    let (status, headers, body) = dav(&h, "GET", &path, None, "").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        headers.get("etag").unwrap().to_str().unwrap(),
+        etag1,
+        "PUT and GET agree on the tag"
+    );
+    assert_eq!(body.matches("BEGIN:VEVENT").count(), 2, "{body}");
+    assert!(body.contains("RECURRENCE-ID:20260914T090000Z"), "{body}");
+    assert!(body.contains("DTSTART:20260914T150000Z"), "{body}");
+    assert!(body.contains("SUMMARY:Standup (moved)"), "{body}");
+
+    // Re-editing only the instance must move the ETag — a second device
+    // decides whether to re-fetch by comparing tags.
+    let moved_again = moved
+        .replace("20260914T150000Z", "20260914T160000Z")
+        .replace("20260914T153000Z", "20260914T163000Z");
+    let (status, headers, _) = dav(
+        &h,
+        "PUT",
+        &path,
+        None,
+        &doc(&format!("{master}{moved_again}")),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    let etag2 = headers.get("etag").unwrap().to_str().unwrap().to_owned();
+    assert_ne!(etag2, etag1, "an instance-only edit moves the tag");
+
+    // A cancelled instance becomes an EXDATE, and the override the client no
+    // longer sends is removed — the PUT body is the whole resource.
+    let cancelled = format!(
+        "BEGIN:VEVENT\r\nUID:{e}\r\nDTSTAMP:20260101T000000Z\r\n\
+         RECURRENCE-ID:20260921T090000Z\r\nDTSTART:20260921T090000Z\r\n\
+         DTEND:20260921T093000Z\r\nSTATUS:CANCELLED\r\nSUMMARY:Standup\r\nEND:VEVENT\r\n"
+    );
+    let (status, _h2, _) = dav(
+        &h,
+        "PUT",
+        &path,
+        None,
+        &doc(&format!("{master}{cancelled}")),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    let (_s, _h3, body) = dav(&h, "GET", &path, None, "").await;
+    assert_eq!(
+        body.matches("BEGIN:VEVENT").count(),
+        1,
+        "the dropped override is gone: {body}"
+    );
+    assert!(body.contains("EXDATE:20260921T090000Z"), "{body}");
+    assert!(!body.contains("RECURRENCE-ID"), "{body}");
+}

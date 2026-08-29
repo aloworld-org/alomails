@@ -441,10 +441,15 @@ async fn calendar_sharing_follows_the_grant_and_never_crosses_tenants() {
     assert!(!b.can_edit_calendar(&cal).await.unwrap());
     assert_not_found(b.delete_event(&eid).await);
     assert_not_found(b.create_event(&sample_event(&cal, "sneaky")).await);
-    // A viewer cannot override one occurrence either (same edit gate).
+    // A viewer cannot override one occurrence either (same edit gate), nor
+    // reconcile the override set the way a CalDAV PUT does.
     let slot = OffsetDateTime::from_unix_timestamp(1_800_000_000).unwrap();
     assert_not_found(
         b.override_occurrence(&eid, slot, &sample_override(slot))
+            .await,
+    );
+    assert_not_found(
+        b.replace_overrides(&eid, &[(slot, sample_override(slot))])
             .await,
     );
     assert!(a.event(&eid).await.unwrap().is_some());
@@ -466,10 +471,19 @@ async fn calendar_sharing_follows_the_grant_and_never_crosses_tenants() {
         a.event(&eid).await.unwrap().unwrap().summary,
         "standup (edited by B)"
     );
-    // As an editor, B may now override a single occurrence.
+    // As an editor, B may now override a single occurrence — and reconcile
+    // the set (the CalDAV PUT path): the reconcile below replaces B's
+    // override with one at a new slot, dropping the old one.
     b.override_occurrence(&eid, slot, &sample_override(slot))
         .await
         .unwrap();
+    let slot2 = slot + Duration::days(7);
+    b.replace_overrides(&eid, &[(slot2, sample_override(slot2))])
+        .await
+        .unwrap();
+    let ovs = a.override_occurrences(&eid).await.unwrap();
+    assert_eq!(ovs.len(), 1, "the dropped override is gone");
+    assert_eq!(ovs[0].recurrence_id, Some(slot2));
 
     // Group sharing reaches every member: C, via the group, sees a second calendar.
     let group = ts1.create_group("eng").await.unwrap();
@@ -497,6 +511,10 @@ async fn calendar_sharing_follows_the_grant_and_never_crosses_tenants() {
     assert_not_found(d.grant_calendar(&cal, "user", "anyone", "editor").await);
     assert_not_found(
         d.override_occurrence(&eid, slot, &sample_override(slot))
+            .await,
+    );
+    assert_not_found(
+        d.replace_overrides(&eid, &[(slot, sample_override(slot))])
             .await,
     );
 }

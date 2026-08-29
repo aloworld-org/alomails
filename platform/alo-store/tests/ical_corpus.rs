@@ -200,6 +200,114 @@ async fn corpus_round_trips_byte_stable_through_the_store() {
     }
 }
 
+/// A multi-`VEVENT` fixture: parse the whole series (`from_ics_series`),
+/// write it through the real store (`put_event` + `replace_overrides` — the
+/// CalDAV PUT path), read back master and overrides, and serialize at the
+/// pinned instant.
+async fn series_through_store(acc: &AccountStore, ics: &str) -> String {
+    let mut series = ical::from_ics_series(ics, "corpus-fallback").expect("fixture parses");
+    series.master.calendar_id = acc
+        .ensure_personal_calendar()
+        .await
+        .expect("personal calendar");
+    let id = EventId::new(series.master.id.as_str().to_owned());
+    acc.put_event(&id, &series.master)
+        .await
+        .expect("PUT stores");
+    acc.replace_overrides(&id, &series.overrides)
+        .await
+        .expect("overrides reconcile");
+    let stored = acc
+        .event(&id)
+        .await
+        .expect("read back")
+        .expect("stored event exists");
+    let ovs = acc.override_occurrences(&id).await.expect("overrides read");
+    ical::to_ics_series_at(&stored, &ovs, t0())
+}
+
+/// Phone-originated per-occurrence edits (AS.1): what Apple Calendar and
+/// DAVx⁵ actually PUT — a `VTIMEZONE` block plus master and `RECURRENCE-ID`
+/// instances — parses, stores, and serves back byte-stable; a
+/// `STATUS:CANCELLED` instance collapses into an `EXDATE` on the master.
+#[tokio::test]
+async fn client_series_with_overrides_round_trips_byte_stable() {
+    let store = test_store().await;
+    let (acc, _user, _inbox) = fresh_account(&store, "ical-series").await;
+
+    let series_fixtures = [
+        Fixture {
+            // Apple-style: VTIMEZONE shipped (ignored — the IANA name is the
+            // definition), zoned master + one moved instance.
+            name: "Apple two-VEVENT series with a moved occurrence",
+            input: "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Apple Inc.//iOS 18.0//EN\r\n\
+                    BEGIN:VTIMEZONE\r\nTZID:Europe/Brussels\r\n\
+                    BEGIN:DAYLIGHT\r\nTZOFFSETFROM:+0100\r\n\
+                    RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU\r\nDTSTART:19810329T020000\r\n\
+                    TZNAME:CEST\r\nTZOFFSETTO:+0200\r\nEND:DAYLIGHT\r\n\
+                    BEGIN:STANDARD\r\nTZOFFSETFROM:+0200\r\n\
+                    RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU\r\nDTSTART:19961027T030000\r\n\
+                    TZNAME:CET\r\nTZOFFSETTO:+0100\r\nEND:STANDARD\r\nEND:VTIMEZONE\r\n\
+                    BEGIN:VEVENT\r\nUID:corpus-series-ov\r\nDTSTAMP:20260810T120000Z\r\n\
+                    DTSTART;TZID=Europe/Brussels:20260907T090000\r\n\
+                    DTEND;TZID=Europe/Brussels:20260907T093000\r\n\
+                    RRULE:FREQ=WEEKLY\r\nSUMMARY:Standup\r\nEND:VEVENT\r\n\
+                    BEGIN:VEVENT\r\nUID:corpus-series-ov\r\nDTSTAMP:20260810T120000Z\r\n\
+                    RECURRENCE-ID;TZID=Europe/Brussels:20260914T090000\r\n\
+                    DTSTART;TZID=Europe/Brussels:20260914T150000\r\n\
+                    DTEND;TZID=Europe/Brussels:20260914T153000\r\n\
+                    SUMMARY:Standup (moved)\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n",
+            canonical: "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//alo//calendar//EN\r\n\
+                    BEGIN:VEVENT\r\nUID:corpus-series-ov\r\nDTSTAMP:20260102T030405Z\r\n\
+                    DTSTART;TZID=Europe/Brussels:20260907T090000\r\n\
+                    DTEND;TZID=Europe/Brussels:20260907T093000\r\n\
+                    RRULE:FREQ=WEEKLY\r\nSUMMARY:Standup\r\nEND:VEVENT\r\n\
+                    BEGIN:VEVENT\r\nUID:corpus-series-ov\r\nDTSTAMP:20260102T030405Z\r\n\
+                    DTSTART;TZID=Europe/Brussels:20260914T150000\r\n\
+                    DTEND;TZID=Europe/Brussels:20260914T153000\r\n\
+                    RECURRENCE-ID;TZID=Europe/Brussels:20260914T090000\r\n\
+                    SUMMARY:Standup (moved)\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n",
+        },
+        Fixture {
+            // DAVx⁵-style: a cancelled instance (STATUS:CANCELLED at its
+            // RECURRENCE-ID) collapses into an EXDATE on the master.
+            name: "DAVx5 cancelled instance becomes an EXDATE",
+            input: "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:+//IDN bitfire.at//DAVx5\r\n\
+                    BEGIN:VEVENT\r\nUID:corpus-series-cancel\r\nDTSTAMP:20260810T120000Z\r\n\
+                    DTSTART:20260907T090000Z\r\nDTEND:20260907T093000Z\r\n\
+                    RRULE:FREQ=WEEKLY\r\nSUMMARY:Standup\r\nEND:VEVENT\r\n\
+                    BEGIN:VEVENT\r\nUID:corpus-series-cancel\r\nDTSTAMP:20260810T120000Z\r\n\
+                    RECURRENCE-ID:20260921T090000Z\r\nDTSTART:20260921T090000Z\r\n\
+                    DTEND:20260921T093000Z\r\nSTATUS:CANCELLED\r\nSUMMARY:Standup\r\n\
+                    END:VEVENT\r\nEND:VCALENDAR\r\n",
+            canonical: "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//alo//calendar//EN\r\n\
+                    BEGIN:VEVENT\r\nUID:corpus-series-cancel\r\nDTSTAMP:20260102T030405Z\r\n\
+                    DTSTART:20260907T090000Z\r\nDTEND:20260907T093000Z\r\n\
+                    RRULE:FREQ=WEEKLY\r\nEXDATE:20260921T090000Z\r\n\
+                    SUMMARY:Standup\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n",
+        },
+    ];
+    for f in &series_fixtures {
+        let first = series_through_store(&acc, f.input).await;
+        assert_eq!(first, f.canonical, "canonical serialization: {}", f.name);
+        let second = series_through_store(&acc, &first).await;
+        assert_eq!(second, first, "byte-stable across cycles: {}", f.name);
+    }
+
+    // A re-PUT that no longer carries the override removes it (RFC 4791 §4.1:
+    // the PUT body is the whole resource).
+    let trimmed = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Apple Inc.//iOS 18.0//EN\r\n\
+                   BEGIN:VEVENT\r\nUID:corpus-series-ov\r\nDTSTAMP:20260810T120000Z\r\n\
+                   DTSTART;TZID=Europe/Brussels:20260907T090000\r\n\
+                   DTEND;TZID=Europe/Brussels:20260907T093000\r\n\
+                   RRULE:FREQ=WEEKLY\r\nSUMMARY:Standup\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+    let served = series_through_store(&acc, trimmed).await;
+    assert!(
+        !served.contains("RECURRENCE-ID"),
+        "the dropped override is gone: {served}"
+    );
+}
+
 #[tokio::test]
 async fn folded_lines_unfold_and_refold_stably() {
     // A description far past the 75-octet fold limit, with a multi-byte char
