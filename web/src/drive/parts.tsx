@@ -11,7 +11,34 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import type { RecordOrigin } from "../agents";
 import type { DriveNodeDto } from "../jmap/types";
+
+/** Where a Drive node came from, in the provenance shape the record agent
+ *  panel renders (A8.4).
+ *
+ *  A node carries the source it was saved from — the email an attachment was
+ *  filed out of, the conversation a shared file was kept from — which is the
+ *  origin whenever it is there. `createdBy` is deliberately not a fallback:
+ *  it holds the account id, an opaque string a person cannot read, and a
+ *  panel that printed it would be citing a source nobody can follow. When the
+ *  read side adopts the stored `record_origins` join, that field arrives with
+ *  a name and this function passes it through instead. */
+export function driveNodeOrigin(
+  node: Pick<DriveNodeDto, "sourceKind" | "sourceId">,
+): RecordOrigin | null {
+  if (node.sourceId === null) return null;
+  switch (node.sourceKind) {
+    case "chat":
+      return { kind: "thread", id: node.sourceId, label: null };
+    case "email":
+      return { kind: "message", id: node.sourceId, label: null };
+    case "event":
+      return { kind: "event", id: node.sourceId, label: null };
+    default:
+      return null;
+  }
+}
 
 /** Preserve a useful backend reason for Drive recovery messages. */
 export function driveErrorReason(error: unknown): string | null {

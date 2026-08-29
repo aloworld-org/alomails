@@ -284,14 +284,17 @@ export function RecordAgentPanel({
 
       {agent !== null && agent !== undefined && (
         <form
-          className="flex items-center gap-2"
+          // Wraps rather than squeezing: the panel is 300px wide in a day
+          // panel and full width in a drawer, and a one-line ask box clipped
+          // mid-placeholder is not a field anybody trusts.
+          className="flex flex-wrap items-center gap-2"
           onSubmit={(event) => {
             event.preventDefault();
             void ask();
           }}
         >
           <Input
-            className="min-w-0 flex-1"
+            className="min-w-[12rem] flex-1"
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
             placeholder={strings.recordAgentAskPlaceholder(agent.handle)}

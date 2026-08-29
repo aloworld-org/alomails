@@ -5745,6 +5745,8 @@ export const nl: Partial<Catalog> = {
   driveAddMemberLabel: "E-mailadres",
   driveAddMemberPlaceholder: "Voeg iemand toe via e-mail",
   driveColModified: "Gewijzigd",
+  driveDetailsTitle: "Details",
+  driveDetailsShow: (name: string): string => `Details van ${name}`,
   driveColName: "Naam",
   driveColSize: "Grootte",
   driveCopy: "Een kopie maken",
@@ -5959,6 +5961,39 @@ export const nl: Partial<Catalog> = {
     `Stel een brief op voor “${person}” vanuit een sjabloon.`,
   recordAgentOriginImport: (format: string): string =>
     `Geïmporteerd uit een ${format}-bestand.`,
+  recordAgentPanelToggle: "Zijn agent",
+  recordAgentFocusRecord: (record: string): string =>
+    `De agent van “${record}”`,
+  recordAgentVerbRenameFile: "Hernoemen",
+  recordAgentDraftRenameFile: (file: string): string =>
+    `Hernoem “${file}” naar `,
+  recordAgentVerbMoveFile: "Verplaatsen",
+  recordAgentDraftMoveFile: (file: string): string =>
+    `Verplaats “${file}” naar de map `,
+  recordAgentVerbListFolder: "Toon wat erin zit",
+  recordAgentDraftListFolder: (folder: string): string =>
+    `Wat zit er in de map “${folder}”?`,
+  recordAgentVerbDraftSection: "Een sectie opstellen",
+  recordAgentDraftDraftSection: (document: string): string =>
+    `Stel een sectie op voor “${document}” over `,
+  recordAgentVerbRewriteDoc: "Een passage herschrijven",
+  recordAgentDraftRewriteDoc: (document: string): string =>
+    `Herschrijf in “${document}” de passage over `,
+  recordAgentVerbWriteFormula: "Een formule schrijven",
+  recordAgentDraftWriteFormula: (sheet: string): string =>
+    `Schrijf in “${sheet}” een formule die `,
+  recordAgentVerbTidyColumn: "Een kolom opschonen",
+  recordAgentDraftTidyColumn: (sheet: string): string =>
+    `Schoon in “${sheet}” kolom `,
+  recordAgentVerbMeetingPrep: "Voorbereiden",
+  recordAgentDraftMeetingPrep: (meeting: string): string =>
+    `Wat heb ik nodig voor “${meeting}”?`,
+  recordAgentVerbRescheduleEvent: "Verzetten",
+  recordAgentDraftRescheduleEvent: (meeting: string): string =>
+    `Verzet “${meeting}” naar `,
+  recordAgentVerbCancelEvent: "Annuleren",
+  recordAgentDraftCancelEvent: (meeting: string): string =>
+    `Annuleer “${meeting}”.`,
   chatAgentTag: "agent",
   chatAgentsAvailable: "Beschikbaar om toe te voegen",
   chatAgentsHere: "Agents in dit gesprek",

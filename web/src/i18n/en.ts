@@ -1570,6 +1570,8 @@ export const en = {
   driveColName: "Name",
   driveColSize: "Size",
   driveColModified: "Modified",
+  driveDetailsTitle: "Details",
+  driveDetailsShow: (name: string): string => `Details for ${name}`,
   driveOpen: "Open",
   driveDownload: "Download",
   driveRename: "Rename",
@@ -2260,6 +2262,39 @@ export const en = {
     `Draft a letter for “${person}” from a template.`,
   recordAgentOriginImport: (format: string): string =>
     `Imported from a ${format} file.`,
+  recordAgentPanelToggle: "Its agent",
+  recordAgentFocusRecord: (record: string): string =>
+    `The agent for “${record}”`,
+  recordAgentVerbRenameFile: "Rename it",
+  recordAgentDraftRenameFile: (file: string): string =>
+    `Rename “${file}” to `,
+  recordAgentVerbMoveFile: "Move it",
+  recordAgentDraftMoveFile: (file: string): string =>
+    `Move “${file}” into the folder `,
+  recordAgentVerbListFolder: "List what’s in it",
+  recordAgentDraftListFolder: (folder: string): string =>
+    `What’s in the “${folder}” folder?`,
+  recordAgentVerbDraftSection: "Draft a section",
+  recordAgentDraftDraftSection: (document: string): string =>
+    `Draft a section for “${document}” about `,
+  recordAgentVerbRewriteDoc: "Rewrite a passage",
+  recordAgentDraftRewriteDoc: (document: string): string =>
+    `In “${document}”, rewrite the passage about `,
+  recordAgentVerbWriteFormula: "Write a formula",
+  recordAgentDraftWriteFormula: (sheet: string): string =>
+    `In “${sheet}”, write a formula that `,
+  recordAgentVerbTidyColumn: "Tidy a column",
+  recordAgentDraftTidyColumn: (sheet: string): string =>
+    `In “${sheet}”, tidy column `,
+  recordAgentVerbMeetingPrep: "Prepare for it",
+  recordAgentDraftMeetingPrep: (meeting: string): string =>
+    `What do I need for “${meeting}”?`,
+  recordAgentVerbRescheduleEvent: "Move it",
+  recordAgentDraftRescheduleEvent: (meeting: string): string =>
+    `Move “${meeting}” to `,
+  recordAgentVerbCancelEvent: "Cancel it",
+  recordAgentDraftCancelEvent: (meeting: string): string =>
+    `Cancel “${meeting}”.`,
   chatSearchPlaceholder: "Search messages, people, channels…",
   chatSearchClear: "Clear search",
   chatSearchNothing: "Nothing matched.",

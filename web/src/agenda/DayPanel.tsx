@@ -1,6 +1,15 @@
 // The right-hand day panel: the selected day's schedule (a timeline of its
 // events) and what's coming up after it. Pure presentation over the events the
 // module already loaded — clicking an entry opens it in the event editor.
+//
+// One meeting at a time can also be put in focus here (A8.4), which shows its
+// agent under the list: what @agenda can do with that meeting, and a question
+// about it answered in place. Opening the entry still opens the editor; the
+// focus button beside it is the second, additive way in.
+import { useState } from "react";
+import { Bot } from "lucide-react";
+
+import { RecordAgentPanel } from "../agents";
 import { getLocale, strings } from "../i18n";
 import type { CalendarEvent } from "../jmap";
 import { awayNames, localDayKey, type AbsentColleague } from "./absences";
@@ -36,6 +45,10 @@ export function DayPanel({
   onEventClick,
 }: Props) {
   const locale = getLocale();
+  // The meeting in focus, by the row's own key: one series can appear twice in
+  // the same panel (today's sitting and next week's), and they are different
+  // records to ask about.
+  const [focused, setFocused] = useState<{ key: string; event: CalendarEvent } | null>(null);
   const start = startOfDay(day);
   const end = addDays(start, 1);
   const away = absences.get(localDayKey(day)) ?? [];
@@ -67,6 +80,44 @@ export function DayPanel({
     }).format(d);
   };
 
+  /** The focus toggle beside an entry, and — when it is the one in focus —
+   *  that meeting's agent under the list it was picked from. */
+  function focusButton(key: string, event: CalendarEvent) {
+    const on = focused?.key === key;
+    return (
+      <button
+        type="button"
+        className={`flex w-9 shrink-0 items-center justify-center rounded-lg border-0 ${
+          on ? "bg-accent-soft text-accent" : "bg-transparent text-tertiary hover:bg-raised hover:text-primary"
+        }`}
+        aria-pressed={on}
+        aria-label={strings.recordAgentFocusRecord(titleOf(event))}
+        title={strings.recordAgentPanelToggle}
+        onClick={() => setFocused(on ? null : { key, event })}
+      >
+        <Bot size={15} />
+      </button>
+    );
+  }
+
+  /** The agent of the meeting in focus, when it was picked from `keys`. */
+  function agentFor(keys: readonly string[]) {
+    if (focused === null || !keys.includes(focused.key)) return null;
+    return (
+      <RecordAgentPanel
+        product="agenda"
+        recordKind="event"
+        recordId={focused.event.id}
+        recordLabel={titleOf(focused.event)}
+        // A calendar event carries no source of its own: nothing in
+        // `/calendar/events` says which mail, room or person it grew out of,
+        // so the panel says it does not know rather than inventing one. It
+        // gains a sentence the day the read joins `record_origins` (A4.5).
+        origin={null}
+      />
+    );
+  }
+
   return (
     <aside className={styles.dayPanel}>
       <div className={styles.dayPanelHead}>
@@ -91,10 +142,10 @@ export function DayPanel({
         ) : (
           <ul className={styles.panelList}>
             {dayEvents.map((e, i) => (
-              <li key={`${e.id}-${i}`}>
+              <li key={`${e.id}-${i}`} className="flex items-stretch gap-1">
                 <button
                   type="button"
-                  className={styles.evItem}
+                  className={`${styles.evItem} min-w-0 flex-1`}
                   onClick={() => onEventClick(e)}
                 >
                   <span
@@ -114,10 +165,12 @@ export function DayPanel({
                     )}
                   </span>
                 </button>
+                {focusButton(`${e.id}-${i}`, e)}
               </li>
             ))}
           </ul>
         )}
+        {agentFor(dayEvents.map((e, i) => `${e.id}-${i}`))}
       </section>
 
       <section className={styles.panelSection}>
@@ -132,10 +185,10 @@ export function DayPanel({
         ) : (
           <ul className={styles.panelList}>
             {upcoming.map((e, i) => (
-              <li key={`${e.id}-up-${i}`}>
+              <li key={`${e.id}-up-${i}`} className="flex items-stretch gap-1">
                 <button
                   type="button"
-                  className={styles.evItem}
+                  className={`${styles.evItem} min-w-0 flex-1`}
                   onClick={() => onEventClick(e)}
                 >
                   <span
@@ -156,10 +209,12 @@ export function DayPanel({
                     )}
                   </span>
                 </button>
+                {focusButton(`${e.id}-up-${i}`, e)}
               </li>
             ))}
           </ul>
         )}
+        {agentFor(upcoming.map((e, i) => `${e.id}-up-${i}`))}
       </section>
     </aside>
   );

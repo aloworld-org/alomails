@@ -77,6 +77,70 @@ export const RECORD_VERBS: Readonly<Record<string, readonly RecordVerb[]>> = {
       draft: (task) => strings.recordAgentDraftReassignTask(task),
     },
   ],
+  // A Drive node is a file, a document, a sheet or a folder, and the verbs
+  // divide the same way: the file verbs take a file (`file_rename` and
+  // `file_move` both name one), while a folder is something to look inside.
+  drive: [
+    {
+      tool: "file_rename",
+      label: () => strings.recordAgentVerbRenameFile,
+      draft: (file) => strings.recordAgentDraftRenameFile(file),
+      kinds: ["file", "doc", "sheet"],
+    },
+    {
+      tool: "file_move",
+      label: () => strings.recordAgentVerbMoveFile,
+      draft: (file) => strings.recordAgentDraftMoveFile(file),
+      kinds: ["file", "doc", "sheet"],
+    },
+    {
+      tool: "list_folder",
+      label: () => strings.recordAgentVerbListFolder,
+      draft: (folder) => strings.recordAgentDraftListFolder(folder),
+      kinds: ["folder"],
+    },
+  ],
+  docs: [
+    {
+      tool: "doc_draft_section",
+      label: () => strings.recordAgentVerbDraftSection,
+      draft: (document) => strings.recordAgentDraftDraftSection(document),
+    },
+    {
+      tool: "doc_rewrite",
+      label: () => strings.recordAgentVerbRewriteDoc,
+      draft: (document) => strings.recordAgentDraftRewriteDoc(document),
+    },
+  ],
+  sheets: [
+    {
+      tool: "sheet_write_formula",
+      label: () => strings.recordAgentVerbWriteFormula,
+      draft: (sheet) => strings.recordAgentDraftWriteFormula(sheet),
+    },
+    {
+      tool: "sheet_clean_column",
+      label: () => strings.recordAgentVerbTidyColumn,
+      draft: (sheet) => strings.recordAgentDraftTidyColumn(sheet),
+    },
+  ],
+  agenda: [
+    {
+      tool: "meeting_prep",
+      label: () => strings.recordAgentVerbMeetingPrep,
+      draft: (meeting) => strings.recordAgentDraftMeetingPrep(meeting),
+    },
+    {
+      tool: "reschedule_event",
+      label: () => strings.recordAgentVerbRescheduleEvent,
+      draft: (meeting) => strings.recordAgentDraftRescheduleEvent(meeting),
+    },
+    {
+      tool: "cancel_event",
+      label: () => strings.recordAgentVerbCancelEvent,
+      draft: (meeting) => strings.recordAgentDraftCancelEvent(meeting),
+    },
+  ],
   crm: [
     {
       tool: "move_deal_stage",

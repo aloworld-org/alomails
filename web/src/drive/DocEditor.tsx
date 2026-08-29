@@ -14,7 +14,7 @@ import {
   type CSSProperties,
   type SyntheticEvent,
 } from "react";
-import { AlignCenter, AlignLeft, AlignRight, Bold, Code2, FileText, Highlighter, ImagePlus, IndentDecrease, IndentIncrease, Italic, LayoutTemplate, Link2, List, ListChecks, ListOrdered, MessageSquarePlus, Minus, Plus, Printer, Redo2, Search, Sigma, Sparkles, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
+import { AlignCenter, AlignLeft, AlignRight, Bold, Bot, Code2, FileText, Highlighter, ImagePlus, IndentDecrease, IndentIncrease, Italic, LayoutTemplate, Link2, List, ListChecks, ListOrdered, MessageSquarePlus, Minus, Plus, Printer, Redo2, Search, Sigma, Sparkles, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
 import {
   useCreateBlockNote,
   SuggestionMenuController,
@@ -25,6 +25,7 @@ import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
 
+import { RecordAgentPanel, type RecordOrigin } from "../agents";
 import { strings } from "../i18n";
 import { useJmapClient } from "../jmap";
 import { ColorPicker, Spinner } from "../ds";
@@ -85,10 +86,15 @@ function documentSettings(blocks: unknown[]): Record<string, unknown> | undefine
 export function DocEditor({
   nodeId,
   name,
+  origin = null,
   onClose,
 }: {
   nodeId: string;
   name: string;
+  /** Where this document came from, as Drive carries it; `null` when it does
+   *  not say. Passed in rather than read again — the file list already had
+   *  the node (A8.4). */
+  origin?: RecordOrigin | null;
   onClose: () => void;
 }) {
   const client = useJmapClient();
@@ -102,6 +108,9 @@ export function DocEditor({
     window.localStorage.getItem(`alo-doc-view:${nodeId}`) === "page" ? "page" : "canvas",
   );
   const [zoom, setZoom] = useState(100);
+  // The document's agent, in a side area beside the writing surface. Closed
+  // until asked for (ADR 0057): opening it is what makes its two reads.
+  const [agentOpen, setAgentOpen] = useState(false);
   const [pageSize, setPageSize] = useState<PageSize>(() => window.localStorage.getItem(`alo-doc-page-size:${nodeId}`) === "letter" ? "letter" : "a4");
   const [pageOrientation, setPageOrientation] = useState<PageOrientation>(() => window.localStorage.getItem(`alo-doc-page-orientation:${nodeId}`) === "landscape" ? "landscape" : "portrait");
   const [pageMargins, setPageMargins] = useState<PageMargins>(() => {
@@ -355,6 +364,14 @@ export function DocEditor({
     onClose();
   }
 
+  /** Send a debounced edit now, without waiting for it. Used when something
+   *  else is about to navigate away from the editor — the agent panel opening
+   *  a conversation — where there is no turn left to await the save in. */
+  function flushSave() {
+    if (timer.current !== null) window.clearTimeout(timer.current);
+    if (pending.current) void save(pending.current);
+  }
+
   async function propose() {
     const ask = instruction.trim();
     if (ask === "" || proposing) return;
@@ -436,6 +453,19 @@ export function DocEditor({
             <span>{strings.docPageView}</span>
           </button>
         </div>
+        <button
+          type="button"
+          className={agentOpen ? styles.viewOptionActive : styles.viewOption}
+          aria-pressed={agentOpen}
+          // The words are hidden at phone widths (the view switch's rule), so
+          // the name has to be on the button rather than only inside it.
+          aria-label={strings.recordAgentPanelToggle}
+          onClick={() => setAgentOpen((open) => !open)}
+          title={strings.recordAgentTitle}
+        >
+          <Bot size={15} />
+          <span>{strings.recordAgentPanelToggle}</span>
+        </button>
       </header>
       {viewMode === "page" && <div className={styles.docCommands} aria-label={strings.docFormattingToolbar}>
         <div ref={menuBarRef} className={styles.docMenus} onClick={(event) => { if ((event.target as HTMLElement).closest("button") !== null) closeMenus(); }}>
@@ -512,6 +542,7 @@ export function DocEditor({
         <label>{strings.docReplaceWith}<input value={replaceWith} onChange={(event) => setReplaceWith(event.target.value)} /></label>
         <div className={styles.findActions}><button type="button" onClick={() => { if (findText !== "") (window as Window & { find?: (text: string) => boolean }).find?.(findText); }}>{strings.docFindNext}</button><button type="button" onClick={replaceAll} disabled={findText === ""}>{strings.docReplaceAll}</button></div>
       </div>}
+      <div className={styles.workArea}>
       <div
         className={`${styles.body} ${viewMode === "page" ? styles.pageMode : styles.canvasMode}`}
         style={{
@@ -606,6 +637,19 @@ export function DocEditor({
             <button type="button" onClick={() => { if (pending.current !== null) void save(pending.current); }}>{strings.driveRetry}</button>
           </div>
         )}
+      </div>
+      {agentOpen && (
+        <aside className={styles.agentPane} aria-label={strings.recordAgentTitle}>
+          <RecordAgentPanel
+            product="docs"
+            recordKind="doc"
+            recordId={nodeId}
+            recordLabel={name}
+            origin={origin}
+            onBeforeNavigate={flushSave}
+          />
+        </aside>
+      )}
       </div>
 
       {/* AI: a compact, centred dock at the bottom — a button until opened, then

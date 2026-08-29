@@ -21,6 +21,7 @@ import {
   HardDrive,
   History,
   Grid2X2,
+  Info,
   List,
   MoveRight,
   Pencil,
@@ -33,7 +34,8 @@ import {
   X,
 } from "lucide-react";
 
-import { strings } from "../i18n";
+import { RecordAgentPanel, type RecordOrigin } from "../agents";
+import { getLocale, strings } from "../i18n";
 import { useJmapClient, type DriveNodeDto, type SpaceDto } from "../jmap";
 import { Menu, Spinner, useDialogs, type MenuItem } from "../ds";
 import { DestinationDialog, MembersDialog, VersionsDialog } from "./dialogs";
@@ -52,11 +54,13 @@ const OFFICE_EXT = /\.(docx?|xlsx?|pptx?|odt|ods|odp|rtf|csv)$/i;
 // (ADR 0033, stage 1). `.xlsx`/`.xlsm` are OOXML; `.xls` (old binary) and `.ods`
 // are not covered yet and still fall through to the Office path.
 const SPREADSHEET_IMPORT = /\.xls[mx]$/i;
-import { driveErrorReason, fileSize, nodeIcon, saveBlob } from "./parts";
+import { driveErrorReason, driveNodeOrigin, fileSize, nodeIcon, saveBlob } from "./parts";
 import { xlsxToUniverSnapshot } from "./importOffice";
 import styles from "./DriveModule.module.css";
 
 type Crumb = { id: string; name: string };
+/** The file an editor is open on: what to call it, and where it came from. */
+type OpenEditor = { id: string; name: string; origin: RecordOrigin | null };
 type EditorKind = "doc" | "sheet" | "office";
 type SortMode = "name-asc" | "name-desc" | "newest" | "oldest" | "largest" | "smallest";
 type ViewMode = "extra-large" | "large" | "medium" | "small" | "list" | "details" | "tiles" | "content";
@@ -123,9 +127,11 @@ export function DriveModule() {
   const [moveNodes, setMoveNodes] = useState<{ nodes: DriveNodeDto[]; mode: "move" | "copy" } | null>(null);
   const [selectedNodes, setSelectedNodes] = useState<ReadonlyMap<string, DriveNodeDto>>(new Map());
   const [versionsNode, setVersionsNode] = useState<string | null>(null);
-  const [openDoc, setOpenDoc] = useState<{ id: string; name: string } | null>(null);
-  const [openSheet, setOpenSheet] = useState<{ id: string; name: string } | null>(null);
-  const [openOffice, setOpenOffice] = useState<{ id: string; name: string } | null>(null);
+  // The open editor carries the node's origin beside its name, so the record
+  // agent panel inside it needs no second read of a node the list already had.
+  const [openDoc, setOpenDoc] = useState<OpenEditor | null>(null);
+  const [openSheet, setOpenSheet] = useState<OpenEditor | null>(null);
+  const [openOffice, setOpenOffice] = useState<OpenEditor | null>(null);
   const [editorRoutePending, setEditorRoutePending] = useState(false);
   const [editorRouteError, setEditorRouteError] = useState<string | null>(null);
   const [editorRouteAttempt, setEditorRouteAttempt] = useState(0);
@@ -142,9 +148,19 @@ export function DriveModule() {
   const canWrite = location === null || (currentSpace !== null && currentSpace.myRole !== "viewer");
   const editorRouteActive = /^\/drive\/(doc|sheet|office)\//.test(route.pathname);
   const selected = useMemo(() => Array.from(selectedNodes.values()), [selectedNodes]);
+  // The record in focus: one selected item, which is what the details pane is
+  // about. Two selections are a bulk action, not a record; the Trash is where
+  // a person undoes things, not where they ask an agent about one.
+  const focused = selected.length === 1 && !trashView ? (selected[0] as DriveNodeDto) : null;
 
-  const showEditor = useCallback((kind: EditorKind, id: string, name: string, replace = false) => {
-    const value = { id, name };
+  const showEditor = useCallback((
+    kind: EditorKind,
+    id: string,
+    name: string,
+    origin: RecordOrigin | null = null,
+    replace = false,
+  ) => {
+    const value = { id, name, origin };
     setOpenDoc(kind === "doc" ? value : null);
     setOpenSheet(kind === "sheet" ? value : null);
     setOpenOffice(kind === "office" ? value : null);
@@ -185,7 +201,7 @@ export function DriveModule() {
       }
       const canonicalKind: EditorKind = node.kind === "doc" ? "doc" : node.kind === "sheet" ? "sheet" : "office";
       const canonicalPath = editorPath(canonicalKind, node.id, node.name);
-      const value = { id: node.id, name: node.name };
+      const value = { id: node.id, name: node.name, origin: driveNodeOrigin(node) };
       setOpenDoc(canonicalKind === "doc" ? value : null);
       setOpenSheet(canonicalKind === "sheet" ? value : null);
       setOpenOffice(canonicalKind === "office" ? value : null);
@@ -261,11 +277,12 @@ export function DriveModule() {
     void client.driveNode(id).then((node) => {
       if (node === null) return;
       if (node.kind === "folder") setPath([{ id: node.id, name: node.name }]);
-      else if (node.kind === "doc") showEditor("doc", id, node.name);
-      else if (node.kind === "sheet") showEditor("sheet", id, node.name);
+      else if (node.kind === "doc") showEditor("doc", id, node.name, driveNodeOrigin(node));
+      else if (node.kind === "sheet") showEditor("sheet", id, node.name, driveNodeOrigin(node));
       else if (node.kind === "file" && SPREADSHEET_IMPORT.test(node.name))
         void importSpreadsheet(id, node.name);
-      else if (node.kind === "file" && OFFICE_EXT.test(node.name)) showEditor("office", id, node.name);
+      else if (node.kind === "file" && OFFICE_EXT.test(node.name))
+        showEditor("office", id, node.name, driveNodeOrigin(node));
     });
   }, [searchParams, setSearchParams, client, showEditor]);
 
@@ -276,10 +293,10 @@ export function DriveModule() {
   }
 
   function openNode(n: DriveNodeDto) {
-    if (n.kind === "doc") showEditor("doc", n.id, n.name);
-    else if (n.kind === "sheet") showEditor("sheet", n.id, n.name);
+    if (n.kind === "doc") showEditor("doc", n.id, n.name, driveNodeOrigin(n));
+    else if (n.kind === "sheet") showEditor("sheet", n.id, n.name, driveNodeOrigin(n));
     else if (n.kind === "file" && SPREADSHEET_IMPORT.test(n.name)) void importSpreadsheet(n.id, n.name);
-    else if (n.kind === "file" && OFFICE_EXT.test(n.name)) showEditor("office", n.id, n.name);
+    else if (n.kind === "file" && OFFICE_EXT.test(n.name)) showEditor("office", n.id, n.name, driveNodeOrigin(n));
     else void download(n);
   }
 
@@ -647,7 +664,14 @@ export function DriveModule() {
         { key: "purge", label: strings.driveDeleteForever, icon: <Trash2 size={15} />, danger: true, onClick: () => void purgeNodes([n]) },
       ];
     }
-    const items: MenuItem[] = [];
+    const items: MenuItem[] = [
+      {
+        key: "details",
+        label: strings.driveDetailsTitle,
+        icon: <Info size={15} />,
+        onClick: () => setSelectedNodes(new Map([[n.id, n]])),
+      },
+    ];
     if (n.kind !== "folder") {
       items.push({ key: "download", label: strings.driveDownload, icon: <Download size={15} />, onClick: () => void download(n) });
       items.push({ key: "versions", label: strings.driveVersionHistory, icon: <History size={15} />, onClick: () => setVersionsNode(n.id) });
@@ -662,7 +686,7 @@ export function DriveModule() {
   }
 
   return (
-    <div className={styles.drive}>
+    <div className={focused === null ? styles.drive : `${styles.drive} ${styles.driveWithDetails}`}>
       <aside className={`${styles.sidebar} ${navigationPane ? "" : styles.sidebarHidden}`}>
         <div className={styles.sideGroup}>
           <button
@@ -986,6 +1010,8 @@ export function DriveModule() {
         )}
       </section>
 
+      {focused !== null && <DetailsPane node={focused} />}
+
       {moveNodes !== null && (
         <DestinationDialog
           spaces={spaces}
@@ -1025,6 +1051,7 @@ export function DriveModule() {
           <DocEditor
             nodeId={openDoc.id}
             name={openDoc.name}
+            origin={openDoc.origin}
             onClose={() => {
               navigate("/drive", { replace: true });
               void load();
@@ -1037,7 +1064,8 @@ export function DriveModule() {
           <SheetEditor
             nodeId={openSheet.id}
             name={openSheet.name}
-            onNameChange={(nextName) => showEditor("sheet", openSheet.id, nextName, true)}
+            origin={openSheet.origin}
+            onNameChange={(nextName) => showEditor("sheet", openSheet.id, nextName, openSheet.origin, true)}
             onClose={() => {
               navigate("/drive", { replace: true });
               void load();
@@ -1095,6 +1123,44 @@ export function DriveModule() {
         </div>
       )}
     </div>
+  );
+}
+
+/** The selected item's own pane: what it is, and its agent (A8.4) — where the
+ *  file came from, what @drive can do with it, and a question about it
+ *  answered in place. A document or a sheet has an agent of its own inside
+ *  its editor; here the record is a file in a file manager, so the agent is
+ *  the file manager's. */
+function DetailsPane({ node }: { node: DriveNodeDto }) {
+  const Icon = nodeIcon(node);
+  const folder = node.kind === "folder";
+  return (
+    <aside className={styles.details} aria-label={strings.driveDetailsTitle}>
+      <header className="flex min-w-0 items-center gap-3">
+        <Icon size={22} className="shrink-0 text-tertiary" />
+        <span className="flex min-w-0 flex-col">
+          <span className="truncate text-sm font-semibold text-primary" title={node.name}>
+            {node.name}
+          </span>
+          <span className="text-xs text-tertiary">{strings.driveDetailsTitle}</span>
+        </span>
+      </header>
+      <dl className="m-0 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 text-xs">
+        <dt className="text-tertiary">{strings.driveColSize}</dt>
+        <dd className="m-0 text-secondary">{folder ? "—" : fileSize(node.size)}</dd>
+        <dt className="text-tertiary">{strings.driveColModified}</dt>
+        <dd className="m-0 text-secondary">
+          {new Date(node.updatedAt).toLocaleString(getLocale())}
+        </dd>
+      </dl>
+      <RecordAgentPanel
+        product="drive"
+        recordKind={node.kind}
+        recordId={node.id}
+        recordLabel={node.name}
+        origin={driveNodeOrigin(node)}
+      />
+    </aside>
   );
 }
 

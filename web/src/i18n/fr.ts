@@ -5812,6 +5812,8 @@ export const fr: Partial<Catalog> = {
   driveAddMemberLabel: "Adresse e-mail",
   driveAddMemberPlaceholder: "Ajoutez quelqu’un par e-mail",
   driveColModified: "Modifié",
+  driveDetailsTitle: "Détails",
+  driveDetailsShow: (name: string): string => `Détails de ${name}`,
   driveColName: "Nom",
   driveColSize: "Taille",
   driveCopy: "Faire une copie",
@@ -6026,6 +6028,39 @@ export const fr: Partial<Catalog> = {
     `Rédige un courrier pour « ${person} » à partir d’un modèle.`,
   recordAgentOriginImport: (format: string): string =>
     `Importé d’un fichier ${format}.`,
+  recordAgentPanelToggle: "Son agent",
+  recordAgentFocusRecord: (record: string): string =>
+    `L’agent de « ${record} »`,
+  recordAgentVerbRenameFile: "Le renommer",
+  recordAgentDraftRenameFile: (file: string): string =>
+    `Renomme « ${file} » en `,
+  recordAgentVerbMoveFile: "Le déplacer",
+  recordAgentDraftMoveFile: (file: string): string =>
+    `Déplace « ${file} » dans le dossier `,
+  recordAgentVerbListFolder: "Lister son contenu",
+  recordAgentDraftListFolder: (folder: string): string =>
+    `Qu’y a-t-il dans le dossier « ${folder} » ?`,
+  recordAgentVerbDraftSection: "Rédiger une section",
+  recordAgentDraftDraftSection: (document: string): string =>
+    `Rédige une section pour « ${document} » sur `,
+  recordAgentVerbRewriteDoc: "Réécrire un passage",
+  recordAgentDraftRewriteDoc: (document: string): string =>
+    `Dans « ${document} », réécris le passage sur `,
+  recordAgentVerbWriteFormula: "Écrire une formule",
+  recordAgentDraftWriteFormula: (sheet: string): string =>
+    `Dans « ${sheet} », écris une formule qui `,
+  recordAgentVerbTidyColumn: "Nettoyer une colonne",
+  recordAgentDraftTidyColumn: (sheet: string): string =>
+    `Dans « ${sheet} », nettoie la colonne `,
+  recordAgentVerbMeetingPrep: "La préparer",
+  recordAgentDraftMeetingPrep: (meeting: string): string =>
+    `De quoi ai-je besoin pour « ${meeting} » ?`,
+  recordAgentVerbRescheduleEvent: "La déplacer",
+  recordAgentDraftRescheduleEvent: (meeting: string): string =>
+    `Déplace « ${meeting} » au `,
+  recordAgentVerbCancelEvent: "L’annuler",
+  recordAgentDraftCancelEvent: (meeting: string): string =>
+    `Annule « ${meeting} ».`,
   chatAgentTag: "agent",
   chatAgentsAvailable: "Disponibles à ajouter",
   chatAgentsHere: "Agents dans cette conversation",

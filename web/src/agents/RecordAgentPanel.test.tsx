@@ -274,6 +274,111 @@ test("a verb bound to a record kind is offered on that kind and no other", async
   ).toBeNull();
 });
 
+test("a Drive folder is offered what takes a folder, and a file what takes a file", async () => {
+  const drive = {
+    agents: [
+      {
+        id: "agent-drive",
+        handle: "drive",
+        name: "Drive",
+        product: "drive",
+        disabled: false,
+        tools: [
+          { name: "list_folder", effect: "read" },
+          { name: "file_rename", effect: "write" },
+          { name: "file_move", effect: "write" },
+        ],
+      },
+    ],
+  };
+  answers = [{ match: "/chat/agents/directory", body: drive }];
+  render(
+    <RecordAgentPanel
+      product="drive"
+      recordKind="folder"
+      recordId="node-1"
+      recordLabel="Contracts"
+      origin={null}
+    />,
+  );
+
+  expect(
+    await screen.findByText(strings.recordAgentVerbListFolder),
+  ).toBeTruthy();
+  expect(screen.queryByText(strings.recordAgentVerbRenameFile)).toBeNull();
+  expect(screen.queryByText(strings.recordAgentVerbMoveFile)).toBeNull();
+
+  cleanup();
+  render(
+    <RecordAgentPanel
+      product="drive"
+      recordKind="file"
+      recordId="node-2"
+      recordLabel="Delaunay quote.pdf"
+      // The file was saved out of an email, which is what Drive keeps of it.
+      origin={{ kind: "message", id: "msg-9", label: null }}
+    />,
+  );
+  expect(
+    await screen.findByText(strings.recordAgentOriginEmail, { exact: false }),
+  ).toBeTruthy();
+  expect(screen.getByText(strings.recordAgentVerbRenameFile)).toBeTruthy();
+  expect(screen.getByText(strings.recordAgentVerbMoveFile)).toBeTruthy();
+  expect(screen.queryByText(strings.recordAgentVerbListFolder)).toBeNull();
+});
+
+test("a meeting's verbs are the meeting's, and its draft names it", async () => {
+  answers = [
+    {
+      match: "/chat/agents/directory",
+      body: {
+        agents: [
+          {
+            id: "agent-agenda",
+            handle: "agenda",
+            name: "Agenda",
+            product: "agenda",
+            disabled: false,
+            tools: [
+              { name: "meeting_prep", effect: "read" },
+              { name: "cancel_event", effect: "write" },
+            ],
+          },
+        ],
+      },
+    },
+    { match: "/chat/agents/agent-agenda/dm", method: "POST", body: { id: "dm-2" } },
+  ];
+  render(
+    <RecordAgentPanel
+      product="agenda"
+      recordKind="event"
+      recordId="ev-1"
+      recordLabel="Delaunay review"
+      origin={null}
+    />,
+  );
+
+  expect(
+    await screen.findByText(strings.recordAgentVerbMeetingPrep),
+  ).toBeTruthy();
+  expect(screen.getByText(strings.recordAgentVerbCancelEvent)).toBeTruthy();
+  // Rescheduling was not offered by this directory, so it is not a button.
+  expect(screen.queryByText(strings.recordAgentVerbRescheduleEvent)).toBeNull();
+
+  fireEvent.click(screen.getByText(strings.recordAgentVerbCancelEvent));
+  await waitFor(() =>
+    expect(navigateSpy).toHaveBeenCalledWith(
+      `/chat?channel=dm-2&draft=${encodeURIComponent(
+        strings.recordAgentDraftCancelEvent("Delaunay review"),
+      )}`,
+    ),
+  );
+  // Cancelling a meeting emails every guest: the panel proposes it in the
+  // room and cancels nothing itself.
+  expect(calls.some((c) => c.url.includes("/execute"))).toBe(false);
+});
+
 test("an imported record cites the file it was read from", async () => {
   render(
     <RecordAgentPanel

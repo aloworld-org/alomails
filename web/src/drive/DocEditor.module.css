@@ -205,10 +205,29 @@
   background: var(--bg-raised);
   color: var(--text-primary);
 }
+/* The writing surface and whatever is docked beside it: the document's agent
+   (A8.4) takes a column of its own rather than floating over the page, so a
+   line of text is never hidden behind it. */
+.workArea {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+}
 .body {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
+  min-width: 0;
+}
+.agentPane {
+  flex: 0 0 auto;
+  width: 340px;
+  min-width: 0;
+  overflow-y: auto;
+  padding: var(--space-4);
+  border-left: 1px solid var(--border-subtle);
+  background: var(--bg-sunken);
 }
 .docCommands {
   display: flex;
@@ -564,11 +583,23 @@
   .printButton span {
     display: none;
   }
+  /* No room for two columns on a phone: the agent takes the screen while it
+     is open, and closing it gives the page back. */
+  .workArea {
+    flex-direction: column;
+  }
+  .agentPane {
+    width: auto;
+    max-height: 60dvh;
+    border-left: 0;
+    border-top: 1px solid var(--border-subtle);
+  }
 }
 
 @media print {
   .head,
   .docCommands,
+  .agentPane,
   .aiDock { display: none !important; }
   .body,
   .pageMode { padding: 0; overflow: visible; background: var(--bg-surface); }

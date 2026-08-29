@@ -4,7 +4,7 @@
 // edits auto-save a new version. Univer is heavy, so DriveModule code-splits this
 // out — it loads only when a sheet is opened.
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronLeft, Download, MoreHorizontal, Pencil, Trash2, X } from "lucide-react";
+import { Bot, Check, ChevronLeft, Download, MoreHorizontal, Pencil, Trash2, X } from "lucide-react";
 
 // Univer's own UI + engine. Framework-agnostic: it mounts into a plain DOM
 // container we hand it, so we drive it from an effect rather than as JSX.
@@ -61,6 +61,7 @@ import "@univerjs/presets/lib/styles/preset-sheets-note.css";
 import "@univerjs/presets/lib/styles/preset-sheets-table.css";
 import "@univerjs/presets/lib/styles/preset-sheets-thread-comment.css";
 
+import { RecordAgentPanel, type RecordOrigin } from "../agents";
 import { strings } from "../i18n";
 import { Chart } from "../insights/chart";
 import { useJmapClient } from "../jmap";
@@ -177,11 +178,16 @@ type Snapshot = SheetSnapshot;
 export function SheetEditor({
   nodeId,
   name,
+  origin = null,
   onNameChange,
   onClose,
 }: {
   nodeId: string;
   name: string;
+  /** Where this workbook came from, as Drive carries it; `null` when it does
+   *  not say. Passed in rather than read again — the file list already had
+   *  the node (A8.4). */
+  origin?: RecordOrigin | null;
   onNameChange: (name: string) => void;
   onClose: () => void;
 }) {
@@ -198,6 +204,9 @@ export function SheetEditor({
    *  to a stale closure in the auto-save interval would delete a chart. */
   const chartsRef = useRef<SheetChart[]>([]);
   const [charts, setCharts] = useState<SheetChart[]>([]);
+  // The workbook's agent, in the same right-hand rail the charts use. Closed
+  // until asked for (ADR 0057): opening it is what makes its two reads.
+  const [agentOpen, setAgentOpen] = useState(false);
   const [chartWorkbook, setChartWorkbook] = useState<SheetSnapshot>({});
   const sheetBlob = useCallback(
     (json: string) =>
@@ -441,15 +450,19 @@ export function SheetEditor({
     return () => window.clearInterval(timer);
   }, [ready, client, nodeId]);
 
-  function close() {
-    // Flush any final edit before unmounting.
+  /** Send the last edit before this editor goes away — on closing it, and on
+   *  anything else navigating out of it (the agent panel opening a room). */
+  function flushSave() {
     const api = apiRef.current;
-    if (api !== null) {
-      const json = snapshotJson(api);
-      if (json !== "" && json !== lastSaved.current) {
-        void client.driveSaveSheet(nodeId, sheetBlob(json));
-      }
+    if (api === null) return;
+    const json = snapshotJson(api);
+    if (json !== "" && json !== lastSaved.current) {
+      void client.driveSaveSheet(nodeId, sheetBlob(json));
     }
+  }
+
+  function close() {
+    flushSave();
     onClose();
   }
 
@@ -810,6 +823,17 @@ export function SheetEditor({
           <button
             type="button"
             className={styles.export}
+            aria-pressed={agentOpen}
+            aria-label={strings.recordAgentPanelToggle}
+            onClick={() => setAgentOpen((open) => !open)}
+            title={strings.recordAgentTitle}
+          >
+            <Bot size={16} />
+            <span>{strings.recordAgentPanelToggle}</span>
+          </button>
+          <button
+            type="button"
+            className={styles.export}
             onClick={downloadXlsx}
             disabled={!ready}
             title={strings.sheetDownloadXlsx}
@@ -866,8 +890,25 @@ export function SheetEditor({
           </div>
         )}
         <div ref={containerRef} className={styles.univer} />
+        {/* One right-hand rail over the grid: the workbook's agent (A8.4) when
+            it is open, then its charts. Two floating panels at the same corner
+            would sit on top of each other. */}
+        {(agentOpen || charts.length > 0) && (
+          <div className="absolute right-5 top-5 z-20 flex max-h-[calc(100%-2.5rem)] w-[min(26rem,calc(100%-2.5rem))] flex-col gap-3 overflow-y-auto">
+        {agentOpen && (
+          <aside className="rounded-2xl border border-subtle bg-surface/95 p-4 shadow-xl backdrop-blur" aria-label={strings.recordAgentTitle}>
+            <RecordAgentPanel
+              product="sheets"
+              recordKind="sheet"
+              recordId={nodeId}
+              recordLabel={sheetName.trim() === "" ? name : sheetName}
+              origin={origin}
+              onBeforeNavigate={flushSave}
+            />
+          </aside>
+        )}
         {charts.length > 0 && (
-          <aside className="absolute right-5 top-5 z-20 flex max-h-[calc(100%-2.5rem)] w-[min(26rem,calc(100%-2.5rem))] flex-col gap-3 overflow-y-auto rounded-2xl border border-subtle bg-surface/95 p-4 shadow-xl backdrop-blur" aria-label={strings.sheetCharts}>
+          <aside className="flex flex-col gap-3 rounded-2xl border border-subtle bg-surface/95 p-4 shadow-xl backdrop-blur" aria-label={strings.sheetCharts}>
             <div className="border-b border-subtle pb-3">
               <h2 className="m-0 text-base font-semibold text-primary">{strings.sheetCharts}</h2>
               <p className="mb-0 mt-1 text-xs leading-5 text-tertiary">{strings.sheetChartExcelLimit}</p>
@@ -883,6 +924,8 @@ export function SheetEditor({
               </section>;
             })}
           </aside>
+        )}
+          </div>
         )}
       </div>
     </div>

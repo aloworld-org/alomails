@@ -1353,6 +1353,8 @@ export const de: Partial<Catalog> = {
   driveColName: "Name",
   driveColSize: "Größe",
   driveColModified: "Geändert",
+  driveDetailsTitle: "Details",
+  driveDetailsShow: (name: string): string => `Details zu ${name}`,
   driveOpen: "Öffnen",
   driveDownload: "Herunterladen",
   driveRename: "Umbenennen",
@@ -1941,6 +1943,39 @@ export const de: Partial<Catalog> = {
     `Entwirf ein Schreiben für „${person}“ aus einer Vorlage.`,
   recordAgentOriginImport: (format: string): string =>
     `Importiert aus einer ${format}-Datei.`,
+  recordAgentPanelToggle: "Sein Agent",
+  recordAgentFocusRecord: (record: string): string =>
+    `Der Agent von „${record}“`,
+  recordAgentVerbRenameFile: "Umbenennen",
+  recordAgentDraftRenameFile: (file: string): string =>
+    `Benenne „${file}“ um in `,
+  recordAgentVerbMoveFile: "Verschieben",
+  recordAgentDraftMoveFile: (file: string): string =>
+    `Verschiebe „${file}“ in den Ordner `,
+  recordAgentVerbListFolder: "Inhalt auflisten",
+  recordAgentDraftListFolder: (folder: string): string =>
+    `Was ist im Ordner „${folder}“?`,
+  recordAgentVerbDraftSection: "Einen Abschnitt entwerfen",
+  recordAgentDraftDraftSection: (document: string): string =>
+    `Entwirf einen Abschnitt für „${document}“ über `,
+  recordAgentVerbRewriteDoc: "Eine Passage umschreiben",
+  recordAgentDraftRewriteDoc: (document: string): string =>
+    `Schreibe in „${document}“ die Passage über `,
+  recordAgentVerbWriteFormula: "Eine Formel schreiben",
+  recordAgentDraftWriteFormula: (sheet: string): string =>
+    `Schreibe in „${sheet}“ eine Formel, die `,
+  recordAgentVerbTidyColumn: "Eine Spalte bereinigen",
+  recordAgentDraftTidyColumn: (sheet: string): string =>
+    `Bereinige in „${sheet}“ die Spalte `,
+  recordAgentVerbMeetingPrep: "Darauf vorbereiten",
+  recordAgentDraftMeetingPrep: (meeting: string): string =>
+    `Was brauche ich für „${meeting}“?`,
+  recordAgentVerbRescheduleEvent: "Verschieben",
+  recordAgentDraftRescheduleEvent: (meeting: string): string =>
+    `Verschiebe „${meeting}“ auf `,
+  recordAgentVerbCancelEvent: "Absagen",
+  recordAgentDraftCancelEvent: (meeting: string): string =>
+    `Sage „${meeting}“ ab.`,
   chatSearchPlaceholder: "Nachrichten, Personen, Kanäle durchsuchen…",
   chatSearchClear: "Suche leeren",
   chatSearchNothing: "Nichts gefunden.",
