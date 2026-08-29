@@ -19,28 +19,28 @@ use crate::{
     audit, audit_record, autoconfig, base, billing_bills, billing_customers, billing_fx,
     billing_invoices, billing_payments, billing_price_connections, billing_products,
     billing_quote_designs, billing_quotes, billing_reminder, billing_reports, billing_schedules,
-    billing_send, billing_sepa, billing_settings, blob, calendar, campaign_audience,
-    campaign_consent, campaign_preview, campaign_record, campaign_segments, campaign_suppression,
-    campaign_unsubscribe, carddav, chat, chat_agent_memory, chat_agent_routes, chat_goals,
-    contacts, crm_activities, crm_deals, crm_handoff, crm_imports, crm_next_steps, crm_pipelines,
-    crm_reports, crm_stages, crm_threads, delegates, docs, drive, filters, finance_approvals,
-    finance_bank, finance_bank_match, finance_chart, finance_expenses, finance_mileage,
-    finance_periods, finance_receipts, finance_report_aged, finance_report_balance,
-    finance_report_pl, finance_report_vat, flagdue, hr_checklists, hr_documents, hr_employees,
-    hr_holidays, hr_leave_balances, hr_leave_policies, hr_leave_requests, hr_letters, hr_org,
-    hr_payroll, hr_recruitment, imap_import_route, insights, insights_ask, insights_eval,
-    insights_gallery, inventory_counts, inventory_locations, inventory_moves, inventory_order_book,
-    inventory_po, inventory_po_print, inventory_po_receipts, inventory_po_send, inventory_reorder,
-    inventory_scan, inventory_so, inventory_so_deliveries, inventory_so_invoice, inventory_stock,
-    inventory_supplier_prices, inventory_suppliers, invite_route, meet_routes, module_access,
-    projects_clients, projects_invoices, projects_plan, projects_reports, projects_templates,
-    projects_time, projects_updates, projects_weeks, push, push_subscriptions, readiness,
-    reset_route, schedule, scoped_roles, security, session, settings, share, signup_route,
-    site_protection, site_schedule, site_version_preview, site_versions, sites, sites_attribution,
-    sites_bookings, sites_catalogs, sites_chat, sites_conversions, sites_domain_purchases,
-    sites_heatmap, sites_knowledge, sites_orders, sites_palette, sites_shop_config,
-    sites_shop_items, sites_shop_settings, sites_templates, sites_tickets, snooze, spaces, tasks,
-    unsubscribe, wopi, workspace_search,
+    billing_send, billing_sepa, billing_settings, blob, calendar, calendar_hours,
+    campaign_audience, campaign_consent, campaign_preview, campaign_record, campaign_segments,
+    campaign_suppression, campaign_unsubscribe, carddav, chat, chat_agent_memory,
+    chat_agent_routes, chat_goals, contacts, crm_activities, crm_deals, crm_handoff, crm_imports,
+    crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads, delegates, docs, drive,
+    filters, finance_approvals, finance_bank, finance_bank_match, finance_chart, finance_expenses,
+    finance_mileage, finance_periods, finance_receipts, finance_report_aged,
+    finance_report_balance, finance_report_pl, finance_report_vat, flagdue, hr_checklists,
+    hr_documents, hr_employees, hr_holidays, hr_leave_balances, hr_leave_policies,
+    hr_leave_requests, hr_letters, hr_org, hr_payroll, hr_recruitment, imap_import_route, insights,
+    insights_ask, insights_eval, insights_gallery, inventory_counts, inventory_locations,
+    inventory_moves, inventory_order_book, inventory_po, inventory_po_print, inventory_po_receipts,
+    inventory_po_send, inventory_reorder, inventory_scan, inventory_so, inventory_so_deliveries,
+    inventory_so_invoice, inventory_stock, inventory_supplier_prices, inventory_suppliers,
+    invite_route, meet_routes, module_access, projects_clients, projects_invoices, projects_plan,
+    projects_reports, projects_templates, projects_time, projects_updates, projects_weeks, push,
+    push_subscriptions, readiness, reset_route, schedule, scoped_roles, security, session,
+    settings, share, signup_route, site_protection, site_schedule, site_version_preview,
+    site_versions, sites, sites_attribution, sites_bookings, sites_catalogs, sites_chat,
+    sites_conversions, sites_domain_purchases, sites_heatmap, sites_knowledge, sites_orders,
+    sites_palette, sites_shop_config, sites_shop_items, sites_shop_settings, sites_templates,
+    sites_tickets, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -184,6 +184,11 @@ pub fn app_with_site_boundaries(
         .route("/calendar/groups", get(calendar::list_shareable_groups))
         // Free/busy: when are these people (in the tenant) busy?
         .route("/calendar/freebusy", post(calendar::free_busy))
+        // The caller's own working schedule (days, hours, zone).
+        .route(
+            "/calendar/working-hours",
+            get(calendar_hours::get_working_hours).put(calendar_hours::put_working_hours),
+        )
         // Tasks (ADR 0021–0023). Rows out; the client groups into board/list.
         .route(
             "/tasks/projects",

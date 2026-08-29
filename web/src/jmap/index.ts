@@ -46,6 +46,7 @@ export {
   type ControlDomain,
   type Session,
   type FreeBusyPerson,
+  type WorkingHours,
   type Task,
   type TaskProject,
   type TaskDetailData,

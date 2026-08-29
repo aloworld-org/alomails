@@ -10,6 +10,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Clock,
   Plus,
   Share2,
   Trash2,
@@ -33,6 +34,7 @@ import {
 import { useAbsenceLayer } from "./absences";
 import { EventModal } from "./EventModal";
 import { ShareDialog } from "./ShareDialog";
+import { WorkingHoursDialog } from "./WorkingHoursDialog";
 import { MiniMonth } from "./MiniMonth";
 import { MonthView } from "./MonthView";
 import { WeekView } from "./WeekView";
@@ -78,6 +80,7 @@ export function AgendaModule() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Editing>(null);
   const [sharing, setSharing] = useState<Calendar | null>(null);
+  const [editingHours, setEditingHours] = useState(false);
 
   const colorMap = useMemo(() => calendarColorMap(calendars), [calendars]);
   const colorOf = useCallback(
@@ -366,6 +369,15 @@ export function AgendaModule() {
             {others.map(calendarRow)}
           </div>
         )}
+
+        <button
+          type="button"
+          className={styles.sidebarAction}
+          onClick={() => setEditingHours(true)}
+        >
+          <Clock size={15} />
+          {strings.agendaWorkingHours}
+        </button>
       </aside>
 
       <section className={styles.main}>
@@ -473,6 +485,10 @@ export function AgendaModule() {
 
       {sharing !== null && (
         <ShareDialog calendar={sharing} onClose={() => setSharing(null)} />
+      )}
+
+      {editingHours && (
+        <WorkingHoursDialog onClose={() => setEditingHours(false)} />
       )}
     </div>
   );

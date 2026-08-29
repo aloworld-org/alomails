@@ -477,6 +477,20 @@ export const nl: Partial<Catalog> = {
   agendaAvailChecking: "Controleren…",
   agendaAvailAllFree: "Iedereen is dan vrij.",
   agendaAvailBusy: (names: string) => `Dan bezet: ${names}`,
+  agendaAvailOutside: (names: string) =>
+    `Dan buiten de werkuren: ${names}`,
+  agendaWorkingHours: "Werkuren",
+  agendaWorkingHoursHint:
+    "Wie met u plant, ziet tijd buiten deze uren gemarkeerd.",
+  agendaWorkingDays: "Werkdagen",
+  agendaWorkStart: "Begin",
+  agendaWorkEnd: "Einde",
+  agendaWorkZone: "Tijdzone",
+  agendaWorkZoneMine: "Mijn tijdzone",
+  agendaWorkHoursOrder: "De werkuren eindigen voordat ze beginnen.",
+  agendaWorkingHoursError:
+    "Uw werkuren konden niet worden opgeslagen. Probeer het opnieuw.",
+  agendaWorkingHoursLoadError: "Uw werkuren konden niet worden geladen.",
   agendaAvailNoGuests:
     "Voeg genodigden toe om hun beschikbaarheid te controleren.",
   agendaAvailError: "Kon de beschikbaarheid niet controleren.",

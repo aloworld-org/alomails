@@ -187,7 +187,8 @@ export function EventModal({
   const [calendarId, setCalendarId] = useState(defaultCalendar);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [availability, setAvailability] = useState<string | null>(null);
+  // One line per finding: who is busy, who is outside their working hours.
+  const [availability, setAvailability] = useState<string[] | null>(null);
   const [checking, setChecking] = useState(false);
   const client = useJmapClient();
 
@@ -211,13 +212,15 @@ export function EventModal({
       .filter((g) => g.includes("@"));
   }
 
-  /** Ask the server who among the guests is busy over the chosen window. */
+  /** Ask the server who among the guests is busy — or outside their working
+   *  hours — over the chosen window. Two separate findings, reported apart:
+   *  a colleague can be free yet asleep in their time zone. */
   async function checkAvailability() {
     const t = readTimes();
     if (t === null) return;
     const people = guestList();
     if (people.length === 0) {
-      setAvailability(strings.agendaAvailNoGuests);
+      setAvailability([strings.agendaAvailNoGuests]);
       return;
     }
     setChecking(true);
@@ -226,21 +229,25 @@ export function EventModal({
       const fb = await client.freeBusy(people, t.startsAt, t.endsAt);
       const s = new Date(t.startsAt).getTime();
       const e = new Date(t.endsAt).getTime();
-      const clash = fb
-        .filter((p) =>
-          p.busy.some(
-            (b) =>
-              new Date(b.start).getTime() < e && new Date(b.end).getTime() > s,
-          ),
-        )
+      const overlaps = (spans: { start: string; end: string }[] | undefined) =>
+        (spans ?? []).some(
+          (b) =>
+            new Date(b.start).getTime() < e && new Date(b.end).getTime() > s,
+        );
+      const clash = fb.filter((p) => overlaps(p.busy)).map((p) => p.email);
+      const outside = fb
+        .filter((p) => overlaps(p.outsideHours))
         .map((p) => p.email);
+      const findings: string[] = [];
+      if (clash.length > 0)
+        findings.push(strings.agendaAvailBusy(clash.join(", ")));
+      if (outside.length > 0)
+        findings.push(strings.agendaAvailOutside(outside.join(", ")));
       setAvailability(
-        clash.length === 0
-          ? strings.agendaAvailAllFree
-          : strings.agendaAvailBusy(clash.join(", ")),
+        findings.length === 0 ? [strings.agendaAvailAllFree] : findings,
       );
     } catch {
-      setAvailability(strings.agendaAvailError);
+      setAvailability([strings.agendaAvailError]);
     } finally {
       setChecking(false);
     }
@@ -670,7 +677,13 @@ export function EventModal({
                     : strings.agendaCheckAvailability}
                 </button>
                 {availability !== null && (
-                  <small className={styles.fieldHint}>{availability}</small>
+                  <span className={styles.availabilityFindings}>
+                    {availability.map((line) => (
+                      <small key={line} className={styles.fieldHint}>
+                        {line}
+                      </small>
+                    ))}
+                  </span>
                 )}
               </div>
               {event?.attendeeStatus && event.attendeeStatus.length > 0 && (

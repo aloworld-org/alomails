@@ -38,3 +38,4 @@ mod tenant_isolation;
 mod transcripts;
 mod unsubscribe;
 mod vacation;
+mod working_hours_http;

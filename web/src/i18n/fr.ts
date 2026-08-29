@@ -485,6 +485,21 @@ export const fr: Partial<Catalog> = {
   agendaAvailChecking: "Vérification…",
   agendaAvailAllFree: "Tout le monde est libre à ce moment-là.",
   agendaAvailBusy: (names: string) => `Occupé(s) : ${names}`,
+  agendaAvailOutside: (names: string) =>
+    `Hors horaires de travail à ce moment-là : ${names}`,
+  agendaWorkingHours: "Horaires de travail",
+  agendaWorkingHoursHint:
+    "Quand des collègues planifient avec vous, les heures hors de ces horaires sont signalées.",
+  agendaWorkingDays: "Jours travaillés",
+  agendaWorkStart: "Début",
+  agendaWorkEnd: "Fin",
+  agendaWorkZone: "Fuseau horaire",
+  agendaWorkZoneMine: "Mon fuseau horaire",
+  agendaWorkHoursOrder: "Les horaires de travail finissent avant de commencer.",
+  agendaWorkingHoursError:
+    "Impossible d'enregistrer vos horaires de travail. Veuillez réessayer.",
+  agendaWorkingHoursLoadError:
+    "Impossible de charger vos horaires de travail.",
   agendaAvailNoGuests: "Ajoutez des invités pour vérifier leur disponibilité.",
   agendaAvailError: "Impossible de vérifier la disponibilité.",
   agendaClose: "Fermer",

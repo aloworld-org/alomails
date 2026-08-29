@@ -28,6 +28,7 @@ import {
   type MailFilterRule,
   type SecurityCheck,
   type FreeBusyPerson,
+  type WorkingHours,
   type Task,
   type TaskProject,
   type TaskDetailData,
@@ -3017,6 +3018,26 @@ export class JmapClient {
     });
     if (!res.ok) throw new JmapError(`freebusy ${res.status}`);
     return ((await res.json()) as { freebusy: FreeBusyPerson[] }).freebusy;
+  }
+
+  /** The caller's own working schedule (the Mon–Fri 09:00–17:00 default until
+   *  they set one). */
+  async workingHours(): Promise<WorkingHours> {
+    const res = await this.#fetch(`${API_BASE}/api/calendar/working-hours`, {
+      method: "GET",
+    });
+    if (!res.ok) throw new JmapError(`workingHours ${res.status}`);
+    return (await res.json()) as WorkingHours;
+  }
+
+  /** Replace the caller's working schedule. */
+  async setWorkingHours(hours: WorkingHours): Promise<void> {
+    const res = await this.#fetch(`${API_BASE}/api/calendar/working-hours`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(hours),
+    });
+    if (!res.ok) throw new JmapError(`setWorkingHours ${res.status}`);
   }
 
   /** The user's server-side mail filter rules. */

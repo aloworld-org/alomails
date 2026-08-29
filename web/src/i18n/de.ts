@@ -609,6 +609,21 @@ export const de: Partial<Catalog> = {
   agendaAvailChecking: "Wird geprüft…",
   agendaAvailAllFree: "Alle sind dann frei.",
   agendaAvailBusy: (names: string) => `Dann beschäftigt: ${names}`,
+  agendaAvailOutside: (names: string) =>
+    `Dann außerhalb der Arbeitszeiten: ${names}`,
+  agendaWorkingHours: "Arbeitszeiten",
+  agendaWorkingHoursHint:
+    "Wer einen Termin mit Ihnen plant, sieht Zeiten außerhalb dieser Stunden markiert.",
+  agendaWorkingDays: "Arbeitstage",
+  agendaWorkStart: "Beginn",
+  agendaWorkEnd: "Ende",
+  agendaWorkZone: "Zeitzone",
+  agendaWorkZoneMine: "Meine Zeitzone",
+  agendaWorkHoursOrder: "Die Arbeitszeiten enden, bevor sie beginnen.",
+  agendaWorkingHoursError:
+    "Ihre Arbeitszeiten konnten nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+  agendaWorkingHoursLoadError:
+    "Ihre Arbeitszeiten konnten nicht geladen werden.",
   agendaAvailNoGuests:
     "Fügen Sie Gäste hinzu, um ihre Verfügbarkeit zu prüfen.",
   agendaAvailError: "Verfügbarkeit konnte nicht geprüft werden.",

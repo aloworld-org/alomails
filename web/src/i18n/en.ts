@@ -534,6 +534,20 @@ export const en = {
   agendaAvailBusy: (names: string) => `Busy then: ${names}`,
   agendaAvailNoGuests: "Add guests to check their availability.",
   agendaAvailError: "Couldn't check availability.",
+  agendaAvailOutside: (names: string) =>
+    `Outside working hours then: ${names}`,
+  // Working hours (the schedule colleagues' scheduling checks against)
+  agendaWorkingHours: "Working hours",
+  agendaWorkingHoursHint:
+    "When colleagues schedule with you, time outside these hours is flagged.",
+  agendaWorkingDays: "Working days",
+  agendaWorkStart: "Start",
+  agendaWorkEnd: "End",
+  agendaWorkZone: "Time zone",
+  agendaWorkZoneMine: "My time zone",
+  agendaWorkHoursOrder: "Working hours end before they start.",
+  agendaWorkingHoursError: "Couldn't save your working hours. Please try again.",
+  agendaWorkingHoursLoadError: "Couldn't load your working hours.",
   agendaClose: "Close",
   agendaReadOnly: "You have view-only access to this calendar.",
   // Calendar sharing

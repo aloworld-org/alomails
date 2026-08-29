@@ -467,11 +467,24 @@ export interface ShareableGroup {
 }
 
 /** One person's free/busy: their busy intervals in the queried window (no event
- *  detail), or `known: false` if the email isn't a user in the tenant. */
+ *  detail), or `known: false` if the email isn't a user in the tenant. Beside
+ *  `busy`, the window's spans outside their working hours (nights, weekends,
+ *  non-working days, in their schedule's zone) — the two kinds never merge. */
 export interface FreeBusyPerson {
   email: string;
   known: boolean;
   busy: { start: string; end: string }[];
+  outsideHours?: { start: string; end: string }[];
+}
+
+/** A person's working schedule as the wire spells it: ISO weekday numbers
+ *  (Monday = 1 … Sunday = 7), wall-clock "HH:MM" bounds, and the IANA zone
+ *  the window follows — `null` meaning their own zone. */
+export interface WorkingHours {
+  days: number[];
+  start: string;
+  end: string;
+  zone: string | null;
 }
 
 /** A calendar event as it crosses the wire (times are RFC 3339, UTC). */

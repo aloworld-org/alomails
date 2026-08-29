@@ -10,6 +10,7 @@ mod agent_goals;
 mod agent_ground;
 mod agent_tool_runs;
 mod app_passwords_tenancy;
+mod calendar_working_hours_tenancy;
 mod categories;
 mod chat_agent_dm;
 mod chat_agent_product;

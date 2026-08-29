@@ -1178,3 +1178,48 @@
   cursor: default;
   opacity: 0.6;
 }
+
+/* ---- working hours (the sidebar's schedule dialog) ---- */
+.sidebarAction {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  padding: 6px 8px;
+  border-radius: var(--radius-md);
+  align-self: flex-start;
+}
+.sidebarAction:hover {
+  background: var(--bg-raised);
+}
+.workDays {
+  border: 0;
+  padding: 0;
+  margin: var(--space-3) 0 0;
+}
+.workDayRow {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-top: var(--space-2);
+}
+.workDay {
+  min-width: 44px;
+  padding: 6px 0;
+  text-align: center;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  background: var(--bg-raised);
+}
+.workDayOn {
+  background: var(--terracotta);
+  color: #fff;
+}
+/* The findings stack: one small line per verdict (busy / outside hours). */
+.availabilityFindings {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}

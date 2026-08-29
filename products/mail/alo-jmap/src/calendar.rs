@@ -979,10 +979,15 @@ struct FreeBusyBody {
     to: String,
 }
 
-/// `POST /calendar/freebusy` → `{"freebusy":[{email,known,busy:[{start,end}]}]}`.
+/// `POST /calendar/freebusy` →
+/// `{"freebusy":[{email,known,busy:[{start,end}],outsideHours:[{start,end}]}]}`.
 /// Each person's **busy intervals** in `[from, to)` — merged, clamped to the
-/// window, and carrying no event details (only busy/free). Strictly within the
-/// caller's tenant: an email that isn't a user there comes back `known:false`.
+/// window, and carrying no event details (only busy/free) — plus, additively,
+/// the spans **outside their working hours** (nights, weekends, non-working
+/// days, in their schedule's zone). The two kinds are served side by side and
+/// never merged: an existing client reading only `busy` sees exactly what it
+/// always saw. Strictly within the caller's tenant: an email that isn't a
+/// user there comes back `known:false`.
 pub async fn free_busy(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -1004,29 +1009,50 @@ pub async fn free_busy(
     for email in req.emails.iter().take(50) {
         let email = email.trim();
         let Ok(uid) = ts.user_by_email(email).await else {
-            out.push(json!({ "email": email, "known": false, "busy": [] }));
+            out.push(json!({ "email": email, "known": false, "busy": [], "outsideHours": [] }));
             continue;
         };
         // Their own busy time (reusing the recurrence/override-aware expander),
         // tenant-scoped by construction — same tenant as the caller.
-        let events = state
-            .store
-            .for_account(account.tenant.clone(), uid)
+        let door = state.store.for_account(account.tenant.clone(), uid);
+        let events = door
             .events_in_range(from, to)
             .await
             .map_err(|_| Problem::server_error())?;
-        let busy: Vec<Value> = alo_store::merged_busy_spans(&events, from, to)
-            .iter()
-            .map(|span| {
-                json!({
-                    "start": span.from.format(&Rfc3339).unwrap_or_default(),
-                    "end": span.to.format(&Rfc3339).unwrap_or_default(),
-                })
-            })
-            .collect();
-        out.push(json!({ "email": email, "known": true, "busy": busy }));
+        let busy = spans_json(&alo_store::merged_busy_spans(&events, from, to));
+        // Their schedule's complement — the second span kind, beside busy,
+        // never merged into it. The schedule's own zone wins; an unset one
+        // follows the person's profile zone, else UTC.
+        let hours = door
+            .working_hours()
+            .await
+            .map_err(|_| Problem::server_error())?;
+        let profile_zone = door
+            .user_timezone()
+            .await
+            .map_err(|_| Problem::server_error())?;
+        let outside = alo_store::outside_hours_spans(&hours, profile_zone.as_deref(), from, to);
+        out.push(json!({
+            "email": email,
+            "known": true,
+            "busy": busy,
+            "outsideHours": spans_json(&outside),
+        }));
     }
     Ok(Json(json!({ "freebusy": out })))
+}
+
+/// Spans as the free/busy wire spells them: `[{start, end}]`, RFC 3339 UTC.
+fn spans_json(spans: &[alo_store::CalendarBusySpan]) -> Vec<Value> {
+    spans
+        .iter()
+        .map(|span| {
+            json!({
+                "start": span.from.format(&Rfc3339).unwrap_or_default(),
+                "end": span.to.format(&Rfc3339).unwrap_or_default(),
+            })
+        })
+        .collect()
 }
 
 fn parse_time(s: &str) -> Result<OffsetDateTime, Problem> {

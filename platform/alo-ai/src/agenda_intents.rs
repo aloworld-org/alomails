@@ -279,6 +279,10 @@ pub const AGENDA_EXCLUDED: &[Excluded] = &[
         route: "/calendar/freebusy",
         why: "The scheduling row's tenant-wide busy spans; the agent looks across diaries only where they are shared, through find_a_time and colleague_free.",
     },
+    Excluded {
+        route: "/calendar/working-hours",
+        why: "A person's working schedule — days, hours, zone — is theirs to set in Agenda's settings; scheduling already reads its effect through free/busy.",
+    },
 ];
 
 /// The Agenda paragraph of the agent's general instructions.
