@@ -26,7 +26,7 @@ use time::OffsetDateTime;
 use crate::account::AccountStore;
 use crate::chat::MemberRole;
 use crate::error::{Result, StoreError};
-use crate::events::valid_name;
+use crate::events::valid_event_name;
 use crate::id::{AgentInstructionId, ChatAgentId, ChatChannelId, TenantId, UserId};
 use crate::store::Store;
 
@@ -239,7 +239,7 @@ impl AccountStore {
                 (None, Some(*every_minutes), Some(first))
             }
             InstructionTrigger::Event { kind } => {
-                if !valid_name(kind) {
+                if !valid_event_name(kind) {
                     return Err(StoreError::Validation(
                         "an event trigger names a verb: lowercase words joined by '.' or '_'"
                             .to_owned(),

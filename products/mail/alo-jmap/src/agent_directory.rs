@@ -78,6 +78,12 @@ fn tools_json(product: AgentProduct) -> Vec<Value> {
 /// worked and when — and a tool's arguments carry the very things that must not
 /// be repeated onto a new surface: the body of a drafted email, a person's
 /// name, the text of a document. Narrower is the whole point of a summary.
+///
+/// The action record's fields (A8.1) do ride along: the record the run
+/// touched, the write's own preview sentence, whether an undo exists, and the
+/// proposal it settled. The preview is not an exception to the rule above —
+/// this list is only ever the caller's own runs, and a proposal's preview was
+/// already shown to a whole room before anybody tapped.
 fn run_json(run: &AgentToolRun) -> Value {
     json!({
         "id": run.id.as_str(),
@@ -85,6 +91,13 @@ fn run_json(run: &AgentToolRun) -> Value {
         "effect": run.effect,
         "ok": run.ok,
         "channel": run.channel.as_ref().map(alo_store::ChatChannelId::as_str),
+        "record": run.record_id.as_deref().map(|id| json!({
+            "kind": run.record_type.as_deref(),
+            "id": id,
+        })),
+        "preview": run.preview.as_deref(),
+        "undoable": run.undo_tool.is_some(),
+        "proposal": run.proposal.as_ref().map(alo_store::ChatProposalId::as_str),
         "at": run
             .created_at
             .format(&time::format_description::well_known::Rfc3339)

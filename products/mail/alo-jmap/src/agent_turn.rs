@@ -190,6 +190,9 @@ impl<'a> TurnContext<'a> {
             approval: Approval::InTurn,
             agent: self.agent,
             channel: self.channel,
+            // A read inside the turn settles no card; a write never runs from
+            // here at all (it becomes the proposal instead).
+            proposal: None,
         }
     }
 }

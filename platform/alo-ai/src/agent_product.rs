@@ -29,7 +29,7 @@ use crate::drive_intents::DRIVE as DRIVE_INTENTS;
 use crate::finance_intents::FINANCE as FINANCE_INTENTS;
 use crate::hr_intents::HR as HR_INTENTS;
 use crate::insights_intents::INSIGHTS as INSIGHTS_INTENTS;
-use crate::intent::IntentModule;
+use crate::intent::{IntentModule, IntentSpec};
 use crate::inventory_intents::INVENTORY as INVENTORY_INTENTS;
 use crate::mail_intents::MAIL as MAIL_INTENTS;
 use crate::meet_intents::MEET as MEET_INTENTS;
@@ -259,11 +259,37 @@ pub fn offers(product: AgentProduct, tool: &str) -> bool {
         .any(|set| set.tools().iter().any(|entry| entry.name == tool))
 }
 
+/// The intent behind a verb's name, wherever it is registered — the action
+/// record's question (A8.1): what a run's preview template and inverse verb
+/// are, asked of the registry at the execution boundary.
+///
+/// `None` for a verb of a module that has not moved to intents yet — those
+/// tools run and are audited, but declare no preview and no undo to keep.
+/// A name in two modules cannot happen: the registry test refuses a tool
+/// that belongs to two products.
+#[must_use]
+pub fn intent_spec(tool: &str) -> Option<&'static IntentSpec> {
+    MOVED.iter().find_map(|(_, module)| module.find(tool))
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use alo_store::ALL_AGENT_PRODUCTS;
+
+    /// The action record's registry question (A8.1): a moved verb answers with
+    /// its spec — preview template, inverse verb — wherever it is registered;
+    /// a name nobody declares answers with nothing.
+    #[test]
+    fn the_spec_behind_a_verb_is_found_wherever_it_is_registered() {
+        let send = intent_spec("send_quote").expect("billing's verb has a spec");
+        assert_eq!(send.name, "send_quote");
+        assert!(send.preview.is_some(), "a write previews");
+        let raise = intent_spec("create_invoice_draft").expect("billing's draft verb");
+        assert_eq!(raise.undo, Some("discard_invoice_draft"));
+        assert!(intent_spec("no_such_verb").is_none());
+    }
 
     /// The whole registry, product by product. Written out rather than derived,
     /// so moving a tool between products is a visible change to this list and

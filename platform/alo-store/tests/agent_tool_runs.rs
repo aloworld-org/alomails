@@ -10,9 +10,37 @@
 use crate::common;
 
 use alo_store::{
-    AgentProduct, ChannelVisibility, ChatAgentId, ChatChannelId, NewAgentToolRun, StoreError,
+    AgentProduct, ChannelVisibility, ChatAgentId, ChatChannelId, ChatProposalId, NewAgentToolRun,
+    StoreError,
 };
-use serde_json::json;
+use serde_json::{Value, json};
+
+/// A run with none of the action record's fields — what every recording
+/// looked like before A8.1, so the older properties in this file read as they
+/// always did.
+fn bare<'a>(
+    agent: Option<&'a ChatAgentId>,
+    channel: Option<&'a ChatChannelId>,
+    tool: &'a str,
+    effect: &'a str,
+    args: &'a Value,
+    ok: bool,
+) -> NewAgentToolRun<'a> {
+    NewAgentToolRun {
+        agent,
+        channel,
+        tool,
+        effect,
+        args,
+        ok,
+        preview: None,
+        record_type: None,
+        record_id: None,
+        undo_tool: None,
+        undo_args: None,
+        proposal: None,
+    }
+}
 
 /// A read runs inside the turn with nobody's approval, so the log is the only
 /// place it shows up — and the agent's record has to count it, or eleven
@@ -47,14 +75,14 @@ async fn a_read_leaves_a_record_even_though_nobody_approved_it() {
     );
 
     let args = json!({ "product": "X100" });
-    a.record_tool_run(&NewAgentToolRun {
-        agent: Some(&agent),
-        channel: Some(&room),
-        tool: "stock_answer",
-        effect: "read",
-        args: &args,
-        ok: true,
-    })
+    a.record_tool_run(&bare(
+        Some(&agent),
+        Some(&room),
+        "stock_answer",
+        "read",
+        &args,
+        true,
+    ))
     .await
     .unwrap();
 
@@ -83,14 +111,14 @@ async fn a_read_leaves_a_record_even_though_nobody_approved_it() {
 
     // A refused write is recorded too, and is NOT counted as a read: an audit
     // that only kept the successes would hide exactly the interesting rows.
-    a.record_tool_run(&NewAgentToolRun {
-        agent: Some(&agent),
-        channel: Some(&room),
-        tool: "send_email",
-        effect: "write",
-        args: &args,
-        ok: false,
-    })
+    a.record_tool_run(&bare(
+        Some(&agent),
+        Some(&room),
+        "send_email",
+        "write",
+        &args,
+        false,
+    ))
     .await
     .unwrap();
     assert_eq!(a.agent_tool_runs(50).await.unwrap().len(), 2);
@@ -107,16 +135,9 @@ async fn a_read_leaves_a_record_even_though_nobody_approved_it() {
 
     // The palette's assistant is not a row in `chat_agents`, so its runs carry
     // no agent and belong to nobody's per-agent tally.
-    a.record_tool_run(&NewAgentToolRun {
-        agent: None,
-        channel: None,
-        tool: "find_file",
-        effect: "read",
-        args: &args,
-        ok: true,
-    })
-    .await
-    .unwrap();
+    a.record_tool_run(&bare(None, None, "find_file", "read", &args, true))
+        .await
+        .unwrap();
     assert_eq!(a.agent_tool_runs(50).await.unwrap().len(), 3);
     assert_eq!(
         a.agent_records()
@@ -131,15 +152,8 @@ async fn a_read_leaves_a_record_even_though_nobody_approved_it() {
     // An effect that is neither is refused rather than stored: the column is
     // read back as a fact about what happened.
     assert!(matches!(
-        a.record_tool_run(&NewAgentToolRun {
-            agent: None,
-            channel: None,
-            tool: "stock_answer",
-            effect: "peek",
-            args: &args,
-            ok: true,
-        })
-        .await,
+        a.record_tool_run(&bare(None, None, "stock_answer", "peek", &args, true))
+            .await,
         Err(StoreError::Validation(_))
     ));
 }
@@ -166,31 +180,18 @@ async fn one_agents_runs_are_that_agents_and_the_newest_come_first() {
 
     let args = json!({ "product": "X100" });
     for tool in ["stock_answer", "reorder_proposals"] {
-        a.record_tool_run(&NewAgentToolRun {
-            agent: Some(&inventory),
-            channel: None,
-            tool,
-            effect: if tool == "stock_answer" {
-                "read"
-            } else {
-                "write"
-            },
-            args: &args,
-            ok: true,
-        })
+        let effect = if tool == "stock_answer" {
+            "read"
+        } else {
+            "write"
+        };
+        a.record_tool_run(&bare(Some(&inventory), None, tool, effect, &args, true))
+            .await
+            .unwrap();
+    }
+    a.record_tool_run(&bare(Some(&agenda), None, "whats_on", "read", &args, true))
         .await
         .unwrap();
-    }
-    a.record_tool_run(&NewAgentToolRun {
-        agent: Some(&agenda),
-        channel: None,
-        tool: "whats_on",
-        effect: "read",
-        args: &args,
-        ok: true,
-    })
-    .await
-    .unwrap();
 
     let runs = a.agent_tool_runs_for(&inventory, 20).await.unwrap();
     assert_eq!(runs.len(), 2, "{runs:?}");
@@ -251,16 +252,9 @@ async fn a_run_is_never_another_tenants_and_never_a_colleagues() {
         .await
         .unwrap();
     let args = json!({ "from": "2026-08-14" });
-    a.record_tool_run(&NewAgentToolRun {
-        agent: Some(&agent),
-        channel: None,
-        tool: "whats_on",
-        effect: "read",
-        args: &args,
-        ok: true,
-    })
-    .await
-    .unwrap();
+    a.record_tool_run(&bare(Some(&agent), None, "whats_on", "read", &args, true))
+        .await
+        .unwrap();
 
     assert_eq!(a.agent_tool_runs(50).await.unwrap().len(), 1);
 
@@ -292,16 +286,9 @@ async fn a_run_is_never_another_tenants_and_never_a_colleagues() {
     assert!(c.agent_tool_runs_for(&agent, 50).await.unwrap().is_empty());
     assert!(c.agent_records().await.unwrap().is_empty());
     // …and writing one in tenant two does not reach into tenant one.
-    c.record_tool_run(&NewAgentToolRun {
-        agent: Some(&agent),
-        channel: None,
-        tool: "whats_on",
-        effect: "read",
-        args: &args,
-        ok: true,
-    })
-    .await
-    .unwrap();
+    c.record_tool_run(&bare(Some(&agent), None, "whats_on", "read", &args, true))
+        .await
+        .unwrap();
     assert_eq!(
         a.agent_tool_runs(50).await.unwrap().len(),
         1,
@@ -313,4 +300,130 @@ async fn a_run_is_never_another_tenants_and_never_a_colleagues() {
     // not something the id is trusted to imply.
     assert_eq!(a.agent_tool_runs_for(&agent, 50).await.unwrap().len(), 1);
     assert_eq!(c.agent_tool_runs_for(&agent, 50).await.unwrap().len(), 1);
+}
+
+/// The action record's own fields (A8.1, ADR 0058 §6): a write keeps what it
+/// would do, what it touched, how to take it back and which card it settled —
+/// and each of those has a shape the store refuses to bend.
+#[tokio::test]
+async fn the_action_record_keeps_preview_record_undo_and_proposal() {
+    let store = common::test_store().await;
+    let t = store.create_tenant("toolrun-action").await.unwrap();
+    let ts = store.for_tenant(t.clone());
+    let ua = ts.create_user("anna@action.test").await.unwrap();
+    let a = store.for_account(t.clone(), ua.clone());
+
+    let agent = a
+        .create_agent("billing", "Billing", None, AgentProduct::Billing)
+        .await
+        .unwrap();
+    let args = json!({ "customer": "Northstar Foods BV" });
+    let undo_args = json!({ "invoice": "inv-77" });
+    let proposal = ChatProposalId::new("prop-1".to_owned());
+    a.record_tool_run(&NewAgentToolRun {
+        agent: Some(&agent),
+        channel: None,
+        tool: "create_invoice_draft",
+        effect: "write",
+        args: &args,
+        ok: true,
+        preview: Some("A draft invoice for Northstar Foods BV will be raised."),
+        record_type: Some("invoice"),
+        record_id: Some("inv-77"),
+        undo_tool: Some("discard_invoice_draft"),
+        undo_args: Some(&undo_args),
+        proposal: Some(&proposal),
+    })
+    .await
+    .unwrap();
+
+    let runs = a.agent_tool_runs(10).await.unwrap();
+    assert_eq!(runs.len(), 1);
+    let action = &runs[0];
+    assert_eq!(
+        action.preview.as_deref(),
+        Some("A draft invoice for Northstar Foods BV will be raised.")
+    );
+    assert_eq!(action.record_type.as_deref(), Some("invoice"));
+    assert_eq!(action.record_id.as_deref(), Some("inv-77"));
+    assert_eq!(action.undo_tool.as_deref(), Some("discard_invoice_draft"));
+    assert_eq!(action.undo_args.as_ref().unwrap()["invoice"], "inv-77");
+    assert_eq!(
+        action.proposal.as_ref().map(ChatProposalId::as_str),
+        Some("prop-1")
+    );
+    // …and the per-agent window answers with the same fields, not a thinner row.
+    let window = a.agent_tool_runs_for(&agent, 10).await.unwrap();
+    assert_eq!(
+        window[0].undo_tool.as_deref(),
+        Some("discard_invoice_draft")
+    );
+
+    // A row recorded without any of it reads back as plainly empty.
+    a.record_tool_run(&bare(
+        Some(&agent),
+        None,
+        "open_quotes",
+        "read",
+        &args,
+        true,
+    ))
+    .await
+    .unwrap();
+    let newest = &a.agent_tool_runs(10).await.unwrap()[0];
+    assert_eq!(newest.tool, "open_quotes");
+    assert!(newest.preview.is_none() && newest.undo_tool.is_none());
+    assert!(newest.record_id.is_none() && newest.proposal.is_none());
+
+    // The shapes the store refuses, each with the reason in the module note:
+    // a read has nothing to preview and nothing to invert…
+    let refused = a
+        .record_tool_run(&NewAgentToolRun {
+            preview: Some("would look at the books"),
+            ..bare(None, None, "open_quotes", "read", &args, true)
+        })
+        .await;
+    assert!(matches!(refused, Err(StoreError::Validation(_))));
+    let refused = a
+        .record_tool_run(&NewAgentToolRun {
+            undo_tool: Some("discard_invoice_draft"),
+            ..bare(None, None, "open_quotes", "read", &args, true)
+        })
+        .await;
+    assert!(matches!(refused, Err(StoreError::Validation(_))));
+    // …a record reference is both halves or neither…
+    let refused = a
+        .record_tool_run(&NewAgentToolRun {
+            record_id: Some("inv-77"),
+            ..bare(None, None, "issue_invoice", "write", &args, true)
+        })
+        .await;
+    assert!(matches!(refused, Err(StoreError::Validation(_))));
+    // …undo arguments make no sense without their verb…
+    let refused = a
+        .record_tool_run(&NewAgentToolRun {
+            undo_args: Some(&undo_args),
+            ..bare(None, None, "issue_invoice", "write", &args, true)
+        })
+        .await;
+    assert!(matches!(refused, Err(StoreError::Validation(_))));
+    // …and the vocabulary is the event stream's: no shouting, no injection.
+    let refused = a
+        .record_tool_run(&NewAgentToolRun {
+            record_type: Some("Invoice;--"),
+            record_id: Some("inv-77"),
+            ..bare(None, None, "issue_invoice", "write", &args, true)
+        })
+        .await;
+    assert!(matches!(refused, Err(StoreError::Validation(_))));
+    let long = "x".repeat(1001);
+    let refused = a
+        .record_tool_run(&NewAgentToolRun {
+            preview: Some(&long),
+            ..bare(None, None, "issue_invoice", "write", &args, true)
+        })
+        .await;
+    assert!(matches!(refused, Err(StoreError::Validation(_))));
+    // Nothing refused was stored.
+    assert_eq!(a.agent_tool_runs(10).await.unwrap().len(), 2);
 }

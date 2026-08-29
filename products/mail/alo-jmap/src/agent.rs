@@ -12,8 +12,8 @@
 use crate::agent_turn::{Turn, TurnContext, TurnResult, take_turn};
 use alo_ai::{AiConfig, InferenceError, WorkspaceSource};
 use alo_store::{
-    CalendarEvent, ChatAgentId, ChatChannelId, EventId, MAX_PAGE, MailboxId, MessageId,
-    NewAgentToolRun, Page,
+    CalendarEvent, ChatAgentId, ChatChannelId, ChatProposalId, EventId, MAX_PAGE, MailboxId,
+    MessageId, NewAgentToolRun, Page,
 };
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
@@ -60,6 +60,10 @@ pub(crate) struct ToolRun<'a> {
     pub agent: Option<&'a ChatAgentId>,
     /// The room it happened in.
     pub channel: Option<&'a ChatChannelId>,
+    /// The `chat_proposals` row this run settles, when it came from one — the
+    /// action record's link between the card a room saw and the execution it
+    /// became (A8.1). `None` for a palette tap and for a read inside a turn.
+    pub proposal: Option<&'a ChatProposalId>,
 }
 
 impl ToolRun<'_> {
@@ -70,6 +74,7 @@ impl ToolRun<'_> {
             approval: Approval::Asker,
             agent: None,
             channel: None,
+            proposal: None,
         }
     }
 }
@@ -302,7 +307,7 @@ pub(crate) async fn execute_tool(
     // from the agent's own row, never taken from the caller — see [`scope`].
     let product = scope(account, run).await?;
     if !alo_ai::offers(product, tool) {
-        record_run(account, run, &entry, args, false).await;
+        record_run(account, run, &entry, args, None).await;
         return Err(Problem::with(
             StatusCode::FORBIDDEN,
             out_of_product(product, tool),
@@ -312,12 +317,21 @@ pub(crate) async fn execute_tool(
     // merely asked of it. The registry says what this tool does and the caller
     // says whose approval it carries; nothing the model returned is consulted.
     if must_wait_for_approval(entry, run.approval) {
-        record_run(account, run, &entry, args, false).await;
+        record_run(account, run, &entry, args, None).await;
         return Err(Problem::with(StatusCode::FORBIDDEN, NEEDS_APPROVAL));
     }
     let done = dispatch(state, account, tool, args).await;
     // ADR 0047 §4: both paths leave a row, and a refusal leaves one too.
-    record_run(account, run, &entry, args, done.is_ok()).await;
+    // Since A8.1 the row is the action record, so the run's outcome rides
+    // along: the record it touched, and the undo that record makes possible.
+    record_run(
+        account,
+        run,
+        &entry,
+        args,
+        done.as_ref().ok().map(|reply| &reply.0),
+    )
+    .await;
     // ADR 0058 §5: every intent execution emits an event on the tenant's
     // stream. Executions only — a refusal is not something that happened.
     if let Ok(reply) = &done {
@@ -371,7 +385,17 @@ const fn must_wait_for_approval(entry: alo_ai::AgentTool, approval: Approval) ->
     !entry.is_read() && matches!(approval, Approval::InTurn)
 }
 
-/// Write the audit row for one run (ADR 0047 §4).
+/// Write the action record for one run (ADR 0047 §4; the action record's
+/// fields are A8.1, ADR 0058 §6).
+///
+/// `reply` is the executor's answer when the run happened and worked, `None`
+/// for a refusal or a failure — so `ok` is not a parameter anyone could pass
+/// wrongly. From the reply comes the record the execution touched; from the
+/// registry come the write's preview (rendered with the resolved arguments —
+/// the sentence the proposal card shows, kept even for a refused write,
+/// because it says what *would have* changed) and the inverse verb, stored
+/// only when there is a record for its argument to name: an undo that cannot
+/// say which record to undo is not an undo.
 ///
 /// **Best-effort on purpose.** A read the caller was entitled to must not fail
 /// because a logline could not be written — that trades a working product for
@@ -383,8 +407,29 @@ async fn record_run(
     run: &ToolRun<'_>,
     entry: &alo_ai::AgentTool,
     args: &Value,
-    ok: bool,
+    reply: Option<&Value>,
 ) {
+    let record = reply.and_then(event_record_ref);
+    let spec = alo_ai::intent_spec(entry.name);
+    let preview = if entry.is_read() {
+        None
+    } else {
+        spec.and_then(|spec| spec.preview)
+            .map(|template| alo_ai::render_preview(template, args))
+    };
+    // The inverse verb's argument is the record this run touched, keyed by
+    // its own record word ({"invoice": …} for discard_invoice_draft) — the
+    // one thing a later "Undo" needs to name.
+    let undo = if entry.is_read() {
+        None
+    } else {
+        spec.and_then(|spec| spec.undo).zip(record.as_ref())
+    };
+    let undo_args = undo.map(|(_, (kind, id))| {
+        let mut named = serde_json::Map::new();
+        named.insert(kind.clone(), Value::String(id.clone()));
+        Value::Object(named)
+    });
     if let Err(err) = account
         .acc
         .record_tool_run(&NewAgentToolRun {
@@ -393,7 +438,13 @@ async fn record_run(
             tool: entry.name,
             effect: entry.effect.as_str(),
             args,
-            ok,
+            ok: reply.is_some(),
+            preview: preview.as_deref(),
+            record_type: record.as_ref().map(|(kind, _)| kind.as_str()),
+            record_id: record.as_ref().map(|(_, id)| id.as_str()),
+            undo_tool: undo.map(|(tool, _)| tool),
+            undo_args: undo_args.as_ref(),
+            proposal: run.proposal,
         })
         .await
     {
@@ -436,6 +487,11 @@ async fn emit_event(
 /// (`{"kind":"quote","quote":{"id":…}}`). Both shapes are read; a result that
 /// is not about one record — a list, a total, a report — yields `None`, which
 /// is an event without a record reference rather than a wrong one.
+///
+/// A `kind` outside the stream's vocabulary (`messageRead` — a client-facing
+/// camelCase word, not a record word) is treated the same way: no reference,
+/// rather than a reference the store would refuse — which would take the
+/// whole event or action row down with it, since recording is best-effort.
 fn event_record_ref(reply: &Value) -> Option<(String, String)> {
     let result = reply.get("result")?;
     let kind = result.get("kind")?.as_str()?;
@@ -443,6 +499,9 @@ fn event_record_ref(reply: &Value) -> Option<(String, String)> {
         .get("id")
         .or_else(|| result.get(kind).and_then(|record| record.get("id")))
         .and_then(Value::as_str)?;
+    if !alo_store::valid_event_name(kind) || id.is_empty() || id.len() > 128 {
+        return None;
+    }
     Some((kind.to_owned(), id.to_owned()))
 }
 

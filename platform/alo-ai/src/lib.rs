@@ -59,7 +59,7 @@ pub use agent_plan::{
     AgentPlan, MAX_PLAN_STEPS, PlanAgent, PlanAsk, PlanStep, parse_plan, plan_messages,
     plan_system_prompt, run_planner,
 };
-pub use agent_product::{MOVED, ToolSet, offers, tool_sets, tools_for};
+pub use agent_product::{MOVED, ToolSet, intent_spec, offers, tool_sets, tools_for};
 pub use agent_tool::{AgentTool, Effect, find_tool};
 pub use insights::{ChartReply, chart_messages, chart_turn, parse_chart_reply, repair_messages};
 pub use intent::{Arg, Excluded, IntentModule, IntentSpec, render_preview, routes_in};

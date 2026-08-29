@@ -110,7 +110,13 @@ fn event_of(row: EventRow) -> DomainEvent {
 /// 64 bytes, lowercase words of `a-z0-9` joined by `.` or `_` — the same
 /// shape the audit trail's vocabulary uses, so the two never diverge into
 /// needing a translator.
-pub(crate) fn valid_name(name: &str) -> bool {
+///
+/// Public so an emitter can ask *before* attaching a record reference: a
+/// reply whose record word is outside the vocabulary (`messageRead`) is not
+/// a wrong reference but no reference — the event and the action row still
+/// land, without a pointer, rather than being dropped whole at validation.
+#[must_use]
+pub fn valid_event_name(name: &str) -> bool {
     !name.is_empty()
         && name.len() <= 64
         && name
@@ -136,7 +142,7 @@ impl AccountStore {
                 event.effect
             )));
         }
-        if !valid_name(event.kind) {
+        if !valid_event_name(event.kind) {
             return Err(StoreError::Validation(
                 "event kind must be lowercase words joined by '.' or '_'".to_owned(),
             ));
@@ -147,7 +153,7 @@ impl AccountStore {
             ));
         }
         if let Some(record_type) = event.record_type
-            && !valid_name(record_type)
+            && !valid_event_name(record_type)
         {
             return Err(StoreError::Validation(
                 "record type must be lowercase words joined by '.' or '_'".to_owned(),
@@ -249,17 +255,17 @@ impl TenantStore {
 
 #[cfg(test)]
 mod tests {
-    use super::valid_name;
+    use super::valid_event_name;
 
     #[test]
     fn the_vocabulary_is_lowercase_words_joined_by_dot_or_underscore() {
-        assert!(valid_name("send_quote"));
-        assert!(valid_name("billing.quote.send"));
-        assert!(valid_name("open_quotes"));
-        assert!(!valid_name(""));
-        assert!(!valid_name("Send_Quote"));
-        assert!(!valid_name("send quote"));
-        assert!(!valid_name("drop;--"));
-        assert!(!valid_name(&"x".repeat(65)));
+        assert!(valid_event_name("send_quote"));
+        assert!(valid_event_name("billing.quote.send"));
+        assert!(valid_event_name("open_quotes"));
+        assert!(!valid_event_name(""));
+        assert!(!valid_event_name("Send_Quote"));
+        assert!(!valid_event_name("send quote"));
+        assert!(!valid_event_name("drop;--"));
+        assert!(!valid_event_name(&"x".repeat(65)));
     }
 }

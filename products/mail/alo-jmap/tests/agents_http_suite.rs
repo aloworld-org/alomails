@@ -6,6 +6,7 @@
 
 mod common;
 
+mod agent_actions_http;
 mod agent_agenda_http;
 mod agent_agenda_intents_http;
 mod agent_billing_intents_http;

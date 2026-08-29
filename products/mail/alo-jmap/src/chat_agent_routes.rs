@@ -327,6 +327,9 @@ pub async fn decide_proposal(
             approval: crate::agent::Approval::Asker,
             agent: agent.as_ref(),
             channel: Some(&decided.channel),
+            // The action record's join back to the card the room saw (A8.1):
+            // this execution is that proposal, settled.
+            proposal: Some(&decided.id),
         };
         match crate::agent::execute_tool(&state, &account, &decided.tool, &decided.args, &run).await
         {

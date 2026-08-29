@@ -436,7 +436,7 @@ pub use dmarc_reports::{DmarcAggregateRow, DmarcEventRecord};
 pub use document::{Document, DocumentSummary};
 pub use drive::{DriveLocation, DriveNode, DriveVersion, NewDriveFile};
 pub use error::{Result, StoreError};
-pub use events::{DomainEvent, NewDomainEvent};
+pub use events::{DomainEvent, NewDomainEvent, valid_event_name};
 pub use fin_accounts::{
     ACCOUNT_CODE_MAX_CHARS, ACCOUNT_NAME_MAX_CHARS, Account, AccountRole, AccountType, CHART,
     CHART_SEED_KEY, ChartAccount, ChartName, ChartSeed, NewAccount,
