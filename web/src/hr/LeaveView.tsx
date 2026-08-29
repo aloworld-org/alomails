@@ -34,6 +34,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarOff, CalendarPlus, Inbox as InboxIcon } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 
+import { RecordAgentPanel } from "../agents";
 import {
   Button,
   Card,
@@ -371,7 +372,20 @@ export function LeaveView() {
                   aria-current={request.id === marked ? "true" : undefined}
                 >
                   {showingPerson && <Td>{request.employeeName}</Td>}
-                  <Td>{request.policyName}</Td>
+                  <Td>
+                    <button
+                      type="button"
+                      className="cursor-pointer border-0 bg-transparent p-0 text-left text-sm font-medium text-accent hover:underline"
+                      aria-expanded={request.id === marked}
+                      onClick={() =>
+                        setParams({
+                          request: request.id === marked ? null : request.id,
+                        })
+                      }
+                    >
+                      {request.policyName}
+                    </button>
+                  </Td>
                   <Td>
                     <span>
                       {strings.hrLeaveBetween(
@@ -465,6 +479,26 @@ export function LeaveView() {
           </Table>
         )}
       </div>
+
+      {/* The marked request is the record in focus — the approvals inbox
+          lands here with `?request=`, and the kind cell toggles the same
+          mark by hand. */}
+      {requests
+        .filter((request) => request.id === marked)
+        .map((request) => (
+          <RecordAgentPanel
+            key={request.id}
+            product="hr"
+            recordKind="leave"
+            recordId={request.id}
+            recordLabel={request.employeeName}
+            origin={{
+              kind: "person",
+              id: request.employeeId,
+              label: request.employeeName,
+            }}
+          />
+        ))}
 
       {asking && (
         <LeaveDialog

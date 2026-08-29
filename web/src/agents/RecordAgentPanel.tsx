@@ -18,7 +18,7 @@ import { ChatApi, chatMessage, useChatApi } from "../chat/api";
 import { Button, Input, Spinner } from "../ds";
 import { strings } from "../i18n";
 import { useAgentsApi, type DirectoryAgent } from "./api";
-import { RECORD_VERBS, type RecordOrigin, type RecordVerb } from "./recordAgent";
+import { verbsFor, type RecordOrigin, type RecordVerb } from "./recordAgent";
 
 /** How long an ask will wait for the agent's answer before pointing at the
  *  conversation instead: 20 polls, 1.5 s apart. */
@@ -195,6 +195,8 @@ export function RecordAgentPanel({
         return strings.recordAgentOriginEvent;
       case "quote":
         return strings.recordAgentOriginQuote(label ?? from.id);
+      case "import":
+        return strings.recordAgentOriginImport(label ?? from.id);
       default:
         return strings.recordAgentOriginFrom(label ?? from.kind);
     }
@@ -216,7 +218,7 @@ export function RecordAgentPanel({
   const verbs =
     agent === null || agent === undefined
       ? []
-      : (RECORD_VERBS[product] ?? []).filter((verb) =>
+      : verbsFor(product, recordKind).filter((verb) =>
           agent.tools.some((tool) => tool.name === verb.tool),
         );
   const sourcePath = origin === null ? null : originPath(origin);

@@ -20,6 +20,19 @@ vi.mock("./api", async (loadOriginal) => {
   };
 });
 
+// The week's agent panel reads the directory through the session; a fetch
+// that answers `{}` settles it to "no agent here", which is not this file's
+// subject.
+vi.mock("../auth", () => ({
+  useAuth: () => ({
+    authorizedFetch: async () =>
+      new Response("{}", {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+  }),
+}));
+
 const project: Project = {
   id: "project-1",
   name: "Website redesign",

@@ -473,6 +473,16 @@ describe("the deal drawer", () => {
     expect(await screen.findByText("€25,000.00")).toBeTruthy();
     expect(screen.getByText(strings.crmStateOpen)).toBeTruthy();
   });
+
+  test("the deal's agent panel is on the record, citing the deal's source", async () => {
+    ui(`/crm/board?deal=${DEAL.id}`);
+
+    expect(await screen.findByText(strings.recordAgentTitle)).toBeTruthy();
+    // The record's own words for where it came from ("Referral").
+    expect(
+      screen.getByText(strings.recordAgentOriginFrom(DEAL.source)),
+    ).toBeTruthy();
+  });
 });
 
 // ---- closing a deal (B2.08) ---------------------------------------------------

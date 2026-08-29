@@ -1903,6 +1903,38 @@ export const de: Partial<Catalog> = {
     `Markiere „${task}“ als erledigt.`,
   recordAgentDraftReassignTask: (task: string): string =>
     `Übertrage „${task}“ an `,
+  recordAgentVerbMoveDealStage: "Phase ändern",
+  recordAgentVerbDraftFollowup: "Nachfassnachricht entwerfen",
+  recordAgentDraftMoveDealStage: (deal: string): string =>
+    `Verschiebe „${deal}“ in die Phase `,
+  recordAgentDraftDraftFollowup: (deal: string): string =>
+    `Entwirf eine Nachfassnachricht für „${deal}“.`,
+  recordAgentVerbApproveExpense: "Genehmigen",
+  recordAgentVerbSuggestCategories: "Kategorien vorschlagen",
+  recordAgentDraftApproveExpense: (merchant: string): string =>
+    `Genehmige die Spesenabrechnung „${merchant}“.`,
+  recordAgentDraftSuggestCategories:
+    "Gehe meine Spesen ohne Kategorie durch und schlage für jede eine vor.",
+  recordAgentVerbProjectStatus: "Status zusammenfassen",
+  recordAgentVerbLogTime: "Zeit darauf erfassen",
+  recordAgentVerbDraftTimesheet: "Aus meinem Kalender entwerfen",
+  recordAgentDraftProjectStatus: (project: string): string =>
+    `Fasse den Status von „${project}“ zusammen.`,
+  recordAgentDraftLogTime: (project: string): string =>
+    `Erfasse Zeit auf „${project}“: `,
+  recordAgentDraftDraftTimesheet: (week: string): string =>
+    `Entwirf meinen Stundenzettel für ${week} aus meinem Kalender.`,
+  recordAgentVerbReceiveDelivery: "Lieferung annehmen",
+  recordAgentDraftReceiveDelivery: (order: string): string =>
+    `Nimm die Lieferung zu „${order}“ an.`,
+  recordAgentVerbApproveLeave: "Genehmigen",
+  recordAgentVerbDraftLetter: "Ein Schreiben entwerfen",
+  recordAgentDraftApproveLeave: (person: string): string =>
+    `Genehmige den Urlaubsantrag von „${person}“.`,
+  recordAgentDraftDraftLetter: (person: string): string =>
+    `Entwirf ein Schreiben für „${person}“ aus einer Vorlage.`,
+  recordAgentOriginImport: (format: string): string =>
+    `Importiert aus einer ${format}-Datei.`,
   chatSearchPlaceholder: "Nachrichten, Personen, Kanäle durchsuchen…",
   chatSearchClear: "Suche leeren",
   chatSearchNothing: "Nichts gefunden.",

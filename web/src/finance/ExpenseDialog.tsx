@@ -23,6 +23,7 @@
 import { useState } from "react";
 import { ReceiptText } from "lucide-react";
 
+import { RecordAgentPanel } from "../agents";
 import { hundredthsToInput, parseHundredths } from "../billing";
 import { Field, Input, Select } from "../ds";
 import { strings } from "../i18n";
@@ -180,6 +181,20 @@ export function ExpenseDialog({
       }
       onClose={onClose}
       onSubmit={() => void save()}
+      aside={
+        claim !== null && (
+          <RecordAgentPanel
+            product="finance"
+            recordKind="expense"
+            recordId={claim.id}
+            recordLabel={
+              claim.merchant === "" ? claim.description : claim.merchant
+            }
+            origin={null}
+            onBeforeNavigate={onClose}
+          />
+        )
+      }
     >
       <div className={styles.row}>
         <Field label={strings.financeSpentOn} hint={strings.financeSpentOnHint}>

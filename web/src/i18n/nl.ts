@@ -5921,6 +5921,38 @@ export const nl: Partial<Catalog> = {
     `Markeer “${task}” als afgerond.`,
   recordAgentDraftReassignTask: (task: string): string =>
     `Wijs “${task}” toe aan `,
+  recordAgentVerbMoveDealStage: "Fase wijzigen",
+  recordAgentVerbDraftFollowup: "Opvolgbericht opstellen",
+  recordAgentDraftMoveDealStage: (deal: string): string =>
+    `Verplaats “${deal}” naar de fase `,
+  recordAgentDraftDraftFollowup: (deal: string): string =>
+    `Stel een opvolgbericht op voor “${deal}”.`,
+  recordAgentVerbApproveExpense: "Goedkeuren",
+  recordAgentVerbSuggestCategories: "Categorieën voorstellen",
+  recordAgentDraftApproveExpense: (merchant: string): string =>
+    `Keur de onkostendeclaratie “${merchant}” goed.`,
+  recordAgentDraftSuggestCategories:
+    "Loop mijn declaraties zonder categorie na en stel er voor elk een voor.",
+  recordAgentVerbProjectStatus: "Status samenvatten",
+  recordAgentVerbLogTime: "Tijd erop schrijven",
+  recordAgentVerbDraftTimesheet: "Opstellen uit mijn agenda",
+  recordAgentDraftProjectStatus: (project: string): string =>
+    `Vat de status van “${project}” samen.`,
+  recordAgentDraftLogTime: (project: string): string =>
+    `Schrijf tijd op “${project}”: `,
+  recordAgentDraftDraftTimesheet: (week: string): string =>
+    `Stel mijn urenstaat voor ${week} op uit mijn agenda.`,
+  recordAgentVerbReceiveDelivery: "Levering ontvangen",
+  recordAgentDraftReceiveDelivery: (order: string): string =>
+    `Ontvang de levering voor “${order}”.`,
+  recordAgentVerbApproveLeave: "Goedkeuren",
+  recordAgentVerbDraftLetter: "Een brief opstellen",
+  recordAgentDraftApproveLeave: (person: string): string =>
+    `Keur de verlofaanvraag van “${person}” goed.`,
+  recordAgentDraftDraftLetter: (person: string): string =>
+    `Stel een brief op voor “${person}” vanuit een sjabloon.`,
+  recordAgentOriginImport: (format: string): string =>
+    `Geïmporteerd uit een ${format}-bestand.`,
   chatAgentTag: "agent",
   chatAgentsAvailable: "Beschikbaar om toe te voegen",
   chatAgentsHere: "Agents in dit gesprek",

@@ -19,6 +19,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Banknote, Inbox } from "lucide-react";
 
+import { RecordAgentPanel } from "../agents";
 import { Button, Spinner, Table, Td, Th, useDialogs } from "../ds";
 import { strings } from "../i18n";
 import { financeMessage, useFinanceApi } from "./api";
@@ -34,6 +35,10 @@ export function ApprovalsView({ onDecided }: { onDecided: () => void }) {
   const [waiting, setWaiting] = useState<PendingExpense[]>([]);
   const [owed, setOwed] = useState<PendingExpense[]>([]);
   const [paying, setPaying] = useState<PendingExpense | null>(null);
+  /** The waiting claim in focus — its agent panel opens under the queue.
+   *  An id, not the record: a decided claim leaves the list and takes the
+   *  panel with it. */
+  const [focused, setFocused] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -145,8 +150,22 @@ export function ApprovalsView({ onDecided }: { onDecided: () => void }) {
             </thead>
             <tbody>
               {waiting.map((claim) => (
-                <tr key={claim.id}>
-                  <Td>{claim.userEmail}</Td>
+                <tr
+                  key={claim.id}
+                  aria-current={claim.id === focused ? "true" : undefined}
+                >
+                  <Td>
+                    <button
+                      type="button"
+                      className="cursor-pointer border-0 bg-transparent p-0 text-left text-sm font-medium text-accent hover:underline"
+                      aria-expanded={claim.id === focused}
+                      onClick={() =>
+                        setFocused(claim.id === focused ? null : claim.id)
+                      }
+                    >
+                      {claim.userEmail}
+                    </button>
+                  </Td>
                   <Td>{dayLabel(claim.spentOn)}</Td>
                   <Td>
                     {claim.merchant === "" ? (
@@ -203,6 +222,24 @@ export function ApprovalsView({ onDecided }: { onDecided: () => void }) {
             </tbody>
           </Table>
         )}
+        {waiting
+          .filter((claim) => claim.id === focused)
+          .map((claim) => (
+            <RecordAgentPanel
+              key={claim.id}
+              product="finance"
+              recordKind="approval"
+              recordId={claim.id}
+              recordLabel={
+                claim.merchant === "" ? claim.description : claim.merchant
+              }
+              origin={{
+                kind: "person",
+                id: claim.userId,
+                label: claim.userEmail,
+              }}
+            />
+          ))}
       </section>
 
       <section className={styles.section}>

@@ -2222,6 +2222,38 @@ export const en = {
     `Mark “${task}” as done.`,
   recordAgentDraftReassignTask: (task: string): string =>
     `Reassign “${task}” to `,
+  recordAgentVerbMoveDealStage: "Move its stage",
+  recordAgentVerbDraftFollowup: "Draft a follow-up",
+  recordAgentDraftMoveDealStage: (deal: string): string =>
+    `Move “${deal}” to the stage `,
+  recordAgentDraftDraftFollowup: (deal: string): string =>
+    `Draft a follow-up for “${deal}”.`,
+  recordAgentVerbApproveExpense: "Approve it",
+  recordAgentVerbSuggestCategories: "Suggest categories",
+  recordAgentDraftApproveExpense: (merchant: string): string =>
+    `Approve the expense “${merchant}”.`,
+  recordAgentDraftSuggestCategories:
+    "Go through my expense claims without a category and suggest one for each.",
+  recordAgentVerbProjectStatus: "Sum up its status",
+  recordAgentVerbLogTime: "Log time on it",
+  recordAgentVerbDraftTimesheet: "Draft it from my calendar",
+  recordAgentDraftProjectStatus: (project: string): string =>
+    `Sum up the status of “${project}”.`,
+  recordAgentDraftLogTime: (project: string): string =>
+    `Log time on “${project}”: `,
+  recordAgentDraftDraftTimesheet: (week: string): string =>
+    `Draft my timesheet for ${week} from my calendar.`,
+  recordAgentVerbReceiveDelivery: "Receive its delivery",
+  recordAgentDraftReceiveDelivery: (order: string): string =>
+    `Receive the delivery for “${order}”.`,
+  recordAgentVerbApproveLeave: "Approve it",
+  recordAgentVerbDraftLetter: "Draft a letter",
+  recordAgentDraftApproveLeave: (person: string): string =>
+    `Approve the leave request from “${person}”.`,
+  recordAgentDraftDraftLetter: (person: string): string =>
+    `Draft a letter for “${person}” from a template.`,
+  recordAgentOriginImport: (format: string): string =>
+    `Imported from a ${format} file.`,
   chatSearchPlaceholder: "Search messages, people, channels…",
   chatSearchClear: "Clear search",
   chatSearchNothing: "Nothing matched.",

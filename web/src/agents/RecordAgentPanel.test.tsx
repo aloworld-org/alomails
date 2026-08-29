@@ -220,6 +220,75 @@ test("an ask goes to the agent with the record named, and the answer shows in pl
   expect(screen.getByText(strings.recordAgentOpenConversation)).toBeTruthy();
 });
 
+test("a verb bound to a record kind is offered on that kind and no other", async () => {
+  const finance = {
+    agents: [
+      {
+        id: "agent-finance",
+        handle: "finance",
+        name: "Finance",
+        product: "finance",
+        disabled: false,
+        tools: [
+          { name: "approve_expense", effect: "write" },
+          { name: "categorise_transactions", effect: "write" },
+        ],
+      },
+    ],
+  };
+  answers = [{ match: "/chat/agents/directory", body: finance }];
+  render(
+    <RecordAgentPanel
+      product="finance"
+      recordKind="approval"
+      recordId="exp-1"
+      recordLabel="Bakkerij Van Damme"
+      origin={{ kind: "person", id: "u-2", label: "amara@alo.dev" }}
+    />,
+  );
+
+  // Approving is the approvals queue's verb; suggesting categories reads the
+  // asker's own claims and is the expense editor's — not this record's.
+  expect(
+    await screen.findByText(strings.recordAgentVerbApproveExpense),
+  ).toBeTruthy();
+  expect(
+    screen.queryByText(strings.recordAgentVerbSuggestCategories),
+  ).toBeNull();
+
+  cleanup();
+  render(
+    <RecordAgentPanel
+      product="finance"
+      recordKind="expense"
+      recordId="exp-2"
+      recordLabel="NS International"
+      origin={null}
+    />,
+  );
+  expect(
+    await screen.findByText(strings.recordAgentVerbSuggestCategories),
+  ).toBeTruthy();
+  expect(
+    screen.queryByText(strings.recordAgentVerbApproveExpense),
+  ).toBeNull();
+});
+
+test("an imported record cites the file it was read from", async () => {
+  render(
+    <RecordAgentPanel
+      product="finance"
+      recordKind="bankStatement"
+      recordId="st-1"
+      recordLabel="2026-07"
+      origin={{ kind: "import", id: "st-1", label: "CAMT" }}
+    />,
+  );
+  expect(
+    await screen.findByText(strings.recordAgentOriginImport("CAMT")),
+  ).toBeTruthy();
+});
+
 test("a record with no origin says so, and a product without an agent is offered nothing", async () => {
   answers = [{ match: "/chat/agents/directory", body: { agents: [] } }];
   render(

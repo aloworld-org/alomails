@@ -1,6 +1,7 @@
 import { ArrowRight, BarChart3, CalendarDays, CheckCircle2, CircleAlert, Clock3, Download, File, Flag, ListTodo, MessageSquareText, Paperclip, PencilLine, ReceiptText, Send, X } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
+import { RecordAgentPanel } from "../agents";
 import { strings } from "../i18n";
 import { useJmapClient, type Task, type TaskDepEdgeDto } from "../jmap";
 import { InvoiceHandoffDialog } from "../projects/InvoiceHandoffDialog";
@@ -378,6 +379,13 @@ export function ProjectOverviewView({
         </div>
 
         <div className="flex flex-col gap-5">
+          <RecordAgentPanel
+            product="projects"
+            recordKind="project"
+            recordId={project.id}
+            recordLabel={project.name}
+            origin={null}
+          />
           <div className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-base font-semibold text-primary">{strings.projectsHealth}</h2>

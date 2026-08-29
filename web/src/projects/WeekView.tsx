@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 
+import { RecordAgentPanel } from "../agents";
 import { Button, IconButton, Modal, Spinner, Table, Td, Th } from "../ds";
 import { strings } from "../i18n";
 import { projectsMessage, useProjectsApi } from "./api";
@@ -636,6 +637,17 @@ export function WeekView({
             </tbody>
         </Table>
       )}
+
+      {/* The week is the timesheet's record in focus. A never-submitted week
+          has no stored row yet, so its Monday — the address every timesheet
+          read uses — stands in as the id. */}
+      <RecordAgentPanel
+        product="projects"
+        recordKind="timesheet"
+        recordId={week?.id ?? monday}
+        recordLabel={strings.projectsWeekOf(dayLabel(monday), dayLabel(sunday))}
+        origin={null}
+      />
 
       <div className={styles.weekFoot}>
         <div className={styles.weekFootFacts}>

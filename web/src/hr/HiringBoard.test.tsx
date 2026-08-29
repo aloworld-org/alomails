@@ -219,6 +219,16 @@ describe("the hiring board", () => {
     expect(recorded.body).toEqual({ name: "Chidi Okafor" });
   });
 
+  test("the candidate's agent panel is in the drawer, citing where they applied from", async () => {
+    ui();
+    fireEvent.click(await screen.findByText(AMARA.name));
+
+    expect(await screen.findByText(strings.recordAgentTitle)).toBeTruthy();
+    expect(
+      screen.getByText(strings.recordAgentOriginFrom(AMARA.source)),
+    ).toBeTruthy();
+  });
+
   test("erasing a record asks first, and then really deletes it", async () => {
     ui();
     fireEvent.click(await screen.findByText(AMARA.name));

@@ -26,6 +26,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Network, Search, Users } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 
+import { RecordAgentPanel } from "../agents";
 import { Avatar, Checkbox, Spinner, Table, Td, Th, Toolbar } from "../ds";
 import { strings } from "../i18n";
 import { hrMessage, useHrApi } from "./api";
@@ -161,6 +162,7 @@ export function DirectoryView() {
   const total = view === "org" ? countOrg(chart ?? []) : entries.length;
   const matching = view === "org" ? countOrg(shownChart) : shown.length;
   const searching = query.trim() !== "";
+  const focusedPerson = person === null ? undefined : index.get(person);
 
   return (
     <div className={styles.page}>
@@ -256,6 +258,19 @@ export function DirectoryView() {
           />
         ) : (
           <OrgChart nodes={shownChart} highlightId={person} selfId={selfId} />
+        )}
+
+        {/* The person in focus — the one "show in chart" is pointing at. The
+            directory's public projection keeps no provenance, so the panel
+            says the record does not say where it came from. */}
+        {focusedPerson !== undefined && (
+          <RecordAgentPanel
+            product="hr"
+            recordKind="person"
+            recordId={focusedPerson.id}
+            recordLabel={focusedPerson.name}
+            origin={null}
+          />
         )}
       </div>
     </div>

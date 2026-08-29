@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { FileText, Pencil, Receipt, Trash2, X } from "lucide-react";
 
+import { RecordAgentPanel, type RecordOrigin } from "../agents";
 import { RecordHistory } from "../audit";
 import { Field, IconButton, Select, useDialogs } from "../ds";
 import { strings } from "../i18n";
@@ -32,6 +33,20 @@ interface Props {
   onClose: () => void;
   /** Something about the deal changed: the board or list behind re-reads. */
   onChanged: () => void;
+}
+
+/** Where this deal came from, in the provenance shape the agent panel
+ *  renders. A deal's record carries its source as the free words the person
+ *  or import gave it ("Referral", "Website"), so those words are the
+ *  citation. `createdBy` is deliberately not a fallback: it holds the
+ *  creator's opaque subject id, and an origin is said in words or not at
+ *  all — the readable join is A4.5's, adopted when the deal read carries
+ *  it. */
+export function dealOrigin(deal: CrmDeal): RecordOrigin | null {
+  if (deal.source !== "") {
+    return { kind: "source", id: deal.source, label: deal.source };
+  }
+  return null;
 }
 
 export function DealDrawer({ dealId, stages, onClose, onChanged }: Props) {
@@ -206,6 +221,14 @@ export function DealDrawer({ dealId, stages, onClose, onChanged }: Props) {
           <ActivityLog dealId={deal.id} />
           <NextSteps dealId={deal.id} />
           <LinkedThreads dealId={deal.id} />
+          <RecordAgentPanel
+            product="crm"
+            recordKind="deal"
+            recordId={deal.id}
+            recordLabel={deal.title}
+            origin={dealOrigin(deal)}
+            onBeforeNavigate={onClose}
+          />
           {/* Who changed this deal, and when (B2.13). Last in the drawer: it is
               the question asked after the ones above, never instead of them. */}
           <RecordHistory entityType="crm.deal" entityId={deal.id} />

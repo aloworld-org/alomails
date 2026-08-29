@@ -20,6 +20,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 
+import { RecordAgentPanel } from "../agents";
 import { RecordHistory } from "../audit";
 import { TotalsPanel, useBillingApi, useCustomers, type BillingProduct } from "../billing";
 import {
@@ -512,6 +513,18 @@ export function SalesOrderEditor() {
             )}
           </section>
         </>
+      )}
+
+      {/* As on the purchase order: `createdBy` is an opaque subject id, not
+          an origin in words. */}
+      {id !== undefined && order !== null && (
+        <RecordAgentPanel
+          product="inventory"
+          recordKind="salesOrder"
+          recordId={id}
+          recordLabel={order.number ?? strings.inventoryDraftOrder}
+          origin={null}
+        />
       )}
 
       {id !== undefined && <RecordHistory entityType="inventory.sales_order" entityId={id} />}

@@ -26,6 +26,7 @@ import {
   X,
 } from "lucide-react";
 
+import { RecordAgentPanel } from "../agents";
 import { saveBlob } from "../drive";
 import { Button, Field, IconButton, Select, Spinner, useDialogs } from "../ds";
 import { strings } from "../i18n";
@@ -343,6 +344,23 @@ export function ApplicantDrawer({
               {strings.hrErase}
             </Button>
           </section>
+
+          <RecordAgentPanel
+            product="hr"
+            recordKind="applicant"
+            recordId={applicant.id}
+            recordLabel={applicant.name}
+            origin={
+              applicant.source === ""
+                ? null
+                : {
+                    kind: "source",
+                    id: applicant.source,
+                    label: applicant.source,
+                  }
+            }
+            onBeforeNavigate={onClose}
+          />
 
           <p className={styles.drawerFact}>
             {strings.hrAppliedOn(momentLabel(applicant.createdAt))}

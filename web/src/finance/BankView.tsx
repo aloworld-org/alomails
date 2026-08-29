@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Landmark, Upload } from "lucide-react";
 
+import { RecordAgentPanel } from "../agents";
 import { Button, Spinner, Table, Td, Th, Toolbar, ToolbarSpacer } from "../ds";
 import { strings } from "../i18n";
 import { financeMessage, useFinanceApi } from "./api";
@@ -29,6 +30,8 @@ export function BankView({ onImported }: { onImported: () => void }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [staged, setStaged] = useState<string | null>(null);
+  /** The statement in focus — its agent panel opens under the list. */
+  const [focused, setFocused] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
 
   const reload = useCallback(() => setRevision((r) => r + 1), []);
@@ -93,10 +96,24 @@ export function BankView({ onImported }: { onImported: () => void }) {
           </thead>
           <tbody>
             {statements.map((statement) => (
-              <tr key={statement.id}>
+              <tr
+                key={statement.id}
+                aria-current={statement.id === focused ? "true" : undefined}
+              >
                 <Td>
-                  {dayLabel(statement.fromDate, "—")} –{" "}
-                  {dayLabel(statement.toDate, "—")}
+                  <button
+                    type="button"
+                    className="cursor-pointer border-0 bg-transparent p-0 text-left text-sm font-medium text-accent hover:underline"
+                    aria-expanded={statement.id === focused}
+                    onClick={() =>
+                      setFocused(
+                        statement.id === focused ? null : statement.id,
+                      )
+                    }
+                  >
+                    {dayLabel(statement.fromDate, "—")} –{" "}
+                    {dayLabel(statement.toDate, "—")}
+                  </button>
                   {statement.statementRef !== null &&
                     statement.statementRef !== "" && (
                       <span className={styles.subtle}>
@@ -130,6 +147,29 @@ export function BankView({ onImported }: { onImported: () => void }) {
           </tbody>
         </Table>
       )}
+
+      {statements
+        .filter((statement) => statement.id === focused)
+        .map((statement) => (
+          <RecordAgentPanel
+            key={statement.id}
+            product="finance"
+            recordKind="bankStatement"
+            recordId={statement.id}
+            recordLabel={
+              statement.statementRef !== null && statement.statementRef !== ""
+                ? statement.statementRef
+                : statement.accountIban
+            }
+            origin={{
+              kind: "import",
+              id: statement.id,
+              // The reader that understood the file — `importedBy` is an
+              // opaque subject id, not an origin in words.
+              label: sourceLabel(statement.source),
+            }}
+          />
+        ))}
 
       {importing && (
         <BankImportDialog

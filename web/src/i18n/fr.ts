@@ -5988,6 +5988,38 @@ export const fr: Partial<Catalog> = {
     `Marque « ${task} » comme terminée.`,
   recordAgentDraftReassignTask: (task: string): string =>
     `Réattribue « ${task} » à `,
+  recordAgentVerbMoveDealStage: "Changer son étape",
+  recordAgentVerbDraftFollowup: "Rédiger une relance",
+  recordAgentDraftMoveDealStage: (deal: string): string =>
+    `Passe « ${deal} » à l’étape `,
+  recordAgentDraftDraftFollowup: (deal: string): string =>
+    `Rédige une relance pour « ${deal} ».`,
+  recordAgentVerbApproveExpense: "L’approuver",
+  recordAgentVerbSuggestCategories: "Suggérer des catégories",
+  recordAgentDraftApproveExpense: (merchant: string): string =>
+    `Approuve la note de frais « ${merchant} ».`,
+  recordAgentDraftSuggestCategories:
+    "Passe en revue mes notes de frais sans catégorie et suggère-en une pour chacune.",
+  recordAgentVerbProjectStatus: "Résumer son état",
+  recordAgentVerbLogTime: "Pointer du temps dessus",
+  recordAgentVerbDraftTimesheet: "La préparer depuis mon agenda",
+  recordAgentDraftProjectStatus: (project: string): string =>
+    `Résume l’état de « ${project} ».`,
+  recordAgentDraftLogTime: (project: string): string =>
+    `Pointe du temps sur « ${project} » : `,
+  recordAgentDraftDraftTimesheet: (week: string): string =>
+    `Prépare ma feuille de temps pour ${week} depuis mon agenda.`,
+  recordAgentVerbReceiveDelivery: "Réceptionner sa livraison",
+  recordAgentDraftReceiveDelivery: (order: string): string =>
+    `Réceptionne la livraison de « ${order} ».`,
+  recordAgentVerbApproveLeave: "L’approuver",
+  recordAgentVerbDraftLetter: "Rédiger un courrier",
+  recordAgentDraftApproveLeave: (person: string): string =>
+    `Approuve la demande de congé de « ${person} ».`,
+  recordAgentDraftDraftLetter: (person: string): string =>
+    `Rédige un courrier pour « ${person} » à partir d’un modèle.`,
+  recordAgentOriginImport: (format: string): string =>
+    `Importé d’un fichier ${format}.`,
   chatAgentTag: "agent",
   chatAgentsAvailable: "Disponibles à ajouter",
   chatAgentsHere: "Agents dans cette conversation",

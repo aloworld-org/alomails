@@ -26,6 +26,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Printer } from "lucide-react";
 
+import { RecordAgentPanel } from "../agents";
 import { RecordHistory } from "../audit";
 import { TotalsPanel, printSheet, useBillingApi, type BillingProduct } from "../billing";
 import {
@@ -499,6 +500,19 @@ export function PurchaseOrderEditor() {
               ...(receipt.billId === null ? {} : { aside: strings.inventoryBillDrafted }),
             }),
           )}
+        />
+      )}
+
+      {/* The order's `createdBy` is an opaque subject id, which is not an
+          origin said in words — the panel says the record does not say,
+          until the read carries A4.5's readable join. */}
+      {id !== undefined && order !== null && (
+        <RecordAgentPanel
+          product="inventory"
+          recordKind="purchaseOrder"
+          recordId={id}
+          recordLabel={order.number ?? strings.inventoryDraftOrder}
+          origin={null}
         />
       )}
 

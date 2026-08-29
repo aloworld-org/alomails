@@ -111,6 +111,7 @@ export function DialogFrame({
   onClose,
   onSubmit,
   children,
+  aside,
 }: {
   Icon: LucideIcon;
   title: string;
@@ -123,6 +124,10 @@ export function DialogFrame({
   onClose: () => void;
   onSubmit: () => void;
   children: ReactNode;
+  /** Rendered after the form, as its sibling — the slot for a panel that
+   *  carries its own `<form>` (the record's agent), which HTML forbids
+   *  nesting inside this frame's. */
+  aside?: ReactNode;
 }) {
   const formId = useId();
   function submit(e: FormEvent) {
@@ -170,6 +175,7 @@ export function DialogFrame({
       <form id={formId} className="flex flex-col gap-4" onSubmit={submit}>
         {children}
       </form>
+      {aside}
     </Modal>
   );
 }
