@@ -590,6 +590,10 @@ impl AccountStore {
         .execute(&self.pool)
         .await
         .map_err(StoreError::Db)?;
+        // Their standing instructions pause (A7.1): each firing runs on the
+        // author's access, and access that walked out must not keep acting
+        // in the room. The card says paused; the rows stay for the record.
+        self.pause_author_instructions(id, user).await?;
         Ok(())
     }
 
@@ -659,8 +663,10 @@ impl AccountStore {
         .map_err(StoreError::Db)?;
         // The room's history stays readable; what its agents learned there
         // does not (A6.3) — an archived room takes no further turns, so its
-        // memories have no surface left to be right on.
+        // memories have no surface left to be right on. Its standing
+        // instructions go the same way (A7.1): no room, no card, no firing.
         self.forget_channel_memories(id).await?;
+        self.delete_channel_instructions(id).await?;
         Ok(())
     }
 

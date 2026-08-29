@@ -15,16 +15,16 @@ use crate::error::Problem;
 use crate::push::PushHub;
 use crate::state::{AppState, Limits};
 use crate::{
-    admin, agent, agent_directory, ai, api, app_passwords, audit, audit_record, autoconfig, base,
-    billing_bills, billing_customers, billing_fx, billing_invoices, billing_payments,
-    billing_products, billing_quote_designs, billing_quotes, billing_reminder, billing_reports,
-    billing_schedules, billing_send, billing_sepa, billing_settings, blob, calendar,
-    campaign_audience, campaign_consent, campaign_preview, campaign_record, campaign_segments,
-    campaign_suppression, campaign_unsubscribe, carddav, chat, chat_agent_memory,
-    chat_agent_routes, contacts, crm_activities, crm_deals, crm_handoff, crm_imports,
-    crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads, delegates, docs, drive,
-    filters, finance_approvals, finance_bank, finance_bank_match, finance_chart, finance_expenses,
-    finance_mileage, finance_periods, finance_receipts, finance_report_aged,
+    admin, agent, agent_directory, agent_instructions, ai, api, app_passwords, audit, audit_record,
+    autoconfig, base, billing_bills, billing_customers, billing_fx, billing_invoices,
+    billing_payments, billing_products, billing_quote_designs, billing_quotes, billing_reminder,
+    billing_reports, billing_schedules, billing_send, billing_sepa, billing_settings, blob,
+    calendar, campaign_audience, campaign_consent, campaign_preview, campaign_record,
+    campaign_segments, campaign_suppression, campaign_unsubscribe, carddav, chat,
+    chat_agent_memory, chat_agent_routes, contacts, crm_activities, crm_deals, crm_handoff,
+    crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads, delegates,
+    docs, drive, filters, finance_approvals, finance_bank, finance_bank_match, finance_chart,
+    finance_expenses, finance_mileage, finance_periods, finance_receipts, finance_report_aged,
     finance_report_balance, finance_report_pl, finance_report_vat, flagdue, hr_checklists,
     hr_documents, hr_employees, hr_holidays, hr_leave_balances, hr_leave_policies,
     hr_leave_requests, hr_letters, hr_org, hr_payroll, hr_recruitment, imap_import_route, insights,
@@ -376,6 +376,16 @@ pub fn app_with_site_boundaries(
         .route(
             "/chat/memories/{id}",
             delete(chat_agent_memory::forget_memory),
+        )
+        // Standing instructions (ADR 0057 §7): a person asks once, in
+        // advance; Cancel is the author's and the room owner's.
+        .route(
+            "/chat/channels/{id}/instructions",
+            get(agent_instructions::list_instructions).post(agent_instructions::create_instruction),
+        )
+        .route(
+            "/chat/instructions/{id}",
+            delete(agent_instructions::cancel_instruction),
         )
         .route(
             "/chat/proposals/{id}",

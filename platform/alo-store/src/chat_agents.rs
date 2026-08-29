@@ -427,6 +427,10 @@ impl AccountStore {
         .await
         .map_err(StoreError::Db)?;
         self.forget_agent_channel_memories(agent, channel).await?;
+        // Its standing instructions here too (A7.1): an agent taken out of a
+        // room cannot be asked to keep acting in it.
+        self.delete_agent_channel_instructions(agent, channel)
+            .await?;
         Ok(())
     }
 }

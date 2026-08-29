@@ -412,6 +412,9 @@ async fn run(addr: SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
     // Background scheduled-send sweeper (send later): submit drafts whose chosen
     // time has arrived, through the same outbound path as an interactive send.
     // Needs the full app state (submission listener address), so it starts here.
+    // Standing instructions ride the same tick (ADR 0057 §7, A7.1): each due
+    // instruction fires one agent turn as its author, which needs the full
+    // app state too (the turns registry and the push hub).
     {
         let state = state.clone();
         tokio::spawn(async move {
@@ -419,6 +422,7 @@ async fn run(addr: SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
             loop {
                 tick.tick().await;
                 alo_jmap::submission::run_due_scheduled(&state).await;
+                alo_jmap::agent_instructions::run_due(&state).await;
             }
         });
     }

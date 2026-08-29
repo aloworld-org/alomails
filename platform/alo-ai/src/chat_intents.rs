@@ -247,6 +247,14 @@ pub const CHAT_EXCLUDED: &[Excluded] = &[
         route: "/chat/memories/{id}",
         why: "Forgetting a remembered fact is a person's withdrawal of consent; an agent must not curate what is remembered about a room.",
     },
+    Excluded {
+        route: "/chat/channels/{id}/instructions",
+        why: "A standing instruction (ADR 0057 §7) is a person's advance ask; an agent must not commission itself, and the card list is the members' window.",
+    },
+    Excluded {
+        route: "/chat/instructions/{id}",
+        why: "Cancel is the author's and the room owner's brake on a standing instruction; it must never be a tool an agent can reach.",
+    },
 ];
 
 /// The Chat paragraph of the agent's general instructions.

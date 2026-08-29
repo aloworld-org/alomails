@@ -100,13 +100,18 @@ pub(crate) async fn ground(
 /// Best-effort throughout: a turn that fails leaves the asker's own message
 /// untouched, because their words were already said and are not conditional on
 /// a model being reachable.
-async fn take_turn(
+///
+/// `asked` is the message that triggered the turn, when one did — a standing
+/// instruction's firing (A7.1) has none, and a turn with no message behind it
+/// learns nothing: memory rests on a person's words in the room, and a firing
+/// is the author's past words replayed, not new consent to remember from.
+pub(crate) async fn take_turn(
     state: &AppState,
     account: &Account,
     channel: &ChatChannelId,
     agent: &ChatAgent,
     question: &str,
-    asked: &ChatMessageId,
+    asked: Option<&ChatMessageId>,
     stopped: &std::sync::atomic::AtomicBool,
 ) -> Option<Spoken> {
     let acc = &account.acc;
@@ -208,19 +213,21 @@ async fn take_turn(
             // The answer is already said; whether the exchange taught the room
             // anything is a side effect behind the room's own switch (A6.1),
             // and never a reason the answer could fail.
-            crate::chat_agent_memory::learn_from_turn(
-                account,
-                &config,
-                channel,
-                agent,
-                &crate::chat_agent_memory::Exchange {
-                    question,
-                    answer: &answer,
-                    read: &read,
-                    source: asked,
-                },
-            )
-            .await;
+            if let Some(asked) = asked {
+                crate::chat_agent_memory::learn_from_turn(
+                    account,
+                    &config,
+                    channel,
+                    agent,
+                    &crate::chat_agent_memory::Exchange {
+                        question,
+                        answer: &answer,
+                        read: &read,
+                        source: asked,
+                    },
+                )
+                .await;
+            }
             Some(Spoken::Answered)
         }
         Ok((TurnResult::Propose { action, say }, _)) => {
@@ -352,7 +359,13 @@ pub(crate) fn answer_if_asked(
             );
             push::notify_chat(&state, &tenant, &[acc.user().clone()]).await;
             let spoke = take_turn(
-                &state, &account, &channel, &agent, &body, &message, &stopped,
+                &state,
+                &account,
+                &channel,
+                &agent,
+                &body,
+                Some(&message),
+                &stopped,
             )
             .await;
             state.turns.end(&tenant, &channel, &id);

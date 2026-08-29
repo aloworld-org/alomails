@@ -110,7 +110,7 @@ fn event_of(row: EventRow) -> DomainEvent {
 /// 64 bytes, lowercase words of `a-z0-9` joined by `.` or `_` — the same
 /// shape the audit trail's vocabulary uses, so the two never diverge into
 /// needing a translator.
-fn valid_name(name: &str) -> bool {
+pub(crate) fn valid_name(name: &str) -> bool {
     !name.is_empty()
         && name.len() <= 64
         && name

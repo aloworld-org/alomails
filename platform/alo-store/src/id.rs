@@ -462,6 +462,12 @@ opaque_id!(
     AgentMemoryId
 );
 opaque_id!(
+    /// One standing instruction — a person's advance ask that an agent act on
+    /// a schedule or a module event (ADR 0057 §7). Addressed by id so Cancel
+    /// cancels exactly one.
+    AgentInstructionId
+);
+opaque_id!(
     /// One journal entry — everything one document event did to the books, in
     /// one transaction (alo Finance, ADR 0035, wave B4). An entry is written
     /// whole and never edited: a correction is another entry pointing back at
