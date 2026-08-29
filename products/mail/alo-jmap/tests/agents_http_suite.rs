@@ -33,6 +33,7 @@ mod agent_meet_http;
 mod agent_meet_intents_http;
 mod agent_memory_http;
 mod agent_orchestrate_http;
+mod agent_origins_http;
 mod agent_projects_intents_http;
 mod agent_reads_answer_http;
 mod agent_seed_http;

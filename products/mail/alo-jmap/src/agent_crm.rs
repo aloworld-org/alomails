@@ -118,6 +118,26 @@ pub async fn execute_create_deal(
             .then(|| origin.thread.as_str().to_owned()),
         None => None,
     };
+    // ADR 0058 §4 (A4.5): a deal raised out of an email carries that email as
+    // its provenance, set here where the record is created — the specific
+    // source beats the generic room stamp the execution funnel would leave.
+    // The label is the subject the propose path resolved beside the id, the
+    // words a person would cite the conversation by. Best-effort: the deal
+    // was raised, and a pointer must not unraise it.
+    if let Some(message) = string_arg(args, "message_id")
+        && let Err(err) = account
+            .acc
+            .set_record_origin(
+                "deal",
+                id.as_str(),
+                "email",
+                &message,
+                string_arg(args, "subject").as_deref(),
+            )
+            .await
+    {
+        tracing::warn!(error = %err, "email provenance not recorded on the deal");
+    }
     let deal = load(account, &id).await?;
     Ok(Json(json!({
         "ok": true,

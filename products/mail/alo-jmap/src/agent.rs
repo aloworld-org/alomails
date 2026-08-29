@@ -320,7 +320,14 @@ pub(crate) async fn execute_tool(
         record_run(account, run, &entry, args, None).await;
         return Err(Problem::with(StatusCode::FORBIDDEN, NEEDS_APPROVAL));
     }
-    let done = dispatch(state, account, tool, args).await;
+    let mut done = dispatch(state, account, tool, args).await;
+    // ADR 0058 §4 (A4.5): a record created from a room is stamped with the
+    // thread it came from, and any reply about one record answers with its
+    // stored origin — so every module's intent returns provenance without
+    // each module joining it by hand.
+    if let Ok(reply) = &mut done {
+        attach_origin(account, run, &entry, &mut reply.0).await;
+    }
     // ADR 0047 §4: both paths leave a row, and a refusal leaves one too.
     // Since A8.1 the row is the action record, so the run's outcome rides
     // along: the record it touched, and the undo that record makes possible.
@@ -477,6 +484,73 @@ async fn emit_event(
     if let Err(err) = account.acc.emit_event(&event).await {
         tracing::warn!(tool = entry.name, error = %err, "intent event not emitted");
     }
+}
+
+/// Provenance for one execution's reply (ADR 0058 §4, A4.5).
+///
+/// Two halves, both best-effort like [`record_run`] — an act the caller was
+/// entitled to must not fail because a pointer could not be written or read:
+///
+/// - **Stamp.** A write that ran in a room and created or touched exactly one
+///   record leaves `{kind: "thread", id: the channel, label: its name}` as
+///   that record's origin — the thread a task came from. `ON CONFLICT DO
+///   NOTHING` in the store means a module that already declared a better
+///   source inside the creating call (the quote an invoice came from) wins,
+///   and this generic stamp quietly loses.
+/// - **Answer.** Any reply that names exactly one record gets the stored
+///   origin injected as `origin` on its `result` — the field the design puts
+///   on the record view — so a read's grounding carries "where it came from"
+///   to the model, which is told to cite it.
+///
+/// An executor that already answered an `origin` field keeps its own: the
+/// module's word about its record beats a generic join.
+async fn attach_origin(
+    account: &Account,
+    run: &ToolRun<'_>,
+    entry: &alo_ai::AgentTool,
+    reply: &mut Value,
+) {
+    let Some((kind, id)) = event_record_ref(reply) else {
+        return;
+    };
+    if !entry.is_read()
+        && let Some(channel) = run.channel
+    {
+        // The room's own name is the label a person would cite; a bare DM has
+        // none, and the pointer still stands without one.
+        let label = account
+            .acc
+            .channel(channel)
+            .await
+            .ok()
+            .and_then(|room| room.name);
+        if let Err(err) = account
+            .acc
+            .set_record_origin(&kind, &id, "thread", channel.as_str(), label.as_deref())
+            .await
+        {
+            tracing::warn!(tool = entry.name, error = %err, "record origin not stamped");
+        }
+    }
+    let stored = match account.acc.record_origin(&kind, &id).await {
+        Ok(stored) => stored,
+        Err(err) => {
+            tracing::warn!(tool = entry.name, error = %err, "record origin not read");
+            return;
+        }
+    };
+    if let Some(origin) = stored
+        && let Some(result) = reply.get_mut("result").and_then(Value::as_object_mut)
+        && !result.contains_key("origin")
+    {
+        result.insert("origin".to_owned(), origin_json(&origin));
+    }
+}
+
+/// The `origin` field as every record view renders it — one shape, shared, so
+/// a module attaching provenance by hand cannot drift from the funnel's join.
+pub(crate) fn origin_json(origin: &alo_store::RecordOrigin) -> Value {
+    json!({ "kind": origin.kind, "id": origin.id, "label": origin.label })
 }
 
 /// The record an execution's reply names, when it names exactly one.

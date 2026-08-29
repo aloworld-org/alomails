@@ -193,6 +193,7 @@ pub mod project_milestones;
 pub mod project_templates;
 pub mod project_updates;
 pub mod push_subscriptions;
+pub mod record_origins;
 pub mod reset;
 pub mod rfc2047;
 pub mod schedule;
@@ -602,6 +603,7 @@ pub use push_subscriptions::{
     PUSH_ENDPOINT_MAX_CHARS, PUSH_KEY_MAX_CHARS, PUSH_SUBSCRIPTIONS_MAX, PushDelivery,
     PushSubscriptionRow,
 };
+pub use record_origins::RecordOrigin;
 pub use reset::PendingReset;
 pub use schedule::DueSend;
 pub use search::SearchHit;

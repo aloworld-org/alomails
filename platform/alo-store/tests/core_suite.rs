@@ -31,6 +31,7 @@ mod meet;
 mod missing_blob_is_logged;
 mod out_of_office_window;
 mod push_subscriptions_tenancy;
+mod record_origins;
 mod sieve;
 mod snooze;
 mod store_behaviors;

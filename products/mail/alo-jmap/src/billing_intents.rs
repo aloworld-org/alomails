@@ -232,6 +232,33 @@ pub(crate) async fn accept_quote(account: &Account, id: &BillingQuoteId) -> Resu
         .accept_billing_quote(id)
         .await
         .map_err(map_store_err)?;
+    // ADR 0058 §4 (A4.5): the raised document came from this quote, and that
+    // is recorded where the record is created — here, on both the route's
+    // path and the agent's, since they share this core. Best-effort like
+    // every provenance write: the acceptance already happened, and failing
+    // it over a pointer would be the worse trade. The label is the number a
+    // person would cite the offer by (an accepted quote always has one).
+    let raised: &str = match &accepted.outcome {
+        AcceptedAs::InvoiceDraft(_) => "invoice",
+        AcceptedAs::SalesOrder(_) => "sales_order",
+    };
+    let raised_id: &str = match &accepted.outcome {
+        AcceptedAs::InvoiceDraft(invoice_id) => invoice_id.as_str(),
+        AcceptedAs::SalesOrder(order_id) => order_id.as_str(),
+    };
+    if let Err(err) = account
+        .acc
+        .set_record_origin(
+            raised,
+            raised_id,
+            "quote",
+            accepted.quote.quote.id.as_str(),
+            accepted.quote.quote.number.as_deref(),
+        )
+        .await
+    {
+        tracing::warn!(error = %err, "quote provenance not recorded on the raised document");
+    }
     let day = today();
     let mut body = json!({
         "quote": crate::billing_quotes::document_json(&accepted.quote, day),
@@ -696,6 +723,10 @@ pub async fn execute_invoice_lookup(account: &Account, args: &Value) -> Reply {
     .await?;
     if let Some(object) = value.as_object_mut() {
         object.insert("customerName".to_owned(), json!(names.get(&customer_id)));
+        // The record word, so the funnel knows which record this read is
+        // about — that is what lets it answer with the invoice's `origin`
+        // (A4.5) and point the read's action row at the document.
+        object.insert("kind".to_owned(), json!("invoice"));
     }
     ok(value)
 }

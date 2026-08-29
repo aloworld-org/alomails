@@ -111,6 +111,7 @@ const NO_TOOLS_YET: &str = "You have no tools in this product yet, so you ANSWER
 /// told how to fill in an argument it would never have.
 const AGENT_SYSTEM_RULES: &str = "\
 Resolve any relative date or time (today, tomorrow 3pm, next Friday) against the current date given below into an absolute value (YYYY-MM-DD for a task due, RFC 3339 UTC for an event). \
+When a record a tool returns carries an \"origin\" field, that is where the record came from — cite it in your answer by its label (e.g. \"raised from quote QUO-2026-00007\", \"from the #finance thread\") so you explain rather than assert; never invent an origin for a record that has none. \
 If the request needs an action no tool covers, ANSWER instead and say you cannot do that yet. Write the answer/say text in the user's language. Output ONLY the JSON object — no markdown, no code fences, no preamble.";
 
 /// The whole system prompt for one product's agent: who it is, the tools it —
