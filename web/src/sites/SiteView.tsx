@@ -31,6 +31,7 @@ import {
   X,
 } from "lucide-react";
 
+import { RecordAgentPanel } from "../agents";
 import { strings } from "../i18n";
 import { Button, Spinner } from "../ds";
 import { sitesMessage, useSitesApi } from "./api";
@@ -394,6 +395,22 @@ export function SiteView() {
                 )}
               </div>
             </section>
+
+            {/* The site as a record (A8.4), directly under how it stands:
+                what @sites can do with this website — read where it stands,
+                go through it for search engines, put the draft live — each
+                one proposed in the agent's room and approved there, never
+                run from here. */}
+            <RecordAgentPanel
+              product="sites"
+              recordKind="site"
+              recordId={site.id}
+              recordLabel={site.name}
+              // A site keeps no provenance: neither `/sites` nor `/sites/{id}`
+              // says who made it or which template it grew from, so the panel
+              // says it does not know rather than inventing a source (A8.4).
+              origin={null}
+            />
 
             {/* Publishing later belongs directly under publishing now: they are
               the same decision, one of them with a moment attached. */}

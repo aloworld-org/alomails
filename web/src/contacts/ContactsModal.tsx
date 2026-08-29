@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 
+import { RecordAgentPanel } from "../agents";
 import { strings } from "../i18n";
 import {
   Button,
@@ -212,6 +213,13 @@ export function ContactsModal({ onClose }: ContactsModalProps) {
         (c.organization ?? "").toLowerCase().includes(q),
     );
   }, [contacts, query]);
+
+  /** The saved contact on screen, if the detail pane holds one — `null` while
+   *  nothing is chosen and while a new card is being composed. */
+  const inFocus =
+    selected === null || selected === "new"
+      ? null
+      : ((contacts ?? []).find((c) => c.id === selected) ?? null);
 
   function openNew() {
     setSelected("new");
@@ -437,6 +445,26 @@ export function ContactsModal({ onClose }: ContactsModalProps) {
               onDelete={remove}
               onCancel={() => setSelected(null)}
             />
+          )}
+          {/* The person as a record (A8.4): the exchange with them and a
+              letter to them are @mail's — the address book is that agent's
+              too (ADR 0034). A sibling of the form rather than a child of it:
+              the panel carries its own ask field, and HTML forbids a form
+              inside a form. A contact being composed has no record yet. */}
+          {inFocus !== null && (
+            <div className="mt-5">
+              <RecordAgentPanel
+                product="mail"
+                recordKind="contact"
+                recordId={inFocus.id}
+                recordLabel={inFocus.name}
+                // A card in an address book keeps nothing about where it came
+                // from — not who added it, not the message it was taken from
+                // — so the panel says so rather than inventing a source.
+                origin={null}
+                onBeforeNavigate={onClose}
+              />
+            </div>
           )}
         </div>
       </div>

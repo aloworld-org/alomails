@@ -200,6 +200,97 @@ export const RECORD_VERBS: Readonly<Record<string, readonly RecordVerb[]>> = {
       kinds: ["purchaseOrder"],
     },
   ],
+  // A conversation is a record too: the room in focus in "Who is here", where
+  // the room's own agents (A6.4) are listed. Its verbs are the ones that name
+  // one room — catching up on it, and looking inside it.
+  chat: [
+    {
+      tool: "catch_up_room",
+      label: () => strings.recordAgentVerbCatchUpRoom,
+      draft: (room) => strings.recordAgentDraftCatchUpRoom(room),
+    },
+    {
+      tool: "find_in_chat",
+      label: () => strings.recordAgentVerbFindInRoom,
+      draft: (room) => strings.recordAgentDraftFindInRoom(room),
+    },
+  ],
+  // A meeting that has ended: what the record of it says, and the minutes
+  // written from that record into the room the meeting came out of.
+  meet: [
+    {
+      tool: "meeting_record",
+      label: () => strings.recordAgentVerbMeetingRecord,
+      draft: (meeting) => strings.recordAgentDraftMeetingRecord(meeting),
+    },
+    {
+      tool: "meeting_minutes",
+      label: () => strings.recordAgentVerbMeetingMinutes,
+      draft: (meeting) => strings.recordAgentDraftMeetingMinutes(meeting),
+    },
+  ],
+  // Insights has two records on one screen: the board, which `pin_chart`
+  // names by the caption on its tab, and one chart on it, whose question is
+  // what `insight_change` re-asks over two periods.
+  insights: [
+    {
+      tool: "insight_change",
+      label: () => strings.recordAgentVerbInsightChange,
+      draft: (chart) => strings.recordAgentDraftInsightChange(chart),
+      kinds: ["tile"],
+    },
+    {
+      tool: "pin_chart",
+      label: () => strings.recordAgentVerbPinChart,
+      draft: (board) => strings.recordAgentDraftPinChart(board),
+      kinds: ["board"],
+    },
+  ],
+  // Mail's agent works in the mail AND the address book (ADR 0034's one
+  // product), so its two record kinds are a conversation and a contact.
+  mail: [
+    {
+      tool: "draft_reply",
+      label: () => strings.recordAgentVerbDraftReply,
+      draft: (subject) => strings.recordAgentDraftDraftReply(subject),
+      kinds: ["message"],
+    },
+    {
+      tool: "thread_lookup",
+      label: () => strings.recordAgentVerbThreadLookup,
+      draft: (subject) => strings.recordAgentDraftThreadLookup(subject),
+      kinds: ["message"],
+    },
+    {
+      tool: "correspondence",
+      label: () => strings.recordAgentVerbCorrespondence,
+      draft: (person) => strings.recordAgentDraftCorrespondence(person),
+      kinds: ["contact"],
+    },
+    {
+      tool: "draft_email",
+      label: () => strings.recordAgentVerbWriteToThem,
+      draft: (person) => strings.recordAgentDraftWriteToThem(person),
+      kinds: ["contact"],
+    },
+  ],
+  sites: [
+    {
+      tool: "site_status",
+      label: () => strings.recordAgentVerbSiteStatus,
+      draft: (site) => strings.recordAgentDraftSiteStatus(site),
+    },
+    {
+      tool: "site_seo_review",
+      label: () => strings.recordAgentVerbSiteSeoReview,
+      draft: (site) => strings.recordAgentDraftSiteSeoReview(site),
+    },
+    {
+      tool: "site_publish",
+      label: () => strings.recordAgentVerbSitePublish,
+      draft: (site) => strings.recordAgentDraftSitePublish(site),
+    },
+  ],
   hr: [
     {
       tool: "approve_leave_request",

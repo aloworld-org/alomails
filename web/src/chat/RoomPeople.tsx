@@ -9,14 +9,32 @@
 // the distinction that matters is "who is here", not "which kind of thing".
 // They are still visibly different — an agent is marked, never avatared, so
 // nobody mistakes one for a colleague.
+//
+// The room is also a record, and its agent stands here too (A8.4): who opened
+// it, what @chat can do with this conversation, and a question about it
+// answered in place — under the people, because who is here is what the
+// dialog was opened for.
 import { useCallback, useEffect, useState } from "react";
 import { Brain, Sparkles, UserMinus, UserPlus, X } from "lucide-react";
 
-import { AgentMemoryPanel } from "../agents";
+import { AgentMemoryPanel, RecordAgentPanel } from "../agents";
+import type { RecordOrigin } from "../agents";
 import { Avatar, Button, IconButton } from "../ds";
 import { strings } from "../i18n";
 import { chatMessage, useChatApi } from "./api";
 import type { Agent, ChannelDetail } from "./types";
+
+/** Where a room came from: whoever opened it, by the address the room itself
+ *  still knows them by. `createdBy` is an account id, so a room whose creator
+ *  has left (or is not a member) has no origin to show rather than an
+ *  unreadable one — the same rule every other mount follows (A8.4). */
+export function roomOrigin(detail: ChannelDetail): RecordOrigin | null {
+  const creator = detail.members.find(
+    (member) => member.user === detail.createdBy,
+  );
+  if (creator === undefined || creator.email === null) return null;
+  return { kind: "person", id: detail.createdBy, label: creator.email };
+}
 
 const sectionClass = "mb-2 mt-3 first:mt-0 text-xs font-semibold uppercase tracking-wide text-tertiary";
 const listClass = "m-0 flex list-none flex-col gap-1 p-0";
@@ -201,6 +219,22 @@ export function RoomPeople({
               </li>
             ))}
           </ul>
+
+          {/* The room itself as a record (A8.4), beside the agents that are in
+              it and what they remember (A6.4). A DM has no name for a verb to
+              name, so the panel is a named room's. */}
+          {detail !== null && detail.name !== null && (
+            <div className="mt-3">
+              <RecordAgentPanel
+                product="chat"
+                recordKind="room"
+                recordId={detail.id}
+                recordLabel={detail.name}
+                origin={roomOrigin(detail)}
+                onBeforeNavigate={onClose}
+              />
+            </div>
+          )}
 
           {error !== null && <p className="mt-3 text-sm text-accent" role="alert">{error}</p>}
         </div>

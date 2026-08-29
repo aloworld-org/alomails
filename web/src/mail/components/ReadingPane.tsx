@@ -27,6 +27,7 @@ import {
   Trash2,
 } from "lucide-react";
 
+import { RecordAgentPanel } from "../../agents";
 import { strings } from "../../i18n";
 import { Button, IconButton, Menu, Toolbar, ToolbarSpacer } from "../../ds";
 import type { MenuItem } from "../../ds";
@@ -522,6 +523,24 @@ export function ReadingPane({
               onToggle={() => toggle(message.id)}
             />
           ))}
+        </div>
+
+        {/* The conversation as a record (A8.4): who sent the message these
+            actions act on, what @mail can do with it, and a question about it
+            answered in place. Under the thread, because the mail is what the
+            pane was opened for — and it is the same panel every module has. */}
+        <div className="mt-5">
+          <RecordAgentPanel
+            product="mail"
+            recordKind="message"
+            recordId={target.id}
+            recordLabel={subjectOr(target)}
+            origin={{
+              kind: "sender",
+              id: target.id,
+              label: senderName(target),
+            }}
+          />
         </div>
 
         {replies.status === "ready" && (

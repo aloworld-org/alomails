@@ -1976,6 +1976,46 @@ export const de: Partial<Catalog> = {
   recordAgentVerbCancelEvent: "Absagen",
   recordAgentDraftCancelEvent: (meeting: string): string =>
     `Sage „${meeting}“ ab.`,
+  recordAgentOriginSender: (who: string): string => `Gesendet von ${who}.`,
+  recordAgentVerbCatchUpRoom: "Bring mich auf den Stand",
+  recordAgentDraftCatchUpRoom: (room: string): string =>
+    `Bring mich zu „${room}“ auf den Stand.`,
+  recordAgentVerbFindInRoom: "Darin etwas suchen",
+  recordAgentDraftFindInRoom: (room: string): string =>
+    `Suche in „${room}“ nach `,
+  recordAgentVerbMeetingRecord: "Was darin gesagt wurde",
+  recordAgentDraftMeetingRecord: (meeting: string): string =>
+    `Was ist in „${meeting}“ passiert?`,
+  recordAgentVerbMeetingMinutes: "Protokoll schreiben",
+  recordAgentDraftMeetingMinutes: (meeting: string): string =>
+    `Schreibe das Protokoll von „${meeting}“.`,
+  recordAgentVerbInsightChange: "Was sich verändert hat",
+  recordAgentDraftInsightChange: (chart: string): string =>
+    `Wie hat sich „${chart}“ seit der Periode davor verändert?`,
+  recordAgentVerbPinChart: "Ein Diagramm anheften",
+  recordAgentDraftPinChart: (board: string): string =>
+    `Hefte an die Tafel „${board}“ ein Diagramm, das `,
+  recordAgentVerbDraftReply: "Antwort entwerfen",
+  recordAgentDraftDraftReply: (subject: string): string =>
+    `Entwirf eine Antwort auf „${subject}“, die `,
+  recordAgentVerbThreadLookup: "Den Verlauf zusammenfassen",
+  recordAgentDraftThreadLookup: (subject: string): string =>
+    `Fasse das Gespräch „${subject}“ zusammen.`,
+  recordAgentVerbCorrespondence: "Was wir ihnen geschrieben haben",
+  recordAgentDraftCorrespondence: (person: string): string =>
+    `Was haben wir ${person} geschrieben?`,
+  recordAgentVerbWriteToThem: "Ihnen schreiben",
+  recordAgentDraftWriteToThem: (person: string): string =>
+    `Entwirf eine E-Mail an ${person} über `,
+  recordAgentVerbSiteStatus: "Wie sie dasteht",
+  recordAgentDraftSiteStatus: (site: string): string =>
+    `Wie steht die Website „${site}“ da?`,
+  recordAgentVerbSiteSeoReview: "Für Suchmaschinen prüfen",
+  recordAgentDraftSiteSeoReview: (site: string): string =>
+    `Prüfe „${site}“ für Suchmaschinen.`,
+  recordAgentVerbSitePublish: "Veröffentlichen",
+  recordAgentDraftSitePublish: (site: string): string =>
+    `Veröffentliche „${site}“.`,
   chatSearchPlaceholder: "Nachrichten, Personen, Kanäle durchsuchen…",
   chatSearchClear: "Suche leeren",
   chatSearchNothing: "Nichts gefunden.",

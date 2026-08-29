@@ -17,6 +17,7 @@ import wavingHand from "../assets/alo-waving-hand.svg";
 import { getLocale, strings } from "../i18n";
 import { useJmapClient, type CalendarEvent } from "../jmap";
 import { MeetRoom } from "./MeetRoom";
+import { RecentMeetings } from "./RecentMeetings";
 import { useMeetApi, type Meeting } from "./api";
 import styles from "./MeetModule.module.css";
 
@@ -181,7 +182,7 @@ export function MeetModule() {
             </section>
 
             {later.length > 0 && <Card as="section" pad="sm" className={styles.upcoming}><div className={styles.sectionHeading}><div><h2>{strings.meetUpcoming}</h2><p>{strings.meetUpcomingHint}</p></div></div>{later.slice(0, 4).map((event) => <button type="button" key={`${event.id}-${event.startsAt}`} onClick={() => navigate("/agenda")}><time><b>{new Date(event.startsAt).toLocaleDateString(getLocale(), { day: "2-digit" })}</b><small>{new Date(event.startsAt).toLocaleDateString(getLocale(), { month: "short" })}</small></time><span><strong>{event.summary || strings.meetCalendarUntitled}</strong><small>{time(event.startsAt)} · {duration(event)}</small></span><ArrowRight /></button>)}</Card>}
-            {history.length > 0 && <Card as="section" pad="sm" className={styles.history}><div className={styles.sectionHeading}><div><h2>{strings.meetRecent}</h2><p>{strings.meetRecentHint}</p></div></div><ul>{history.slice(0, 6).map((meeting) => <li key={meeting.id}><span className={styles.historyIcon}><Video /></span><div><strong>{meeting.title.trim() || strings.meetUntitled}</strong><small>{meeting.endedAt === null ? "" : strings.meetEndedAt(new Date(meeting.endedAt).toLocaleString(getLocale(), { dateStyle: "medium", timeStyle: "short" }))}</small></div>{meeting.startedAt !== null && meeting.endedAt !== null && <time>{strings.meetDuration(Math.max(1, Math.round((new Date(meeting.endedAt).getTime() - new Date(meeting.startedAt).getTime()) / 60_000)))}</time>}</li>)}</ul></Card>}
+            {history.length > 0 && <RecentMeetings history={history} />}
           </main>
 
           <aside className={styles.sidebar}>

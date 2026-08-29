@@ -5994,6 +5994,46 @@ export const nl: Partial<Catalog> = {
   recordAgentVerbCancelEvent: "Annuleren",
   recordAgentDraftCancelEvent: (meeting: string): string =>
     `Annuleer “${meeting}”.`,
+  recordAgentOriginSender: (who: string): string => `Gestuurd door ${who}.`,
+  recordAgentVerbCatchUpRoom: "Praat me bij",
+  recordAgentDraftCatchUpRoom: (room: string): string =>
+    `Praat me bij over “${room}”.`,
+  recordAgentVerbFindInRoom: "Er iets in zoeken",
+  recordAgentDraftFindInRoom: (room: string): string =>
+    `Zoek in “${room}” naar `,
+  recordAgentVerbMeetingRecord: "Wat er is gezegd",
+  recordAgentDraftMeetingRecord: (meeting: string): string =>
+    `Wat is er in “${meeting}” gebeurd?`,
+  recordAgentVerbMeetingMinutes: "Notulen schrijven",
+  recordAgentDraftMeetingMinutes: (meeting: string): string =>
+    `Schrijf de notulen van “${meeting}”.`,
+  recordAgentVerbInsightChange: "Wat er is veranderd",
+  recordAgentDraftInsightChange: (chart: string): string =>
+    `Hoe is “${chart}” veranderd sinds de vorige periode?`,
+  recordAgentVerbPinChart: "Er een grafiek op zetten",
+  recordAgentDraftPinChart: (board: string): string =>
+    `Zet op het bord “${board}” een grafiek die `,
+  recordAgentVerbDraftReply: "Antwoord opstellen",
+  recordAgentDraftDraftReply: (subject: string): string =>
+    `Stel een antwoord op “${subject}” op waarin `,
+  recordAgentVerbThreadLookup: "Vat het gesprek samen",
+  recordAgentDraftThreadLookup: (subject: string): string =>
+    `Vat het gesprek “${subject}” samen.`,
+  recordAgentVerbCorrespondence: "Wat we hun hebben gezegd",
+  recordAgentDraftCorrespondence: (person: string): string =>
+    `Wat hebben we tegen ${person} gezegd?`,
+  recordAgentVerbWriteToThem: "Hun schrijven",
+  recordAgentDraftWriteToThem: (person: string): string =>
+    `Stel een e-mail aan ${person} op over `,
+  recordAgentVerbSiteStatus: "Hoe het ervoor staat",
+  recordAgentDraftSiteStatus: (site: string): string =>
+    `Hoe staat de website “${site}” ervoor?`,
+  recordAgentVerbSiteSeoReview: "Nakijken voor zoekmachines",
+  recordAgentDraftSiteSeoReview: (site: string): string =>
+    `Kijk “${site}” na voor zoekmachines.`,
+  recordAgentVerbSitePublish: "Publiceren",
+  recordAgentDraftSitePublish: (site: string): string =>
+    `Publiceer “${site}”.`,
   chatAgentTag: "agent",
   chatAgentsAvailable: "Beschikbaar om toe te voegen",
   chatAgentsHere: "Agents in dit gesprek",

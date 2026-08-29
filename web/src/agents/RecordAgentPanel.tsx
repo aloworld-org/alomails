@@ -191,6 +191,10 @@ export function RecordAgentPanel({
           : strings.recordAgentOriginThread(label);
       case "message":
         return strings.recordAgentOriginEmail;
+      // A message's own provenance is who sent it — the one origin the mail
+      // API does carry, and the one nobody has to be told twice.
+      case "sender":
+        return strings.recordAgentOriginSender(label ?? from.id);
       case "event":
         return strings.recordAgentOriginEvent;
       case "quote":

@@ -6061,6 +6061,46 @@ export const fr: Partial<Catalog> = {
   recordAgentVerbCancelEvent: "L’annuler",
   recordAgentDraftCancelEvent: (meeting: string): string =>
     `Annule « ${meeting} ».`,
+  recordAgentOriginSender: (who: string): string => `Envoyé par ${who}.`,
+  recordAgentVerbCatchUpRoom: "Me remettre à jour",
+  recordAgentDraftCatchUpRoom: (room: string): string =>
+    `Remets-moi à jour sur « ${room} ».`,
+  recordAgentVerbFindInRoom: "Y chercher quelque chose",
+  recordAgentDraftFindInRoom: (room: string): string =>
+    `Dans « ${room} », cherche `,
+  recordAgentVerbMeetingRecord: "Ce qui s’y est dit",
+  recordAgentDraftMeetingRecord: (meeting: string): string =>
+    `Que s’est-il passé dans « ${meeting} » ?`,
+  recordAgentVerbMeetingMinutes: "Rédiger le compte rendu",
+  recordAgentDraftMeetingMinutes: (meeting: string): string =>
+    `Rédige le compte rendu de « ${meeting} ».`,
+  recordAgentVerbInsightChange: "Ce qui a changé",
+  recordAgentDraftInsightChange: (chart: string): string =>
+    `Comment « ${chart} » a-t-il évolué depuis la période précédente ?`,
+  recordAgentVerbPinChart: "Y épingler un graphique",
+  recordAgentDraftPinChart: (board: string): string =>
+    `Épingle sur le tableau « ${board} » un graphique qui montre `,
+  recordAgentVerbDraftReply: "Rédiger une réponse",
+  recordAgentDraftDraftReply: (subject: string): string =>
+    `Rédige une réponse à « ${subject} » disant `,
+  recordAgentVerbThreadLookup: "Me résumer l’échange",
+  recordAgentDraftThreadLookup: (subject: string): string =>
+    `Résume la conversation « ${subject} ».`,
+  recordAgentVerbCorrespondence: "Ce qu’on leur a dit",
+  recordAgentDraftCorrespondence: (person: string): string =>
+    `Qu’avons-nous dit à ${person} ?`,
+  recordAgentVerbWriteToThem: "Leur écrire",
+  recordAgentDraftWriteToThem: (person: string): string =>
+    `Rédige un e-mail à ${person} au sujet de `,
+  recordAgentVerbSiteStatus: "Où il en est",
+  recordAgentDraftSiteStatus: (site: string): string =>
+    `Où en est le site « ${site} » ?`,
+  recordAgentVerbSiteSeoReview: "Le vérifier pour les moteurs",
+  recordAgentDraftSiteSeoReview: (site: string): string =>
+    `Vérifie « ${site} » pour les moteurs de recherche.`,
+  recordAgentVerbSitePublish: "Le publier",
+  recordAgentDraftSitePublish: (site: string): string =>
+    `Publie « ${site} ».`,
   chatAgentTag: "agent",
   chatAgentsAvailable: "Disponibles à ajouter",
   chatAgentsHere: "Agents dans cette conversation",

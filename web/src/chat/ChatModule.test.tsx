@@ -468,6 +468,64 @@ test("an agent can be put into a room from the UI", async () => {
   });
 });
 
+/** The room is a record too (A8.4): who opened it, and what @chat can do with
+ *  this conversation — beside the agents that are in it. */
+test("the room in Who-is-here shows its own agent, and who opened it", async () => {
+  answers = [
+    { match: "/turns", body: { turns: [] } },
+    { match: "/chat/reactions", body: { emoji: ["👍"] } },
+    // Before the roster answer, which would otherwise swallow this URL.
+    {
+      match: "/chat/agents/directory",
+      body: {
+        agents: [
+          {
+            id: "agent-chat",
+            handle: "chat",
+            name: "Chat",
+            product: "chat",
+            disabled: false,
+            tools: [{ name: "catch_up_room", effect: "read" }],
+          },
+        ],
+      },
+    },
+    { match: "/chat/agents", body: { agents: [AGENT] } },
+    { match: "/chat/channels/room-1/agents", body: { agents: [] } },
+    { match: "/messages", body: { messages: [message({ body: "hi" })] } },
+    {
+      match: "/chat/channels/room-1",
+      body: {
+        ...ROOM,
+        members: [
+          {
+            user: ME,
+            email: "anna@alo.test",
+            role: "owner",
+            joinedAt: "",
+            lastReadSeq: 0,
+            muted: false,
+          },
+        ],
+        myRole: "owner",
+      },
+    },
+    { match: "/chat/channels", body: { channels: [ROOM] } },
+  ];
+  mount();
+
+  fireEvent.click(await screen.findByText(strings.chatMembersAndAgents));
+
+  const panel = await screen.findByLabelText(strings.recordAgentTitle);
+  expect(panel.getAttribute("data-record")).toBe("room:room-1");
+  expect(
+    await screen.findByText(strings.recordAgentOriginPerson("anna@alo.test")),
+  ).toBeTruthy();
+  expect(
+    await screen.findByText(strings.recordAgentVerbCatchUpRoom),
+  ).toBeTruthy();
+});
+
 test("only my own standing words offer Edit and Withdraw", async () => {
   withMessages([
     message({ id: "m-mine", seq: 1, author: ME, body: "my words" }),

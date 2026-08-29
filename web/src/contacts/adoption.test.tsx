@@ -5,6 +5,7 @@
 // have broken — so they are the ones worth a build. Each test names what the
 // hand-built version did instead.
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { DialogProvider } from "../ds";
@@ -37,11 +38,25 @@ vi.mock("../jmap", () => ({
   }),
 }));
 
+// The contact in focus now shows its agent (A8.4), which reads the agent
+// directory and links into the chat room — so the dialog needs the workspace's
+// authorized fetch and a router around it, as it has in the app.
+vi.mock("../auth", () => ({
+  useAuth: () => ({
+    authorizedFetch: async () =>
+      new Response(JSON.stringify({ agents: [] }), {
+        headers: { "content-type": "application/json" },
+      }),
+  }),
+}));
+
 function open(onClose = () => {}) {
   return render(
-    <DialogProvider>
-      <ContactsModal onClose={onClose} />
-    </DialogProvider>,
+    <MemoryRouter>
+      <DialogProvider>
+        <ContactsModal onClose={onClose} />
+      </DialogProvider>
+    </MemoryRouter>,
   );
 }
 

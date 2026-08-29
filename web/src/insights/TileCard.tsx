@@ -14,6 +14,7 @@
 // (BI1.06) — and moving is its own request, so renaming can never rearrange a
 // board.
 import {
+  Bot,
   ChevronLeft,
   ChevronRight,
   Maximize2,
@@ -47,6 +48,9 @@ export interface TileActions {
   resize: (tile: Tile, span: number) => void;
   move: (tile: Tile, direction: -1 | 1) => void;
   remove: (tile: Tile) => void;
+  /** Put this chart in focus below the board — or let it go, when it already
+   *  is — so its agent stands under the question it is about (A8.4). */
+  focus: (tile: Tile) => void;
 }
 
 /** The grid class for a tile's stored width, clamped to the columns the grid
@@ -72,6 +76,12 @@ export function TileCard({
   const figures = useTileFigures(tile.id, tile.readable, revision);
 
   const items: MenuItem[] = [
+    {
+      key: "agent",
+      label: strings.recordAgentPanelToggle,
+      icon: <Bot size={15} />,
+      onClick: () => actions.focus(tile),
+    },
     {
       key: "rename",
       label: strings.insightsRenameTile,

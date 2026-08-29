@@ -16,6 +16,7 @@ import { useCallback, useState } from "react";
 import { BarChart3, Plus, RefreshCw, Sparkles } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
+import { RecordAgentPanel } from "../agents";
 import { Button, IconButton, Spinner, useDialogs } from "../ds";
 import { strings } from "../i18n";
 import { insightsMessage, useInsightsApi } from "./api";
@@ -60,8 +61,12 @@ export function BoardGrid({ onBoardsChanged }: { onBoardsChanged: () => void }) 
    *  gallery: both end in the same one request, and only one of them can be
    *  open at a time. */
   const [asking, setAsking] = useState(false);
+  /** The chart whose agent is open under the board, if any — one at a time,
+   *  and the board's own agent stands there when no chart is (A8.4). */
+  const [focused, setFocused] = useState<string | null>(null);
   const view = useBoard(dashboardId ?? null, revision);
   const tiles = view.board?.tiles ?? [];
+  const chartInFocus = tiles.find((tile) => tile.id === focused) ?? null;
 
   const bump = useCallback(() => setRevision((r) => r + 1), []);
 
@@ -115,6 +120,7 @@ export function BoardGrid({ onBoardsChanged }: { onBoardsChanged: () => void }) 
         await commit(() => api.deleteTile(tile.id), strings.insightsDeleteFailed);
       })();
     },
+    focus: (tile) => setFocused((id) => (id === tile.id ? null : tile.id)),
   };
 
   /** Pins a ready-made question to this board, with the caption the reader was
@@ -297,6 +303,36 @@ export function BoardGrid({ onBoardsChanged }: { onBoardsChanged: () => void }) 
           ))}
         </div>
       )}
+
+      {/* The record in focus under the board it belongs to: one of its charts
+          when a reader picked one from its menu, the board itself otherwise.
+          A board and a chart are different records with different verbs — a
+          chart is a question that can be re-asked over two periods, a board is
+          something more can be pinned to — so each says which it is. Neither
+          panel is a second Insights: it opens the room where things run. */}
+      <div className="mt-5 max-w-3xl">
+        {chartInFocus !== null ? (
+          <RecordAgentPanel
+            product="insights"
+            recordKind="tile"
+            recordId={chartInFocus.id}
+            recordLabel={chartInFocus.title}
+            // A pinned chart keeps no provenance: `createdBy` on the board is
+            // an account id and the tile carries none at all, so the panel
+            // says it does not know rather than printing a subject nobody can
+            // follow (A8.4, AW.2).
+            origin={null}
+          />
+        ) : (
+          <RecordAgentPanel
+            product="insights"
+            recordKind="board"
+            recordId={view.board.dashboard.id}
+            recordLabel={view.board.dashboard.name}
+            origin={null}
+          />
+        )}
+      </div>
     </div>
   );
 }

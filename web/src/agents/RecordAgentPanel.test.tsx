@@ -394,6 +394,158 @@ test("an imported record cites the file it was read from", async () => {
   ).toBeTruthy();
 });
 
+test("mail's two records are offered their own verbs, and a message says who sent it", async () => {
+  // One agent works in the mail and the address book (ADR 0034), so the two
+  // record kinds share a directory entry and must not share verbs.
+  answers = [
+    {
+      match: "/chat/agents/directory",
+      body: {
+        agents: [
+          {
+            id: "agent-mail",
+            handle: "mail",
+            name: "Mail",
+            product: "mail",
+            disabled: false,
+            tools: [
+              { name: "draft_reply", effect: "write" },
+              { name: "thread_lookup", effect: "read" },
+              { name: "correspondence", effect: "read" },
+              { name: "draft_email", effect: "write" },
+            ],
+          },
+        ],
+      },
+    },
+  ];
+  render(
+    <RecordAgentPanel
+      product="mail"
+      recordKind="message"
+      recordId="msg-1"
+      recordLabel="Delivery on Friday"
+      origin={{ kind: "sender", id: "msg-1", label: "Ilse Vermeer" }}
+    />,
+  );
+
+  expect(
+    await screen.findByText(strings.recordAgentOriginSender("Ilse Vermeer")),
+  ).toBeTruthy();
+  expect(screen.getByText(strings.recordAgentVerbDraftReply)).toBeTruthy();
+  expect(screen.getByText(strings.recordAgentVerbThreadLookup)).toBeTruthy();
+  // Writing to somebody is a card's verb, not a conversation's.
+  expect(screen.queryByText(strings.recordAgentVerbWriteToThem)).toBeNull();
+  expect(screen.queryByText(strings.recordAgentVerbCorrespondence)).toBeNull();
+
+  cleanup();
+  render(
+    <RecordAgentPanel
+      product="mail"
+      recordKind="contact"
+      recordId="c-1"
+      recordLabel="Ilse Vermeer"
+      origin={null}
+    />,
+  );
+  expect(
+    await screen.findByText(strings.recordAgentVerbCorrespondence),
+  ).toBeTruthy();
+  expect(screen.getByText(strings.recordAgentVerbWriteToThem)).toBeTruthy();
+  expect(screen.queryByText(strings.recordAgentVerbDraftReply)).toBeNull();
+});
+
+test("a board is offered the board's verb and a chart the chart's", async () => {
+  answers = [
+    {
+      match: "/chat/agents/directory",
+      body: {
+        agents: [
+          {
+            id: "agent-insights",
+            handle: "insights",
+            name: "Insights",
+            product: "insights",
+            disabled: false,
+            tools: [
+              { name: "insight_change", effect: "read" },
+              { name: "pin_chart", effect: "write" },
+            ],
+          },
+        ],
+      },
+    },
+  ];
+  render(
+    <RecordAgentPanel
+      product="insights"
+      recordKind="board"
+      recordId="board-1"
+      recordLabel="Sales"
+      origin={null}
+    />,
+  );
+  expect(await screen.findByText(strings.recordAgentVerbPinChart)).toBeTruthy();
+  expect(screen.queryByText(strings.recordAgentVerbInsightChange)).toBeNull();
+
+  cleanup();
+  render(
+    <RecordAgentPanel
+      product="insights"
+      recordKind="tile"
+      recordId="tile-1"
+      recordLabel="Revenue by month"
+      origin={null}
+    />,
+  );
+  expect(
+    await screen.findByText(strings.recordAgentVerbInsightChange),
+  ).toBeTruthy();
+  expect(screen.queryByText(strings.recordAgentVerbPinChart)).toBeNull();
+});
+
+test("a room's verb proposes in the agent's room and reads nothing on its own", async () => {
+  answers = [
+    {
+      match: "/chat/agents/directory",
+      body: {
+        agents: [
+          {
+            id: "agent-chat",
+            handle: "chat",
+            name: "Chat",
+            product: "chat",
+            disabled: false,
+            tools: [{ name: "catch_up_room", effect: "read" }],
+          },
+        ],
+      },
+    },
+    { match: "/chat/agents/agent-chat/dm", method: "POST", body: { id: "dm-3" } },
+  ];
+  render(
+    <RecordAgentPanel
+      product="chat"
+      recordKind="room"
+      recordId="room-1"
+      recordLabel="release"
+      origin={{ kind: "person", id: "u-3", label: "disan@alo.dev" }}
+    />,
+  );
+
+  fireEvent.click(await screen.findByText(strings.recordAgentVerbCatchUpRoom));
+  await waitFor(() =>
+    expect(navigateSpy).toHaveBeenCalledWith(
+      `/chat?channel=dm-3&draft=${encodeURIComponent(
+        strings.recordAgentDraftCatchUpRoom("release"),
+      )}`,
+    ),
+  );
+  // Finding was not offered by this directory, so it is not a button.
+  expect(screen.queryByText(strings.recordAgentVerbFindInRoom)).toBeNull();
+  expect(calls.some((c) => c.url.includes("/chat/search"))).toBe(false);
+});
+
 test("a record with no origin says so, and a product without an agent is offered nothing", async () => {
   answers = [{ match: "/chat/agents/directory", body: { agents: [] } }];
   render(

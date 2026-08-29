@@ -2295,6 +2295,45 @@ export const en = {
   recordAgentVerbCancelEvent: "Cancel it",
   recordAgentDraftCancelEvent: (meeting: string): string =>
     `Cancel “${meeting}”.`,
+  recordAgentOriginSender: (who: string): string => `Sent by ${who}.`,
+  recordAgentVerbCatchUpRoom: "Catch me up",
+  recordAgentDraftCatchUpRoom: (room: string): string =>
+    `Catch me up on “${room}”.`,
+  recordAgentVerbFindInRoom: "Find something in it",
+  recordAgentDraftFindInRoom: (room: string): string =>
+    `In “${room}”, find `,
+  recordAgentVerbMeetingRecord: "What happened in it",
+  recordAgentDraftMeetingRecord: (meeting: string): string =>
+    `What happened in “${meeting}”?`,
+  recordAgentVerbMeetingMinutes: "Write the minutes",
+  recordAgentDraftMeetingMinutes: (meeting: string): string =>
+    `Write up the minutes of “${meeting}”.`,
+  recordAgentVerbInsightChange: "How has it changed",
+  recordAgentDraftInsightChange: (chart: string): string =>
+    `How has “${chart}” changed since the period before?`,
+  recordAgentVerbPinChart: "Pin a chart to it",
+  recordAgentDraftPinChart: (board: string): string =>
+    `Pin a chart to the “${board}” board that shows `,
+  recordAgentVerbDraftReply: "Draft a reply",
+  recordAgentDraftDraftReply: (subject: string): string =>
+    `Draft a reply to “${subject}” saying `,
+  recordAgentVerbThreadLookup: "Catch me up on it",
+  recordAgentDraftThreadLookup: (subject: string): string =>
+    `Sum up the conversation “${subject}”.`,
+  recordAgentVerbCorrespondence: "What we’ve said to them",
+  recordAgentDraftCorrespondence: (person: string): string =>
+    `What have we said to ${person}?`,
+  recordAgentVerbWriteToThem: "Write to them",
+  recordAgentDraftWriteToThem: (person: string): string =>
+    `Draft an email to ${person} about `,
+  recordAgentVerbSiteStatus: "How it stands",
+  recordAgentDraftSiteStatus: (site: string): string =>
+    `How does the “${site}” website stand?`,
+  recordAgentVerbSiteSeoReview: "Review it for search engines",
+  recordAgentDraftSiteSeoReview: (site: string): string =>
+    `Review “${site}” for search engines.`,
+  recordAgentVerbSitePublish: "Publish it",
+  recordAgentDraftSitePublish: (site: string): string => `Publish “${site}”.`,
   chatSearchPlaceholder: "Search messages, people, channels…",
   chatSearchClear: "Clear search",
   chatSearchNothing: "Nothing matched.",
