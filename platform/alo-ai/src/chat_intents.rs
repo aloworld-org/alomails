@@ -239,6 +239,10 @@ pub const CHAT_EXCLUDED: &[Excluded] = &[
         route: "/chat/messages/{id}/reactions",
         why: "Reacting is a person's own gesture; made by an agent it would be the asker seeming to feel something.",
     },
+    Excluded {
+        route: "/chat/channels/{id}/memory",
+        why: "Whether a room's agents learn from it is the owner's setting in the app.",
+    },
 ];
 
 /// The Chat paragraph of the agent's general instructions.

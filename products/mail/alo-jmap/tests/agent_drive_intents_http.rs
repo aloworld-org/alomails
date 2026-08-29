@@ -11,8 +11,6 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod common;
-
 use std::time::{Duration, Instant};
 
 use axum::Router;
@@ -21,9 +19,9 @@ use axum::http::{Request, StatusCode};
 use bytes::Bytes;
 use serde_json::{Value, json};
 
+use crate::common::model::{Seen, says, scripted_model, use_model, wants};
+use crate::common::{Harness, harness, send};
 use alo_store::{AccountStore, AgentProduct, DriveLocation, DriveNodeId, NewDriveFile};
-use common::model::{Seen, says, scripted_model, use_model, wants};
-use common::{Harness, harness, send};
 
 // ---- request helpers ---------------------------------------------------------
 
@@ -220,7 +218,7 @@ async fn which_files_do_we_have_is_answered_from_the_record() {
     .await;
     // A stranger's file and a colleague's private file, so the assertions
     // below are about reach and not about emptiness.
-    let other = common::harness_on(h.store.clone(), "drive-intents-stranger").await;
+    let other = crate::common::harness_on(h.store.clone(), "drive-intents-stranger").await;
     a_file_for(
         &other.acc,
         &DriveLocation::Personal,
@@ -313,7 +311,7 @@ async fn what_is_shared_with_me_lists_the_spaces_and_their_files() {
         None,
     )
     .await;
-    let other = common::harness_on(h.store.clone(), "drive-intents-shared-x").await;
+    let other = crate::common::harness_on(h.store.clone(), "drive-intents-shared-x").await;
     let theirs = other.acc.create_space("Their secret space").await.unwrap();
     a_file_for(
         &other.acc,

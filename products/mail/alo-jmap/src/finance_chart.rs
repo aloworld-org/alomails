@@ -54,12 +54,14 @@ use crate::finance_chart_names::chart_seed_for;
 use crate::finance_reports::{day, reader};
 use crate::state::AppState;
 
-/// What one account moved in the period asked for, when one was.
-struct Movement {
-    balance_cents: i64,
-    debit_cents: i64,
-    credit_cents: i64,
-    postings: i64,
+/// What one account moved in the period asked for, when one was. Crate-visible
+/// so the Finance agent's `account_balance` (`crate::finance_intents`) answers
+/// with the same row the chart screen shows.
+pub(crate) struct Movement {
+    pub(crate) balance_cents: i64,
+    pub(crate) debit_cents: i64,
+    pub(crate) credit_cents: i64,
+    pub(crate) postings: i64,
 }
 
 /// One account as JSON.
@@ -69,7 +71,7 @@ struct Movement {
 /// movement fields are present only when the caller asked for a period, and are
 /// `null` otherwise: zero would be a claim about the journal that was never
 /// read.
-fn account_json(account: &ChartAccount, moved: Option<&Movement>) -> Value {
+pub(crate) fn account_json(account: &ChartAccount, moved: Option<&Movement>) -> Value {
     json!({
         "id": account.id.as_str(),
         "code": account.code,

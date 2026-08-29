@@ -83,12 +83,15 @@ pub async fn execute_vat_summary(account: &Account, args: &Value) -> Result<Json
         .await
         .map_err(map_store_err)?;
     // The report's own shape, from the file that owns it — the agent is another
-    // reader of the same figures, never a second rendering of them.
+    // reader of the same figures, never a second rendering of them. Money is
+    // made readable beside its integers by the shared rendering
+    // ([`crate::billing_intents::ok`]), which the report's own `currency`
+    // field feeds.
     let mut result = report_json(&report);
     if let Some(object) = result.as_object_mut() {
         object.insert("kind".to_owned(), json!("vatSummary"));
     }
-    Ok(Json(json!({ "ok": true, "result": result })))
+    crate::billing_intents::ok(result)
 }
 
 /// `flag_anomalies` — what is worth a second look in a period of the journal.
@@ -138,31 +141,28 @@ pub async fn execute_flag_anomalies(
         .collect();
     let customers = customer_names(account, &scan).await?;
 
-    Ok(Json(json!({
-        "ok": true,
-        "result": {
-            "kind": "journalAnomalies",
-            "from": iso_date(from),
-            "to": iso_date(to),
-            "currency": currency,
-            "findings": scan
-                .findings
-                .iter()
-                .map(|found| finding_json(found, &chart, &customers))
-                .collect::<Vec<_>>(),
-            // How many were found, how many are in the list, how many entries
-            // were read and whether the period held more than one scan carries:
-            // a scan that stopped looking says so, because silence reads as
-            // "nothing else happened".
-            "found": scan.found,
-            "shown": scan.findings.len(),
-            "scanned": scan.scanned,
-            "truncated": scan.truncated,
-            // Entries that name no counterparty, which the duplicate rule
-            // therefore could not compare.
-            "notComparable": scan.not_comparable,
-        }
-    })))
+    crate::billing_intents::ok(json!({
+        "kind": "journalAnomalies",
+        "from": iso_date(from),
+        "to": iso_date(to),
+        "currency": currency,
+        "findings": scan
+            .findings
+            .iter()
+            .map(|found| finding_json(found, &chart, &customers))
+            .collect::<Vec<_>>(),
+        // How many were found, how many are in the list, how many entries
+        // were read and whether the period held more than one scan carries:
+        // a scan that stopped looking says so, because silence reads as
+        // "nothing else happened".
+        "found": scan.found,
+        "shown": scan.findings.len(),
+        "scanned": scan.scanned,
+        "truncated": scan.truncated,
+        // Entries that name no counterparty, which the duplicate rule
+        // therefore could not compare.
+        "notComparable": scan.not_comparable,
+    }))
 }
 
 /// One finding, in the words a person reads it in.

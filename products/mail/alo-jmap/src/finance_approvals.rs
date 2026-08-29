@@ -45,8 +45,10 @@ use crate::finance_expenses::{expense_json, stated_day};
 use crate::state::{AppState, authenticate};
 
 /// One waiting claim as the inbox shows it: the claim, the person who made it,
-/// and the word that says where it books.
-fn pending_json(pending: &PendingExpense) -> Value {
+/// and the word that says where it books. Crate-visible so the Finance agent's
+/// `expenses_awaiting` (`crate::finance_intents`) shows the queue in exactly
+/// these rows.
+pub(crate) fn pending_json(pending: &PendingExpense) -> Value {
     let mut value = expense_json(&pending.expense);
     if let Some(object) = value.as_object_mut() {
         object.insert("userId".to_owned(), json!(pending.expense.user_id.as_str()));

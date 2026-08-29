@@ -815,8 +815,15 @@ mod tests {
                 "pipeline_summary",
                 "company_history",
                 "project_status_summary",
+                // AA.2: Finance's verbs — the six reads that let "@finance how
+                // much have we invoiced this year?" answer from the books,
+                // rendered from the intent registry.
+                "ledger_summary",
                 "vat_summary",
                 "flag_anomalies",
+                "unmatched_bank_lines",
+                "expenses_awaiting",
+                "account_balance",
                 "stock_answer",
                 "who_is_off",
                 // A2.4: the Insights agent looks up the vocabulary a question
@@ -846,7 +853,7 @@ mod tests {
                 "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 93);
+        assert_eq!(all_tools().len(), 98);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }
@@ -1026,8 +1033,8 @@ mod tests {
         assert!(at("- site_publish:") < at("For a billing verb"));
         assert!(at("For a billing verb") < at("For a CRM verb"));
         assert!(at("For a CRM verb") < at("For a projects tool"));
-        assert!(at("For a projects tool") < at("For a finance tool"));
-        assert!(at("For a finance tool") < at("For an inventory tool"));
+        assert!(at("For a projects tool") < at("For a Finance verb"));
+        assert!(at("For a Finance verb") < at("For an inventory tool"));
         assert!(at("For an inventory tool") < at("For an HR tool"));
         assert!(at("For an HR tool") < at("For a website tool"));
         assert!(at("For a website tool") < at("Output ONLY the JSON object"));

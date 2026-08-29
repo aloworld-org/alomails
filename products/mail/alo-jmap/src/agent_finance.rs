@@ -41,11 +41,13 @@ use axum::Json;
 use serde_json::{Value, json};
 use time::{Date, Duration, OffsetDateTime};
 
-use alo_store::{CategoryProposal, Expense, SkippedClaim};
+use alo_store::{CategoryProposal, Expense, ExpenseDecision, PendingExpense, SkippedClaim};
 
 use crate::agent_args::{string_arg, unprocessable};
 use crate::billing::{iso_date, map_store_err, parse_iso_date};
+use crate::billing_intents::ok;
 use crate::error::Problem;
+use crate::finance_expenses::expense_json;
 use crate::state::Account;
 
 /// How far back a call looks when the proposal states no period.
@@ -113,28 +115,120 @@ pub async fn execute_categorise_transactions(
         .map(|claim| (claim.id.as_str(), claim))
         .collect();
 
-    Ok(Json(json!({
-        "ok": true,
-        "result": {
-            "kind": "categoryProposals",
-            "from": iso_date(from),
-            "to": iso_date(to),
-            "proposed": plan
-                .proposed
-                .iter()
-                .map(|proposal| proposed_json(proposal, &by_id, &names))
-                .collect::<Vec<_>>(),
-            "skipped": plan
-                .skipped
-                .iter()
-                .map(|skipped| skipped_json(skipped, &by_id))
-                .collect::<Vec<_>>(),
-            // The batch's own figures, stated rather than left to a client
-            // adding up the list it was just given.
-            "suggested": plan.proposed.len(),
-            "considered": plan.proposed.len() + plan.skipped.len(),
+    ok(json!({
+        "kind": "categoryProposals",
+        "from": iso_date(from),
+        "to": iso_date(to),
+        "proposed": plan
+            .proposed
+            .iter()
+            .map(|proposal| proposed_json(proposal, &by_id, &names))
+            .collect::<Vec<_>>(),
+        "skipped": plan
+            .skipped
+            .iter()
+            .map(|skipped| skipped_json(skipped, &by_id))
+            .collect::<Vec<_>>(),
+        // The batch's own figures, stated rather than left to a client
+        // adding up the list it was just given.
+        "suggested": plan.proposed.len(),
+        "considered": plan.proposed.len() + plan.skipped.len(),
+    }))
+}
+
+/// `approve_expense` — approve one claim from the approvals queue, named by
+/// its merchant as [`crate::finance_intents::execute_expenses_awaiting`] shows
+/// it. The same gate and the same store decision as
+/// `POST /finance/expenses/{id}/approve` ([`crate::finance_approvals`]); the
+/// audit entry records the asker as the decider, because they are.
+///
+/// Resolution is the executor's job, not the model's: an exact merchant wins
+/// alone, a claimant's email or the purchase day narrows two alike, and an
+/// ambiguity is a refusal that lists what is waiting rather than a guess about
+/// whose money it approves.
+///
+/// # Errors
+/// `403` for a caller who is neither an admin nor an accountant; `422` when no
+/// waiting claim matches, when several do, or when `spentOn` is not a plain
+/// day; the store's own `409`/`422` otherwise.
+pub async fn execute_approve_expense(
+    account: &Account,
+    args: &Value,
+    state: &crate::state::AppState,
+) -> Result<Json<Value>, Problem> {
+    account.require_finance()?;
+    let merchant = string_arg(args, "merchant")
+        .filter(|stated| !stated.trim().is_empty())
+        .ok_or_else(|| unprocessable("name the merchant on the claim"))?;
+    let wanted = merchant.trim().to_lowercase();
+    let claimant = string_arg(args, "claimant")
+        .map(|stated| stated.trim().to_lowercase())
+        .filter(|stated| !stated.is_empty());
+    let spent_on = match string_arg(args, "spentOn").filter(|raw| !raw.trim().is_empty()) {
+        None => None,
+        Some(raw) => Some(
+            parse_iso_date(&raw)
+                .ok_or_else(|| unprocessable("spentOn must be a date, YYYY-MM-DD"))?,
+        ),
+    };
+    // The queue and the decision live on the tenant door, behind the gate
+    // above — exactly as `POST /finance/expenses/{id}/approve` reaches them.
+    let tenant = state.store.for_tenant(account.tenant.clone());
+    let waiting = tenant.pending_expenses().await.map_err(map_store_err)?;
+    let narrowed: Vec<&PendingExpense> = waiting
+        .iter()
+        .filter(|pending| {
+            pending.expense.merchant.to_lowercase().contains(&wanted)
+                && claimant
+                    .as_deref()
+                    .is_none_or(|email| pending.user_email.to_lowercase() == email)
+                && spent_on.is_none_or(|day| pending.expense.spent_on == day)
+        })
+        .collect();
+    let exact: Vec<&PendingExpense> = narrowed
+        .iter()
+        .copied()
+        .filter(|pending| pending.expense.merchant.to_lowercase() == wanted)
+        .collect();
+    let found = if exact.is_empty() { narrowed } else { exact };
+    let one = match found.as_slice() {
+        [] => {
+            return Err(unprocessable(format!(
+                "no claim from \"{}\" is waiting for a decision",
+                merchant.trim()
+            )));
         }
-    })))
+        [one] => one,
+        several => {
+            return Err(unprocessable(format!(
+                "several claims from \"{}\" are waiting: {} — say the claimant or the day",
+                merchant.trim(),
+                several
+                    .iter()
+                    .map(|pending| {
+                        format!(
+                            "{} on {} by {}",
+                            pending.expense.merchant,
+                            iso_date(pending.expense.spent_on),
+                            pending.user_email
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join("; ")
+            )));
+        }
+    };
+    let note = string_arg(args, "note").unwrap_or_default();
+    let claim = tenant
+        .decide_expense(
+            &one.expense.id,
+            ExpenseDecision::Approve,
+            &account.user,
+            &note,
+        )
+        .await
+        .map_err(map_store_err)?;
+    ok(json!({ "kind": "expense", "expense": expense_json(&claim) }))
 }
 
 /// One suggestion, as the claim a person recognises plus the word being

@@ -24,8 +24,6 @@ use std::pin::Pin;
 use time::format_description::well_known::Rfc3339;
 
 use crate::agent_docs as docs;
-use crate::agent_finance as finance;
-use crate::agent_finance_answers as finance_answers;
 use crate::agent_hr as hr;
 use crate::agent_insights as insights;
 use crate::agent_inventory as inventory;
@@ -477,6 +475,7 @@ pub(crate) const MODULES: &[ModuleDispatcher] = &[
     crate::chat_intents::dispatch,
     crate::crm_intents::dispatch,
     crate::drive_intents::dispatch,
+    crate::finance_intents::dispatch,
 ];
 
 /// [`execute_tool`]'s boundary check and audit cannot be bypassed by a caller
@@ -579,16 +578,6 @@ async fn dispatch(
         "draft_timesheet_from_calendar" => {
             timesheet::execute_draft_timesheet_from_calendar(account, args).await
         }
-        // alo Finance's tools (B4.14a), on the same seam. What
-        // `categorise_transactions` writes is a suggestion on each claim, in a
-        // column no report reads until the claimant accepts it.
-        "categorise_transactions" => finance::execute_categorise_transactions(account, args).await,
-        // B4.14b's two **answers**, in their own module because they read the
-        // whole tenant's books rather than the caller's own claims — and are
-        // therefore gated like the finance reports themselves, not like a
-        // personal one.
-        "vat_summary" => finance_answers::execute_vat_summary(account, args).await,
-        "flag_anomalies" => finance_answers::execute_flag_anomalies(account, args).await,
         // alo Inventory's tools (B5.10), on the same seam. What
         // `reorder_proposals` writes is a **draft** order per supplier: it
         // carries no number and has been sent to nobody until a person
