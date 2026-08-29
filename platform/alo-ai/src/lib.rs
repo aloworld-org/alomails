@@ -27,7 +27,6 @@ pub mod agent_mail;
 pub mod agent_memory;
 pub mod agent_plan;
 pub mod agent_product;
-pub mod agent_sheets;
 pub mod agent_sites;
 pub mod agent_tasks;
 mod agent_tool;
@@ -45,6 +44,7 @@ pub mod meet_intents;
 pub mod projects_intents;
 pub mod sheet_charts;
 pub mod sheet_grid;
+pub mod sheets_intents;
 pub mod site_chat;
 pub mod site_edits;
 pub mod site_shop_config;
@@ -66,7 +66,6 @@ pub use agent_plan::{
     plan_system_prompt, run_planner,
 };
 pub use agent_product::{MOVED, ToolSet, offers, tool_sets, tools_for};
-pub use agent_sheets::SHEETS_TOOLS;
 pub use agent_sites::SITES_TOOLS;
 pub use agent_tasks::TASKS_TOOLS;
 pub use agent_tool::{AgentTool, Effect, find_tool};

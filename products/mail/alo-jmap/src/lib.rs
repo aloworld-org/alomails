@@ -209,6 +209,7 @@ pub mod server;
 pub mod session;
 pub mod settings;
 pub mod share;
+pub mod sheets_intents;
 pub mod sieve;
 pub mod signup_route;
 pub mod site_booking_notify;

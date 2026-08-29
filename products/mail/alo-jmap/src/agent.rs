@@ -25,7 +25,6 @@ use time::format_description::well_known::Rfc3339;
 
 use crate::agent_hr as hr;
 use crate::agent_inventory as inventory;
-use crate::agent_sheets as sheets;
 use crate::agent_sites as sites;
 use crate::ai::MAX_ASK_BYTES;
 use crate::error::Problem;
@@ -476,6 +475,7 @@ pub(crate) const MODULES: &[ModuleDispatcher] = &[
     crate::insights_intents::dispatch,
     crate::meet_intents::dispatch,
     crate::projects_intents::dispatch,
+    crate::sheets_intents::dispatch,
 ];
 
 /// [`execute_tool`]'s boundary check and audit cannot be bypassed by a caller
@@ -531,17 +531,8 @@ async fn dispatch(
         "draft_reply" => execute_draft_reply(account, args, state).await,
         "send_email" => execute_send(account, args, state).await,
         "move_to_folder" => execute_move_to_folder(account, args).await,
-        // alo Sheets' tools (A2.2), on the same seam. The three reads answer
-        // with the addresses of the cells they read; the two writes edit the
-        // stored workbook and therefore wait for the asker's own approval —
-        // `sheet_write_formula` puts a calculation in a cell and refuses
-        // anything that is not one, and `sheet_clean_column` changes how a
-        // column was typed and nothing about what it means.
-        "sheet_read" => sheets::execute_sheet_read(account, args).await,
-        "sheet_answer" => sheets::execute_sheet_answer(account, args).await,
-        "sheet_formula_explain" => sheets::execute_sheet_formula_explain(account, args).await,
-        "sheet_write_formula" => sheets::execute_sheet_write_formula(account, args).await,
-        "sheet_clean_column" => sheets::execute_sheet_clean_column(account, args).await,
+        // Sheets' verbs, the five A2.2 tools included, are dispatched by its
+        // module row above (AB.3).
         // Docs' verbs, the four A2.3 tools included, are dispatched by its
         // module row above (AB.2).
         // The reading tools of Agenda, Chat and Contacts. Every one answers

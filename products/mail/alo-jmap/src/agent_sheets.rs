@@ -1,6 +1,7 @@
 //! Executing the **Sheets** tools of the Sheet agent (ADR 0034, queue item
-//! A2.2) — the acting half of what [`alo_ai::agent_sheets`] describes to the
-//! model.
+//! A2.2) — the acting half of five of the verbs [`alo_ai::sheets_intents`]
+//! describes to the model, reached through the module's dispatcher in
+//! [`crate::sheets_intents`] (AB.3).
 //!
 //! The three reading tools run inside the turn ([`crate::agent_turn`]); the two
 //! that change a workbook run only from [`crate::agent::agent_execute`], after

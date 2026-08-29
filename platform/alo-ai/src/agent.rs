@@ -792,6 +792,12 @@ mod tests {
                 "find_file",
                 "file_read",
                 "attachment_read",
+                // AB.3: the Sheet agent's reads, rendered from the intent
+                // registry — what spreadsheets the Drive holds, a block of one
+                // with every cell addressed, the rows that mention something,
+                // and one formula explained. Writing a formula and tidying a
+                // column are writes and are not here.
+                "list_spreadsheets",
                 "sheet_read",
                 "sheet_answer",
                 "sheet_formula_explain",
@@ -873,7 +879,7 @@ mod tests {
                 "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 108);
+        assert_eq!(all_tools().len(), 109);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }

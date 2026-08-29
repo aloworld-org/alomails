@@ -24,7 +24,6 @@ use crate::agent_contacts::{CONTACTS_GUIDANCE, CONTACTS_TOOL_DOC, CONTACTS_TOOLS
 use crate::agent_hr::{HR_GUIDANCE, HR_TOOL_DOC, HR_TOOLS};
 use crate::agent_inventory::{INVENTORY_GUIDANCE, INVENTORY_TOOL_DOC, INVENTORY_TOOLS};
 use crate::agent_mail::{MAIL_GUIDANCE, MAIL_TOOL_DOC, MAIL_TOOLS};
-use crate::agent_sheets::{SHEETS_GUIDANCE, SHEETS_TOOL_DOC, SHEETS_TOOLS};
 use crate::agent_sites::{SITES_GUIDANCE, SITES_TOOL_DOC, SITES_TOOLS};
 use crate::agent_tasks::{TASKS_GUIDANCE, TASKS_TOOL_DOC, TASKS_TOOLS};
 use crate::agent_tool::AgentTool;
@@ -38,6 +37,7 @@ use crate::insights_intents::INSIGHTS as INSIGHTS_INTENTS;
 use crate::intent::IntentModule;
 use crate::meet_intents::MEET as MEET_INTENTS;
 use crate::projects_intents::PROJECTS as PROJECTS_INTENTS;
+use crate::sheets_intents::SHEETS as SHEETS_INTENTS;
 
 /// One module's contribution to a product's agent: what it may do, how each
 /// tool is described, and the rules that keep a proposal from it honest.
@@ -117,15 +117,11 @@ const TASKS_SET: ToolSet = set(TASKS_TOOLS, TASKS_TOOL_DOC, TASKS_GUIDANCE);
 const INVENTORY_SET: ToolSet = set(INVENTORY_TOOLS, INVENTORY_TOOL_DOC, INVENTORY_GUIDANCE);
 const HR_SET: ToolSet = set(HR_TOOLS, HR_TOOL_DOC, HR_GUIDANCE);
 const SITES_SET: ToolSet = set(SITES_TOOLS, SITES_TOOL_DOC, SITES_GUIDANCE);
-/// alo Sheets, whose agent works on a spreadsheet the caller can already open —
-/// a Drive node, which is also what gates it (`AgentProduct::module`).
-const SHEETS_SET: ToolSet = set(SHEETS_TOOLS, SHEETS_TOOL_DOC, SHEETS_GUIDANCE);
 
 /// Mail's, including the address book.
 const MAIL: &[ToolSet] = &[MAIL_SET, CONTACTS_SET];
 const AGENDA: &[ToolSet] = &[AGENDA_SET];
 const TASKS: &[ToolSet] = &[TASKS_SET];
-const SHEETS: &[ToolSet] = &[SHEETS_SET];
 const INVENTORY: &[ToolSet] = &[INVENTORY_SET];
 const HR: &[ToolSet] = &[HR_SET];
 const SITES: &[ToolSet] = &[SITES_SET];
@@ -150,6 +146,7 @@ pub const MOVED: &[(AgentProduct, &IntentModule)] = &[
     (AgentProduct::Insights, &INSIGHTS_INTENTS),
     (AgentProduct::Meet, &MEET_INTENTS),
     (AgentProduct::Projects, &PROJECTS_INTENTS),
+    (AgentProduct::Sheets, &SHEETS_INTENTS),
 ];
 
 /// The hand-written sets a product still carries — empty once it has moved.
@@ -160,7 +157,7 @@ fn static_sets(product: AgentProduct) -> &'static [ToolSet] {
         AgentProduct::Tasks => TASKS,
         AgentProduct::Chat => &[],
         AgentProduct::Drive => &[],
-        AgentProduct::Sheets => SHEETS,
+        AgentProduct::Sheets => &[],
         AgentProduct::Docs => &[],
         AgentProduct::Billing => &[],
         AgentProduct::Crm => &[],
@@ -371,6 +368,7 @@ mod tests {
         assert_eq!(
             names(AgentProduct::Sheets),
             [
+                "list_spreadsheets",
                 "sheet_read",
                 "sheet_answer",
                 "sheet_formula_explain",
@@ -509,7 +507,7 @@ mod tests {
             .map(|tool| tool.name)
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
-        assert_eq!(workspace.len(), 108);
+        assert_eq!(workspace.len(), 109);
     }
 
     /// A moved module registers once (A4.1c): its row in [`MOVED`] is what puts
@@ -546,6 +544,8 @@ mod tests {
             concat!("DOCS_", "INTENTS"),
             concat!("DRIVE_", "INTENTS"),
             concat!("MEET_", "INTENTS"),
+            concat!("PROJECTS_", "INTENTS"),
+            concat!("SHEETS_", "INTENTS"),
         ] {
             assert_eq!(
                 source.matches(module).count(),
