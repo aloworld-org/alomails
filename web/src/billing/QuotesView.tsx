@@ -28,6 +28,7 @@ import {
 import { strings, useLocale } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
 import { BillingPagination } from "./BillingPagination";
+import { BillingStatusCell } from "./BillingStatusCell";
 import {
   formatAuditDate,
   formatAuditDateTime,
@@ -273,9 +274,9 @@ export function QuotesView() {
                     strings.billingNoDate,
                   )}
                 </td>
-                <td className={styles.chips}>
+                <BillingStatusCell>
                   <QuoteChips quote={quote} />
-                </td>
+                </BillingStatusCell>
                 <Td numeric>
                   {formatAmount(
                     quote.totals.grossCents,

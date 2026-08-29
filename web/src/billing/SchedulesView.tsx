@@ -23,6 +23,7 @@ import { Button, Spinner, Table, Td, Th, Toolbar, useDialogs } from "../ds";
 import { strings, useLocale } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
 import { BillingPagination } from "./BillingPagination";
+import { BillingStatusCell } from "./BillingStatusCell";
 import { cadenceLabel } from "./cadence";
 import { formatDocumentDate } from "./dates";
 import { formatAmount } from "./money";
@@ -209,9 +210,9 @@ export function SchedulesView() {
                         strings.billingNoDate,
                       )}
                 </td>
-                <td className={styles.chips}>
+                <BillingStatusCell>
                   <ScheduleChips schedule={schedule} />
-                </td>
+                </BillingStatusCell>
                 <Td numeric>
                   {formatAmount(
                     schedule.totals.grossCents,

@@ -33,6 +33,7 @@ import {
 import { strings, useLocale } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
 import { BillingPagination } from "./BillingPagination";
+import { BillingStatusCell } from "./BillingStatusCell";
 import { formatDocumentDate } from "./dates";
 import { formatAmount } from "./money";
 import { BillingLoading, EmptyState, ErrorBanner } from "./parts";
@@ -288,9 +289,9 @@ export function InvoicesView() {
                     strings.billingNoDate,
                   )}
                 </td>
-                <td className={styles.chips}>
+                <BillingStatusCell>
                   <DocumentChips invoice={invoice} />
-                </td>
+                </BillingStatusCell>
                 <Td numeric>
                   {formatAmount(
                     invoice.totals.grossCents,
