@@ -795,8 +795,10 @@ mod tests {
                 "sheet_read",
                 "sheet_answer",
                 "sheet_formula_explain",
-                // A2.3: the Docs agent reads the document and finds a passage
-                // in it. Drafting and rewriting are writes and are not here.
+                // A2.3, AB.2: the Docs agent lists the documents, reads one,
+                // and finds a passage in it. Creating, drafting and rewriting
+                // are writes and are not here.
+                "list_documents",
                 "doc_read",
                 "doc_answer",
                 // ADR 0058: Billing's verbs — the six reads that were
@@ -858,7 +860,7 @@ mod tests {
                 "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 101);
+        assert_eq!(all_tools().len(), 103);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }

@@ -106,6 +106,7 @@ pub mod crm_threads;
 pub mod csv;
 pub mod delegates;
 pub mod docs;
+pub mod docs_intents;
 pub mod document_mail;
 pub mod drafts;
 pub mod drive;

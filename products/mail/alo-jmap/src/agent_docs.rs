@@ -1,5 +1,8 @@
 //! Executing the **Docs** tools of the Docs agent (ADR 0034, queue item A2.3)
-//! — the acting half of what [`alo_ai::agent_docs`] describes to the model.
+//! — the acting half of what [`alo_ai::docs_intents`] describes to the model
+//! (the hand-written tool set this module was built against moved there in
+//! AB.2, ADR 0058; these four executors are reached through
+//! [`crate::docs_intents::dispatch`]).
 //!
 //! The two reading tools run inside the turn ([`crate::agent_turn`]); the two
 //! that change a document run only from [`crate::agent::agent_execute`], after

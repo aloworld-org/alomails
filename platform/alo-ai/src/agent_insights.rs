@@ -2,7 +2,7 @@
 //! names alo Insights contributes to its own agent, and the words that tell a
 //! model what they take.
 //!
-//! The same seam every product before it uses ([`crate::agent_docs`]): a tool
+//! The same seam every product before it uses ([`crate::agent_sheets`]): a tool
 //! list carrying each tool's effect, a description block, and a paragraph of
 //! guidance. Nothing here reads a figure or writes a board — the reading tools
 //! are executed inside the turn and the write only from an approval, both by

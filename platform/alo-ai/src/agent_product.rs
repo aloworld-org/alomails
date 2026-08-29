@@ -21,7 +21,6 @@ use alo_store::{ALL_AGENT_PRODUCTS, AgentProduct};
 
 use crate::agent_agenda::{AGENDA_GUIDANCE, AGENDA_TOOL_DOC, AGENDA_TOOLS};
 use crate::agent_contacts::{CONTACTS_GUIDANCE, CONTACTS_TOOL_DOC, CONTACTS_TOOLS};
-use crate::agent_docs::{DOCS_GUIDANCE, DOCS_TOOL_DOC, DOCS_TOOLS};
 use crate::agent_hr::{HR_GUIDANCE, HR_TOOL_DOC, HR_TOOLS};
 use crate::agent_insights::{INSIGHTS_GUIDANCE, INSIGHTS_TOOL_DOC, INSIGHTS_TOOLS};
 use crate::agent_inventory::{INVENTORY_GUIDANCE, INVENTORY_TOOL_DOC, INVENTORY_TOOLS};
@@ -34,6 +33,7 @@ use crate::agent_tool::AgentTool;
 use crate::billing_intents::BILLING as BILLING_INTENTS;
 use crate::chat_intents::CHAT as CHAT_INTENTS;
 use crate::crm_intents::CRM as CRM_INTENTS;
+use crate::docs_intents::DOCS as DOCS_INTENTS;
 use crate::drive_intents::DRIVE as DRIVE_INTENTS;
 use crate::finance_intents::FINANCE as FINANCE_INTENTS;
 use crate::intent::IntentModule;
@@ -121,10 +121,6 @@ const SITES_SET: ToolSet = set(SITES_TOOLS, SITES_TOOL_DOC, SITES_GUIDANCE);
 /// alo Sheets, whose agent works on a spreadsheet the caller can already open —
 /// a Drive node, which is also what gates it (`AgentProduct::module`).
 const SHEETS_SET: ToolSet = set(SHEETS_TOOLS, SHEETS_TOOL_DOC, SHEETS_GUIDANCE);
-/// alo Docs, on exactly the same footing: a document is a Drive node too, so
-/// the same switch gates it and the same reads-answer/writes-propose split
-/// applies to it (A2.3).
-const DOCS_SET: ToolSet = set(DOCS_TOOLS, DOCS_TOOL_DOC, DOCS_GUIDANCE);
 /// alo Insights, whose agent reads the figures through the same query engine
 /// the boards do and writes nothing but a board of questions (A2.4).
 const INSIGHTS_SET: ToolSet = set(INSIGHTS_TOOLS, INSIGHTS_TOOL_DOC, INSIGHTS_GUIDANCE);
@@ -134,7 +130,6 @@ const MAIL: &[ToolSet] = &[MAIL_SET, CONTACTS_SET];
 const AGENDA: &[ToolSet] = &[AGENDA_SET];
 const TASKS: &[ToolSet] = &[TASKS_SET];
 const SHEETS: &[ToolSet] = &[SHEETS_SET];
-const DOCS: &[ToolSet] = &[DOCS_SET];
 const PROJECTS: &[ToolSet] = &[PROJECTS_SET];
 const INVENTORY: &[ToolSet] = &[INVENTORY_SET];
 const HR: &[ToolSet] = &[HR_SET];
@@ -155,6 +150,7 @@ pub const MOVED: &[(AgentProduct, &IntentModule)] = &[
     (AgentProduct::Billing, &BILLING_INTENTS),
     (AgentProduct::Chat, &CHAT_INTENTS),
     (AgentProduct::Crm, &CRM_INTENTS),
+    (AgentProduct::Docs, &DOCS_INTENTS),
     (AgentProduct::Drive, &DRIVE_INTENTS),
     (AgentProduct::Finance, &FINANCE_INTENTS),
     (AgentProduct::Meet, &MEET_INTENTS),
@@ -169,7 +165,7 @@ fn static_sets(product: AgentProduct) -> &'static [ToolSet] {
         AgentProduct::Chat => &[],
         AgentProduct::Drive => &[],
         AgentProduct::Sheets => SHEETS,
-        AgentProduct::Docs => DOCS,
+        AgentProduct::Docs => &[],
         AgentProduct::Billing => &[],
         AgentProduct::Crm => &[],
         AgentProduct::Projects => PROJECTS,
@@ -388,7 +384,14 @@ mod tests {
         );
         assert_eq!(
             names(AgentProduct::Docs),
-            ["doc_read", "doc_answer", "doc_draft_section", "doc_rewrite"]
+            [
+                "list_documents",
+                "doc_read",
+                "doc_answer",
+                "create_document",
+                "doc_draft_section",
+                "doc_rewrite",
+            ]
         );
         assert_eq!(
             names(AgentProduct::Billing),
@@ -505,7 +508,7 @@ mod tests {
             .map(|tool| tool.name)
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
-        assert_eq!(workspace.len(), 101);
+        assert_eq!(workspace.len(), 103);
     }
 
     /// A moved module registers once (A4.1c): its row in [`MOVED`] is what puts
@@ -539,6 +542,7 @@ mod tests {
         for module in [
             concat!("BILLING_", "INTENTS"),
             concat!("CRM_", "INTENTS"),
+            concat!("DOCS_", "INTENTS"),
             concat!("DRIVE_", "INTENTS"),
             concat!("MEET_", "INTENTS"),
         ] {

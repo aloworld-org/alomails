@@ -15,6 +15,7 @@ mod agent_delegation_http;
 mod agent_directory_http;
 mod agent_dm_http;
 mod agent_docs_http;
+mod agent_docs_intents_http;
 mod agent_drive_http;
 mod agent_drive_intents_http;
 mod agent_events_http;
