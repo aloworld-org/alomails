@@ -239,17 +239,33 @@ pub async fn delete(
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     let eid = EventId::new(id);
-    if let Some(occ) = q.occurrence {
-        let when = parse_time(&occ)?;
+    let occurrence = match q.occurrence {
+        Some(occ) => Some(parse_time(&occ)?),
+        None => None,
+    };
+    cancel_core(&state, &account, &eid, occurrence).await
+}
+
+/// The delete/cancel itself, shared between the route above and the Agenda
+/// agent's `cancel_event` executor (`crate::agenda_intents`) so "what
+/// cancelling a meeting does" — the store write and the guests' `CANCEL`
+/// mails — is decided in exactly one place.
+pub(crate) async fn cancel_core(
+    state: &AppState,
+    account: &Account,
+    eid: &EventId,
+    occurrence: Option<OffsetDateTime>,
+) -> Result<Json<Value>, Problem> {
+    if let Some(when) = occurrence {
         // Read the event first, so we can tell guests just this instance is off.
         let event = account
             .acc
-            .event(&eid)
+            .event(eid)
             .await
             .map_err(|_| Problem::server_error())?;
         account
             .acc
-            .exclude_occurrence(&eid, when)
+            .exclude_occurrence(eid, when)
             .await
             .map_err(map_store_err)?;
         if let Some(ev) = event
@@ -266,23 +282,19 @@ pub async fn delete(
                 exdates: Vec::new(),
                 ..ev
             };
-            send_cancellations(&state, &account, &occurrence).await;
+            send_cancellations(state, account, &occurrence).await;
         }
         return Ok(Json(json!({ "status": "ok", "scope": "occurrence" })));
     }
     // Read the event before deleting so we know whom to notify.
     let event = account
         .acc
-        .event(&eid)
+        .event(eid)
         .await
         .map_err(|_| Problem::server_error())?;
-    account
-        .acc
-        .delete_event(&eid)
-        .await
-        .map_err(map_store_err)?;
+    account.acc.delete_event(eid).await.map_err(map_store_err)?;
     if let Some(ev) = event {
-        send_cancellations(&state, &account, &ev).await;
+        send_cancellations(state, account, &ev).await;
     }
     Ok(Json(json!({ "status": "ok", "scope": "series" })))
 }
@@ -308,7 +320,33 @@ pub async fn rsvp(
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     let req: RsvpBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
-    let partstat = match req.response.as_str() {
+    // The blob load is the tenant/account ownership boundary: a foreign or
+    // unreferenced blob is NotFound from the store itself.
+    let raw = account
+        .acc
+        .blob_bytes(&BlobId::new(req.blob_id))
+        .await
+        .map_err(map_store_err)?;
+    let (_, added, replied) = rsvp_core(&state, &account, &raw, &req.response).await?;
+    Ok(Json(
+        json!({ "status": "ok", "added": added, "replied": replied }),
+    ))
+}
+
+/// The RSVP itself, given the invitation message's raw bytes: reads its iMIP
+/// `REQUEST`, lands the event on the caller's personal calendar (unless
+/// declining), and emails a `METHOD:REPLY` to the organizer. Returns the event
+/// as read from the invitation, whether it was added, and whether the reply
+/// was sent. Shared between the route above and the Agenda agent's
+/// `respond_to_invitation` executor (`crate::agenda_intents`), so "what
+/// answering an invitation does" is decided in exactly one place.
+pub(crate) async fn rsvp_core(
+    state: &AppState,
+    account: &Account,
+    raw: &[u8],
+    response: &str,
+) -> Result<(CalendarEvent, bool, bool), Problem> {
+    let partstat = match response {
         "accepted" => "ACCEPTED",
         "declined" => "DECLINED",
         "tentative" => "TENTATIVE",
@@ -319,15 +357,8 @@ pub async fn rsvp(
             ));
         }
     };
-    // The blob load is the tenant/account ownership boundary: a foreign or
-    // unreferenced blob is NotFound from the store itself.
-    let raw = account
-        .acc
-        .blob_bytes(&BlobId::new(req.blob_id))
-        .await
-        .map_err(map_store_err)?;
     let not_invite = || Problem::with(StatusCode::BAD_REQUEST, "this message is not an invitation");
-    let ics_bytes = crate::mime_read::calendar_part(&raw).ok_or_else(not_invite)?;
+    let ics_bytes = crate::mime_read::calendar_part(raw).ok_or_else(not_invite)?;
     let ics = String::from_utf8_lossy(&ics_bytes);
     if alo_store::ical::method_of(&ics).as_deref() != Some("REQUEST") {
         return Err(not_invite());
@@ -352,10 +383,8 @@ pub async fn rsvp(
             .map_err(|_| Problem::server_error())?;
     }
     let organizer = alo_store::ical::organizer_of(&ics);
-    let replied = send_reply(&state, &account, &event, partstat, organizer.as_deref()).await;
-    Ok(Json(
-        json!({ "status": "ok", "added": added, "replied": replied }),
-    ))
+    let replied = send_reply(state, account, &event, partstat, organizer.as_deref()).await;
+    Ok((event, added, replied))
 }
 
 #[derive(Deserialize)]
@@ -1011,7 +1040,10 @@ fn parse_time(s: &str) -> Result<OffsetDateTime, Problem> {
         })
 }
 
-fn event_json(e: &CalendarEvent) -> Value {
+/// The record view every `/calendar/events` response serves — shared with the
+/// Agenda agent's `event_lookup` executor, so the agent grounds in exactly
+/// what the calendar itself shows.
+pub(crate) fn event_json(e: &CalendarEvent) -> Value {
     json!({
         "id": e.id.as_str(),
         "summary": e.summary,

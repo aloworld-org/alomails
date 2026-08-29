@@ -923,15 +923,16 @@ mod tests {
                 }
             }
         }
-        // Seventy-five of them, which is the whole point of ADR 0047 — eleven
+        // Eighty-one of them, which is the whole point of ADR 0047 — eleven
         // from the products A1 covered, the Website agent's three (A2.1), its
         // language count (A2.1b), the Sheet agent's three plus its listing
         // (A2.2, AB.3), the Docs
         // agent's three (A2.3, AB.2), the Insights agent's three (A2.4) plus
         // its board listing (AC.3), the Drive
         // agent's five intent reads plus attachment_read (A2.5, AB.1), the
-        // Agenda agent's two (A2.6), the Tasks agent's three plus its board
-        // and its lookup (A2.7, AB.4), the Mail
+        // Agenda agent's two (A2.6) plus its meeting lookup and its
+        // shared-diary colleague check (AB.5), the Tasks agent's three plus
+        // its board and its lookup (A2.7, AB.4), the Mail
         // agent's two (A2.8) plus the mailbox trio AC.4 adds — what waits
         // unread, one message's thread, who the asker's own mail went to —
         // the Meet agent's two (A3.2) plus its diary pair
@@ -950,11 +951,11 @@ mod tests {
         // the published state, the order inbox and the bookable services
         // (AC.5); the folder, the
         // rename, the move, the reschedule, the priority, the chase, the
-        // capture, the completion, the handover, the minutes, the room post
-        // and the scheduled meeting are writes and are counted on the other
-        // side.
+        // capture, the completion, the handover, the minutes, the room post,
+        // the scheduled meeting, the cancellation and the invitation's answer
+        // are writes and are counted on the other side.
         let reads = alo_ai::all_tools().iter().filter(|t| t.is_read()).count();
-        assert_eq!(reads, 79);
+        assert_eq!(reads, 81);
     }
 
     #[test]

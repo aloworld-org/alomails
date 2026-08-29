@@ -463,6 +463,7 @@ pub(crate) type ModuleDispatcher =
 /// The registry's twin is `alo_ai::MOVED`, and a test in each module holds the
 /// two lists to the same length.
 pub(crate) const MODULES: &[ModuleDispatcher] = &[
+    crate::agenda_intents::dispatch,
     crate::billing_intents::dispatch,
     crate::chat_intents::dispatch,
     crate::crm_intents::dispatch,
@@ -493,55 +494,14 @@ async fn dispatch(
             return run.await;
         }
     }
-    match tool {
-        // Tasks' verbs — `create_task` and the A2.7 six included — are
-        // dispatched by its module row above (AB.4). Completing and handing
-        // over a task exist there as previewed writes now; both still run
-        // only from the asker's own approval.
-        "create_event" => execute_create_event(account, args).await,
-        // Mail's verbs, the correspondence pair and the nine email actions
-        // included, are dispatched by its module row above (AC.4); their
-        // executors stay in this file because the draft, submission and
-        // folder plumbing they reuse lives here.
-        // Sheets' verbs, the five A2.2 tools included, are dispatched by its
-        // module row above (AB.3).
-        // Docs' verbs, the four A2.3 tools included, are dispatched by its
-        // module row above (AB.2).
-        // The reading tools of Agenda, Chat and Contacts. Every one answers
-        // from the record rather than the search snippets, and none writes.
-        "whats_on" => crate::agent_reads::execute_whats_on(account, args).await,
-        "am_i_free" => crate::agent_reads::execute_am_i_free(account, args).await,
-        // …and the three A2.6 adds, which take Agenda past the caller's own
-        // diary. `find_a_time` looks across the diaries already shared with
-        // them and reports the ones it could not see rather than counting them
-        // free; `meeting_prep` gathers one meeting's mail and attachments; and
-        // `reschedule_event` — the only write here that touches a meeting that
-        // already exists — moves one sitting and changes nothing else about it.
-        "find_a_time" => crate::agent_agenda::execute_find_a_time(account, args, state).await,
-        "meeting_prep" => crate::agent_meeting::execute_meeting_prep(account, args).await,
-        "reschedule_event" => crate::agent_meeting::execute_reschedule_event(account, args).await,
-        // Chat's verbs, `catch_up_room` and `find_in_chat` included, are
-        // dispatched by its module row above (AC.1) — and the address book's
-        // `find_contact` by Mail's (AC.4).
-        // Projects' verbs, the proposed hour and the calendar draft included,
-        // are dispatched by its module row above (AA.3), and Inventory's, the
-        // draft reorders and the stock answer included, by its own (AA.4).
-        // HR's verbs, the absence view and the letter fill-in included, are
-        // dispatched by its module row above (AA.5).
-        // alo Insights' tools (A2.4), on the same seam. The three reads answer
-        // from the same query engine the boards draw from — the vocabulary a
-        // question has to be asked in, the figures one question comes back
-        // with, and what moved between two periods — and the one write pins
-        // those questions to a new board, which is why it waits for the
-        // asker's own approval. Nothing here changes a figure or a record any
-        // figure is read from.
-        // Sites' verbs, the grounded answer, the editing pair and the publish
-        // included, are dispatched by its module row above (AC.5).
-        // Meet's verbs, the record reads and the minutes included, are
-        // dispatched by its module row above (AC.2).
-        // Unreachable given the allowlist check, but the match stays total.
-        _ => Err(Problem::with(StatusCode::BAD_REQUEST, "unknown tool")),
-    }
+    // With Agenda's move (AB.5) every module's verbs are dispatched by a row
+    // in MODULES, and the per-tool match this function grew up as is gone.
+    // Executors that predate the split stay in this file where their plumbing
+    // lives — `execute_create_event` (Meet's `schedule_meeting` runs the same
+    // shared calendar write), Mail's draft/submission/folder handlers — and
+    // are reached through their modules' dispatchers. Unreachable given the
+    // allowlist check, but the boundary states its own refusal.
+    Err(Problem::with(StatusCode::BAD_REQUEST, "unknown tool"))
 }
 
 /// Replace `{"source": n}` in an action's args with the concrete email it refers

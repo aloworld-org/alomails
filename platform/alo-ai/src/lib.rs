@@ -18,8 +18,8 @@ use serde_json::{Value, json};
 pub mod egress;
 use egress::{is_blocked_ip, split_authority};
 
+pub mod agenda_intents;
 mod agent;
-pub mod agent_agenda;
 pub mod agent_memory;
 pub mod agent_plan;
 pub mod agent_product;
@@ -54,7 +54,6 @@ pub use agent::{
     all_tools, is_agent_tool, is_read_tool, parse_decision, run_agent, run_agent_after_read,
     system_prompt_for,
 };
-pub use agent_agenda::AGENDA_TOOLS;
 pub use agent_memory::{MEMORY_FACTS_MAX, extract_memories, memory_messages, parse_memories};
 pub use agent_plan::{
     AgentPlan, MAX_PLAN_STEPS, PlanAgent, PlanAsk, PlanStep, parse_plan, plan_messages,

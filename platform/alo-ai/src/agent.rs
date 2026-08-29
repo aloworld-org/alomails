@@ -769,6 +769,13 @@ mod tests {
                 // write and is not here.
                 "find_a_time",
                 "meeting_prep",
+                // AB.5: …and, rendered from the intent registry, one meeting
+                // in full — guests' replies included — and one colleague's
+                // span of time, out of the diaries already shared. Cancelling
+                // a meeting and answering an invitation are writes and are
+                // not here.
+                "event_lookup",
+                "colleague_free",
                 // A2.7, AB.4: the Tasks agent reads the list it used to be
                 // able only to add to — what is unfinished, who is late on
                 // the boards the asker can open, what a room agreed, one
@@ -914,7 +921,7 @@ mod tests {
                 "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 130);
+        assert_eq!(all_tools().len(), 134);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }

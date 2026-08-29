@@ -330,13 +330,17 @@ mod tests {
             people_line.contains("\"who is off this week\""),
             "{people_line}"
         );
-        // A product still on hand-written tools has no hints yet — and no
-        // empty "Ask it for:" either.
+        // …and Agenda at AB.5 — the last module to move, so no roster line is
+        // without its hints any more.
         let agenda_line = prompt
             .lines()
             .find(|line| line.starts_with("- @agenda:"))
             .unwrap_or_default();
-        assert!(!agenda_line.contains("Ask it for:"), "{agenda_line}");
+        assert!(agenda_line.contains("Ask it for:"), "{agenda_line}");
+        assert!(
+            agenda_line.contains("\"what have I got on Thursday\""),
+            "{agenda_line}"
+        );
     }
 
     const ROSTER: [PlanAgent<'static>; 3] = [

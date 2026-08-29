@@ -19,7 +19,7 @@
 
 use alo_store::{ALL_AGENT_PRODUCTS, AgentProduct};
 
-use crate::agent_agenda::{AGENDA_GUIDANCE, AGENDA_TOOL_DOC, AGENDA_TOOLS};
+use crate::agenda_intents::AGENDA as AGENDA_INTENTS;
 use crate::agent_tool::AgentTool;
 use crate::billing_intents::BILLING as BILLING_INTENTS;
 use crate::chat_intents::CHAT as CHAT_INTENTS;
@@ -86,16 +86,6 @@ impl ToolSet {
     }
 }
 
-/// One module's three constants, gathered.
-const fn set(tools: &'static [AgentTool], doc: &'static str, guidance: &'static str) -> ToolSet {
-    ToolSet {
-        static_tools: tools,
-        static_doc: doc,
-        intents: None,
-        guidance,
-    }
-}
-
 /// A module that has moved to intents (ADR 0058): everything renders from
 /// its [`IntentModule`].
 const fn intents(module: &'static IntentModule) -> ToolSet {
@@ -106,10 +96,6 @@ const fn intents(module: &'static IntentModule) -> ToolSet {
         guidance: module.guidance,
     }
 }
-
-const AGENDA_SET: ToolSet = set(AGENDA_TOOLS, AGENDA_TOOL_DOC, AGENDA_GUIDANCE);
-
-const AGENDA: &[ToolSet] = &[AGENDA_SET];
 
 /// Every product's tool sets, in the order [`AgentProduct::Workspace`] renders
 /// them.
@@ -122,6 +108,7 @@ const AGENDA: &[ToolSet] = &[AGENDA_SET];
 /// conflict on neighbouring lines, and the resolution is to keep both. A row's
 /// product sees the module as its own; Ask alo sees every row.
 pub const MOVED: &[(AgentProduct, &IntentModule)] = &[
+    (AgentProduct::Agenda, &AGENDA_INTENTS),
     (AgentProduct::Billing, &BILLING_INTENTS),
     (AgentProduct::Chat, &CHAT_INTENTS),
     (AgentProduct::Crm, &CRM_INTENTS),
@@ -143,7 +130,7 @@ pub const MOVED: &[(AgentProduct, &IntentModule)] = &[
 fn static_sets(product: AgentProduct) -> &'static [ToolSet] {
     match product {
         AgentProduct::Mail => &[],
-        AgentProduct::Agenda => AGENDA,
+        AgentProduct::Agenda => &[],
         AgentProduct::Tasks => &[],
         AgentProduct::Chat => &[],
         AgentProduct::Drive => &[],
@@ -316,8 +303,12 @@ mod tests {
                 "am_i_free",
                 "find_a_time",
                 "meeting_prep",
+                "event_lookup",
+                "colleague_free",
                 "create_event",
                 "reschedule_event",
+                "cancel_event",
+                "respond_to_invitation",
             ]
         );
         assert_eq!(
@@ -524,7 +515,7 @@ mod tests {
             .map(|tool| tool.name)
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
-        assert_eq!(workspace.len(), 130);
+        assert_eq!(workspace.len(), 134);
     }
 
     /// A moved module registers once (A4.1c): its row in [`MOVED`] is what puts
@@ -556,6 +547,7 @@ mod tests {
         }
         let source = include_str!("agent_product.rs");
         for module in [
+            concat!("AGENDA_", "INTENTS"),
             concat!("BILLING_", "INTENTS"),
             concat!("CRM_", "INTENTS"),
             concat!("DOCS_", "INTENTS"),

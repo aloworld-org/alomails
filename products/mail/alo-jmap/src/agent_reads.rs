@@ -35,7 +35,10 @@ pub(crate) fn iso(at: OffsetDateTime) -> String {
 /// The wire shape of one event. Enough to say what it is and when, and
 /// nothing more — an agent answering "what's on Thursday" does not need every
 /// attendee's status.
-fn event_json(event: &alo_store::CalendarEvent) -> Value {
+/// Shared with the Agenda agent's `colleague_free` executor
+/// (`crate::agenda_intents`), which reports a shared diary's clashes in the
+/// same words the asker's own are reported in.
+pub(crate) fn event_json(event: &alo_store::CalendarEvent) -> Value {
     json!({
         "title": event.summary,
         "startsAt": iso(event.starts_at),

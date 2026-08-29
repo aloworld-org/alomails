@@ -99,52 +99,12 @@ pub async fn execute_find_a_time(
         .unwrap_or(DEFAULT_SLOTS)
         .clamp(1, MAX_SLOTS);
 
-    // Every calendar the asker can open, owned or shared with them — the whole
-    // of what this tool is able to look at.
-    let calendars = account.acc.calendars().await.map_err(map_store_err)?;
-    let mut owner_of: HashMap<String, UserId> = HashMap::new();
-    for calendar in &calendars {
-        owner_of.insert(
-            calendar.id.as_str().to_owned(),
-            UserId::new(calendar.owner.clone()),
-        );
-    }
-    let others: Vec<UserId> = owner_of
-        .values()
-        .filter(|owner| **owner != account.user)
-        .cloned()
-        .collect::<HashSet<_>>()
-        .into_iter()
-        .collect();
-    // Labels for the diaries that are already readable — never a directory
-    // lookup, so a name that matches nothing says nothing about who exists.
-    let mut addresses = state
-        .store
-        .for_tenant(account.tenant.clone())
-        .emails_of(&others)
-        .await
-        .map_err(map_store_err)?;
-    let mine = state
-        .store
-        .for_tenant(account.tenant.clone())
-        .email_of(&account.user)
-        .await
-        .map_err(map_store_err)?
-        .unwrap_or_default();
-    addresses.insert(account.user.as_str().to_owned(), mine.clone());
-    // The asker is among the diaries that can be named: a person who says
-    // "Ben, Marta and me" has named themselves, and answering that their own
-    // diary is not shared with them would be a nonsense.
-    let mut visible: Vec<(String, UserId)> = others
-        .iter()
-        .chain(std::iter::once(&account.user))
-        .filter_map(|owner| {
-            addresses
-                .get(owner.as_str())
-                .map(|email| (email.clone(), owner.clone()))
-        })
-        .collect();
-    visible.sort_by(|a, b| a.0.cmp(&b.0));
+    let SharedDiaries {
+        owner_of,
+        addresses,
+        mine,
+        visible,
+    } = shared_diaries(account, state).await?;
 
     // Who is actually in the answer: the asker, plus every named colleague
     // whose diary they can see. The rest are reported, not assumed free.
@@ -251,6 +211,81 @@ pub async fn execute_find_a_time(
     })))
 }
 
+/// The diaries the asker can already open, gathered once.
+///
+/// Shared with the `colleague_free` executor in [`crate::agenda_intents`], so
+/// "which diaries exist for this person" has exactly one answer — two readings
+/// of it would eventually disagree about whose afternoon is visible.
+pub(crate) struct SharedDiaries {
+    /// Calendar id → the diary's owner.
+    pub owner_of: HashMap<String, UserId>,
+    /// Owner id → email address, the asker included.
+    pub addresses: HashMap<String, String>,
+    /// The asker's own address.
+    pub mine: String,
+    /// `(address, owner)` pairs, sorted by address — what a name is resolved
+    /// against, and nothing else is.
+    pub visible: Vec<(String, UserId)>,
+}
+
+/// Every calendar the asker can open, owned or shared with them — the whole
+/// of what the cross-diary tools are able to look at.
+pub(crate) async fn shared_diaries(
+    account: &Account,
+    state: &AppState,
+) -> Result<SharedDiaries, Problem> {
+    let calendars = account.acc.calendars().await.map_err(map_store_err)?;
+    let mut owner_of: HashMap<String, UserId> = HashMap::new();
+    for calendar in &calendars {
+        owner_of.insert(
+            calendar.id.as_str().to_owned(),
+            UserId::new(calendar.owner.clone()),
+        );
+    }
+    let others: Vec<UserId> = owner_of
+        .values()
+        .filter(|owner| **owner != account.user)
+        .cloned()
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
+    // Labels for the diaries that are already readable — never a directory
+    // lookup, so a name that matches nothing says nothing about who exists.
+    let mut addresses = state
+        .store
+        .for_tenant(account.tenant.clone())
+        .emails_of(&others)
+        .await
+        .map_err(map_store_err)?;
+    let mine = state
+        .store
+        .for_tenant(account.tenant.clone())
+        .email_of(&account.user)
+        .await
+        .map_err(map_store_err)?
+        .unwrap_or_default();
+    addresses.insert(account.user.as_str().to_owned(), mine.clone());
+    // The asker is among the diaries that can be named: a person who says
+    // "Ben, Marta and me" has named themselves, and answering that their own
+    // diary is not shared with them would be a nonsense.
+    let mut visible: Vec<(String, UserId)> = others
+        .iter()
+        .chain(std::iter::once(&account.user))
+        .filter_map(|owner| {
+            addresses
+                .get(owner.as_str())
+                .map(|email| (email.clone(), owner.clone()))
+        })
+        .collect();
+    visible.sort_by(|a, b| a.0.cmp(&b.0));
+    Ok(SharedDiaries {
+        owner_of,
+        addresses,
+        mine,
+        visible,
+    })
+}
+
 /// A bound of the working window, in the `HH:MM` the model passed it as — the
 /// answer says the window it actually looked inside, and says it in the same
 /// vocabulary the argument used.
@@ -338,7 +373,7 @@ fn stated_people(args: &Value) -> Result<Vec<String>, Problem> {
 /// `ben@…` reaches Ben even when Bennett's diary is shared too; two matches is
 /// a question that lists them, never a guess — the wrong diary would be read as
 /// the right one, and the meeting would land on the wrong person's afternoon.
-fn resolve_person(wanted: &str, visible: &[(String, UserId)]) -> Result<UserId, String> {
+pub(crate) fn resolve_person(wanted: &str, visible: &[(String, UserId)]) -> Result<UserId, String> {
     let needle = wanted.trim().to_lowercase();
     if needle.is_empty() {
         return Err("which colleague was meant is required".to_owned());

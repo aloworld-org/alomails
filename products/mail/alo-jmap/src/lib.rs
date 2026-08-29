@@ -13,6 +13,7 @@
 //! IdP.
 
 pub mod admin;
+pub mod agenda_intents;
 pub mod agent;
 pub mod agent_agenda;
 pub mod agent_args;
