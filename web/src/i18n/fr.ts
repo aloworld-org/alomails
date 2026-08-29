@@ -1645,6 +1645,11 @@ export const fr: Partial<Catalog> = {
   billingLoadFailed:
     "Impossible de charger cette liste. Vérifiez votre connexion et réessayez.",
   billingLoading: "Chargement des données de facturation…",
+  billingPaginationLabel: "Pages de la liste de facturation",
+  billingPaginationPrevious: "Page précédente",
+  billingPaginationNext: "Page suivante",
+  billingPaginationRange: (first: number, last: number, total: number) => `${first}–${last} sur ${total}`,
+  billingPaginationPage: (page: number, total: number) => `Page ${page} sur ${total}`,
   billingSaveFailed:
     "Impossible d’enregistrer. Vérifiez votre connexion et réessayez.",
   billingNoMatches: "Aucun résultat pour cette recherche.",
@@ -7028,6 +7033,7 @@ export const fr: Partial<Catalog> = {
     "La clé complète n’est affichée qu’au moment de sa création.",
   billingConnectionsCopy: "Copier",
   billingConnectionsConnected: "Connecté",
+  billingConnectionsExpired: "Expiré",
   billingConnectionsActionNeeded: "Action requise",
   billingConnectionsPaused: "Suspendu",
   billingConnectionsIndustrialComponentsEur: "Composants industriels · EUR",

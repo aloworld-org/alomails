@@ -25,6 +25,32 @@ async fn main() -> ExitCode {
         return usage();
     };
 
+    // Refuse the demo command before `connect` applies migrations. The store
+    // service validates again before writing, but a production refusal should
+    // not change even the schema as a side effect of discovering the refusal.
+    if command == "billing-demo" {
+        let database_url = match std::env::var("DATABASE_URL") {
+            Ok(value) => value,
+            Err(_) => {
+                eprintln!("identityctl: DATABASE_URL is required");
+                return ExitCode::FAILURE;
+            }
+        };
+        let deployment = match std::env::var("ALO_ENV") {
+            Ok(value) => value,
+            Err(_) => {
+                eprintln!("identityctl: ALO_ENV=development is required for Billing demo data");
+                return ExitCode::FAILURE;
+            }
+        };
+        if let Err(message) =
+            alo_store::billing_demo::DemoEnvironment::validate(&database_url, &deployment)
+        {
+            eprintln!("identityctl: {message}");
+            return ExitCode::FAILURE;
+        }
+    }
+
     let identity = match connect().await {
         Ok(id) => id,
         Err(msg) => {
@@ -38,6 +64,7 @@ async fn main() -> ExitCode {
         "bootstrap-operator" => bootstrap_operator(&identity, &args[1..]).await,
         "reset-password" => reset_password(&identity, &args[1..]).await,
         "register-client" => register_client(&identity, &args[1..]).await,
+        "billing-demo" => billing_demo(&identity, &args[1..]).await,
         "ensure-signing-key" => ensure_signing_key(&identity).await,
         "rotate-signing-key" => rotate_signing_key(&identity).await,
         "help" | "--help" | "-h" => return usage(),
@@ -161,6 +188,47 @@ async fn register_client(identity: &Identity, args: &[String]) -> Result<(), Str
     Ok(())
 }
 
+async fn billing_demo(identity: &Identity, args: &[String]) -> Result<(), String> {
+    let [action, login_email] = args else {
+        return Err("usage: billing-demo <seed|reset> <login-email>".to_owned());
+    };
+    let database_url =
+        std::env::var("DATABASE_URL").map_err(|_| "DATABASE_URL is required".to_owned())?;
+    let deployment = std::env::var("ALO_ENV")
+        .map_err(|_| "ALO_ENV=development is required for Billing demo data".to_owned())?;
+    let environment =
+        alo_store::billing_demo::DemoEnvironment::validate(&database_url, &deployment)?;
+    let credential = identity
+        .store()
+        .credentials_by_username(login_email)
+        .await
+        .map_err(|_| "could not resolve the requested development login".to_owned())?
+        .ok_or_else(|| format!("no account exists for {login_email}"))?;
+    let account = identity
+        .store()
+        .for_account(credential.tenant, credential.user);
+    let counts = match action.as_str() {
+        "seed" => account.seed_billing_demo(&environment).await,
+        "reset" => account.reset_billing_demo(&environment).await,
+        _ => return Err("usage: billing-demo <seed|reset> <login-email>".to_owned()),
+    }
+    .map_err(|error| format!("Billing demo operation failed: {error}"))?;
+    println!(
+        "Billing demo: {} customers, {} products, {} price connections, {} quotes, {} invoices, {} recurring schedules, {} VAT-source invoices; product links: {} quote, {} invoice, {} recurring",
+        counts.customers,
+        counts.products,
+        counts.price_connections,
+        counts.quotes,
+        counts.invoices,
+        counts.schedules,
+        counts.vat_source_invoices,
+        counts.quote_product_links,
+        counts.invoice_product_links,
+        counts.schedule_product_links,
+    );
+    Ok(())
+}
+
 async fn ensure_signing_key(identity: &Identity) -> Result<(), String> {
     identity.ensure_signing_key().await.map_err(fail)?;
     println!("signing key present");
@@ -202,6 +270,7 @@ fn usage() -> ExitCode {
          \x20 bootstrap-operator <email>                  create a platform operator (control plane)\n\
          \x20 reset-password <email>                      replace an existing account password\n\
          \x20 register-client <client-id> <name> <uri>... register a public OAuth client\n\
+         \x20 billing-demo <seed|reset> <login-email>     manage local Billing demo records\n\
          \x20 ensure-signing-key                          create an ID-token key if none\n\
          \x20 rotate-signing-key                          add a new signing key\n\
          \n\

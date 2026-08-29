@@ -22,6 +22,7 @@ import { RefreshCw } from "lucide-react";
 import { Button, Spinner, Table, Td, Th, Toolbar, useDialogs } from "../ds";
 import { strings, useLocale } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
+import { BillingPagination } from "./BillingPagination";
 import { cadenceLabel } from "./cadence";
 import { formatDocumentDate } from "./dates";
 import { formatAmount } from "./money";
@@ -30,6 +31,7 @@ import { ScheduleChips } from "./ScheduleChips";
 import { BillingLoading, EmptyState, ErrorBanner } from "./parts";
 import type { BillingCustomer, BillingScheduleSummary } from "./types";
 import styles from "./billingStyles";
+import { useBillingPagination } from "./useBillingPagination";
 
 /** The chips one arrangement wears, in reading order: what it is doing, then
  *  whether it is waiting on a run.
@@ -77,6 +79,7 @@ export function SchedulesView() {
     () => new Map(customers.map((c) => [c.id, c.name] as const)),
     [customers],
   );
+  const paged = useBillingPagination(schedules, "schedules");
 
   /** Raise everything that is due, now rather than at the next hourly run. The
    *  server decides what "due" means; this only reports what appeared. */
@@ -161,7 +164,7 @@ export function SchedulesView() {
           onCta={() => void navigate("../invoices")}
         />
       ) : (
-        <Table
+        <><Table
           label={strings.billingRecurringTitle}
           className={styles.listTable}
           stickyHeader
@@ -180,7 +183,7 @@ export function SchedulesView() {
             </tr>
           </thead>
           <tbody>
-            {schedules.map((schedule) => (
+            {paged.records.map((schedule) => (
               <tr key={schedule.id}>
                 <td>
                   <button
@@ -242,7 +245,7 @@ export function SchedulesView() {
               </tr>
             ))}
           </tbody>
-        </Table>
+        </Table><BillingPagination {...paged} onPage={paged.setPage} /></>
       )}
 
       {editing !== null && (

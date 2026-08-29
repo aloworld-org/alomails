@@ -32,6 +32,7 @@ import {
 } from "../ds";
 import { strings, useLocale } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
+import { BillingPagination } from "./BillingPagination";
 import { formatDocumentDate } from "./dates";
 import { formatAmount } from "./money";
 import { BillingLoading, EmptyState, ErrorBanner } from "./parts";
@@ -42,6 +43,7 @@ import type {
   InvoiceStatus,
 } from "./types";
 import styles from "./billingStyles";
+import { useBillingPagination } from "./useBillingPagination";
 
 /** The filter's choices, in the order a document moves through them.
  *
@@ -135,6 +137,7 @@ export function InvoicesView() {
       matches(i, names.get(i.customerId) ?? "", needle),
     );
   }, [invoices, names, search]);
+  const paged = useBillingPagination(shown, `${search}\u0000${filter}`);
 
   /** Chase one late invoice: the server writes the letter from the stored
    *  document and leaves it in the sender's Drafts. Nothing is sent, and the
@@ -216,7 +219,7 @@ export function InvoicesView() {
       ) : shown.length === 0 ? (
         <p className={styles.noMatches}>{strings.billingNoMatches}</p>
       ) : (
-        <Table
+        <><Table
           label={strings.billingInvoices}
           className={styles.listTable}
           stickyHeader
@@ -235,7 +238,7 @@ export function InvoicesView() {
             </tr>
           </thead>
           <tbody>
-            {shown.map((invoice) => (
+            {paged.records.map((invoice) => (
               <tr
                 key={invoice.id}
                 className={cx(invoice.overdue && styles.overdueRow)}
@@ -306,7 +309,7 @@ export function InvoicesView() {
               </tr>
             ))}
           </tbody>
-        </Table>
+        </Table><BillingPagination {...paged} onPage={paged.setPage} /></>
       )}
     </div>
   );

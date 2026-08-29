@@ -2517,6 +2517,11 @@ export const de: Partial<Catalog> = {
   billingLoadFailed:
     "Diese Liste konnte nicht geladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
   billingLoading: "Rechnungsdaten werden geladen…",
+  billingPaginationLabel: "Seiten der Abrechnungsliste",
+  billingPaginationPrevious: "Vorherige Seite",
+  billingPaginationNext: "Nächste Seite",
+  billingPaginationRange: (first: number, last: number, total: number) => `${first}–${last} von ${total}`,
+  billingPaginationPage: (page: number, total: number) => `Seite ${page} von ${total}`,
   billingSaveFailed:
     "Speichern nicht möglich. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
   billingNoMatches: "Nichts entspricht dieser Suche.",
@@ -7066,6 +7071,7 @@ export const de: Partial<Catalog> = {
     "Der vollständige Schlüssel wird nur bei der Erstellung angezeigt.",
   billingConnectionsCopy: "Kopieren",
   billingConnectionsConnected: "Verbunden",
+  billingConnectionsExpired: "Abgelaufen",
   billingConnectionsActionNeeded: "Handlungsbedarf",
   billingConnectionsPaused: "Pausiert",
   billingConnectionsIndustrialComponentsEur: "Industriekomponenten · EUR",

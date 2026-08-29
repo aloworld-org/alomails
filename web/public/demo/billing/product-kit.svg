@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" role="img" aria-labelledby="title desc">
+  <title id="title">Fictional product kit</title>
+  <desc id="desc">An abstract reusable placeholder for seeded catalogue items.</desc>
+  <rect width="320" height="240" rx="20" fill="#f4f1ec"/>
+  <path d="m160 35 91 49v79l-91 49-91-49V84l91-49Z" fill="#ffffff" stroke="#d8d1c7" stroke-width="5"/>
+  <path d="m70 85 90 50 90-50m-90 50v76" fill="none" stroke="#876bdb" stroke-width="7" stroke-linejoin="round"/>
+  <path d="m115 60 91 50" stroke="#317a5b" stroke-width="7" stroke-linecap="round"/>
+</svg>

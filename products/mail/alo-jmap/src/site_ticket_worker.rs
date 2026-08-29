@@ -17,6 +17,8 @@
 
 use alo_store::{PipelineSeed, StageSeed, Store, TicketFulfilWords};
 
+use crate::finance_chart_names::chart_seed_for;
+
 /// How many paid orders one sweep round claims. Small: each one is a handful
 /// of Billing writes, and a backlog of ticket sales is a good problem the
 /// next round absorbs thirty seconds later.
@@ -121,8 +123,9 @@ pub async fn run_due(store: &Store) -> usize {
         for claim in &claims {
             let words = words_for(&claim.default_locale);
             let seed = seed_for(words);
+            let chart_seed = chart_seed_for(&claim.default_locale);
             match store
-                .fulfil_claimed_ticket(claim, &words.fulfil, &seed)
+                .fulfil_claimed_ticket(claim, &words.fulfil, &seed, &chart_seed)
                 .await
             {
                 Ok(outcome) => {

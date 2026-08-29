@@ -345,6 +345,18 @@ pub const BILLING_EXCLUDED: &[Excluded] = &[
         why: "The price list is kept by a person in the app; a later intent set.",
     },
     Excluded {
+        route: "/billing/price-connections",
+        why: "Supplier and customer catalogue connections are configured by a person in the app; a later intent set.",
+    },
+    Excluded {
+        route: "/billing/price-connections/{id}",
+        why: "Pausing or disconnecting a catalogue connection is a person's decision in the app; a later intent set.",
+    },
+    Excluded {
+        route: "/billing/price-connections/{id}/sync",
+        why: "A person starts an exceptional catalogue sync in the app; scheduled synchronization remains automatic.",
+    },
+    Excluded {
         route: "/billing/invoices/{id}/void",
         why: "Voiding and crediting are corrections a person makes deliberately; a later intent set.",
     },

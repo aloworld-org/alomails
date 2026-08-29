@@ -5,9 +5,9 @@ import { Button, ChoicePicker, Input, Modal } from "../ds";
 import { strings } from "../i18n";
 import { PriceConnectionCloseButton } from "./PriceConnectionCloseButton";
 import { PriceConnectionField } from "./PriceConnectionField";
-import type { PriceConnection } from "./priceConnectionsModel";
+import type { PriceConnectionDraft } from "./priceConnectionsModel";
 
-export function ConnectSupplierDialog({ onClose, onConnected }: { onClose: () => void; onConnected: (connection: PriceConnection) => void }) {
+export function ConnectSupplierDialog({ onClose, onConnected }: { onClose: () => void; onConnected: (connection: PriceConnectionDraft) => void }) {
   const [company, setCompany] = useState("");
   const [source, setSource] = useState("alo");
   const [address, setAddress] = useState("");
@@ -26,7 +26,7 @@ export function ConnectSupplierDialog({ onClose, onConnected }: { onClose: () =>
   const [headerValue, setHeaderValue] = useState("");
   const canTest = company.trim() !== "" && address.trim() !== "";
 
-  return <Modal title={strings.billingConnectionsConnectSupplier} onClose={onClose} wide icon={<ArrowDownToLine className="size-5" />} actions={<PriceConnectionCloseButton onClick={onClose} />} footer={<div className="ml-auto flex gap-3"><Button variant="ghost" onClick={onClose}>{strings.cancel}</Button><Button disabled={!tested} onClick={() => onConnected({ id: `received-${Date.now()}`, direction: "received", company: company.trim(), catalogue: strings.billingConnectionsSupplierCatalogueEur, items: 148, health: "connected", detail: strings.billingConnectionsNoChangesAttention, updated: strings.billingConnectionsConnectedNow, cadence: schedule === "hourly" ? strings.billingConnectionsHourly : schedule === "weekly" ? strings.billingConnectionsWeekly : schedule === "manual" ? strings.billingConnectionsManual : strings.billingConnectionsDaily, channel: source === "alo" ? "alo" : "api" })}>{strings.billingConnectionsConnectPrices}</Button></div>}>
+  return <Modal title={strings.billingConnectionsConnectSupplier} onClose={onClose} wide icon={<ArrowDownToLine className="size-5" />} actions={<PriceConnectionCloseButton onClick={onClose} />} footer={<div className="ml-auto flex gap-3"><Button variant="ghost" onClick={onClose}>{strings.cancel}</Button><Button disabled={!tested} onClick={() => onConnected({ direction: "received", company: company.trim(), catalogue: strings.billingConnectionsSupplierCatalogueEur, cadence: schedule as PriceConnectionDraft["cadence"], channel: source === "alo" ? "alo" : "api", productIds: [] })}>{strings.billingConnectionsConnectPrices}</Button></div>}>
     <div className="rounded-xl border border-accent/20 bg-accent-soft p-4"><p className="m-0 text-sm font-semibold text-primary">{strings.billingConnectionsEasyOption}</p><p className="mb-0 mt-1 text-sm leading-relaxed text-secondary">{strings.billingConnectionsEasyOptionHelp}</p></div>
     <div className="grid grid-cols-2 gap-5 max-md:grid-cols-1">
       <PriceConnectionField label={strings.billingConnectionsSupplier}><Input value={company} onChange={(event) => { setCompany(event.target.value); setTested(false); }} placeholder={strings.billingConnectionsSupplierPlaceholder} /></PriceConnectionField>

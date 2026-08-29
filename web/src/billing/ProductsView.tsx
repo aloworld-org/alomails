@@ -10,12 +10,14 @@ import { Package, Upload } from "lucide-react";
 import { strings, useLocale } from "../i18n";
 import { Badge, Button, Table, Td, Th, useDialogs } from "../ds";
 import { billingMessage, useBillingApi } from "./api";
+import { BillingPagination } from "./BillingPagination";
 import { formatAmount, formatRate } from "./money";
 import { ProductDialog } from "./ProductDialog";
 import { PriceImportDialog } from "./PriceImportDialog";
 import { BillingLoading, EmptyState, ErrorBanner, ListToolbar } from "./parts";
 import type { BillingProduct } from "./types";
 import styles from "./billingStyles";
+import { useBillingPagination } from "./useBillingPagination";
 
 export function ProductsView() {
   const api = useBillingApi();
@@ -55,6 +57,7 @@ export function ProductsView() {
         needle === "" || `${p.name} ${p.unit}`.toLowerCase().includes(needle),
     );
   }, [products, search]);
+  const paged = useBillingPagination(shown, `${search}\u0000${includeArchived}`);
 
   async function toggleArchived(product: BillingProduct) {
     if (
@@ -106,7 +109,7 @@ export function ProductsView() {
       ) : shown.length === 0 ? (
         <p className={styles.noMatches}>{strings.billingNoMatches}</p>
       ) : (
-        <Table
+        <><Table
           label={strings.billingProducts}
           className={styles.listTable}
           stickyHeader
@@ -122,7 +125,7 @@ export function ProductsView() {
             </tr>
           </thead>
           <tbody>
-            {shown.map((p) => (
+            {paged.records.map((p) => (
               <tr
                 key={p.id}
                 className={p.archived ? styles.archivedRow : undefined}
@@ -158,7 +161,7 @@ export function ProductsView() {
               </tr>
             ))}
           </tbody>
-        </Table>
+        </Table><BillingPagination {...paged} onPage={paged.setPage} /></>
       )}
 
       {editing !== undefined && (

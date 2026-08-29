@@ -5,12 +5,12 @@ import { Button, ChoicePicker, Input, Modal, cx } from "../ds";
 import { strings } from "../i18n";
 import { PriceConnectionCloseButton } from "./PriceConnectionCloseButton";
 import { PriceConnectionField } from "./PriceConnectionField";
-import type { PriceConnection } from "./priceConnectionsModel";
+import type { PriceConnectionDraft } from "./priceConnectionsModel";
 import type { BillingProduct } from "./types";
 
 interface SharePricesDialogProps {
   onClose: () => void;
-  onShared: (connection: PriceConnection) => void;
+  onShared: (connection: PriceConnectionDraft) => void;
   products: BillingProduct[];
   productsLoading: boolean;
 }
@@ -39,16 +39,12 @@ export function SharePricesDialog({ onClose, onShared, products, productsLoading
 
   function finish() {
     onShared({
-      id: `shared-${Date.now()}`,
       direction: "shared",
       company: company.trim(),
       catalogue: catalogue === "all" ? strings.billingConnectionsLivePriceListAutomatic : strings.billingConnectionsSelectedPriceItems,
-      items: sharedProducts.length,
-      health: "connected",
-      detail: delivery === "alo" ? strings.billingConnectionsWaitingClient : strings.billingConnectionsExternalReady,
-      updated: strings.billingConnectionsCreatedNow,
-      cadence: delivery === "alo" ? strings.billingConnectionsOnApproval : strings.billingConnectionsLive,
+      cadence: delivery === "alo" ? "approval" : "live",
       channel: delivery === "alo" ? "alo" : "api",
+      productIds: sharedProducts.map((product) => product.id),
     });
   }
 

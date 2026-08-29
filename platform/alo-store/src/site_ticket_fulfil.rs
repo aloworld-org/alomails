@@ -50,6 +50,7 @@ use crate::billing_payments::NewPayment;
 use crate::crm_lead_capture::{CapturedLead, ConversationLead, CrmLeadCapture};
 use crate::crm_pipelines::PipelineSeed;
 use crate::error::{Result, StoreError};
+use crate::fin_accounts::ChartSeed;
 use crate::id::{
     BillingProductId, SiteId, SiteTicketEventId, SiteTicketFulfilmentId, SiteTicketOrderId,
     TenantId, UserId, generate_token,
@@ -252,7 +253,9 @@ impl Store {
     /// CRM, and the record of both on the fulfilment row. Each act goes
     /// through the owning module's own door under the site owner's account;
     /// an act that fails is written down (`invoice_note`, `crm_outcome`) and
-    /// never repeated — the claim was the once.
+    /// never repeated — the claim was the once. `chart_seed` carries the
+    /// caller's localized default account names for the case where checkout
+    /// is the tenant's first accounting act; an existing chart is untouched.
     ///
     /// # Errors
     /// [`StoreError::Db`] when the record itself cannot be written; a failed
@@ -262,6 +265,7 @@ impl Store {
         claim: &ClaimedTicketFulfilment,
         words: &TicketFulfilWords,
         seed: &PipelineSeed,
+        chart_seed: &ChartSeed,
     ) -> Result<TicketFulfilmentOutcome> {
         let description = self.resolve_description(claim, words).await;
         // CRM first, deliberately: the invoice below makes this buyer a
@@ -270,7 +274,10 @@ impl Store {
         // very sale that made them one, and no first-time buyer would ever
         // reach the board.
         let crm_outcome = self.capture_buyer(claim, words, seed).await;
-        let (invoice, note) = match self.raise_invoice(claim, words, &description).await {
+        let (invoice, note) = match self
+            .raise_invoice(claim, words, &description, chart_seed)
+            .await
+        {
             Ok(raised) => (Some(raised), None),
             Err(error) => {
                 tracing::warn!(
@@ -344,8 +351,15 @@ impl Store {
         claim: &ClaimedTicketFulfilment,
         words: &TicketFulfilWords,
         description: &str,
+        chart_seed: &ChartSeed,
     ) -> Result<(crate::id::BillingInvoiceId, String)> {
         let account = self.for_account(claim.tenant.clone(), claim.owner.clone());
+        // Ticket checkout can be a tenant's first accounting act. Use the
+        // site's localized chart words at that boundary so Billing can post
+        // the issued document without requiring a preparatory Finance visit.
+        // The seed ledger makes this a no-op for a tenant that already owns a
+        // chart, including one their accountant has renamed or replaced.
+        account.fin_accounts_or_seed(chart_seed, false).await?;
         let seller = account.billing_settings().await?;
         if seller.country.is_empty() {
             // An invoice needs a place of supply; a seller profile without a

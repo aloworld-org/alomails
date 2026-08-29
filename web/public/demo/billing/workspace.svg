@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-labelledby="title desc">
+  <title id="title">Fictional collaborative workspace</title>
+  <desc id="desc">An abstract illustration of desks, plants and project boards.</desc>
+  <rect width="640" height="360" rx="24" fill="#f4f1ec"/>
+  <rect x="54" y="54" width="228" height="138" rx="14" fill="#ffffff" stroke="#d8d1c7" stroke-width="4"/>
+  <rect x="77" y="78" width="74" height="19" rx="7" fill="#876bdb"/>
+  <rect x="77" y="113" width="164" height="12" rx="6" fill="#d8d1c7"/>
+  <rect x="77" y="140" width="128" height="12" rx="6" fill="#e7e1d8"/>
+  <circle cx="445" cy="103" r="46" fill="#d8f0e4"/>
+  <path d="M445 143c-50 0-90 33-90 73h180c0-40-40-73-90-73Z" fill="#317a5b"/>
+  <path d="M98 285h444" stroke="#6f6257" stroke-width="10" stroke-linecap="round"/>
+  <path d="M142 285v38m356-38v38" stroke="#6f6257" stroke-width="10" stroke-linecap="round"/>
+  <rect x="188" y="226" width="122" height="55" rx="9" fill="#876bdb"/>
+  <rect x="334" y="239" width="96" height="42" rx="9" fill="#f0b45b"/>
+  <path d="M548 272c0-44 20-69 43-83-1 39-13 69-43 83Zm0 0c-5-38-24-57-46-67 5 34 18 57 46 67Z" fill="#317a5b"/>
+</svg>

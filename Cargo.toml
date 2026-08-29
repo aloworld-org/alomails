@@ -66,7 +66,7 @@ encoding_rs = "0.8"
 # crash the store — a parser panic just means "not content-indexed".
 zip = { version = "2", default-features = false, features = ["deflate"] }
 quick-xml = "0.37"
-pdf-extract = "0.7"
+pdf-extract = "0.12"
 # Trust-stack (alo-auth-mail) crypto primitives. RSA sign/verify use
 # `ring` (constant-time, already in-tree via rustls) rather than the
 # `rsa` crate, which carries the unfixed Marvin timing sidechannel

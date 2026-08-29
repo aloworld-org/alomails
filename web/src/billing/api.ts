@@ -17,6 +17,7 @@ import { useAuth } from "../auth";
 import { getLocale } from "../i18n";
 import { API_BASE } from "../platform/runtime";
 import { RestError, problemDetail, restMessage } from "../platform/rest";
+import type { PriceConnection, PriceConnectionDraft, PriceConnectionHealth } from "./priceConnectionsModel";
 import type {
   BillingCustomer,
   BillingInvoice,
@@ -185,6 +186,43 @@ export class BillingApi {
       `/billing/products/${encodeURIComponent(id)}/archive`,
       { archived },
     ).then((r) => r.product);
+  }
+
+  /** Durable supplier and client price connections for this tenant. */
+  priceConnections(): Promise<PriceConnection[]> {
+    return this.#read<{ connections?: PriceConnection[] }>("/billing/price-connections").then(
+      (response) => response.connections ?? [],
+    );
+  }
+
+  createPriceConnection(draft: PriceConnectionDraft): Promise<PriceConnection> {
+    return this.#write<{ connection: PriceConnection }>(
+      "POST",
+      "/billing/price-connections",
+      draft,
+    ).then((response) => response.connection);
+  }
+
+  setPriceConnectionHealth(id: string, health: PriceConnectionHealth): Promise<PriceConnection> {
+    return this.#write<{ connection: PriceConnection }>(
+      "PATCH",
+      `/billing/price-connections/${encodeURIComponent(id)}`,
+      { health },
+    ).then((response) => response.connection);
+  }
+
+  syncPriceConnection(id: string): Promise<PriceConnection> {
+    return this.#act<{ connection: PriceConnection }>(
+      `/billing/price-connections/${encodeURIComponent(id)}/sync`,
+    ).then((response) => response.connection);
+  }
+
+  async deletePriceConnection(id: string): Promise<void> {
+    await this.#json<unknown>(
+      await this.#send(`/billing/price-connections/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      }),
+    );
   }
 
   /** The tenant's invoices, newest first, each with its totals, settlement and

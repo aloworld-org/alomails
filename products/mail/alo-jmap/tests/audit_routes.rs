@@ -225,6 +225,7 @@ const EXPECTED_VOCABULARY: &str = r#"
 DELETE /billing/bills/{id} -> billing.bill.delete
 DELETE /billing/invoices/{id} -> billing.invoice.delete
 DELETE /billing/invoices/{id}/payments/{payment_id} -> billing.invoice.payment.delete
+DELETE /billing/price-connections/{id} -> billing.price_connection.delete
 DELETE /billing/quotes/{id} -> billing.quote.delete
 DELETE /billing/schedules/{id} -> billing.schedule.delete
 DELETE /crm/activities/{id} -> crm.activity.delete
@@ -250,6 +251,7 @@ DELETE /projects/templates/{id} -> projects.template.delete
 DELETE /projects/time/{id} -> projects.time.delete
 PATCH /billing/customers/{id} -> billing.customer.update
 PATCH /billing/invoices/{id} -> billing.invoice.update
+PATCH /billing/price-connections/{id} -> billing.price_connection.update
 PATCH /billing/products/{id} -> billing.product.update
 PATCH /billing/quotes/{id} -> billing.quote.update
 PATCH /billing/schedules/{id} -> billing.schedule.update
@@ -289,6 +291,8 @@ POST /billing/invoices/{id}/payments -> billing.invoice.payment.create
 POST /billing/invoices/{id}/reminder -> billing.invoice.reminder
 POST /billing/invoices/{id}/send -> billing.invoice.send
 POST /billing/invoices/{id}/void -> billing.invoice.void
+POST /billing/price-connections -> billing.price_connection.create
+POST /billing/price-connections/{id}/sync -> billing.price_connection.sync
 POST /billing/products -> billing.product.create
 POST /billing/products/{id}/archive -> billing.product.archive
 POST /billing/quotes -> billing.quote.create

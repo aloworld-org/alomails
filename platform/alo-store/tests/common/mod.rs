@@ -111,8 +111,8 @@ pub async fn tenant_fixture(store: &Store, tag: &str) -> Fixture {
 /// test that issues an invoice, records a payment or confirms a bank match
 /// needs a chart the booking can resolve its roles against — exactly the
 /// setup step a real tenant performs by opening the Accounts screen once.
-pub async fn seed_default_chart(account: &AccountStore) {
-    let seed = alo_store::ChartSeed {
+pub fn default_chart_seed() -> alo_store::ChartSeed {
+    alo_store::ChartSeed {
         names: alo_store::CHART
             .iter()
             .map(|entry| alo_store::ChartName {
@@ -120,7 +120,11 @@ pub async fn seed_default_chart(account: &AccountStore) {
                 name: format!("Account {}", entry.code),
             })
             .collect(),
-    };
+    }
+}
+
+pub async fn seed_default_chart(account: &AccountStore) {
+    let seed = default_chart_seed();
     account
         .fin_accounts_or_seed(&seed, false)
         .await

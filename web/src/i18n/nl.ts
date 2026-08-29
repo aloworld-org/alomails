@@ -1604,6 +1604,11 @@ export const nl: Partial<Catalog> = {
   billingLoadFailed:
     "Deze lijst kon niet worden geladen. Controleer uw verbinding en probeer opnieuw.",
   billingLoading: "Factuurgegevens laden…",
+  billingPaginationLabel: "Pagina’s van de facturatielijst",
+  billingPaginationPrevious: "Vorige pagina",
+  billingPaginationNext: "Volgende pagina",
+  billingPaginationRange: (first: number, last: number, total: number) => `${first}–${last} van ${total}`,
+  billingPaginationPage: (page: number, total: number) => `Pagina ${page} van ${total}`,
   billingSaveFailed:
     "Opslaan is niet gelukt. Controleer uw verbinding en probeer opnieuw.",
   billingNoMatches: "Niets komt overeen met die zoekopdracht.",
@@ -6961,6 +6966,7 @@ export const nl: Partial<Catalog> = {
     "De volledige sleutel wordt alleen bij het aanmaken getoond.",
   billingConnectionsCopy: "Kopiëren",
   billingConnectionsConnected: "Verbonden",
+  billingConnectionsExpired: "Verlopen",
   billingConnectionsActionNeeded: "Actie nodig",
   billingConnectionsPaused: "Gepauzeerd",
   billingConnectionsIndustrialComponentsEur: "Industriële componenten · EUR",

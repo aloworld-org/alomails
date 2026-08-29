@@ -8,10 +8,12 @@ import { UserRound } from "lucide-react";
 import { strings } from "../i18n";
 import { Badge, Table, Th, useDialogs } from "../ds";
 import { billingMessage, useBillingApi } from "./api";
+import { BillingPagination } from "./BillingPagination";
 import { CustomerDialog } from "./CustomerDialog";
 import { BillingLoading, EmptyState, ErrorBanner, ListToolbar } from "./parts";
 import type { BillingCustomer } from "./types";
 import styles from "./billingStyles";
+import { useBillingPagination } from "./useBillingPagination";
 
 /** Whether a customer answers the search box (name, city, country, VAT id). */
 function matches(c: BillingCustomer, needle: string): boolean {
@@ -55,6 +57,7 @@ export function CustomersView() {
     const needle = search.trim().toLowerCase();
     return customers.filter((c) => matches(c, needle));
   }, [customers, search]);
+  const paged = useBillingPagination(shown, `${search}\u0000${includeArchived}`);
 
   async function toggleArchived(customer: BillingCustomer) {
     if (
@@ -109,7 +112,7 @@ export function CustomersView() {
       ) : shown.length === 0 ? (
         <p className={styles.noMatches}>{strings.billingNoMatches}</p>
       ) : (
-        <Table
+        <><Table
           label={strings.billingCustomers}
           className={styles.listTable}
           stickyHeader
@@ -127,7 +130,7 @@ export function CustomersView() {
             </tr>
           </thead>
           <tbody>
-            {shown.map((c) => (
+            {paged.records.map((c) => (
               <tr
                 key={c.id}
                 className={c.archived ? styles.archivedRow : undefined}
@@ -167,7 +170,7 @@ export function CustomersView() {
               </tr>
             ))}
           </tbody>
-        </Table>
+        </Table><BillingPagination {...paged} onPage={paged.setPage} /></>
       )}
 
       {editing !== undefined && (

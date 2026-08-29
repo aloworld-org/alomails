@@ -856,7 +856,12 @@ async fn a_paid_sale_is_made_good_once_and_walled() {
 
     // The act: invoice raised and settled, buyer in CRM, record written.
     let outcome = store
-        .fulfil_claimed_ticket(&claim, &fulfil_words(), &crm_seed())
+        .fulfil_claimed_ticket(
+            &claim,
+            &fulfil_words(),
+            &crm_seed(),
+            &common::default_chart_seed(),
+        )
         .await
         .unwrap();
     assert!(outcome.invoiced);
@@ -974,7 +979,12 @@ async fn a_paid_sale_is_made_good_once_and_walled() {
     let order2 = paid(&v, "fulfil-b", &hold2.id, &buyer).await;
     let claim2 = claim_for(&store, &order2.id).await;
     let outcome2 = store
-        .fulfil_claimed_ticket(&claim2, &fulfil_words(), &crm_seed())
+        .fulfil_claimed_ticket(
+            &claim2,
+            &fulfil_words(),
+            &crm_seed(),
+            &common::default_chart_seed(),
+        )
         .await
         .unwrap();
     assert!(outcome2.invoiced);
@@ -1005,7 +1015,12 @@ async fn a_paid_sale_is_made_good_once_and_walled() {
     let order3 = paid(&bare, "fulfil-c", &bare.hold, &bare_buyer).await;
     let claim3 = claim_for(&store, &order3.id).await;
     let outcome3 = store
-        .fulfil_claimed_ticket(&claim3, &fulfil_words(), &crm_seed())
+        .fulfil_claimed_ticket(
+            &claim3,
+            &fulfil_words(),
+            &crm_seed(),
+            &common::default_chart_seed(),
+        )
         .await
         .unwrap();
     assert!(!outcome3.invoiced, "no seller country, no invoice");
@@ -1178,11 +1193,21 @@ async fn the_ticket_mail_waits_for_fulfilment_claims_once_and_never_crosses_tena
     assert!(mailed_at_of(&pool, &claim_a.fulfilment).await.is_none());
 
     store
-        .fulfil_claimed_ticket(&claim_a, &fulfil_words(), &crm_seed())
+        .fulfil_claimed_ticket(
+            &claim_a,
+            &fulfil_words(),
+            &crm_seed(),
+            &common::default_chart_seed(),
+        )
         .await
         .unwrap();
     store
-        .fulfil_claimed_ticket(&claim_b, &fulfil_words(), &crm_seed())
+        .fulfil_claimed_ticket(
+            &claim_b,
+            &fulfil_words(),
+            &crm_seed(),
+            &common::default_chart_seed(),
+        )
         .await
         .unwrap();
 
@@ -1259,7 +1284,12 @@ async fn the_ticket_mail_waits_for_fulfilment_claims_once_and_never_crosses_tena
     let c_claims = claims_for(&store, &[&order_c1.id, &order_c2.id]).await;
     for claim in &c_claims {
         store
-            .fulfil_claimed_ticket(claim, &fulfil_words(), &crm_seed())
+            .fulfil_claimed_ticket(
+                claim,
+                &fulfil_words(),
+                &crm_seed(),
+                &common::default_chart_seed(),
+            )
             .await
             .unwrap();
     }

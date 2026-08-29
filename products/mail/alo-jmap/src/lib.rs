@@ -63,6 +63,7 @@ pub mod billing_pain001;
 pub mod billing_pain001_rules;
 pub mod billing_payments;
 pub mod billing_pdf;
+pub mod billing_price_connections;
 pub mod billing_print;
 pub mod billing_products;
 pub mod billing_quote_designs;

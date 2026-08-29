@@ -346,6 +346,10 @@ opaque_id!(
     BillingScheduleId
 );
 opaque_id!(
+    /// One tenant-scoped supplier/client price-list connection.
+    BillingPriceConnectionId
+);
+opaque_id!(
     /// One line of a billing document. Invoices and quotes share the line
     /// model (`crate::billing_line`), so they share its id type.
     BillingLineId

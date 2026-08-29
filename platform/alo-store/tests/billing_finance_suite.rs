@@ -18,6 +18,7 @@ mod billing_by_number;
 mod billing_catalog_seam;
 mod billing_credit_notes;
 mod billing_customers_tenancy;
+mod billing_demo;
 mod billing_fx;
 mod billing_invoice_issue;
 mod billing_invoice_lifecycle;

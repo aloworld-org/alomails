@@ -1,8 +1,10 @@
-import { render, screen } from "@testing-library/react";
-import { expect, test } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, expect, test } from "vitest";
 
 import { App } from "./App";
 import { strings } from "./i18n/strings";
+
+afterEach(cleanup);
 
 // With no stored session, the app boots to the sign-in screen (RequireAuth
 // sends an unauthenticated visitor to /login). We assert the login title

@@ -27,6 +27,7 @@ import {
 } from "../ds";
 import { strings, useLocale } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
+import { BillingPagination } from "./BillingPagination";
 import {
   formatAuditDate,
   formatAuditDateTime,
@@ -41,6 +42,7 @@ import type {
   QuoteStatus,
 } from "./types";
 import styles from "./billingStyles";
+import { useBillingPagination } from "./useBillingPagination";
 
 /** The filter's choices, in the order an offer moves through them. `all` is
  *  the absence of a filter, not a sixth status. */
@@ -122,6 +124,7 @@ export function QuotesView() {
         new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
     );
   }, [quotes, names, search, filter]);
+  const paged = useBillingPagination(shown, `${search}\u0000${filter}`);
 
   const deleteDraft = useCallback(
     async (quote: BillingQuoteSummary) => {
@@ -192,7 +195,7 @@ export function QuotesView() {
       ) : shown.length === 0 ? (
         <p className={styles.noMatches}>{strings.billingNoMatches}</p>
       ) : (
-        <Table
+        <><Table
           label={strings.billingQuotes}
           className={styles.listTable}
           stickyHeader
@@ -214,7 +217,7 @@ export function QuotesView() {
             </tr>
           </thead>
           <tbody>
-            {shown.map((quote) => (
+            {paged.records.map((quote) => (
               <tr
                 key={quote.id}
                 role="link"
@@ -318,7 +321,7 @@ export function QuotesView() {
               </tr>
             ))}
           </tbody>
-        </Table>
+        </Table><BillingPagination {...paged} onPage={paged.setPage} /></>
       )}
     </div>
   );

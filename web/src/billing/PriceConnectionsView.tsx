@@ -3,23 +3,26 @@ import { ArrowDownToLine, ArrowUpFromLine, Check, Link2, Search, Share2, X } fro
 
 import { Button, Input, cx, useDialogs } from "../ds";
 import { strings } from "../i18n";
-import { useBillingApi } from "./api";
+import { billingMessage, useBillingApi } from "./api";
+import { BillingPagination } from "./BillingPagination";
 import { ConnectSupplierDialog } from "./ConnectSupplierDialog";
 import { PriceConnectionCard } from "./PriceConnectionCard";
 import {
-  PRICE_CONNECTIONS_STORAGE_KEY,
-  loadStoredPriceConnections,
   type PriceConnection,
+  type PriceConnectionDraft,
   type PriceConnectionDirection,
 } from "./priceConnectionsModel";
 import { SharePricesDialog } from "./SharePricesDialog";
 import type { BillingProduct } from "./types";
+import { useBillingPagination } from "./useBillingPagination";
 
 export function PriceConnectionsView() {
   const { confirm } = useDialogs();
   const api = useBillingApi();
   const [direction, setDirection] = useState<PriceConnectionDirection>("received");
-  const [connections, setConnections] = useState<PriceConnection[]>(loadStoredPriceConnections);
+  const [connections, setConnections] = useState<PriceConnection[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [dialog, setDialog] = useState<PriceConnectionDirection | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -29,36 +32,46 @@ export function PriceConnectionsView() {
     const needle = search.trim().toLocaleLowerCase();
     return connections.filter((connection) => connection.direction === direction && (needle === "" || `${connection.company} ${connection.catalogue}`.toLocaleLowerCase().includes(needle)));
   }, [connections, direction, search]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(PRICE_CONNECTIONS_STORAGE_KEY, JSON.stringify(connections));
-    } catch {
-      // The workspace remains usable when private browsing blocks storage.
-    }
-  }, [connections]);
+  const paged = useBillingPagination(shown, `${search}\u0000${direction}`);
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
     setProductsLoading(true);
-    void api.products(false)
-      .then((items) => {
-        if (active) setProducts(items.filter((item) => !item.archived));
+    void Promise.all([api.priceConnections(), api.products(false)])
+      .then(([loadedConnections, items]) => {
+        if (!active) return;
+        setConnections(loadedConnections);
+        setProducts(items.filter((item) => !item.archived));
+        setError(null);
       })
-      .catch(() => {
-        if (active) setProducts([]);
+      .catch((caught: unknown) => {
+        if (!active) return;
+        setConnections([]);
+        setProducts([]);
+        setError(billingMessage(caught, strings.billingLoadFailed));
       })
       .finally(() => {
-        if (active) setProductsLoading(false);
+        if (active) {
+          setLoading(false);
+          setProductsLoading(false);
+        }
       });
     return () => { active = false; };
   }, [api]);
 
-  function add(connection: PriceConnection) {
-    setConnections((current) => [connection, ...current]);
-    setDirection(connection.direction);
-    setDialog(null);
-    setNotice(connection.direction === "received" ? strings.billingConnectionsNowSupplying(connection.company) : strings.billingConnectionsNowReceiving(connection.company));
+  function add(draft: PriceConnectionDraft) {
+    void api.createPriceConnection(draft).then((connection) => {
+      setConnections((current) => [connection, ...current]);
+      setDirection(connection.direction);
+      setDialog(null);
+      setNotice(connection.direction === "received" ? strings.billingConnectionsNowSupplying(connection.company) : strings.billingConnectionsNowReceiving(connection.company));
+      setError(null);
+    }).catch((caught: unknown) => setError(billingMessage(caught, strings.billingSaveFailed)));
+  }
+
+  function replace(connection: PriceConnection) {
+    setConnections((current) => current.map((item) => item.id === connection.id ? connection : item));
   }
 
   return (
@@ -81,9 +94,10 @@ export function PriceConnectionsView() {
       </section>
 
       {notice !== null && <div className="flex items-center gap-3 rounded-xl border border-success/20 bg-success-tint px-4 py-3 text-sm text-primary" role="status"><Check className="size-4 shrink-0 text-success" />{notice}<button type="button" className="ml-auto rounded-lg p-2 text-tertiary hover:bg-surface hover:text-primary" aria-label={strings.billingConnectionsDismiss} onClick={() => setNotice(null)}><X className="size-4" /></button></div>}
+      {error !== null && <div className="rounded-xl border border-danger/20 bg-danger-tint px-4 py-3 text-sm text-danger" role="alert">{error}</div>}
 
       <div className="grid gap-4">
-        {shown.map((connection) => <PriceConnectionCard key={connection.id} connection={connection} onSync={() => { setConnections((current) => current.map((item) => item.id === connection.id ? { ...item, updated: strings.billingConnectionsUpdatedNow, health: "connected" } : item)); setNotice(strings.billingConnectionsUpToDate(connection.company)); }} onToggle={() => setConnections((current) => current.map((item) => item.id === connection.id ? { ...item, health: item.health === "paused" ? "connected" : "paused" } : item))} onRemove={() => { void (async () => {
+        {paged.records.map((connection) => <PriceConnectionCard key={connection.id} connection={connection} onSync={() => { void api.syncPriceConnection(connection.id).then((updated) => { replace(updated); setNotice(strings.billingConnectionsUpToDate(connection.company)); setError(null); }).catch((caught: unknown) => setError(billingMessage(caught, strings.billingActionFailed))); }} onToggle={() => { void api.setPriceConnectionHealth(connection.id, connection.health === "paused" ? "connected" : "paused").then((updated) => { replace(updated); setError(null); }).catch((caught: unknown) => setError(billingMessage(caught, strings.billingActionFailed))); }} onRemove={() => { void (async () => {
           const accepted = await confirm({
             title: strings.billingConnectionsDisconnectTitle,
             message: connection.direction === "received" ? strings.billingConnectionsDisconnectReceived(connection.company) : strings.billingConnectionsDisconnectShared(connection.company),
@@ -91,9 +105,19 @@ export function PriceConnectionsView() {
             cancelLabel: strings.billingConnectionsKeepConnected,
             danger: true,
           });
-          if (accepted) setConnections((current) => current.filter((item) => item.id !== connection.id));
+          if (accepted) {
+            try {
+              await api.deletePriceConnection(connection.id);
+              setConnections((current) => current.filter((item) => item.id !== connection.id));
+              setError(null);
+            } catch (caught) {
+              setError(billingMessage(caught, strings.billingActionFailed));
+            }
+          }
         })(); }} />)}
-        {shown.length === 0 && <div className="flex min-h-56 flex-col items-center justify-center rounded-2xl border border-dashed border-default bg-surface p-8 text-center"><Link2 className="size-8 text-accent" /><h3 className="mb-0 mt-3 text-base font-semibold text-primary">{strings.billingConnectionsNoMatches}</h3><p className="mb-0 mt-1 text-sm text-secondary">{strings.billingConnectionsNoMatchesHelp}</p></div>}
+        {loading && <div className="flex min-h-56 items-center justify-center text-sm text-secondary">{strings.billingLoading}</div>}
+        {!loading && shown.length === 0 && <div className="flex min-h-56 flex-col items-center justify-center rounded-2xl border border-dashed border-default bg-surface p-8 text-center"><Link2 className="size-8 text-accent" /><h3 className="mb-0 mt-3 text-base font-semibold text-primary">{strings.billingConnectionsNoMatches}</h3><p className="mb-0 mt-1 text-sm text-secondary">{strings.billingConnectionsNoMatchesHelp}</p></div>}
+        {!loading && <BillingPagination {...paged} onPage={paged.setPage} />}
       </div>
 
       {dialog === "received" && <ConnectSupplierDialog onClose={() => setDialog(null)} onConnected={add} />}

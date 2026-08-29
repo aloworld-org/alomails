@@ -37,6 +37,7 @@ pub mod billing_cadence;
 pub mod billing_catalog_read;
 pub mod billing_cii_read;
 pub mod billing_customers;
+pub mod billing_demo;
 pub mod billing_einvoice_import;
 pub mod billing_field;
 pub mod billing_fx;
@@ -45,6 +46,7 @@ pub mod billing_fx_rates;
 pub mod billing_invoices;
 pub mod billing_line;
 pub mod billing_payments;
+pub mod billing_price_connections;
 pub mod billing_products;
 pub mod billing_quote_designs;
 pub mod billing_quote_lines;
@@ -530,13 +532,13 @@ pub use id::{
     AgentGoalId, AgentInstructionId, AgentMemoryId, AppPasswordId, AttachmentId, BankLineId,
     BankMatchId, BankStatementId, BaseFieldId, BaseRecordId, BaseTableId, BaseViewId,
     BillingBillId, BillingCustomerId, BillingInvoiceId, BillingLineId, BillingPaymentId,
-    BillingProductId, BillingQuoteId, BillingScheduleId, BlobId, CalendarId, CampaignBounceId,
-    CampaignConsentId, CampaignId, CampaignSegmentId, CampaignSendId, CampaignSuppressionId,
-    CampaignUnsubscribeTokenId, CategoryId, ChatAgentId, ChatChannelId, ChatMessageId,
-    ChatProposalId, ChatToolRunId, CommentId, ContactId, CrmActivityId, CrmDealId, CrmEventId,
-    CrmPipelineId, CrmStageId, DomainEventId, DriveNodeId, EventId, FinAccountId, FinCategoryId,
-    FinEntryId, FinExpenseId, FinMatchRuleId, FinMileageId, FinMileageRateId, FinPeriodId,
-    FinPostingId, GroupId, HrApplicantId, HrApplicantNoteId, HrChecklistStepId,
+    BillingPriceConnectionId, BillingProductId, BillingQuoteId, BillingScheduleId, BlobId,
+    CalendarId, CampaignBounceId, CampaignConsentId, CampaignId, CampaignSegmentId, CampaignSendId,
+    CampaignSuppressionId, CampaignUnsubscribeTokenId, CategoryId, ChatAgentId, ChatChannelId,
+    ChatMessageId, ChatProposalId, ChatToolRunId, CommentId, ContactId, CrmActivityId, CrmDealId,
+    CrmEventId, CrmPipelineId, CrmStageId, DomainEventId, DriveNodeId, EventId, FinAccountId,
+    FinCategoryId, FinEntryId, FinExpenseId, FinMatchRuleId, FinMileageId, FinMileageRateId,
+    FinPeriodId, FinPostingId, GroupId, HrApplicantId, HrApplicantNoteId, HrChecklistStepId,
     HrChecklistTemplateId, HrDocumentId, HrEmployeeId, HrEmploymentId, HrLeavePolicyId,
     HrLeaveRequestId, HrLetterTemplateId, HrOpeningId, HrPayrollExportId, InsightDashboardId,
     InsightTileId, InvCountId, InvLocationId, InvMoveId, InvPoReceiptId, InvPurchaseOrderId,
