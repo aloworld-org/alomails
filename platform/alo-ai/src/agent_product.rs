@@ -22,7 +22,6 @@ use alo_store::{ALL_AGENT_PRODUCTS, AgentProduct};
 use crate::agent_agenda::{AGENDA_GUIDANCE, AGENDA_TOOL_DOC, AGENDA_TOOLS};
 use crate::agent_contacts::{CONTACTS_GUIDANCE, CONTACTS_TOOL_DOC, CONTACTS_TOOLS};
 use crate::agent_hr::{HR_GUIDANCE, HR_TOOL_DOC, HR_TOOLS};
-use crate::agent_inventory::{INVENTORY_GUIDANCE, INVENTORY_TOOL_DOC, INVENTORY_TOOLS};
 use crate::agent_mail::{MAIL_GUIDANCE, MAIL_TOOL_DOC, MAIL_TOOLS};
 use crate::agent_sites::{SITES_GUIDANCE, SITES_TOOL_DOC, SITES_TOOLS};
 use crate::agent_tasks::{TASKS_GUIDANCE, TASKS_TOOL_DOC, TASKS_TOOLS};
@@ -35,6 +34,7 @@ use crate::drive_intents::DRIVE as DRIVE_INTENTS;
 use crate::finance_intents::FINANCE as FINANCE_INTENTS;
 use crate::insights_intents::INSIGHTS as INSIGHTS_INTENTS;
 use crate::intent::IntentModule;
+use crate::inventory_intents::INVENTORY as INVENTORY_INTENTS;
 use crate::meet_intents::MEET as MEET_INTENTS;
 use crate::projects_intents::PROJECTS as PROJECTS_INTENTS;
 use crate::sheets_intents::SHEETS as SHEETS_INTENTS;
@@ -114,7 +114,6 @@ const MAIL_SET: ToolSet = set(MAIL_TOOLS, MAIL_TOOL_DOC, MAIL_GUIDANCE);
 const CONTACTS_SET: ToolSet = set(CONTACTS_TOOLS, CONTACTS_TOOL_DOC, CONTACTS_GUIDANCE);
 const AGENDA_SET: ToolSet = set(AGENDA_TOOLS, AGENDA_TOOL_DOC, AGENDA_GUIDANCE);
 const TASKS_SET: ToolSet = set(TASKS_TOOLS, TASKS_TOOL_DOC, TASKS_GUIDANCE);
-const INVENTORY_SET: ToolSet = set(INVENTORY_TOOLS, INVENTORY_TOOL_DOC, INVENTORY_GUIDANCE);
 const HR_SET: ToolSet = set(HR_TOOLS, HR_TOOL_DOC, HR_GUIDANCE);
 const SITES_SET: ToolSet = set(SITES_TOOLS, SITES_TOOL_DOC, SITES_GUIDANCE);
 
@@ -122,7 +121,6 @@ const SITES_SET: ToolSet = set(SITES_TOOLS, SITES_TOOL_DOC, SITES_GUIDANCE);
 const MAIL: &[ToolSet] = &[MAIL_SET, CONTACTS_SET];
 const AGENDA: &[ToolSet] = &[AGENDA_SET];
 const TASKS: &[ToolSet] = &[TASKS_SET];
-const INVENTORY: &[ToolSet] = &[INVENTORY_SET];
 const HR: &[ToolSet] = &[HR_SET];
 const SITES: &[ToolSet] = &[SITES_SET];
 
@@ -144,6 +142,7 @@ pub const MOVED: &[(AgentProduct, &IntentModule)] = &[
     (AgentProduct::Drive, &DRIVE_INTENTS),
     (AgentProduct::Finance, &FINANCE_INTENTS),
     (AgentProduct::Insights, &INSIGHTS_INTENTS),
+    (AgentProduct::Inventory, &INVENTORY_INTENTS),
     (AgentProduct::Meet, &MEET_INTENTS),
     (AgentProduct::Projects, &PROJECTS_INTENTS),
     (AgentProduct::Sheets, &SHEETS_INTENTS),
@@ -163,7 +162,7 @@ fn static_sets(product: AgentProduct) -> &'static [ToolSet] {
         AgentProduct::Crm => &[],
         AgentProduct::Projects => &[],
         AgentProduct::Finance => &[],
-        AgentProduct::Inventory => INVENTORY,
+        AgentProduct::Inventory => &[],
         AgentProduct::Hr => HR,
         AgentProduct::Sites => SITES,
         AgentProduct::Insights => &[],
@@ -442,7 +441,15 @@ mod tests {
         );
         assert_eq!(
             names(AgentProduct::Inventory),
-            ["reorder_proposals", "stock_answer"]
+            [
+                "stock_answer",
+                "stock_below_minimum",
+                "open_purchase_orders",
+                "supplier_prices",
+                "recent_moves",
+                "reorder_proposals",
+                "receive_delivery",
+            ]
         );
         assert_eq!(
             names(AgentProduct::Hr),
@@ -507,7 +514,7 @@ mod tests {
             .map(|tool| tool.name)
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
-        assert_eq!(workspace.len(), 109);
+        assert_eq!(workspace.len(), 114);
     }
 
     /// A moved module registers once (A4.1c): its row in [`MOVED`] is what puts
@@ -543,6 +550,7 @@ mod tests {
             concat!("CRM_", "INTENTS"),
             concat!("DOCS_", "INTENTS"),
             concat!("DRIVE_", "INTENTS"),
+            concat!("INVENTORY_", "INTENTS"),
             concat!("MEET_", "INTENTS"),
             concat!("PROJECTS_", "INTENTS"),
             concat!("SHEETS_", "INTENTS"),

@@ -62,7 +62,7 @@ fn receipt_line_json(l: &ReceiptLine) -> Value {
 /// `billId` is `null` for a receipt whose drafted bill has since been thrown
 /// away, which is a thing a person may do to an undecided bill; what arrived
 /// still arrived.
-fn receipt_json(r: &Receipt) -> Value {
+pub(crate) fn receipt_json(r: &Receipt) -> Value {
     json!({
         "id": r.id.as_str(),
         "sequenceNo": r.sequence_no,

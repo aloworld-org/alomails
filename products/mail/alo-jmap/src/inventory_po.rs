@@ -119,7 +119,10 @@ pub(crate) fn document_json(d: &PurchaseOrderDocument, today: Date) -> Value {
 }
 
 /// A list entry: the header and what the order is worth, without the lines.
-fn summary_json(s: &PurchaseOrderSummary, today: Date) -> Value {
+///
+/// Shared with the agent's order read ([`crate::inventory_intents`]), so the
+/// model grounds in exactly what the list screen shows.
+pub(crate) fn summary_json(s: &PurchaseOrderSummary, today: Date) -> Value {
     let mut header = order_json(&s.order, &s.supplier_name, today);
     if let Some(object) = header.as_object_mut() {
         object.insert("totals".to_owned(), totals_json(&s.totals));

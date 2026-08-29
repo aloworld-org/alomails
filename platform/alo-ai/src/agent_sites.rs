@@ -2,7 +2,7 @@
 //! alo Sites contributes to its own agent, and the words that tell a model what
 //! they take.
 //!
-//! The same seam every product before it uses ([`crate::agent_inventory`]): a
+//! The same seam every product before it uses ([`crate::agent_tasks`]): a
 //! tool list carrying each tool's effect, a description block, and a paragraph
 //! of guidance. Nothing here reads, writes or publishes anything — the reading
 //! tools are executed inside the turn and the writes only from an approval, both

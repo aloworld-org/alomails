@@ -37,7 +37,7 @@ use crate::state::{AppState, authenticate};
 /// `leadTimeDays` is `null` when the offer inherits the supplier's default;
 /// `effectiveLeadTimeDays` is the number a screen should actually show, so no
 /// client has to re-implement the fallback (and none can get it wrong).
-fn price_json(p: &SupplierPrice, supplier_default: i32) -> Value {
+pub(crate) fn price_json(p: &SupplierPrice, supplier_default: i32) -> Value {
     json!({
         "supplierId": p.supplier_id.as_str(),
         "productId": p.product_id.as_str(),

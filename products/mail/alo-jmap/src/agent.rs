@@ -24,7 +24,6 @@ use std::pin::Pin;
 use time::format_description::well_known::Rfc3339;
 
 use crate::agent_hr as hr;
-use crate::agent_inventory as inventory;
 use crate::agent_sites as sites;
 use crate::ai::MAX_ASK_BYTES;
 use crate::error::Problem;
@@ -473,6 +472,7 @@ pub(crate) const MODULES: &[ModuleDispatcher] = &[
     crate::drive_intents::dispatch,
     crate::finance_intents::dispatch,
     crate::insights_intents::dispatch,
+    crate::inventory_intents::dispatch,
     crate::meet_intents::dispatch,
     crate::projects_intents::dispatch,
     crate::sheets_intents::dispatch,
@@ -552,13 +552,8 @@ async fn dispatch(
         // dispatched by its module row above (AC.1).
         "find_contact" => crate::agent_reads::execute_find_contact(account, args).await,
         // Projects' verbs, the proposed hour and the calendar draft included,
-        // are dispatched by its module row above (AA.3).
-        // alo Inventory's tools (B5.10), on the same seam. What
-        // `reorder_proposals` writes is a **draft** order per supplier: it
-        // carries no number and has been sent to nobody until a person
-        // presses send on the purchase-orders screen.
-        "reorder_proposals" => inventory::execute_reorder_proposals(account, args).await,
-        "stock_answer" => inventory::execute_stock_answer(account, args).await,
+        // are dispatched by its module row above (AA.3), and Inventory's, the
+        // draft reorders and the stock answer included, by its own (AA.4).
         // alo HR's one tool so far (B6.09). It **answers**: who is away over a
         // stated range, from the same layer the Agenda draws — names and days,
         // never a reason, and nothing is written, booked or announced.

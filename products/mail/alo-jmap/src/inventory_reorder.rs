@@ -68,7 +68,7 @@ fn rule_json(r: &ReorderRule) -> Value {
 
 /// One shortage as JSON: the four inputs, the three numbers they imply, and the
 /// supplier a proposal would be written against.
-fn shortage_json(s: &Shortage) -> Value {
+pub(crate) fn shortage_json(s: &Shortage) -> Value {
     json!({
         "ruleId": s.rule_id.as_str(),
         "productId": s.product_id.as_str(),

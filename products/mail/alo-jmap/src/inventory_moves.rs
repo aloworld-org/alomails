@@ -43,7 +43,7 @@ use crate::state::{AppState, authenticate};
 
 /// One movement as JSON, with the names of what moved and where — an id is not
 /// an explanation, and this feed is read by a person.
-fn move_json(m: &Move) -> Value {
+pub(crate) fn move_json(m: &Move) -> Value {
     json!({
         "id": m.id.as_str(),
         "productId": m.product_id.as_str(),

@@ -840,7 +840,16 @@ mod tests {
                 "unmatched_bank_lines",
                 "expenses_awaiting",
                 "account_balance",
+                // AA.4: Inventory's verbs — the kept stock answer plus the
+                // shortage report, the order book's open side, one supplier's
+                // price list and the ledger's tail, rendered from the intent
+                // registry. Drafting reorders and booking a delivery are
+                // writes and are not here.
                 "stock_answer",
+                "stock_below_minimum",
+                "open_purchase_orders",
+                "supplier_prices",
+                "recent_moves",
                 "who_is_off",
                 // A2.4: the Insights agent looks up the vocabulary a question
                 // has to be asked in, asks it, and asks it again over an
@@ -879,7 +888,7 @@ mod tests {
                 "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 109);
+        assert_eq!(all_tools().len(), 114);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }
@@ -1061,8 +1070,8 @@ mod tests {
         assert!(at("For a billing verb") < at("For a CRM verb"));
         assert!(at("For a CRM verb") < at("For a Projects verb"));
         assert!(at("For a Projects verb") < at("For a Finance verb"));
-        assert!(at("For a Finance verb") < at("For an inventory tool"));
-        assert!(at("For an inventory tool") < at("For an HR tool"));
+        assert!(at("For a Finance verb") < at("For an Inventory verb"));
+        assert!(at("For an Inventory verb") < at("For an HR tool"));
         assert!(at("For an HR tool") < at("For a website tool"));
         assert!(at("For a website tool") < at("Output ONLY the JSON object"));
     }

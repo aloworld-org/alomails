@@ -1,12 +1,13 @@
 //! Executing the **Inventory** tools of an approved agent proposal (ADR 0034,
-//! ADR 0035 wave B5.10) — the acting half of what [`alo_ai::agent_inventory`]
-//! describes to the model.
+//! ADR 0035 wave B5.10) — the acting half of what
+//! [`alo_ai::inventory_intents`] describes to the model, kept in its own file
+//! and reached only from the module's dispatch
+//! ([`crate::inventory_intents::dispatch`], AA.4).
 //!
-//! Called only from [`crate::agent::agent_execute`], which is the single acting
-//! path: the user saw the proposal and approved it. Everything here runs
-//! through the caller's own tenant-scoped store handle, so an agent can no more
-//! reach another tenant's shelf, supplier or order than the browser that asked
-//! it can.
+//! Reached only through the single acting path: the user saw the proposal and
+//! approved it. Everything here runs through the caller's own tenant-scoped
+//! store handle, so an agent can no more reach another tenant's shelf,
+//! supplier or order than the browser that asked it can.
 //!
 //! Four rules shape this module, and they are why it is not thin glue:
 //!
@@ -38,7 +39,6 @@
 
 use std::collections::HashMap;
 
-use axum::Json;
 use serde_json::{Value, json};
 use time::OffsetDateTime;
 
@@ -53,6 +53,7 @@ use alo_store::{BillingProductId, InvPurchaseOrderId, InvSupplierId, NewLine, Pr
 
 use crate::agent_args::{pick, string_arg, unprocessable};
 use crate::billing::map_store_err;
+use crate::billing_intents::{Reply, ok};
 use crate::billing_products::product_json;
 use crate::error::Problem;
 use crate::inventory_po::document_json;
@@ -71,10 +72,7 @@ use crate::state::Account;
 /// # Errors
 /// `422` when a stated supplier or place cannot be resolved to exactly one
 /// record; the store's own `422`/`409`/`500` otherwise.
-pub async fn execute_reorder_proposals(
-    account: &Account,
-    args: &Value,
-) -> Result<Json<Value>, Problem> {
+pub async fn execute_reorder_proposals(account: &Account, args: &Value) -> Reply {
     let supplier = resolve_supplier(account, args).await?;
     let location = resolve_location(account, args).await?;
     let shortages = account
@@ -108,39 +106,36 @@ pub async fn execute_reorder_proposals(
         drafted.push(draft_json(account, &id, &group.lines).await?);
     }
 
-    Ok(Json(json!({
-        "ok": true,
-        "result": {
-            "kind": "reorderProposals",
-            // What the caller narrowed to, echoed so the card can say what it
-            // looked at rather than implying it looked at everything.
-            "supplier": supplier.map(|(id, name)| json!({
-                "supplierId": id.as_str(), "supplierName": name,
-            })),
-            "location": location.map(|place| json!({
-                "locationId": place.id.as_str(),
-                "locationCode": place.code,
-                "locationName": place.name,
-            })),
-            "drafted": drafted,
-            "skipped": plan
-                .skipped
-                .iter()
-                .map(|skipped| json!({
-                    "productId": skipped.product_id.as_str(),
-                    "productName": skipped.product_name,
-                    "sku": skipped.sku,
-                    "locationCode": skipped.location_code,
-                    "buyQtyMilli": skipped.buy_qty_milli,
-                    "reason": skipped.reason,
-                }))
-                .collect::<Vec<_>>(),
-            // The batch's own figures, stated rather than left to a client
-            // adding up the list it was just given.
-            "shortages": shortages.len(),
-            "ordered": plan.groups.iter().map(|group| group.lines.len()).sum::<usize>(),
-        }
-    })))
+    ok(json!({
+        "kind": "reorderProposals",
+        // What the caller narrowed to, echoed so the card can say what it
+        // looked at rather than implying it looked at everything.
+        "supplier": supplier.map(|(id, name)| json!({
+            "supplierId": id.as_str(), "supplierName": name,
+        })),
+        "location": location.map(|place| json!({
+            "locationId": place.id.as_str(),
+            "locationCode": place.code,
+            "locationName": place.name,
+        })),
+        "drafted": drafted,
+        "skipped": plan
+            .skipped
+            .iter()
+            .map(|skipped| json!({
+                "productId": skipped.product_id.as_str(),
+                "productName": skipped.product_name,
+                "sku": skipped.sku,
+                "locationCode": skipped.location_code,
+                "buyQtyMilli": skipped.buy_qty_milli,
+                "reason": skipped.reason,
+            }))
+            .collect::<Vec<_>>(),
+        // The batch's own figures, stated rather than left to a client
+        // adding up the list it was just given.
+        "shortages": shortages.len(),
+        "ordered": plan.groups.iter().map(|group| group.lines.len()).sum::<usize>(),
+    }))
 }
 
 /// `stock_answer` — where one product stands right now.
@@ -154,7 +149,7 @@ pub async fn execute_reorder_proposals(
 /// # Errors
 /// `422` when the product cannot be resolved to exactly one catalog item;
 /// `500` on a store failure.
-pub async fn execute_stock_answer(account: &Account, args: &Value) -> Result<Json<Value>, Problem> {
+pub async fn execute_stock_answer(account: &Account, args: &Value) -> Reply {
     let product = resolve_product(account, args).await?;
     // A service has no shelf — the ledger refuses to move one — so the reads
     // that only make sense for goods are skipped rather than answered with
@@ -190,28 +185,25 @@ pub async fn execute_stock_answer(account: &Account, args: &Value) -> Result<Jso
     };
     let on_hand: i64 = levels.iter().map(|level| level.qty_milli).sum();
 
-    Ok(Json(json!({
-        "ok": true,
-        "result": {
-            "kind": "stockAnswer",
-            "id": product.id.as_str(),
-            "title": product.name,
-            "product": product_json(&product),
-            "stock": levels.iter().map(level_json).collect::<Vec<_>>(),
-            "onHandQtyMilli": on_hand,
-            "onOrderQtyMilli": pipeline.on_order_qty_milli,
-            "committedQtyMilli": pipeline.committed_qty_milli,
-            // The one number a reader would otherwise work out themselves, and
-            // the one the shortage rule is actually tested against.
-            "availableQtyMilli": available_qty_milli(
-                on_hand,
-                pipeline.on_order_qty_milli,
-                pipeline.committed_qty_milli,
-            ),
-            "valueCents": levels.iter().map(|level| level.value_cents).sum::<i64>(),
-            "watched": rules.iter().map(|rule| watch_json(rule, &levels)).collect::<Vec<_>>(),
-        }
-    })))
+    ok(json!({
+        "kind": "stockAnswer",
+        "id": product.id.as_str(),
+        "title": product.name,
+        "product": product_json(&product),
+        "stock": levels.iter().map(level_json).collect::<Vec<_>>(),
+        "onHandQtyMilli": on_hand,
+        "onOrderQtyMilli": pipeline.on_order_qty_milli,
+        "committedQtyMilli": pipeline.committed_qty_milli,
+        // The one number a reader would otherwise work out themselves, and
+        // the one the shortage rule is actually tested against.
+        "availableQtyMilli": available_qty_milli(
+            on_hand,
+            pipeline.on_order_qty_milli,
+            pipeline.committed_qty_milli,
+        ),
+        "valueCents": levels.iter().map(|level| level.value_cents).sum::<i64>(),
+        "watched": rules.iter().map(|rule| watch_json(rule, &levels)).collect::<Vec<_>>(),
+    }))
 }
 
 /// One place this product is watched, and whether the shelf there is under the
@@ -374,7 +366,7 @@ async fn draft_json(
 ///
 /// `None` when the proposal named none, which is "every supplier" — the whole
 /// Monday-morning question.
-async fn resolve_supplier(
+pub(crate) async fn resolve_supplier(
     account: &Account,
     args: &Value,
 ) -> Result<Option<(InvSupplierId, String)>, Problem> {
@@ -407,7 +399,10 @@ async fn resolve_supplier(
 ///
 /// Only real shelves are candidates: the virtual counterparties are an
 /// accounting fact about a closed ledger, and nothing is ever short at one.
-async fn resolve_location(account: &Account, args: &Value) -> Result<Option<Location>, Problem> {
+pub(crate) async fn resolve_location(
+    account: &Account,
+    args: &Value,
+) -> Result<Option<Location>, Problem> {
     let Some(wanted) = string_arg(args, "location") else {
         return Ok(None);
     };
@@ -441,7 +436,7 @@ async fn resolve_location(account: &Account, args: &Value) -> Result<Option<Loca
 /// A barcode and an SKU are tried exactly first — both are machine-readable
 /// identifiers a person may well have read off a box, and neither is a name to
 /// match loosely — and only then does the shared name rule apply.
-async fn resolve_product(account: &Account, args: &Value) -> Result<Product, Problem> {
+pub(crate) async fn resolve_product(account: &Account, args: &Value) -> Result<Product, Problem> {
     let wanted = string_arg(args, "product")
         .or_else(|| string_arg(args, "productName"))
         .ok_or_else(|| unprocessable("which product this is about is required"))?;

@@ -22,6 +22,7 @@ mod agent_events_http;
 mod agent_finance_intents_http;
 mod agent_insights_http;
 mod agent_insights_intents_http;
+mod agent_inventory_intents_http;
 mod agent_isolation_http;
 mod agent_meet_http;
 mod agent_meet_intents_http;
