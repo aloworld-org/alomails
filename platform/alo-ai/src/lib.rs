@@ -23,7 +23,6 @@ pub mod agent_agenda;
 pub mod agent_memory;
 pub mod agent_plan;
 pub mod agent_product;
-pub mod agent_sites;
 mod agent_tool;
 pub mod billing_intents;
 pub mod chat_intents;
@@ -48,6 +47,7 @@ pub mod site_edits;
 pub mod site_shop_config;
 pub mod site_translation;
 pub mod sites;
+pub mod sites_intents;
 pub mod tasks_intents;
 pub use agent::{
     AgentAsk, AgentDecision, AgentProduct, ProposedAction, after_read_messages, agent_messages,
@@ -61,7 +61,6 @@ pub use agent_plan::{
     plan_system_prompt, run_planner,
 };
 pub use agent_product::{MOVED, ToolSet, offers, tool_sets, tools_for};
-pub use agent_sites::SITES_TOOLS;
 pub use agent_tool::{AgentTool, Effect, find_tool};
 pub use insights::{ChartReply, chart_messages, chart_turn, parse_chart_reply, repair_messages};
 pub use intent::{Arg, Excluded, IntentModule, IntentSpec, render_preview, routes_in};

@@ -20,7 +20,6 @@
 use alo_store::{ALL_AGENT_PRODUCTS, AgentProduct};
 
 use crate::agent_agenda::{AGENDA_GUIDANCE, AGENDA_TOOL_DOC, AGENDA_TOOLS};
-use crate::agent_sites::{SITES_GUIDANCE, SITES_TOOL_DOC, SITES_TOOLS};
 use crate::agent_tool::AgentTool;
 use crate::billing_intents::BILLING as BILLING_INTENTS;
 use crate::chat_intents::CHAT as CHAT_INTENTS;
@@ -36,6 +35,7 @@ use crate::mail_intents::MAIL as MAIL_INTENTS;
 use crate::meet_intents::MEET as MEET_INTENTS;
 use crate::projects_intents::PROJECTS as PROJECTS_INTENTS;
 use crate::sheets_intents::SHEETS as SHEETS_INTENTS;
+use crate::sites_intents::SITES as SITES_INTENTS;
 use crate::tasks_intents::TASKS as TASKS_INTENTS;
 
 /// One module's contribution to a product's agent: what it may do, how each
@@ -108,10 +108,8 @@ const fn intents(module: &'static IntentModule) -> ToolSet {
 }
 
 const AGENDA_SET: ToolSet = set(AGENDA_TOOLS, AGENDA_TOOL_DOC, AGENDA_GUIDANCE);
-const SITES_SET: ToolSet = set(SITES_TOOLS, SITES_TOOL_DOC, SITES_GUIDANCE);
 
 const AGENDA: &[ToolSet] = &[AGENDA_SET];
-const SITES: &[ToolSet] = &[SITES_SET];
 
 /// Every product's tool sets, in the order [`AgentProduct::Workspace`] renders
 /// them.
@@ -137,6 +135,7 @@ pub const MOVED: &[(AgentProduct, &IntentModule)] = &[
     (AgentProduct::Meet, &MEET_INTENTS),
     (AgentProduct::Projects, &PROJECTS_INTENTS),
     (AgentProduct::Sheets, &SHEETS_INTENTS),
+    (AgentProduct::Sites, &SITES_INTENTS),
     (AgentProduct::Tasks, &TASKS_INTENTS),
 ];
 
@@ -156,7 +155,7 @@ fn static_sets(product: AgentProduct) -> &'static [ToolSet] {
         AgentProduct::Finance => &[],
         AgentProduct::Inventory => &[],
         AgentProduct::Hr => &[],
-        AgentProduct::Sites => SITES,
+        AgentProduct::Sites => &[],
         AgentProduct::Insights => &[],
         AgentProduct::Meet => &[],
         // Ask alo works across products, so it is offered all of them — the
@@ -477,6 +476,10 @@ mod tests {
             names(AgentProduct::Sites),
             [
                 "site_answer",
+                "site_pages",
+                "site_status",
+                "site_orders",
+                "site_bookings",
                 "site_page_read",
                 "site_seo_review",
                 "site_translation_status",
@@ -521,7 +524,7 @@ mod tests {
             .map(|tool| tool.name)
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
-        assert_eq!(workspace.len(), 126);
+        assert_eq!(workspace.len(), 130);
     }
 
     /// A moved module registers once (A4.1c): its row in [`MOVED`] is what puts

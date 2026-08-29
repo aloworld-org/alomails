@@ -103,7 +103,7 @@ const MAX_PROPOSED_ALT_TEXT_CHARS: usize = 200;
 
 // ---- JSON shaping -----------------------------------------------------------
 
-fn iso(t: OffsetDateTime) -> String {
+pub(crate) fn iso(t: OffsetDateTime) -> String {
     t.format(&Rfc3339).unwrap_or_default()
 }
 

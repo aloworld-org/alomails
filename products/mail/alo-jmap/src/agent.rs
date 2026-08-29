@@ -23,7 +23,6 @@ use std::future::Future;
 use std::pin::Pin;
 use time::format_description::well_known::Rfc3339;
 
-use crate::agent_sites as sites;
 use crate::ai::MAX_ASK_BYTES;
 use crate::error::Problem;
 use crate::state::{Account, AppState, authenticate};
@@ -477,6 +476,7 @@ pub(crate) const MODULES: &[ModuleDispatcher] = &[
     crate::meet_intents::dispatch,
     crate::projects_intents::dispatch,
     crate::sheets_intents::dispatch,
+    crate::sites_intents::dispatch,
     crate::tasks_intents::dispatch,
 ];
 
@@ -535,22 +535,8 @@ async fn dispatch(
         // those questions to a new board, which is why it waits for the
         // asker's own approval. Nothing here changes a figure or a record any
         // figure is read from.
-        // alo Sites' tools (A2.1), on the same seam. The reads answer from the
-        // published site and the draft; the two page writes land in the
-        // **draft** and nowhere else, and `site_publish` is the only one of them
-        // that puts anything on the internet — which is why it is declared a
-        // write and cannot run without the owner's own approval.
-        "site_answer" => sites::execute_site_answer(account, args).await,
-        "site_page_read" => sites::execute_site_page_read(account, args).await,
-        "site_seo_review" => sites::execute_site_seo_review(account, args).await,
-        // …and its fourth read (A2.1b), which counts how far each of the site's
-        // languages got. Translating stays on `/sites/:id/translation-proposals`
-        // where every page is approved beside its original: there is deliberately
-        // no tool here that writes another language into a site.
-        "site_translation_status" => sites::execute_site_translation_status(account, args).await,
-        "site_page_draft" => sites::execute_site_page_draft(account, args).await,
-        "site_page_edit" => sites::execute_site_page_edit(account, args).await,
-        "site_publish" => sites::execute_site_publish(account, args).await,
+        // Sites' verbs, the grounded answer, the editing pair and the publish
+        // included, are dispatched by its module row above (AC.5).
         // Meet's verbs, the record reads and the minutes included, are
         // dispatched by its module row above (AC.2).
         // Unreachable given the allowlist check, but the match stays total.

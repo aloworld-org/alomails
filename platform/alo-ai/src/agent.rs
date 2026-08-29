@@ -893,11 +893,19 @@ mod tests {
                 // `schedule_meeting`, a write, and is not here.
                 "upcoming_meetings",
                 "meeting_lookup",
-                // A2.1: the Website agent reads the published site, one page of
-                // the draft, and what search engines will find missing. Putting
-                // any of it on the internet is `site_publish`, which is not
-                // here — that is the whole of "publishing is proposed".
+                // A2.1, AC.5: the Website agent reads the published site, one
+                // page of the draft, and what search engines will find
+                // missing — now rendered from the intent registry, with the
+                // site as a business subject beside them: the page list,
+                // where the site stands on the internet, the order inbox and
+                // the bookable services. Putting anything on the internet is
+                // `site_publish`, which is not here — that is the whole of
+                // "publishing is proposed".
                 "site_answer",
+                "site_pages",
+                "site_status",
+                "site_orders",
+                "site_bookings",
                 "site_page_read",
                 "site_seo_review",
                 // A2.1b: …and how far each of the site's own languages got.
@@ -906,7 +914,7 @@ mod tests {
                 "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 126);
+        assert_eq!(all_tools().len(), 130);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }

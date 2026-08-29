@@ -531,7 +531,7 @@ pub async fn execute_site_publish(account: &Account, args: &Value) -> Result<Jso
 /// and the candidates come from [`alo_store::AccountStore::sites`], so a site
 /// belonging to another tenant is not merely refused here — it is not among the
 /// things that can be named.
-async fn resolve_site(account: &Account, args: &Value) -> Result<Site, Problem> {
+pub(crate) async fn resolve_site(account: &Account, args: &Value) -> Result<Site, Problem> {
     let sites = account.acc.sites().await.map_err(map_store_err)?;
     if sites.is_empty() {
         return Err(unprocessable("there is no website in this workspace yet"));
@@ -628,7 +628,7 @@ fn page_envelope(page: &SitePage) -> Result<SectionsEnvelope, Problem> {
 }
 
 /// The site, said the way every result says it.
-fn site_ref(site: &Site) -> Value {
+pub(crate) fn site_ref(site: &Site) -> Value {
     let mut value = site_json(site);
     if let Some(object) = value.as_object_mut() {
         // The theme is a page of JSON nobody reading an agent's answer needs,

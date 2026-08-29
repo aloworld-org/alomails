@@ -943,15 +943,18 @@ mod tests {
         // team's open work and the asker's own week (AA.3), and the Inventory
         // agent's five: the kept stock answer plus the shortage report, the
         // open orders, one supplier's price list and the ledger's tail
-        // (AA.4), and the People agent's five: the kept absence view plus
+        // (AA.4), the People agent's five: the kept absence view plus
         // the directory, the asker's own balance, the requests waiting for
-        // a decision and the checklists still open (AA.5); the folder, the
+        // a decision and the checklists still open (AA.5), and the Website
+        // agent's eight: the four A2.1/A2.1b reads kept plus the page list,
+        // the published state, the order inbox and the bookable services
+        // (AC.5); the folder, the
         // rename, the move, the reschedule, the priority, the chase, the
         // capture, the completion, the handover, the minutes, the room post
         // and the scheduled meeting are writes and are counted on the other
         // side.
         let reads = alo_ai::all_tools().iter().filter(|t| t.is_read()).count();
-        assert_eq!(reads, 75);
+        assert_eq!(reads, 79);
     }
 
     #[test]
