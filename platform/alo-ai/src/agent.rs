@@ -859,7 +859,16 @@ mod tests {
                 "open_purchase_orders",
                 "supplier_prices",
                 "recent_moves",
+                // AA.5: the People agent's reads, rendered from the intent
+                // registry — the kept absence view plus the directory, the
+                // asker's own balance, the requests waiting for a decision
+                // and the checklists still open. Approving leave and filling
+                // in a letter are writes and are not here.
                 "who_is_off",
+                "who_works_here",
+                "my_leave_balance",
+                "open_leave_requests",
+                "open_checklists",
                 // A2.4: the Insights agent looks up the vocabulary a question
                 // has to be asked in, asks it, and asks it again over an
                 // earlier period. Pinning the answers to a board is
@@ -897,7 +906,7 @@ mod tests {
                 "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 121);
+        assert_eq!(all_tools().len(), 126);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }
@@ -1083,8 +1092,8 @@ mod tests {
         assert!(at("For a CRM verb") < at("For a Projects verb"));
         assert!(at("For a Projects verb") < at("For a Finance verb"));
         assert!(at("For a Finance verb") < at("For an Inventory verb"));
-        assert!(at("For an Inventory verb") < at("For an HR tool"));
-        assert!(at("For an HR tool") < at("For a website tool"));
+        assert!(at("For an Inventory verb") < at("For an HR verb"));
+        assert!(at("For an HR verb") < at("For a website tool"));
         assert!(at("For a website tool") < at("Output ONLY the JSON object"));
     }
 }

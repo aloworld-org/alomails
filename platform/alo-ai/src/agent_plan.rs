@@ -280,6 +280,10 @@ mod tests {
                     handle: "people",
                     product: AgentProduct::Hr,
                 },
+                PlanAgent {
+                    handle: "agenda",
+                    product: AgentProduct::Agenda,
+                },
             ],
             MAX_PLAN_STEPS,
         );
@@ -316,13 +320,23 @@ mod tests {
             inventory_line.contains("\"which products are below minimum\""),
             "{inventory_line}"
         );
-        // A product still on hand-written tools has no hints yet — and no
-        // empty "Ask it for:" either.
+        // …and HR at AA.5.
         let people_line = prompt
             .lines()
             .find(|line| line.starts_with("- @people:"))
             .unwrap_or_default();
-        assert!(!people_line.contains("Ask it for:"), "{people_line}");
+        assert!(people_line.contains("Ask it for:"), "{people_line}");
+        assert!(
+            people_line.contains("\"who is off this week\""),
+            "{people_line}"
+        );
+        // A product still on hand-written tools has no hints yet — and no
+        // empty "Ask it for:" either.
+        let agenda_line = prompt
+            .lines()
+            .find(|line| line.starts_with("- @agenda:"))
+            .unwrap_or_default();
+        assert!(!agenda_line.contains("Ask it for:"), "{agenda_line}");
     }
 
     const ROSTER: [PlanAgent<'static>; 3] = [

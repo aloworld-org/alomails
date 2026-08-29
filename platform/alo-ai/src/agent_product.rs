@@ -20,7 +20,6 @@
 use alo_store::{ALL_AGENT_PRODUCTS, AgentProduct};
 
 use crate::agent_agenda::{AGENDA_GUIDANCE, AGENDA_TOOL_DOC, AGENDA_TOOLS};
-use crate::agent_hr::{HR_GUIDANCE, HR_TOOL_DOC, HR_TOOLS};
 use crate::agent_sites::{SITES_GUIDANCE, SITES_TOOL_DOC, SITES_TOOLS};
 use crate::agent_tool::AgentTool;
 use crate::billing_intents::BILLING as BILLING_INTENTS;
@@ -29,6 +28,7 @@ use crate::crm_intents::CRM as CRM_INTENTS;
 use crate::docs_intents::DOCS as DOCS_INTENTS;
 use crate::drive_intents::DRIVE as DRIVE_INTENTS;
 use crate::finance_intents::FINANCE as FINANCE_INTENTS;
+use crate::hr_intents::HR as HR_INTENTS;
 use crate::insights_intents::INSIGHTS as INSIGHTS_INTENTS;
 use crate::intent::IntentModule;
 use crate::inventory_intents::INVENTORY as INVENTORY_INTENTS;
@@ -108,11 +108,9 @@ const fn intents(module: &'static IntentModule) -> ToolSet {
 }
 
 const AGENDA_SET: ToolSet = set(AGENDA_TOOLS, AGENDA_TOOL_DOC, AGENDA_GUIDANCE);
-const HR_SET: ToolSet = set(HR_TOOLS, HR_TOOL_DOC, HR_GUIDANCE);
 const SITES_SET: ToolSet = set(SITES_TOOLS, SITES_TOOL_DOC, SITES_GUIDANCE);
 
 const AGENDA: &[ToolSet] = &[AGENDA_SET];
-const HR: &[ToolSet] = &[HR_SET];
 const SITES: &[ToolSet] = &[SITES_SET];
 
 /// Every product's tool sets, in the order [`AgentProduct::Workspace`] renders
@@ -132,6 +130,7 @@ pub const MOVED: &[(AgentProduct, &IntentModule)] = &[
     (AgentProduct::Docs, &DOCS_INTENTS),
     (AgentProduct::Drive, &DRIVE_INTENTS),
     (AgentProduct::Finance, &FINANCE_INTENTS),
+    (AgentProduct::Hr, &HR_INTENTS),
     (AgentProduct::Insights, &INSIGHTS_INTENTS),
     (AgentProduct::Inventory, &INVENTORY_INTENTS),
     (AgentProduct::Mail, &MAIL_INTENTS),
@@ -156,7 +155,7 @@ fn static_sets(product: AgentProduct) -> &'static [ToolSet] {
         AgentProduct::Projects => &[],
         AgentProduct::Finance => &[],
         AgentProduct::Inventory => &[],
-        AgentProduct::Hr => HR,
+        AgentProduct::Hr => &[],
         AgentProduct::Sites => SITES,
         AgentProduct::Insights => &[],
         AgentProduct::Meet => &[],
@@ -453,7 +452,15 @@ mod tests {
         );
         assert_eq!(
             names(AgentProduct::Hr),
-            ["who_is_off", "draft_letter_from_template"]
+            [
+                "who_is_off",
+                "who_works_here",
+                "my_leave_balance",
+                "open_leave_requests",
+                "open_checklists",
+                "approve_leave_request",
+                "draft_letter_from_template",
+            ]
         );
         assert_eq!(
             names(AgentProduct::Insights),
@@ -514,7 +521,7 @@ mod tests {
             .map(|tool| tool.name)
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
-        assert_eq!(workspace.len(), 121);
+        assert_eq!(workspace.len(), 126);
     }
 
     /// A moved module registers once (A4.1c): its row in [`MOVED`] is what puts

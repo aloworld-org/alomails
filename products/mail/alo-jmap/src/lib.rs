@@ -134,6 +134,7 @@ pub mod hr_checklists;
 pub mod hr_documents;
 pub mod hr_employees;
 pub mod hr_holidays;
+pub mod hr_intents;
 pub mod hr_leave_balances;
 pub mod hr_leave_door;
 pub mod hr_leave_policies;

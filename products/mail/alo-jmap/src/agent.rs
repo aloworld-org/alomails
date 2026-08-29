@@ -23,7 +23,6 @@ use std::future::Future;
 use std::pin::Pin;
 use time::format_description::well_known::Rfc3339;
 
-use crate::agent_hr as hr;
 use crate::agent_sites as sites;
 use crate::ai::MAX_ASK_BYTES;
 use crate::error::Problem;
@@ -471,6 +470,7 @@ pub(crate) const MODULES: &[ModuleDispatcher] = &[
     crate::docs_intents::dispatch,
     crate::drive_intents::dispatch,
     crate::finance_intents::dispatch,
+    crate::hr_intents::dispatch,
     crate::insights_intents::dispatch,
     crate::inventory_intents::dispatch,
     crate::mail_intents::dispatch,
@@ -526,17 +526,8 @@ async fn dispatch(
         // Projects' verbs, the proposed hour and the calendar draft included,
         // are dispatched by its module row above (AA.3), and Inventory's, the
         // draft reorders and the stock answer included, by its own (AA.4).
-        // alo HR's one tool so far (B6.09). It **answers**: who is away over a
-        // stated range, from the same layer the Agenda draws — names and days,
-        // never a reason, and nothing is written, booked or announced.
-        "who_is_off" => hr::execute_who_is_off(account, args, state).await,
-        // …and its second (B6.09b), which **drafts**: one of the tenant's own
-        // letters filled in about a colleague and left in the caller's Drafts.
-        // A letter nobody in the company has written is a 422 naming the ones
-        // they have — there is no path here that composes a letter.
-        "draft_letter_from_template" => {
-            hr::execute_draft_letter_from_template(account, args, state).await
-        }
+        // HR's verbs, the absence view and the letter fill-in included, are
+        // dispatched by its module row above (AA.5).
         // alo Insights' tools (A2.4), on the same seam. The three reads answer
         // from the same query engine the boards draw from — the vocabulary a
         // question has to be asked in, the figures one question comes back

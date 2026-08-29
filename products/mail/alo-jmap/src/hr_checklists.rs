@@ -89,8 +89,10 @@ fn step_json(step: &PlannedStep) -> Value {
     })
 }
 
-/// One running checklist as JSON, folded from its own tasks.
-fn progress_json(progress: &ChecklistProgress) -> Value {
+/// One running checklist as JSON, folded from its own tasks. Shared with the
+/// agent's `open_checklists` ([`crate::hr_intents`]), so the screen and the
+/// agent state a checklist's progress in one shape.
+pub(crate) fn progress_json(progress: &ChecklistProgress) -> Value {
     json!({
         "projectId": progress.project_id.as_str(),
         "name": progress.name,

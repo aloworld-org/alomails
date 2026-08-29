@@ -46,7 +46,7 @@ use crate::state::{AppState, authenticate};
 /// a support ticket, and a float that rounds one way in the browser and another
 /// on the server is a person told two different numbers about their own
 /// holiday.
-fn balance_json(entry: &PolicyBalance) -> Value {
+pub(crate) fn balance_json(entry: &PolicyBalance) -> Value {
     let balance = &entry.balance;
     let average = entry.average_day_minutes;
     json!({

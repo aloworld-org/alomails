@@ -923,7 +923,7 @@ mod tests {
                 }
             }
         }
-        // Seventy-one of them, which is the whole point of ADR 0047 — eleven
+        // Seventy-five of them, which is the whole point of ADR 0047 — eleven
         // from the products A1 covered, the Website agent's three (A2.1), its
         // language count (A2.1b), the Sheet agent's three plus its listing
         // (A2.2, AB.3), the Docs
@@ -943,13 +943,15 @@ mod tests {
         // team's open work and the asker's own week (AA.3), and the Inventory
         // agent's five: the kept stock answer plus the shortage report, the
         // open orders, one supplier's price list and the ledger's tail
-        // (AA.4); the folder, the
+        // (AA.4), and the People agent's five: the kept absence view plus
+        // the directory, the asker's own balance, the requests waiting for
+        // a decision and the checklists still open (AA.5); the folder, the
         // rename, the move, the reschedule, the priority, the chase, the
         // capture, the completion, the handover, the minutes, the room post
         // and the scheduled meeting are writes and are counted on the other
         // side.
         let reads = alo_ai::all_tools().iter().filter(|t| t.is_read()).count();
-        assert_eq!(reads, 71);
+        assert_eq!(reads, 75);
     }
 
     #[test]
