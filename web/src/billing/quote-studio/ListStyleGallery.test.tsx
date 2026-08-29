@@ -23,14 +23,20 @@ describe("ListStyleGallery", () => {
   });
 
   it("offers the bullet library for a bullet list", () => {
-    render(<ListStyleGallery ordered={false} value="disc" onChange={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: strings.quoteStudioBulletStyle }));
+    const onChange = vi.fn();
+    render(
+      <div data-testid="clipped-editor" className="overflow-hidden">
+        <ListStyleGallery ordered={false} value="disc" onChange={onChange} />
+      </div>,
+    );
+    const trigger = screen.getByRole("button", { name: strings.quoteStudioBulletStyle });
+    expect(trigger.textContent).not.toContain(strings.quoteStudioListStyleName("disc"));
+    fireEvent.click(trigger);
     const dialog = screen.getByRole("dialog", { name: strings.quoteStudioBulletStyle });
     expect(screen.getAllByRole("radio")).toHaveLength(7);
-    expect(dialog.className).toContain("fixed");
-    expect(dialog.className).toContain("sm:right-0");
+    expect(screen.getByTestId("clipped-editor").contains(dialog)).toBe(false);
+    expect(dialog.parentElement?.className).toContain("fixed");
     expect(dialog.className).toContain("overflow-y-auto");
-    expect(dialog.className).not.toContain("left-0");
 
     const checkbox = screen.getByRole("radio", {
       name: strings.quoteStudioListStyleName("checkbox"),
@@ -41,6 +47,15 @@ describe("ListStyleGallery", () => {
     const selected = screen.getByRole("radio", {
       name: strings.quoteStudioListStyleName("disc"),
     });
-    expect(selected.querySelector("svg")).toBeTruthy();
+    const selectedMark = selected.querySelector("svg")?.parentElement;
+    expect(selectedMark?.className).toContain("right-2.5");
+    expect(selectedMark?.className).toContain("top-2.5");
+
+    fireEvent.keyDown(selected, { key: "Tab", shiftKey: true });
+    expect(screen.getAllByRole("radio").at(-1)).toBe(document.activeElement);
+
+    fireEvent.click(checkbox);
+    expect(onChange).toHaveBeenCalledWith("checkbox");
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

@@ -119,9 +119,6 @@ interface Props<T extends StoredDocument, A> {
   editorActions?: ReactNode;
   /** Temporarily render the editable draft as a customer-facing preview. */
   presentationReadOnly?: boolean;
-  /** Lets a document-specific canvas display anchored editing overlays beyond
-   *  the shared shell. Customer-facing previews keep the shell clipped. */
-  allowEditorOverflow?: boolean;
   creationTemplates?: CreationTemplate[];
   /** What the record shows about its relations — the credit notes against an
    *  invoice, the invoice an accepted offer produced. */
@@ -134,10 +131,6 @@ interface Props<T extends StoredDocument, A> {
   /** Fetches this document's printable page from the server. `undefined`
    *  before the document exists — there is nothing to print. */
   onPrint: (() => Promise<string>) | undefined;
-}
-
-export function documentEditorClass(allowOverflow: boolean) {
-  return cx(styles.editor, allowOverflow && "!overflow-visible");
 }
 
 export function DocumentEditor<T extends StoredDocument, A>({
@@ -153,7 +146,6 @@ export function DocumentEditor<T extends StoredDocument, A>({
   documentBody,
   editorActions,
   presentationReadOnly = false,
-  allowEditorOverflow = false,
   creationTemplates,
   footer,
   onBack,
@@ -710,7 +702,7 @@ export function DocumentEditor<T extends StoredDocument, A>({
 
   return (
     <div className={styles.page}>
-      <article className={documentEditorClass(allowEditorOverflow)}>
+      <article className={styles.editor}>
         <div className={styles.editorHead}>
           <button type="button" className={styles.linkAction} onClick={onBack}>
             <ArrowLeft size={14} aria-hidden="true" /> {labels.back}

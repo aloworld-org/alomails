@@ -5,10 +5,11 @@
 // list's kind as a tile. Each tile is drawn by numbering a fixed five-item
 // outline with the real catalogue, so what the tile shows is exactly what the
 // document will show — there is no separate picture to keep in sync.
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
 
-import { cx, useDismiss } from "../../ds";
+import { cx } from "../../ds";
 import { strings } from "../../i18n";
 import { numberListItems, type ListItem } from "./listItems";
 import {
@@ -54,7 +55,7 @@ function ListStyleTile({ style }: { style: ListStyleId }) {
 function CompactListStylePreview({ style }: { style: ListStyleId }) {
   return (
     <span className="grid w-16 gap-1" aria-hidden="true">
-      {numberListItems(SAMPLE.slice(0, 3), style).map((item, index) => (
+      {numberListItems(SAMPLE.slice(0, 2), style).map((item, index) => (
         <span key={index} className="flex items-center gap-1.5">
           <span
             className="w-5 shrink-0 text-right text-[9px] font-semibold leading-none text-primary before:content-[attr(data-marker)]"
@@ -77,9 +78,23 @@ export function ListStyleGallery({
   onChange: (style: ListStyleId) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const close = useCallback(() => setOpen(false), []);
-  useDismiss(open, rootRef, close);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const selectedRef = useRef<HTMLButtonElement>(null);
+  const close = useCallback(() => {
+    setOpen(false);
+    triggerRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    selectedRef.current?.focus();
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") close();
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [close, open]);
 
   const styles = ordered ? NUMBERING_STYLES : BULLET_STYLES;
   const groupLabel = ordered
@@ -87,8 +102,9 @@ export function ListStyleGallery({
     : strings.quoteStudioBulletStyle;
 
   return (
-    <div className="relative" ref={rootRef}>
+    <div className="relative">
       <button
+        ref={triggerRef}
         type="button"
         className={cx(
           "flex h-control items-center gap-2 rounded-md !border !border-default bg-surface !px-2.5 text-primary transition-[border-color,box-shadow]",
@@ -107,68 +123,96 @@ export function ListStyleGallery({
         />
       </button>
 
-      {open && (
-        <>
+      {open &&
+        // The quotation canvas, its blocks and the app root deliberately clip
+        // overflow so the browser document can never grow a dead band beneath
+        // the workspace. This picker belongs to the overlay layer, not that
+        // document tree: portalling preserves both invariants at once.
+        createPortal(
           <div
-            className="fixed inset-0 z-[calc(var(--z-overlay)-1)] bg-overlay sm:hidden"
+            className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-overlay p-4 max-sm:items-end"
             role="presentation"
-            onMouseDown={close}
-          />
-          <div
-            className="fixed inset-x-4 bottom-4 z-[var(--z-overlay)] mx-auto max-h-[calc(100vh-2rem)] w-auto max-w-[23rem] overflow-y-auto overscroll-contain rounded-2xl border border-default bg-surface p-4 shadow-xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-full sm:mx-0 sm:mt-2 sm:w-[23rem]"
-            role="dialog"
-            aria-label={groupLabel}
+            onPointerDown={(event) => {
+              if (event.target === event.currentTarget) close();
+            }}
           >
-            <span
-              className="mx-auto mb-3 block h-1 w-10 rounded-full bg-raised sm:hidden"
-              aria-hidden="true"
-            />
             <div
-              className="grid grid-cols-2 gap-2 sm:grid-cols-3"
-              role="radiogroup"
+              ref={dialogRef}
+              className="max-h-[calc(100dvh-2rem)] w-full max-w-[25rem] overflow-y-auto overscroll-contain rounded-2xl border border-default bg-surface p-4 shadow-xl"
+              role="dialog"
               aria-label={groupLabel}
-            >
-              {styles.map((style) => {
-                const chosen = style === value;
-                const styleName = strings.quoteStudioListStyleName(style);
-                return (
-                  <button
-                    key={style}
-                    type="button"
-                    role="radio"
-                    aria-checked={chosen}
-                    aria-label={styleName}
-                    className={cx(
-                      // `!` because the global button reset strips borders.
-                      "relative min-h-24 min-w-0 rounded-xl !border-2 p-3 text-left transition-[background-color,border-color,box-shadow]",
-                      "hover:!border-accent/50 hover:bg-accent-soft/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
-                      chosen
-                        ? "!border-accent bg-accent-soft/60 shadow-sm"
-                        : "!border-default bg-surface",
-                    )}
-                    onClick={() => {
-                      onChange(style);
-                      setOpen(false);
-                    }}
-                  >
-                    <ListStyleTile style={style} />
-                    {chosen && (
-                      <span className="absolute right-1.5 top-1.5 flex size-5 items-center justify-center rounded-full bg-accent text-on-accent shadow-sm">
-                        <Check className="size-3" aria-hidden="true" />
-                      </span>
-                    )}
-                  </button>
+              aria-modal="true"
+              onPointerDown={(event) => event.stopPropagation()}
+              onKeyDown={(event) => {
+                if (event.key !== "Tab") return;
+                const choices = dialogRef.current?.querySelectorAll<HTMLButtonElement>(
+                  '[role="radio"]',
                 );
-              })}
+                if (choices === undefined || choices.length === 0) return;
+                const first = choices[0];
+                const last = choices[choices.length - 1];
+                if (event.shiftKey && document.activeElement === first) {
+                  event.preventDefault();
+                  last?.focus();
+                } else if (!event.shiftKey && document.activeElement === last) {
+                  event.preventDefault();
+                  first?.focus();
+                }
+              }}
+            >
+              <span
+                className="mx-auto mb-3 block h-1 w-10 rounded-full bg-raised sm:hidden"
+                aria-hidden="true"
+              />
+              <div
+                className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+                role="radiogroup"
+                aria-label={groupLabel}
+              >
+                {styles.map((style) => {
+                  const chosen = style === value;
+                  const styleName = strings.quoteStudioListStyleName(style);
+                  return (
+                    <button
+                      ref={chosen ? selectedRef : undefined}
+                      key={style}
+                      type="button"
+                      role="radio"
+                      aria-checked={chosen}
+                      aria-label={styleName}
+                      className={cx(
+                        // `!` because the global button reset strips borders.
+                        "relative min-h-24 min-w-0 rounded-xl !border-2 p-3 text-left transition-[background-color,border-color,box-shadow]",
+                        "hover:!border-accent/50 hover:bg-accent-soft/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
+                        chosen
+                          ? "!border-accent bg-accent-soft/60 shadow-sm"
+                          : "!border-default bg-surface",
+                      )}
+                      onClick={() => {
+                        onChange(style);
+                        close();
+                      }}
+                    >
+                      <ListStyleTile style={style} />
+                      {chosen && (
+                        <span className="absolute right-2.5 top-2.5 flex size-5 items-center justify-center rounded-full bg-accent text-on-accent shadow-sm ring-2 ring-surface">
+                          <Check className="size-3" aria-hidden="true" />
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              {isNumberingStyle(value) === ordered ? null : (
+                // Unreachable by construction (resolveListStyle keeps kind and
+                // style in step); kept so a future mismatch fails visibly.
+                <p className="mt-2 text-xs text-secondary">{strings.quoteStudioChooseListStyle}</p>
+              )}
             </div>
-            {isNumberingStyle(value) === ordered ? null : (
-              // Unreachable by construction (resolveListStyle keeps kind and
-              // style in step); kept so a future mismatch fails visibly.
-              <p className="mt-2 text-xs text-secondary">{strings.quoteStudioChooseListStyle}</p>
-            )}
           </div>
-        </>
-      )}
+          ,
+          document.body,
+        )}
     </div>
   );
 }

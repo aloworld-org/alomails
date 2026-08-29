@@ -331,7 +331,6 @@ export function QuoteEditor() {
         )
       }
       presentationReadOnly={preview}
-      allowEditorOverflow={!preview}
       dates={
         quote === null ? null : (
           <>
