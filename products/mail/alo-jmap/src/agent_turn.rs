@@ -546,7 +546,7 @@ pub(crate) async fn delegate_turn(
     roster: &[ChatAgent],
     depth: usize,
 ) -> Result<TurnResult, InferenceError> {
-    let mut ground = crate::chat_agent::ground(
+    let (mut ground, retrieved) = crate::chat_agent::ground(
         env.account,
         delegate.product,
         ask,
@@ -578,7 +578,18 @@ pub(crate) async fn delegate_turn(
     // The delegate's own reading list stays with the delegate: memory learning
     // (A6.1) learns from the top-level turn only, and what a delegate read is
     // folded into that turn's sources as its answer, already scoped.
-    turn_at(env, &nested, depth).await.map(|(result, _)| result)
+    turn_at(env, &nested, depth).await.map(|(result, _)| {
+        // A proposed write naming a source by its number is resolved to the
+        // concrete message HERE, against this delegate's own numbering, before
+        // any caller stores it — the callers (an orchestrated step, a handoff's
+        // room proposal) never saw this turn's sources and could not.
+        if let TurnResult::Propose { mut action, say } = result {
+            crate::agent::resolve_email_source(&mut action.args, &retrieved);
+            TurnResult::Propose { action, say }
+        } else {
+            result
+        }
+    })
 }
 
 /// Join `agent` to the room, say one line as it, and tell the room — the

@@ -318,6 +318,76 @@ async fn a_draft_waits_for_the_askers_tap_and_never_sends() {
     }
 }
 
+/// The Inbox's own unread counter, over the same store the folder list reads.
+async fn unread_in_inbox(h: &Harness) -> i64 {
+    h.acc
+        .mailboxes(Page::first(alo_store::MAX_PAGE))
+        .await
+        .unwrap()
+        .into_iter()
+        .find(|mailbox| mailbox.role.as_deref() == Some("inbox"))
+        .map_or(0, |mailbox| mailbox.unread_messages)
+}
+
+#[tokio::test]
+async fn a_room_write_naming_a_source_lands_on_the_concrete_message() {
+    let h = harness("mail-intents-source").await;
+    let inbox = h.acc.inbox().await.unwrap();
+    deliver(
+        &h,
+        &inbox,
+        "orders@abc-supplies.test",
+        "Your March delivery",
+    )
+    .await;
+
+    let agent = mail_agent(&h).await;
+    let room = a_room_with(&h, "ask", &agent).await;
+    // The model names the email the way it was shown it: as source 1. It was
+    // never shown an id, so this is the only way it CAN name one.
+    let (model, _seen) = scripted_model(vec![wants(
+        "mark_read",
+        json!({ "source": 1 }),
+        "I'll mark the delivery email read once you approve.",
+    )])
+    .await;
+    use_model(&h, &model).await;
+
+    let answer = ask_in_room(&h, &room, "@mail mark the March delivery email as read").await;
+    assert_eq!(answer["proposal"]["tool"], "mark_read", "{answer}");
+    // The stored proposal already names the concrete message: the source
+    // number was resolved before the room recorded it, so the approval tap
+    // does not depend on a numbering only the proposing turn could read.
+    // (Before the AC.6 wave review the room stored {"source": 1} verbatim and
+    // approving refused with "message required".)
+    assert!(
+        answer["proposal"]["args"]["message_id"]
+            .as_str()
+            .is_some_and(|id| !id.is_empty()),
+        "the proposal does not name a message: {answer}"
+    );
+    assert!(
+        answer["proposal"]["args"]["source"].is_null(),
+        "the source number outlived its turn: {answer}"
+    );
+    assert_eq!(unread_in_inbox(&h).await, 1, "nothing ran before the tap");
+
+    let proposal = answer["proposal"]["id"].as_str().unwrap().to_owned();
+    let (status, body) = post(
+        &h.app,
+        &h.token,
+        &format!("/chat/proposals/{proposal}"),
+        json!({ "approve": true }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(
+        unread_in_inbox(&h).await,
+        0,
+        "the message was not marked read"
+    );
+}
+
 #[tokio::test]
 async fn another_tenants_mail_does_not_exist_here() {
     let h = harness("mail-intents-iso").await;

@@ -508,7 +508,13 @@ async fn dispatch(
 /// to (`message_id` + `subject`), from the retrieval results. Only resolves when
 /// the referenced source is an email; leaves non-email or source-less args
 /// untouched. Pure so the mapping is unit-tested.
-fn resolve_email_source(args: &mut Value, sources: &[(String, String, String)]) {
+///
+/// Shared with every surface that stores a proposal: the palette resolves
+/// before returning the action to the browser, and the room paths
+/// ([`crate::chat_agent`], [`crate::agent_turn::delegate_turn`]) resolve
+/// before `propose_action`, so an approval tap never meets a source number
+/// the executor cannot read.
+pub(crate) fn resolve_email_source(args: &mut Value, sources: &[(String, String, String)]) {
     let Some(n) = args.get("source").and_then(Value::as_u64) else {
         return;
     };

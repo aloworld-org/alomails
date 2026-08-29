@@ -66,7 +66,10 @@ pub(crate) enum Spoken {
 }
 
 /// The grounding for one turn: whatever the asker's own access turns up in that
-/// product, as numbered sources with no bodies.
+/// product, as numbered sources with no bodies — plus the `(kind, id, title)`
+/// of each hit, kept beside them so a proposed action naming a source by its
+/// number can be resolved to the concrete record before it is stored
+/// ([`crate::agent::resolve_email_source`]). The ids never reach the model.
 ///
 /// The only thing a turn may ever see, and it is the **asker's** access, never
 /// the agent's. Scoped to the product too (A1.3): the Inventory agent is not
@@ -78,12 +81,13 @@ pub(crate) async fn ground(
     product: alo_store::AgentProduct,
     question: &str,
     limit: i64,
-) -> Vec<WorkspaceSource> {
-    account
+) -> (Vec<WorkspaceSource>, Vec<(String, String, String)>) {
+    let hits = account
         .acc
         .agent_ground(product, question, limit)
         .await
-        .unwrap_or_default()
+        .unwrap_or_default();
+    let sources = hits
         .iter()
         .enumerate()
         .map(|(i, h)| WorkspaceSource {
@@ -92,7 +96,12 @@ pub(crate) async fn ground(
             title: h.title.clone(),
             detail: String::new(),
         })
-        .collect()
+        .collect();
+    let retrieved = hits
+        .iter()
+        .map(|h| (h.kind.clone(), h.id.clone(), h.title.clone()))
+        .collect();
+    (sources, retrieved)
 }
 
 /// Run one agent turn and post its result into the room.
@@ -167,7 +176,7 @@ pub(crate) async fn take_turn(
         }
     }
 
-    let mut ground = ground(account, agent.product, question, CHAT_SOURCES).await;
+    let (mut ground, retrieved) = ground(account, agent.product, question, CHAT_SOURCES).await;
     // What this agent remembers here joins the numbered sources (A6.2): the
     // room's own memories in a room, what it remembers about the asker in its
     // one-to-one — the same scope the learning below feeds, read back.
@@ -230,7 +239,12 @@ pub(crate) async fn take_turn(
             }
             Some(Spoken::Answered)
         }
-        Ok((TurnResult::Propose { action, say }, _)) => {
+        Ok((TurnResult::Propose { mut action, say }, _)) => {
+            // A source number in the args becomes the concrete message it
+            // named before anything is stored — the same resolution the
+            // palette does — so the approval tap meets a real id, not a
+            // number only this turn could read.
+            crate::agent::resolve_email_source(&mut action.args, &retrieved);
             // The sentence goes in the room so everyone can read what was
             // proposed; the action is recorded against that message, and only
             // the asker's tap can run it.
