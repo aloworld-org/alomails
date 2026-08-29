@@ -24,6 +24,13 @@
 //! inside the store call that withdrew the consent — and a memory switch left
 //! off deletes what it hides after [`MEMORY_OFF_DELETE_DAYS`] days, on
 //! [`Store::sweep_agent_memories`].
+//!
+//! **Memory is also read and forgotten directly** (A6.4): what an agent
+//! remembers in a room is readable by everyone who can read the room, and one
+//! fact can be forgotten by hand — by the room's owner (it is a room setting,
+//! like the switch) or by the author of the message the fact was learned from
+//! (their words, their withdrawal). [`AccountStore::forget_memory`] is that
+//! path.
 
 use time::OffsetDateTime;
 
@@ -93,6 +100,10 @@ pub struct AgentMemory {
     pub fact: String,
     /// The message it came from, when there is one.
     pub source_msg: Option<ChatMessageId>,
+    /// Who said the words the fact was learned from — the person whose
+    /// withdrawal (of the message, or of just this fact) deletes it. Absent
+    /// when the fact has no source message, or the message no longer resolves.
+    pub source_author: Option<UserId>,
     pub learned_from: MemoryLearnedFrom,
     pub created_at: OffsetDateTime,
 }
@@ -104,12 +115,24 @@ type MemoryRow = (
     Option<String>,
     String,
     Option<String>,
+    Option<String>,
     String,
     OffsetDateTime,
 );
 
-const MEMORY_COLUMNS: &str =
-    "id, agent_id, channel_id, user_id, fact, source_msg, learned_from, created_at";
+/// The columns of one memory, with its source message's author joined on —
+/// use with `FROM agent_memories m LEFT JOIN chat_messages s ON …`.
+const MEMORY_COLUMNS: &str = "m.id, m.agent_id, m.channel_id, m.user_id, m.fact, m.source_msg, \
+     s.author_id, m.learned_from, m.created_at";
+
+/// The join that resolves a memory's source author. A tombstoned message
+/// still names its author — the words are gone, the authorship is not.
+const MEMORY_SOURCE_JOIN: &str =
+    "LEFT JOIN chat_messages s ON s.tenant_id = m.tenant_id AND s.id = m.source_msg";
+
+/// What the forget judgement reads of one row: scope, channel, person, and
+/// the source message's author.
+type ForgetRow = (String, Option<String>, Option<String>, Option<String>);
 
 fn row_to_memory(row: MemoryRow) -> Result<AgentMemory> {
     Ok(AgentMemory {
@@ -119,8 +142,9 @@ fn row_to_memory(row: MemoryRow) -> Result<AgentMemory> {
         user: row.3.map(UserId::new),
         fact: row.4,
         source_msg: row.5.map(ChatMessageId::new),
-        learned_from: MemoryLearnedFrom::parse(&row.6)?,
-        created_at: row.7,
+        source_author: row.6.map(UserId::new),
+        learned_from: MemoryLearnedFrom::parse(&row.7)?,
+        created_at: row.8,
     })
 }
 
@@ -268,10 +292,10 @@ impl AccountStore {
     ) -> Result<Vec<AgentMemory>> {
         self.channel(channel).await?;
         let rows: Vec<MemoryRow> = sqlx::query_as(&format!(
-            "SELECT {MEMORY_COLUMNS} FROM agent_memories \
-             WHERE tenant_id = $1 AND agent_id = $2 AND scope = 'channel' \
-               AND channel_id = $3 \
-             ORDER BY created_at DESC, id DESC"
+            "SELECT {MEMORY_COLUMNS} FROM agent_memories m {MEMORY_SOURCE_JOIN} \
+             WHERE m.tenant_id = $1 AND m.agent_id = $2 AND m.scope = 'channel' \
+               AND m.channel_id = $3 \
+             ORDER BY m.created_at DESC, m.id DESC"
         ))
         .bind(self.tenant.as_str())
         .bind(agent.as_str())
@@ -290,10 +314,10 @@ impl AccountStore {
     /// [`StoreError::Db`] on a database failure.
     pub async fn my_memories(&self, agent: &ChatAgentId) -> Result<Vec<AgentMemory>> {
         let rows: Vec<MemoryRow> = sqlx::query_as(&format!(
-            "SELECT {MEMORY_COLUMNS} FROM agent_memories \
-             WHERE tenant_id = $1 AND agent_id = $2 AND scope = 'person' \
-               AND user_id = $3 \
-             ORDER BY created_at DESC, id DESC"
+            "SELECT {MEMORY_COLUMNS} FROM agent_memories m {MEMORY_SOURCE_JOIN} \
+             WHERE m.tenant_id = $1 AND m.agent_id = $2 AND m.scope = 'person' \
+               AND m.user_id = $3 \
+             ORDER BY m.created_at DESC, m.id DESC"
         ))
         .bind(self.tenant.as_str())
         .bind(agent.as_str())
@@ -302,6 +326,63 @@ impl AccountStore {
         .await
         .map_err(StoreError::Db)?;
         rows.into_iter().map(row_to_memory).collect()
+    }
+
+    /// Forget one fact by hand (A6.4) — the direct withdrawal, beside the four
+    /// source-following deletions of A6.3.
+    ///
+    /// Who may: for a **room's** memory, the room's owner (memory is a room
+    /// setting, like the switch — and in a one-to-one there is no owner, so
+    /// either side may), or the **author of the message the fact was learned
+    /// from** — their words licensed it, and their withdrawal of just the fact
+    /// must not require withdrawing the whole message. For a **person's**
+    /// memory (what an agent remembers about someone), only that person: it is
+    /// surfaced to nobody else, so nobody else can even name its id.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] for a memory that does not exist, is another
+    /// tenant's, is another person's, or lives in a room the caller cannot
+    /// see — all the same answer, so the refusal is not an oracle;
+    /// [`StoreError::Forbidden`] for a member of the room who is neither its
+    /// owner nor the fact's source author.
+    pub async fn forget_memory(&self, id: &AgentMemoryId) -> Result<()> {
+        let row: Option<ForgetRow> = sqlx::query_as(&format!(
+            "SELECT m.scope, m.channel_id, m.user_id, s.author_id \
+                 FROM agent_memories m {MEMORY_SOURCE_JOIN} \
+                 WHERE m.tenant_id = $1 AND m.id = $2"
+        ))
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        let Some((scope, channel, user, source_author)) = row else {
+            return Err(StoreError::NotFound);
+        };
+        if scope == "person" {
+            if user.as_deref() != Some(self.user.as_str()) {
+                return Err(StoreError::NotFound);
+            }
+        } else {
+            let channel = ChatChannelId::new(channel.ok_or(StoreError::NotFound)?);
+            let room = self.channel(&channel).await?;
+            match self.channel_role(&channel).await? {
+                Some(MemberRole::Owner) => {}
+                Some(MemberRole::Member) if room.kind.is_direct() => {}
+                Some(MemberRole::Member)
+                    if source_author.as_deref() == Some(self.user.as_str()) => {}
+                // A member who is neither, and a public room's mere reader
+                // alike: they may read the memory, not take it from the room.
+                Some(MemberRole::Member) | None => return Err(StoreError::Forbidden),
+            }
+        }
+        sqlx::query("DELETE FROM agent_memories WHERE tenant_id = $1 AND id = $2")
+            .bind(self.tenant.as_str())
+            .bind(id.as_str())
+            .execute(&self.pool)
+            .await
+            .map_err(StoreError::Db)?;
+        Ok(())
     }
 
     /// Set the room's learning switch: `Some(true)` on, `Some(false)` off,

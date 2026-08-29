@@ -5812,6 +5812,19 @@ export const nl: Partial<Catalog> = {
   chatAgentAddFailed: "Die agent kon niet worden toegevoegd.",
   chatAgentNothingYet: "Nog niets gevraagd",
   chatAgentRemoveFailed: "Die agent kon niet worden verwijderd.",
+  agentMemoryTitle: (handle: string): string => `Wat @${handle} onthoudt`,
+  agentMemoryShared:
+    "Onthouden uit dit gesprek. Iedereen hier kan deze lijst lezen.",
+  agentMemoryAboutYou:
+    "Wat de agent over u onthoudt uit dit een-op-eengesprek. Alleen u ziet deze lijst.",
+  agentMemoryEmpty:
+    "Er is nog niets onthouden. Feiten die hier worden geleerd — en alles wat u vraagt te onthouden — verschijnen in deze lijst.",
+  agentMemoryExplicit: "Rechtstreeks verteld",
+  agentMemoryFromTurn: "Geleerd uit een antwoord",
+  agentMemoryForget: "Vergeten",
+  agentMemoryForgetFact: (fact: string): string => `“${fact}” vergeten`,
+  agentMemoryLoadFailed: "Wat de agent onthoudt kon niet worden geladen.",
+  agentMemoryForgetFailed: "Dat kon niet worden vergeten.",
   chatAgentTag: "agent",
   chatAgentsAvailable: "Beschikbaar om toe te voegen",
   chatAgentsHere: "Agents in dit gesprek",

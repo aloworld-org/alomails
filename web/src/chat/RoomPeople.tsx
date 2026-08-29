@@ -10,8 +10,9 @@
 // They are still visibly different — an agent is marked, never avatared, so
 // nobody mistakes one for a colleague.
 import { useCallback, useEffect, useState } from "react";
-import { Sparkles, UserMinus, UserPlus, X } from "lucide-react";
+import { Brain, Sparkles, UserMinus, UserPlus, X } from "lucide-react";
 
+import { AgentMemoryPanel } from "../agents";
 import { Avatar, Button, IconButton } from "../ds";
 import { strings } from "../i18n";
 import { chatMessage, useChatApi } from "./api";
@@ -38,6 +39,8 @@ export function RoomPeople({
   const [available, setAvailable] = useState<Agent[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** The agent whose What-I-remember panel is open, if any. */
+  const [memoryOf, setMemoryOf] = useState<Agent | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -131,6 +134,12 @@ export function RoomPeople({
                     </span>
                   </span>
                   <IconButton
+                    onClick={() => setMemoryOf(agent)}
+                    label={strings.agentMemoryTitle(agent.handle)}
+                    icon={<Brain size={15} />}
+                    size="sm"
+                  />
+                  <IconButton
                     onClick={() => void removeAgent(agent)}
                     disabled={busy === agent.id}
                     label={strings.chatAgentRemove(agent.handle)}
@@ -202,6 +211,15 @@ export function RoomPeople({
           </Button>
         </footer>
       </div>
+
+      {memoryOf !== null && (
+        <AgentMemoryPanel
+          channel={channel}
+          agent={memoryOf}
+          aboutYou={detail?.kind === "agent_dm"}
+          onClose={() => setMemoryOf(null)}
+        />
+      )}
     </div>
   );
 }

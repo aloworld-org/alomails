@@ -5879,6 +5879,19 @@ export const fr: Partial<Catalog> = {
   chatAgentAddFailed: "Impossible d’ajouter cet agent.",
   chatAgentNothingYet: "Aucune question posée pour l’instant",
   chatAgentRemoveFailed: "Impossible de retirer cet agent.",
+  agentMemoryTitle: (handle: string): string => `Ce que @${handle} retient`,
+  agentMemoryShared:
+    "Retenu dans cette conversation. Tout le monde ici peut lire cette liste.",
+  agentMemoryAboutYou:
+    "Ce qu’il retient à votre sujet dans cette conversation privée. Visible par vous uniquement.",
+  agentMemoryEmpty:
+    "Rien n’est retenu pour l’instant. Les faits appris ici — et tout ce que vous lui demandez de retenir — apparaîtront dans cette liste.",
+  agentMemoryExplicit: "Confié directement",
+  agentMemoryFromTurn: "Appris d’une réponse",
+  agentMemoryForget: "Oublier",
+  agentMemoryForgetFact: (fact: string): string => `Oublier « ${fact} »`,
+  agentMemoryLoadFailed: "Impossible de charger ce que l’agent retient.",
+  agentMemoryForgetFailed: "Impossible d’oublier ce fait.",
   chatAgentTag: "agent",
   chatAgentsAvailable: "Disponibles à ajouter",
   chatAgentsHere: "Agents dans cette conversation",

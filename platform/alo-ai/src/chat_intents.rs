@@ -239,6 +239,14 @@ pub const CHAT_EXCLUDED: &[Excluded] = &[
         route: "/chat/messages/{id}/reactions",
         why: "Reacting is a person's own gesture; made by an agent it would be the asker seeming to feel something.",
     },
+    Excluded {
+        route: "/chat/channels/{id}/agents/{agent}/memories",
+        why: "The What-I-remember panel is the members' window into an agent; an agent's own memories reach its turns as grounding, not through a verb.",
+    },
+    Excluded {
+        route: "/chat/memories/{id}",
+        why: "Forgetting a remembered fact is a person's withdrawal of consent; an agent must not curate what is remembered about a room.",
+    },
 ];
 
 /// The Chat paragraph of the agent's general instructions.

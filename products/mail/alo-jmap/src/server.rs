@@ -367,6 +367,16 @@ pub fn app_with_site_boundaries(
             "/chat/channels/{id}/memory",
             get(chat_agent_memory::channel_memory).post(chat_agent_memory::set_channel_memory),
         )
+        // What an agent remembers here (A6.4): read by every member, one fact
+        // forgotten by the room's owner or by the author of its source.
+        .route(
+            "/chat/channels/{id}/agents/{agent}/memories",
+            get(chat_agent_memory::agent_memories),
+        )
+        .route(
+            "/chat/memories/{id}",
+            delete(chat_agent_memory::forget_memory),
+        )
         .route(
             "/chat/proposals/{id}",
             post(chat_agent_routes::decide_proposal),

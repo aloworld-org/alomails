@@ -33,12 +33,14 @@
 
 use axum::Json;
 use axum::extract::{Path, State};
-use axum::http::HeaderMap;
+use axum::http::{HeaderMap, StatusCode};
 use serde_json::{Value, json};
+use time::format_description::well_known::Rfc3339;
 
 use alo_ai::{AiConfig, WorkspaceSource};
 use alo_store::{
-    ChatAgent, ChatAgentId, ChatChannelId, ChatMessageId, MemoryLearnedFrom, StoreError,
+    AgentMemory, AgentMemoryId, ChatAgent, ChatAgentId, ChatChannelId, ChatMessageId, MemberRole,
+    MemoryLearnedFrom, StoreError,
 };
 
 use crate::chat_agent_routes::map_store_err;
@@ -234,6 +236,98 @@ pub(crate) async fn learn_from_turn(
             }
         };
     }
+}
+
+/// The wire shape of one remembered fact (A6.4). `canForget` is answered here,
+/// where the rule lives, so the screen offers only buttons the server will
+/// honour: the store's [`alo_store::AccountStore::forget_memory`] makes the
+/// same judgement when the button is pressed.
+fn memory_json(memory: &AgentMemory, forgets_any: bool, caller: &str) -> Value {
+    let mine = memory
+        .source_author
+        .as_ref()
+        .is_some_and(|author| author.as_str() == caller);
+    json!({
+        "id": memory.id.as_str(),
+        "fact": memory.fact,
+        "learnedFrom": memory.learned_from.as_str(),
+        "createdAt": memory.created_at.format(&Rfc3339).unwrap_or_default(),
+        "canForget": forgets_any || mine,
+    })
+}
+
+/// `GET /chat/channels/{id}/agents/{agent}/memories` — what this agent
+/// remembers here, for the **What I remember** panel (A6.4).
+///
+/// Readable by everyone who can read the room, exactly like the messages the
+/// facts were learned from. The room decides the scope: the agent's own
+/// one-to-one surfaces what it remembers about the caller, any other room its
+/// channel memories — and another agent's one-to-one holds nothing of this
+/// agent's, so the list is empty there. Shown whatever the learning switch
+/// says: the switch hides memories from *turns* (A6.2), and this panel is how
+/// a person sees what a switched-off room is still holding.
+pub async fn agent_memories(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, agent)): Path<(String, String)>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let acc = &account.acc;
+    let channel = ChatChannelId::new(id);
+    let agent = ChatAgentId::new(agent);
+    let counterpart = acc
+        .channel_agent_counterpart(&channel)
+        .await
+        .map_err(map_store_err)?;
+    let rows = match &counterpart {
+        Some(mine) if mine.as_str() == agent.as_str() => acc.my_memories(&agent).await,
+        Some(_) => Ok(Vec::new()),
+        None => acc.channel_memories(&agent, &channel).await,
+    }
+    .map_err(map_store_err)?;
+    // Who forgets ANY fact here: the person a one-to-one's memories are about,
+    // a named room's owner, either side of a direct room. Everyone else only
+    // the facts learned from their own words.
+    let forgets_any = if counterpart.is_some() {
+        true
+    } else {
+        let room = acc.channel(&channel).await.map_err(map_store_err)?;
+        match acc.channel_role(&channel).await.map_err(map_store_err)? {
+            Some(MemberRole::Owner) => true,
+            Some(MemberRole::Member) => room.kind.is_direct(),
+            None => false,
+        }
+    };
+    let caller = acc.user().as_str();
+    Ok(Json(json!({
+        "memories": rows
+            .iter()
+            .map(|memory| memory_json(memory, forgets_any, caller))
+            .collect::<Vec<_>>(),
+    })))
+}
+
+/// `DELETE /chat/memories/{id}` — forget one fact by hand (A6.4). The store
+/// holds the rule: the room's owner (either side of a one-to-one), or the
+/// author of the message the fact was learned from. 204 when forgotten.
+pub async fn forget_memory(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<StatusCode, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account
+        .acc
+        .forget_memory(&AgentMemoryId::new(id))
+        .await
+        .map_err(|e| match e {
+            StoreError::Forbidden => Problem::with(
+                StatusCode::FORBIDDEN,
+                "only the room's owner, or the person whose words taught it, can forget this",
+            ),
+            other => map_store_err(other),
+        })?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// The wire shape of a room's memory switch: what it resolves to, the room's

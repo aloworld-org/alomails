@@ -1798,6 +1798,19 @@ export const de: Partial<Catalog> = {
   chatAgentRemove: (handle: string): string => `@${handle} entfernen`,
   chatAgentAddFailed: "Der Agent konnte nicht hinzugefügt werden.",
   chatAgentRemoveFailed: "Der Agent konnte nicht entfernt werden.",
+  agentMemoryTitle: (handle: string): string => `Was @${handle} sich merkt`,
+  agentMemoryShared:
+    "In dieser Unterhaltung gelernt. Alle hier können diese Liste lesen.",
+  agentMemoryAboutYou:
+    "Was der Agent sich aus diesem Einzelgespräch über Sie merkt. Nur Sie sehen diese Liste.",
+  agentMemoryEmpty:
+    "Noch ist nichts gemerkt. Was der Agent hier lernt — und was Sie ihn ausdrücklich bitten sich zu merken — erscheint in dieser Liste.",
+  agentMemoryExplicit: "Direkt mitgeteilt",
+  agentMemoryFromTurn: "Aus einer Antwort gelernt",
+  agentMemoryForget: "Vergessen",
+  agentMemoryForgetFact: (fact: string): string => `„${fact}“ vergessen`,
+  agentMemoryLoadFailed: "Die gemerkten Fakten konnten nicht geladen werden.",
+  agentMemoryForgetFailed: "Das konnte nicht vergessen werden.",
   chatSearchPlaceholder: "Nachrichten, Personen, Kanäle durchsuchen…",
   chatSearchClear: "Suche leeren",
   chatSearchNothing: "Nichts gefunden.",

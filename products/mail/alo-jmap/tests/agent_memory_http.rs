@@ -1412,6 +1412,252 @@ async fn a_switch_left_off_for_thirty_days_deletes_what_it_hides() {
     );
 }
 
+/// The `{fact: (id, canForget)}` map of one What-I-remember listing, and the
+/// order its facts came in.
+async fn memory_panel(
+    h: &Harness,
+    token: &str,
+    channel: &str,
+    agent: &ChatAgentId,
+) -> (
+    std::collections::HashMap<String, (String, bool)>,
+    Vec<String>,
+) {
+    let (status, body) = get(
+        &h.app,
+        token,
+        &format!(
+            "/chat/channels/{channel}/agents/{}/memories",
+            agent.as_str()
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let rows = body["memories"].as_array().unwrap();
+    let order: Vec<String> = rows
+        .iter()
+        .map(|m| m["fact"].as_str().unwrap().to_owned())
+        .collect();
+    let map = rows
+        .iter()
+        .map(|m| {
+            (
+                m["fact"].as_str().unwrap().to_owned(),
+                (
+                    m["id"].as_str().unwrap().to_owned(),
+                    m["canForget"].as_bool().unwrap(),
+                ),
+            )
+        })
+        .collect();
+    (map, order)
+}
+
+/// **What an agent remembers here is read by every member, and one fact is
+/// forgotten by the room's owner or by the author of its source** (A6.4). The
+/// listing says who may forget what (`canForget`), and the DELETE holds the
+/// same line: a member who is neither owner nor the fact's source author gets
+/// a plain 403 and the fact stays.
+#[tokio::test]
+async fn the_room_reads_what_is_remembered_and_owner_or_author_forget() {
+    let h = harness("mempanel").await;
+    let (channel, agent) = a_room_with(&h, "billing", AgentProduct::Billing).await;
+
+    // A second person of the tenant, a member of the room but not its owner.
+    let email = format!("member-{}@mempanel.test", h.tenant);
+    let member = h.ts.create_user(&email).await.unwrap();
+    h.identity
+        .set_password(&h.tenant, &member, &email, "s3cret-pw")
+        .await
+        .unwrap();
+    let member_token = h
+        .identity
+        .password_login(&email, "s3cret-pw", None)
+        .await
+        .unwrap()
+        .expect("token issued")
+        .0
+        .reveal()
+        .to_owned();
+    let (status, body) = post(
+        &h.app,
+        &member_token,
+        &format!("/chat/channels/{channel}/join"),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+
+    // The owner teaches one fact, the member another.
+    ask_for(
+        &h,
+        &h.token,
+        &channel,
+        "@billing remember that Northstar invoices are net 30",
+        "remember",
+    )
+    .await;
+    ask_for(
+        &h,
+        &member_token,
+        &channel,
+        "@billing remember that the X100 ships from Ghent",
+        "remember",
+    )
+    .await;
+
+    // The member reads the whole list, newest first — and may forget only the
+    // fact their own words taught.
+    let (theirs, order) = memory_panel(&h, &member_token, &channel, &agent).await;
+    assert_eq!(
+        order,
+        vec![
+            "the X100 ships from Ghent".to_owned(),
+            "Northstar invoices are net 30".to_owned(),
+        ]
+    );
+    assert!(theirs["the X100 ships from Ghent"].1, "their own words");
+    assert!(
+        !theirs["Northstar invoices are net 30"].1,
+        "not theirs to forget — the owner taught it"
+    );
+    // The owner may forget anything.
+    let (owners, _) = memory_panel(&h, &h.token, &channel, &agent).await;
+    assert!(owners["Northstar invoices are net 30"].1);
+    assert!(owners["the X100 ships from Ghent"].1);
+
+    // The DELETE enforces what the listing said: 403 for the member on the
+    // owner's fact, and the fact stays…
+    let owners_fact = &theirs["Northstar invoices are net 30"].0;
+    let (status, body) = del(
+        &h.app,
+        &member_token,
+        &format!("/chat/memories/{owners_fact}"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+    assert!(
+        body["detail"].as_str().unwrap().contains("owner"),
+        "the refusal names the rule: {body}"
+    );
+    let (still, _) = memory_panel(&h, &member_token, &channel, &agent).await;
+    assert_eq!(still.len(), 2, "a refused forget deletes nothing");
+
+    // …204 for the member on their own fact, and 204 for the owner on theirs.
+    let (status, body) = del(
+        &h.app,
+        &member_token,
+        &format!("/chat/memories/{}", theirs["the X100 ships from Ghent"].0),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
+    let (status, body) = del(&h.app, &h.token, &format!("/chat/memories/{owners_fact}")).await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
+    let (empty, _) = memory_panel(&h, &h.token, &channel, &agent).await;
+    assert!(empty.is_empty(), "both facts were forgotten");
+}
+
+/// **A one-to-one's memories are listed to their person alone** (A6.4): the
+/// panel in an agent's own one-to-one shows what it remembers about the
+/// caller (each fact theirs to forget), another agent has nothing there, a
+/// colleague cannot reach the room, and another tenant can neither read nor
+/// forget anything — the row outlives every refusal.
+#[tokio::test]
+async fn a_one_to_ones_memories_are_the_persons_alone() {
+    let h = harness("mempaneldm").await;
+    let agenda = h
+        .acc
+        .create_agent("agenda", "Agenda", None, AgentProduct::Agenda)
+        .await
+        .unwrap();
+    let (status, room) = post(
+        &h.app,
+        &h.token,
+        &format!("/chat/agents/{}/dm", agenda.as_str()),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{room}");
+    let dm = room["id"].as_str().unwrap().to_owned();
+    ask_for(
+        &h,
+        &h.token,
+        &dm,
+        "Remember that I prefer morning meetings",
+        "remember",
+    )
+    .await;
+
+    let (mine, _) = memory_panel(&h, &h.token, &dm, &agenda).await;
+    assert_eq!(mine.len(), 1);
+    let (fact_id, can_forget) = &mine["I prefer morning meetings"];
+    assert!(*can_forget, "one's own memory is one's own to forget");
+
+    // Another agent asked about in the same one-to-one: nothing is its.
+    let billing = h
+        .acc
+        .create_agent("billing", "Billing", None, AgentProduct::Billing)
+        .await
+        .unwrap();
+    let (others, _) = memory_panel(&h, &h.token, &dm, &billing).await;
+    assert!(others.is_empty(), "another agent holds nothing here");
+
+    // A colleague of the same tenant: the room is not theirs to see.
+    let email = format!("colleague-{}@mempaneldm.test", h.tenant);
+    let colleague = h.ts.create_user(&email).await.unwrap();
+    h.identity
+        .set_password(&h.tenant, &colleague, &email, "s3cret-pw")
+        .await
+        .unwrap();
+    let their_token = h
+        .identity
+        .password_login(&email, "s3cret-pw", None)
+        .await
+        .unwrap()
+        .expect("token issued")
+        .0
+        .reveal()
+        .to_owned();
+    let (status, body) = get(
+        &h.app,
+        &their_token,
+        &format!("/chat/channels/{dm}/agents/{}/memories", agenda.as_str()),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
+    let (status, body) = del(&h.app, &their_token, &format!("/chat/memories/{fact_id}")).await;
+    assert_eq!(
+        status,
+        StatusCode::NOT_FOUND,
+        "a person-scoped memory does not exist for anyone else: {body}"
+    );
+
+    // Another tenant on the same store: the same nothing.
+    let other = harness_on(std::sync::Arc::clone(&h.store), "mempaneldmb").await;
+    let (status, body) = get(
+        &other.app,
+        &other.token,
+        &format!("/chat/channels/{dm}/agents/{}/memories", agenda.as_str()),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
+    let (status, body) = del(
+        &other.app,
+        &other.token,
+        &format!("/chat/memories/{fact_id}"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
+
+    // Every refusal above deleted nothing.
+    assert_eq!(h.acc.my_memories(&agenda).await.unwrap().len(), 1);
+
+    // The person themselves: 204, and the memory is gone.
+    let (status, body) = del(&h.app, &h.token, &format!("/chat/memories/{fact_id}")).await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
+    assert!(h.acc.my_memories(&agenda).await.unwrap().is_empty());
+}
+
 /// The delegate envelope, as the model returns it.
 fn delegates(to: &str, ask: &str) -> String {
     json!({ "kind": "delegate", "delegate": { "to": to, "ask": ask } }).to_string()

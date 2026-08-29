@@ -16,6 +16,7 @@ import { useAuth } from "../auth";
 import { API_BASE } from "../platform/runtime";
 import type {
   Agent,
+  AgentMemory,
   Channel,
   ChannelDetail,
   ChannelSummary,
@@ -153,6 +154,24 @@ export class ChatApi {
       { agent },
     );
     return body.agents ?? [];
+  }
+
+  /** What an agent remembers in this conversation — the What-I-remember
+   *  panel. In the agent's own one-to-one, what it remembers about you. */
+  async agentMemories(channel: string, agent: string): Promise<AgentMemory[]> {
+    const body = await this.#read<{ memories: AgentMemory[] }>(
+      `/chat/channels/${encodeURIComponent(channel)}/agents/${encodeURIComponent(agent)}/memories`,
+    );
+    return body.memories ?? [];
+  }
+
+  /** Make an agent forget one fact. The server holds the rule — the room's
+   *  owner, or the person whose words taught it — and answers 403 for
+   *  anyone else. */
+  async forgetMemory(id: string): Promise<void> {
+    await this.#send(`/chat/memories/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }).then(ChatApi.#rejectFailed);
   }
 
   /** Decide a proposed action. Approving runs it in the same request, so the

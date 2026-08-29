@@ -2127,6 +2127,19 @@ export const en = {
   chatAgentRemove: (handle: string): string => `Remove @${handle}`,
   chatAgentAddFailed: "That agent couldn’t be added.",
   chatAgentRemoveFailed: "That agent couldn’t be removed.",
+  agentMemoryTitle: (handle: string): string => `What @${handle} remembers`,
+  agentMemoryShared:
+    "Learned in this conversation. Everyone here can read this list.",
+  agentMemoryAboutYou:
+    "What it remembers about you from this one-to-one. Only you can see this list.",
+  agentMemoryEmpty:
+    "Nothing remembered yet. Facts it learns here — and anything you ask it to remember — appear in this list.",
+  agentMemoryExplicit: "Told directly",
+  agentMemoryFromTurn: "Learned from an answer",
+  agentMemoryForget: "Forget",
+  agentMemoryForgetFact: (fact: string): string => `Forget “${fact}”`,
+  agentMemoryLoadFailed: "What it remembers couldn’t be loaded.",
+  agentMemoryForgetFailed: "That couldn’t be forgotten.",
   chatSearchPlaceholder: "Search messages, people, channels…",
   chatSearchClear: "Clear search",
   chatSearchNothing: "Nothing matched.",

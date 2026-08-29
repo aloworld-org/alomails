@@ -119,6 +119,22 @@ export interface Agent {
   lastAt: string | null;
 }
 
+/** One fact an agent remembers in a conversation — or about you, when the
+ *  conversation is your own one-to-one with it. */
+export interface AgentMemory {
+  id: string;
+  /** One short standalone sentence, never a transcript. */
+  fact: string;
+  /** "explicit" — someone said "remember that …"; "turn" — learned from an
+   *  answered turn. */
+  learnedFrom: "explicit" | "turn";
+  createdAt: string;
+  /** Whether the server will honour a forget from this reader: the room's
+   *  owner, either side of a one-to-one, or the author of the words the fact
+   *  was learned from. */
+  canForget: boolean;
+}
+
 /** An action an agent proposed, waiting for a tap. */
 export interface Proposal {
   id: string;
