@@ -143,6 +143,24 @@ async fn run(addr: SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
+    // Background agent-memory deletion sweep (ADR 0057 §6, A6.3): a memory
+    // switch left off hides at once and deletes after thirty days — this is
+    // the deleting half, hourly because its deadline is measured in days.
+    {
+        let store = Arc::clone(&store);
+        tokio::spawn(async move {
+            let mut tick = tokio::time::interval(std::time::Duration::from_secs(3600));
+            loop {
+                tick.tick().await;
+                match store.sweep_agent_memories().await {
+                    Ok(n) if n > 0 => tracing::info!(deleted = n, "agent memory sweep"),
+                    Ok(_) => {}
+                    Err(error) => tracing::warn!(%error, "agent memory sweep failed"),
+                }
+            }
+        });
+    }
+
     // Background site-form notifier (alo Sites, ADR 0036): deliver each new
     // contact-form submission to the site owner's inbox as an internal message.
     {

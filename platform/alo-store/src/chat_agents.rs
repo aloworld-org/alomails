@@ -401,7 +401,8 @@ impl AccountStore {
     }
 
     /// Take an agent out of a room. Its past messages stay: a room's history
-    /// does not change because somebody left.
+    /// does not change because somebody left. What it learned in the room
+    /// goes with it (A6.3) — the memories were licensed by its presence.
     ///
     /// # Errors
     /// [`StoreError::NotFound`] if the room is not the caller's, or they are
@@ -425,6 +426,7 @@ impl AccountStore {
         .execute(&self.pool)
         .await
         .map_err(StoreError::Db)?;
+        self.forget_agent_channel_memories(agent, channel).await?;
         Ok(())
     }
 }

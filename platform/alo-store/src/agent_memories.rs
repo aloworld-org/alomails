@@ -16,6 +16,14 @@
 //! (`agent_memory_defaults`), defaulting to ON. An explicit "remember that …"
 //! is stored whatever the switches say — a person asking by name is the
 //! consent the switch exists to approximate.
+//!
+//! **Deletion follows the source** (A6.3). The consent a memory rests on can
+//! be withdrawn four ways, and the rows follow: a withdrawn message takes the
+//! facts learned from it, an archived room takes its channel memories, an
+//! agent removed from a room takes what it learned there — each synchronously,
+//! inside the store call that withdrew the consent — and a memory switch left
+//! off deletes what it hides after [`MEMORY_OFF_DELETE_DAYS`] days, on
+//! [`Store::sweep_agent_memories`].
 
 use time::OffsetDateTime;
 
@@ -23,6 +31,7 @@ use crate::account::AccountStore;
 use crate::chat::MemberRole;
 use crate::error::{Result, StoreError};
 use crate::id::{AgentMemoryId, ChatAgentId, ChatChannelId, ChatMessageId, UserId};
+use crate::store::Store;
 
 /// The longest fact the store will hold. Long enough for "Northstar Foods
 /// invoices are net 30 and go to their Rotterdam office", far too short for a
@@ -33,6 +42,12 @@ pub const MEMORY_FACT_MAX: usize = 400;
 /// oldest is dropped for the newest — an agent's memory of a busy year should
 /// be the recent facts, not the first two hundred.
 pub const MEMORIES_PER_SCOPE: i64 = 200;
+
+/// How long a memory switched off stays in the store before the sweep deletes
+/// it: off hides at once (A6.2), and what has been hidden this long is gone
+/// (A6.3). The clock is per row — a fact stored while a room was already off
+/// gets its own thirty days, not the tail of the room's.
+pub const MEMORY_OFF_DELETE_DAYS: i32 = 30;
 
 /// How a fact came to be remembered.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -311,8 +326,15 @@ impl AccountStore {
             Some(MemberRole::Member) => return Err(StoreError::Forbidden),
             None => return Err(StoreError::NotFound),
         }
+        // The stamp only moves when the choice actually changes: re-saving
+        // "off" must not hand the room's memories another thirty days of
+        // grace, and must not reset a clock already running (A6.3).
         sqlx::query(
-            "UPDATE chat_channels SET agent_memory = $3, updated_at = now() \
+            "UPDATE chat_channels SET \
+                 agent_memory_set_at = CASE \
+                     WHEN agent_memory IS DISTINCT FROM $3 THEN now() \
+                     ELSE agent_memory_set_at END, \
+                 agent_memory = $3, updated_at = now() \
              WHERE tenant_id = $1 AND id = $2",
         )
         .bind(self.tenant.as_str())
@@ -347,10 +369,12 @@ impl AccountStore {
     ///
     /// Gates **learning** at the end of a turn, and gates **retrieval** the
     /// same way (A6.2): a room switched off hides its memories from later
-    /// turns rather than deleting them (30-day deletion is A6.3) — the rows
-    /// stay, and flipping the switch back on surfaces them again. An explicit
-    /// "remember that …" does not come through here — a person asking by name
-    /// is the consent the switch approximates.
+    /// turns rather than deleting them — the rows stay, and flipping the
+    /// switch back on surfaces them again, until a switch left off for
+    /// [`MEMORY_OFF_DELETE_DAYS`] days lets [`Store::sweep_agent_memories`]
+    /// delete what it hides (A6.3). An explicit "remember that …" does not
+    /// come through here — a person asking by name is the consent the switch
+    /// approximates.
     ///
     /// # Errors
     /// [`StoreError::NotFound`] if the room is not the caller's to see.
@@ -393,6 +417,134 @@ impl AccountStore {
         .await
         .map_err(StoreError::Db)?;
         Ok(())
+    }
+
+    /// Forget every fact learned from one message, both scopes — deletion
+    /// following a withdrawn message (A6.3).
+    ///
+    /// An internal hook: [`AccountStore::delete_message`] calls it after
+    /// tombstoning the message, so the author-only check has already run and
+    /// none is repeated here.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on a database failure.
+    pub(crate) async fn forget_learned_from(&self, message: &ChatMessageId) -> Result<()> {
+        sqlx::query("DELETE FROM agent_memories WHERE tenant_id = $1 AND source_msg = $2")
+            .bind(self.tenant.as_str())
+            .bind(message.as_str())
+            .execute(&self.pool)
+            .await
+            .map_err(StoreError::Db)?;
+        Ok(())
+    }
+
+    /// Forget everything every agent remembers in one room — deletion
+    /// following an archived channel (A6.3).
+    ///
+    /// An internal hook: [`AccountStore::archive_channel`] calls it after the
+    /// room leaves the lists, so the owner check has already run.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on a database failure.
+    pub(crate) async fn forget_channel_memories(&self, channel: &ChatChannelId) -> Result<()> {
+        sqlx::query(
+            "DELETE FROM agent_memories \
+             WHERE tenant_id = $1 AND scope = 'channel' AND channel_id = $2",
+        )
+        .bind(self.tenant.as_str())
+        .bind(channel.as_str())
+        .execute(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(())
+    }
+
+    /// Forget what one agent remembers in one room — deletion following the
+    /// agent's removal from the channel (A6.3). Its past messages stay, they
+    /// are the room's; what it learned here was licensed by its presence.
+    ///
+    /// An internal hook: [`AccountStore::remove_agent_from_channel`] calls it
+    /// after the membership row goes, so the member check has already run.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on a database failure.
+    pub(crate) async fn forget_agent_channel_memories(
+        &self,
+        agent: &ChatAgentId,
+        channel: &ChatChannelId,
+    ) -> Result<()> {
+        sqlx::query(
+            "DELETE FROM agent_memories \
+             WHERE tenant_id = $1 AND scope = 'channel' AND agent_id = $2 AND channel_id = $3",
+        )
+        .bind(self.tenant.as_str())
+        .bind(agent.as_str())
+        .bind(channel.as_str())
+        .execute(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(())
+    }
+}
+
+impl Store {
+    /// Delete what a memory switch left off has been hiding for
+    /// [`MEMORY_OFF_DELETE_DAYS`] days — the fourth deletion source (A6.3),
+    /// run by a background sweep because only time can trigger it.
+    ///
+    /// A room's memory resolves off either by its own switch
+    /// (`agent_memory = false`, off since `agent_memory_set_at`) or by
+    /// following a workspace default that is off (off since the later of the
+    /// default's change and the room's return to following it). The clock is
+    /// per row — `GREATEST(off-since, created_at)` — so a fact stored while a
+    /// room was already off gets its own thirty days of grace, which is what
+    /// keeps an explicit "remember that …" said into an off room from dying
+    /// early. Both scopes follow: a channel's memories through the room's
+    /// switch, a person's memories through their one-to-one's switch — the
+    /// only door those are ever surfaced through. Every condition is joined
+    /// on `tenant_id`, so one tenant's default reaches no other tenant's rows.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on a database failure.
+    pub async fn sweep_agent_memories(&self) -> Result<u64> {
+        let off_channels = sqlx::query(
+            "DELETE FROM agent_memories m \
+             USING chat_channels c \
+             LEFT JOIN agent_memory_defaults d ON d.tenant_id = c.tenant_id \
+             WHERE m.tenant_id = c.tenant_id AND m.scope = 'channel' \
+               AND m.channel_id = c.id \
+               AND ((c.agent_memory = FALSE AND c.agent_memory_set_at IS NOT NULL \
+                     AND GREATEST(c.agent_memory_set_at, m.created_at) \
+                         < now() - make_interval(days => $1)) \
+                 OR (c.agent_memory IS NULL AND d.enabled = FALSE \
+                     AND GREATEST(c.agent_memory_set_at, d.updated_at, m.created_at) \
+                         < now() - make_interval(days => $1)))",
+        )
+        .bind(MEMORY_OFF_DELETE_DAYS)
+        .execute(self.pool())
+        .await
+        .map_err(StoreError::Db)?
+        .rows_affected();
+        let off_dms = sqlx::query(
+            "DELETE FROM agent_memories m \
+             USING chat_channels c \
+             LEFT JOIN agent_memory_defaults d ON d.tenant_id = c.tenant_id \
+             WHERE m.tenant_id = c.tenant_id AND m.scope = 'person' \
+               AND c.kind = 'agent_dm' AND c.agent_id = m.agent_id \
+               AND c.created_by = m.user_id \
+               AND ((c.agent_memory = FALSE AND c.agent_memory_set_at IS NOT NULL \
+                     AND GREATEST(c.agent_memory_set_at, m.created_at) \
+                         < now() - make_interval(days => $1)) \
+                 OR (c.agent_memory IS NULL AND d.enabled = FALSE \
+                     AND GREATEST(c.agent_memory_set_at, d.updated_at, m.created_at) \
+                         < now() - make_interval(days => $1)))",
+        )
+        .bind(MEMORY_OFF_DELETE_DAYS)
+        .execute(self.pool())
+        .await
+        .map_err(StoreError::Db)?
+        .rows_affected();
+        Ok(off_channels + off_dms)
     }
 }
 

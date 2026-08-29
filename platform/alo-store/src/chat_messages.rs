@@ -542,6 +542,9 @@ impl AccountStore {
             .execute(&self.pool)
             .await
             .map_err(StoreError::Db)?;
+        // And so are the facts agents learned from them (A6.3): a memory
+        // citing an empty tombstone would outlive the consent it rests on.
+        self.forget_learned_from(id).await?;
         Ok(())
     }
 

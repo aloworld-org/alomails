@@ -34,10 +34,13 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use serde_json::{Value, json};
 
+use sqlx::postgres::PgPoolOptions;
+
 use crate::common::model::{says, scripted_model, use_model};
-use crate::common::{Harness, harness, harness_on, send};
+use crate::common::{Harness, database_url, harness, harness_on, send};
 use alo_store::{
-    AgentMemory, AgentProduct, ChatAgentId, ChatChannelId, MemoryLearnedFrom, StoreError,
+    AgentMemory, AgentProduct, ChannelVisibility, ChatAgentId, ChatChannelId, MemoryLearnedFrom,
+    StoreError,
 };
 
 async fn post(app: &Router, token: &str, uri: &str, body: Value) -> (StatusCode, Value) {
@@ -53,6 +56,16 @@ async fn post(app: &Router, token: &str, uri: &str, body: Value) -> (StatusCode,
 
 async fn get(app: &Router, token: &str, uri: &str) -> (StatusCode, Value) {
     let req = Request::builder()
+        .uri(uri)
+        .header("authorization", format!("Bearer {token}"))
+        .body(Body::empty())
+        .unwrap();
+    send(app, req).await
+}
+
+async fn del(app: &Router, token: &str, uri: &str) -> (StatusCode, Value) {
+    let req = Request::builder()
+        .method("DELETE")
         .uri(uri)
         .header("authorization", format!("Bearer {token}"))
         .body(Body::empty())
@@ -976,6 +989,426 @@ async fn a_dm_turn_reads_the_askers_own_memories_and_nobody_elses() {
     assert!(
         !prompt.contains("morning meetings") && !prompt.contains("late afternoons"),
         "{prompt}"
+    );
+}
+
+/// **Deletion follows the withdrawn message** (A6.3): the facts an agent
+/// learned from it go with it — in a room and in a one-to-one alike — and
+/// only that message's facts, everywhere else untouched.
+#[tokio::test]
+async fn a_withdrawn_message_takes_the_facts_learned_from_it() {
+    let h = harness("memsrc").await;
+    let (channel, agent) = a_room_with(&h, "billing", AgentProduct::Billing).await;
+    let withdrawn = ask_for(
+        &h,
+        &h.token,
+        &channel,
+        "@billing remember that Northstar invoices are net 30",
+        "remember",
+    )
+    .await;
+    ask_for(
+        &h,
+        &h.token,
+        &channel,
+        "@billing remember that the X100 ships from Ghent",
+        "remember",
+    )
+    .await;
+
+    let (status, body) = del(&h.app, &h.token, &format!("/chat/messages/{withdrawn}")).await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
+    let rows = h
+        .acc
+        .channel_memories(&agent, &ChatChannelId::new(channel))
+        .await
+        .unwrap();
+    assert_eq!(rows.len(), 1, "only the withdrawn message's fact went");
+    assert_eq!(rows[0].fact, "the X100 ships from Ghent");
+
+    // The same rule in a one-to-one: withdrawing the instruction forgets it.
+    let agenda = h
+        .acc
+        .create_agent("agenda", "Agenda", None, AgentProduct::Agenda)
+        .await
+        .unwrap();
+    let (status, room) = post(
+        &h.app,
+        &h.token,
+        &format!("/chat/agents/{}/dm", agenda.as_str()),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{room}");
+    let dm = room["id"].as_str().unwrap().to_owned();
+    let told = ask_for(
+        &h,
+        &h.token,
+        &dm,
+        "Remember that I prefer morning meetings",
+        "remember",
+    )
+    .await;
+    assert_eq!(h.acc.my_memories(&agenda).await.unwrap().len(), 1);
+    let (status, body) = del(&h.app, &h.token, &format!("/chat/messages/{told}")).await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
+    assert!(
+        h.acc.my_memories(&agenda).await.unwrap().is_empty(),
+        "the person's memory follows their withdrawn words too"
+    );
+}
+
+/// **An archived room, and an agent shown the door, both forget** (A6.3).
+/// Removing one agent takes only its memories of that room; archiving the
+/// room takes every agent's — and neither reaches another room or what an
+/// agent remembers about a person.
+#[tokio::test]
+async fn an_archived_room_and_a_removed_agent_forget_what_was_learned_there() {
+    let h = harness("memgone").await;
+    let (deals, billing) = a_room_with(&h, "billing", AgentProduct::Billing).await;
+    let tasks = h
+        .acc
+        .create_agent("tasks", "Tasks", None, AgentProduct::Tasks)
+        .await
+        .unwrap();
+    let deals_id = ChatChannelId::new(deals.clone());
+    h.acc.add_agent_to_channel(&deals_id, &tasks).await.unwrap();
+    // A second room with the same billing agent, whose memory must survive.
+    let (status, body) = post(
+        &h.app,
+        &h.token,
+        "/chat/channels",
+        json!({ "name": "ops", "visibility": "public" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let ops = body["id"].as_str().unwrap().to_owned();
+    let ops_id = ChatChannelId::new(ops.clone());
+    h.acc.add_agent_to_channel(&ops_id, &billing).await.unwrap();
+
+    ask_for(
+        &h,
+        &h.token,
+        &deals,
+        "@billing remember that Northstar invoices are net 30",
+        "remember",
+    )
+    .await;
+    ask_for(
+        &h,
+        &h.token,
+        &deals,
+        "@tasks remember that Fridays are for reviews",
+        "remember",
+    )
+    .await;
+    ask_for(
+        &h,
+        &h.token,
+        &ops,
+        "@billing remember that ops invoices go to Rotterdam",
+        "remember",
+    )
+    .await;
+    // And what the agent knows about a person, which no room's fate touches.
+    let (status, room) = post(
+        &h.app,
+        &h.token,
+        &format!("/chat/agents/{}/dm", billing.as_str()),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{room}");
+    let dm = room["id"].as_str().unwrap().to_owned();
+    ask_for(
+        &h,
+        &h.token,
+        &dm,
+        "Remember that I prefer morning meetings",
+        "remember",
+    )
+    .await;
+
+    // Removing billing from deals forgets ITS memories of deals — and
+    // nothing else's, and nowhere else's.
+    let (status, body) = del(
+        &h.app,
+        &h.token,
+        &format!("/chat/channels/{deals}/agents/{}", billing.as_str()),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
+    assert!(
+        h.acc
+            .channel_memories(&billing, &deals_id)
+            .await
+            .unwrap()
+            .is_empty(),
+        "the removed agent's memories of the room went"
+    );
+    assert_eq!(
+        h.acc
+            .channel_memories(&tasks, &deals_id)
+            .await
+            .unwrap()
+            .len(),
+        1,
+        "another agent's memory of the same room stays"
+    );
+    assert_eq!(
+        h.acc
+            .channel_memories(&billing, &ops_id)
+            .await
+            .unwrap()
+            .len(),
+        1,
+        "the same agent's memory of another room stays"
+    );
+
+    // Archiving the room forgets every agent's memories of it.
+    let (status, body) = post(
+        &h.app,
+        &h.token,
+        &format!("/chat/channels/{deals}/archive"),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert!(
+        h.acc
+            .channel_memories(&tasks, &deals_id)
+            .await
+            .unwrap()
+            .is_empty(),
+        "an archived room's memories went with its place in the lists"
+    );
+    assert_eq!(
+        h.acc
+            .channel_memories(&billing, &ops_id)
+            .await
+            .unwrap()
+            .len(),
+        1
+    );
+    assert_eq!(
+        h.acc.my_memories(&billing).await.unwrap().len(),
+        1,
+        "what the agent knows about the person is not the room's to take"
+    );
+}
+
+/// **A switch left off for thirty days deletes what it hides** (A6.3). The
+/// sweep follows the room's own OFF, a workspace default OFF for rooms that
+/// never chose, and a one-to-one's OFF alike; a room switched ON keeps
+/// everything; a fact stored while the room was already off gets its own
+/// thirty days; and one tenant's OFF default reaches no other tenant's rows.
+#[tokio::test]
+async fn a_switch_left_off_for_thirty_days_deletes_what_it_hides() {
+    let h = harness("memsweep").await;
+    h.ts.set_admin(&h.user, true).await.unwrap();
+    let (off_room, agent) = a_room_with(&h, "billing", AgentProduct::Billing).await;
+    let (status, body) = post(
+        &h.app,
+        &h.token,
+        "/chat/channels",
+        json!({ "name": "chose-on", "visibility": "public" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let on_room = body["id"].as_str().unwrap().to_owned();
+    h.acc
+        .add_agent_to_channel(&ChatChannelId::new(on_room.clone()), &agent)
+        .await
+        .unwrap();
+    let (status, body) = post(
+        &h.app,
+        &h.token,
+        "/chat/channels",
+        json!({ "name": "follows-default", "visibility": "public" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let default_room = body["id"].as_str().unwrap().to_owned();
+    h.acc
+        .add_agent_to_channel(&ChatChannelId::new(default_room.clone()), &agent)
+        .await
+        .unwrap();
+    let (status, room) = post(
+        &h.app,
+        &h.token,
+        &format!("/chat/agents/{}/dm", agent.as_str()),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{room}");
+    let dm = room["id"].as_str().unwrap().to_owned();
+
+    switch_memory(&h, &h.token, &off_room, false).await;
+    switch_memory(&h, &h.token, &on_room, true).await;
+    switch_memory(&h, &h.token, &dm, false).await;
+    let (status, body) = post(
+        &h.app,
+        &h.token,
+        "/admin/agent-memory",
+        json!({ "enabled": false }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+
+    // Explicit remembering ignores every switch — which is how the rows the
+    // sweep will judge get seeded at all.
+    ask_for(
+        &h,
+        &h.token,
+        &off_room,
+        "@billing remember that the old fact was hidden here",
+        "remember",
+    )
+    .await;
+    ask_for(
+        &h,
+        &h.token,
+        &on_room,
+        "@billing remember that this room chose to keep learning",
+        "remember",
+    )
+    .await;
+    ask_for(
+        &h,
+        &h.token,
+        &default_room,
+        "@billing remember that this room never chose",
+        "remember",
+    )
+    .await;
+    ask_for(
+        &h,
+        &h.token,
+        &dm,
+        "Remember that I prefer morning meetings",
+        "remember",
+    )
+    .await;
+
+    // Another tenant on the same store, its default untouched: its rows may
+    // never follow this tenant's OFF, however old they grow.
+    let other = harness_on(std::sync::Arc::clone(&h.store), "memsweepb").await;
+    let their_room = other
+        .acc
+        .create_channel("their-deals", None, ChannelVisibility::Public)
+        .await
+        .unwrap();
+    let their_agent = other
+        .acc
+        .create_agent("billing", "billing", None, AgentProduct::Billing)
+        .await
+        .unwrap();
+    other
+        .acc
+        .add_agent_to_channel(&their_room, &their_agent)
+        .await
+        .unwrap();
+    other
+        .acc
+        .remember_in_channel(
+            &their_agent,
+            &their_room,
+            "their fact, their switch",
+            None,
+            MemoryLearnedFrom::Explicit,
+        )
+        .await
+        .unwrap();
+
+    // Not before its time: everything is younger than thirty days.
+    h.store.sweep_agent_memories().await.unwrap();
+    let off_id = ChatChannelId::new(off_room.clone());
+    assert_eq!(
+        h.acc.channel_memories(&agent, &off_id).await.unwrap().len(),
+        1,
+        "hidden is not deleted until the thirty days pass"
+    );
+
+    // Thirty-one days pass — for the switches, for the workspace default,
+    // and for every row so far (the other tenant's age too).
+    let pool = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(&database_url())
+        .await
+        .unwrap();
+    sqlx::query(
+        "UPDATE chat_channels SET agent_memory_set_at = now() - interval '31 days' \
+         WHERE tenant_id = $1 AND id IN ($2, $3)",
+    )
+    .bind(h.tenant.as_str())
+    .bind(&off_room)
+    .bind(&dm)
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "UPDATE agent_memory_defaults SET updated_at = now() - interval '31 days' \
+         WHERE tenant_id = $1",
+    )
+    .bind(h.tenant.as_str())
+    .execute(&pool)
+    .await
+    .unwrap();
+    for tenant in [h.tenant.as_str(), other.tenant.as_str()] {
+        sqlx::query(
+            "UPDATE agent_memories SET created_at = now() - interval '31 days' \
+             WHERE tenant_id = $1",
+        )
+        .bind(tenant)
+        .execute(&pool)
+        .await
+        .unwrap();
+    }
+    // A fact stored while the room was already off gets its own thirty days.
+    ask_for(
+        &h,
+        &h.token,
+        &off_room,
+        "@billing remember that the fresh fact is younger",
+        "remember",
+    )
+    .await;
+
+    h.store.sweep_agent_memories().await.unwrap();
+
+    let rows = h.acc.channel_memories(&agent, &off_id).await.unwrap();
+    assert_eq!(rows.len(), 1, "the room's aged memories went: {rows:?}");
+    assert_eq!(rows[0].fact, "the fresh fact is younger");
+    assert!(
+        h.acc
+            .channel_memories(&agent, &ChatChannelId::new(default_room))
+            .await
+            .unwrap()
+            .is_empty(),
+        "a room that follows an OFF default is swept on the default's clock"
+    );
+    assert_eq!(
+        h.acc
+            .channel_memories(&agent, &ChatChannelId::new(on_room))
+            .await
+            .unwrap()
+            .len(),
+        1,
+        "a room switched ON keeps its memories whatever the default says"
+    );
+    assert!(
+        h.acc.my_memories(&agent).await.unwrap().is_empty(),
+        "a one-to-one switched off is swept the same way"
+    );
+    assert_eq!(
+        other
+            .acc
+            .channel_memories(&their_agent, &their_room)
+            .await
+            .unwrap()
+            .len(),
+        1,
+        "one tenant's OFF default reaches no other tenant's rows"
     );
 }
 

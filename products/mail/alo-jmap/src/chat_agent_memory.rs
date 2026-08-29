@@ -24,7 +24,12 @@
 //! a turn inside somebody else's one-to-one reads nothing, because the only
 //! memories in scope there belong to the room's own counterpart. A room
 //! switched off hides its memories from retrieval rather than deleting them
-//! (the design's "off hides"; 30-day deletion is A6.3).
+//! (the design's "off hides") — until the switch has been off thirty days,
+//! when the store's background sweep deletes what it hides. **Deletion
+//! follows the source** (A6.3) on the other three paths too, synchronously in
+//! the store: a withdrawn message takes the facts learned from it, an
+//! archived room takes its channel memories, and an agent removed from a room
+//! takes what it learned there.
 
 use axum::Json;
 use axum::extract::{Path, State};

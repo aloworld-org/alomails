@@ -657,6 +657,10 @@ impl AccountStore {
         .execute(&self.pool)
         .await
         .map_err(StoreError::Db)?;
+        // The room's history stays readable; what its agents learned there
+        // does not (A6.3) — an archived room takes no further turns, so its
+        // memories have no surface left to be right on.
+        self.forget_channel_memories(id).await?;
         Ok(())
     }
 
