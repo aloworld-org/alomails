@@ -30,6 +30,7 @@ pub mod crm_intents;
 pub mod doc_blocks;
 pub mod docs_intents;
 pub mod drive_intents;
+pub mod evaluation;
 pub mod finance_intents;
 pub mod hr_intents;
 pub mod insights;
