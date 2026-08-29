@@ -2173,6 +2173,41 @@ export const en = {
   agentInstructionsLoadFailed: "The standing instructions couldn’t be loaded.",
   agentInstructionCreateFailed: "That instruction couldn’t be added.",
   agentInstructionCancelFailed: "That couldn’t be cancelled.",
+  recordAgentTitle: "This record’s agent",
+  recordAgentOriginNone: "This record doesn’t say where it came from.",
+  recordAgentOriginPerson: (who: string): string => `Created by ${who}.`,
+  recordAgentOriginThread: (room: string): string =>
+    `Captured from the “${room}” conversation.`,
+  recordAgentOriginThreadUnnamed: "Captured from a conversation.",
+  recordAgentOriginEmail: "Raised from an email.",
+  recordAgentOriginEvent: "From a calendar event.",
+  recordAgentOriginQuote: (quote: string): string =>
+    `Raised from quote ${quote}.`,
+  recordAgentOriginFrom: (source: string): string => `From ${source}.`,
+  recordAgentOpenSource: "Open it",
+  recordAgentCanDo: (handle: string): string => `What @${handle} can do here`,
+  recordAgentAskPlaceholder: (handle: string): string =>
+    `Ask @${handle} about this…`,
+  recordAgentAsk: "Ask",
+  recordAgentAsking: (handle: string): string => `Asking @${handle}…`,
+  recordAgentNoAnswerYet:
+    "No answer yet — it will land in the conversation.",
+  recordAgentOpenConversation: "Open the conversation",
+  recordAgentAskFailed: "That couldn’t be asked.",
+  recordAgentVerbFailed: "That couldn’t be started.",
+  recordAgentAskAbout: (record: string, question: string): string =>
+    `About “${record}”: ${question}`,
+  recordAgentVerbChaseTask: "Chase it",
+  recordAgentVerbSetTaskPriority: "Set its priority",
+  recordAgentVerbCompleteTask: "Mark it done",
+  recordAgentVerbReassignTask: "Hand it over",
+  recordAgentDraftChaseTask: (task: string): string => `Chase “${task}”.`,
+  recordAgentDraftSetTaskPriority: (task: string): string =>
+    `Set the priority of “${task}” to `,
+  recordAgentDraftCompleteTask: (task: string): string =>
+    `Mark “${task}” as done.`,
+  recordAgentDraftReassignTask: (task: string): string =>
+    `Reassign “${task}” to `,
   chatSearchPlaceholder: "Search messages, people, channels…",
   chatSearchClear: "Clear search",
   chatSearchNothing: "Nothing matched.",

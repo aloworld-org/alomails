@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 
 import { strings } from "../i18n";
+import { RecordAgentPanel, type RecordOrigin } from "../agents";
 import {
   useJmapClient,
   type Task,
@@ -72,6 +73,28 @@ interface Props {
   onClose: () => void;
   /** Called after any change so the board/list can refresh. */
   onChanged: () => void;
+}
+
+/** Where this task came from, in the provenance shape the agent panel
+ *  renders. Tasks carried a source link before provenance existed
+ *  (ADR 0021: the email, event or conversation a capture came from), so
+ *  that is the origin; a task typed in by hand says who created it, read
+ *  from the activity trail its record already carries. */
+export function taskOrigin(data: TaskDetailData): RecordOrigin | null {
+  const t = data.task;
+  if (t.sourceKind === "chat" && t.sourceId !== null) {
+    return { kind: "thread", id: t.sourceId, label: null };
+  }
+  if (t.sourceKind === "email" && t.sourceId !== null) {
+    return { kind: "message", id: t.sourceId, label: null };
+  }
+  if (t.sourceKind === "event" && t.sourceId !== null) {
+    return { kind: "event", id: t.sourceId, label: null };
+  }
+  const created = data.activity.find((entry) => entry.kind === "created");
+  return created === undefined
+    ? null
+    : { kind: "person", id: created.actor, label: created.actor };
 }
 
 export type TaskTimerState = "idle" | "this-task" | "another-task";
@@ -625,6 +648,15 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
               </div>
             </div>
           </div>
+
+          <RecordAgentPanel
+            product="tasks"
+            recordKind="task"
+            recordId={t.id}
+            recordLabel={t.title}
+            origin={taskOrigin(data)}
+            onBeforeNavigate={onClose}
+          />
 
           <section className="flex flex-col gap-2 border-t border-subtle pt-4">
             <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary [&>svg]:text-tertiary">

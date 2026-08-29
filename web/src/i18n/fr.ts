@@ -5934,6 +5934,45 @@ export const fr: Partial<Catalog> = {
     "Impossible de charger les instructions permanentes.",
   agentInstructionCreateFailed: "Impossible d’ajouter cette instruction.",
   agentInstructionCancelFailed: "Impossible d’annuler cette instruction.",
+  recordAgentTitle: "L’agent de cette fiche",
+  recordAgentOriginNone: "Cette fiche n’indique pas d’où elle vient.",
+  recordAgentOriginPerson: (who: string): string => `Créée par ${who}.`,
+  recordAgentOriginThread: (room: string): string =>
+    `Issue de la conversation « ${room} ».`,
+  recordAgentOriginThreadUnnamed: "Issue d’une conversation.",
+  recordAgentOriginEmail: "Issue d’un e-mail.",
+  recordAgentOriginEvent: "Issue d’un événement d’agenda.",
+  recordAgentOriginQuote: (quote: string): string =>
+    `Issue du devis ${quote}.`,
+  recordAgentOriginFrom: (source: string): string =>
+    `Provenance : ${source}.`,
+  recordAgentOpenSource: "Ouvrir",
+  recordAgentCanDo: (handle: string): string =>
+    `Ce que @${handle} peut faire ici`,
+  recordAgentAskPlaceholder: (handle: string): string =>
+    `Interroger @${handle} à ce sujet…`,
+  recordAgentAsk: "Demander",
+  recordAgentAsking: (handle: string): string =>
+    `Question posée à @${handle}…`,
+  recordAgentNoAnswerYet:
+    "Pas encore de réponse — elle arrivera dans la conversation.",
+  recordAgentOpenConversation: "Ouvrir la conversation",
+  recordAgentAskFailed: "Impossible de poser cette question.",
+  recordAgentVerbFailed: "Impossible de lancer cette action.",
+  recordAgentAskAbout: (record: string, question: string): string =>
+    `À propos de « ${record} » : ${question}`,
+  recordAgentVerbChaseTask: "Relancer",
+  recordAgentVerbSetTaskPriority: "Définir sa priorité",
+  recordAgentVerbCompleteTask: "Marquer comme terminée",
+  recordAgentVerbReassignTask: "Confier à quelqu’un",
+  recordAgentDraftChaseTask: (task: string): string =>
+    `Relance « ${task} ».`,
+  recordAgentDraftSetTaskPriority: (task: string): string =>
+    `Passe la priorité de « ${task} » à `,
+  recordAgentDraftCompleteTask: (task: string): string =>
+    `Marque « ${task} » comme terminée.`,
+  recordAgentDraftReassignTask: (task: string): string =>
+    `Réattribue « ${task} » à `,
   chatAgentTag: "agent",
   chatAgentsAvailable: "Disponibles à ajouter",
   chatAgentsHere: "Agents dans cette conversation",

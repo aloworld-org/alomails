@@ -10,6 +10,7 @@
 // optimistic â€” the line appears at once and is reconciled by the refetch â€” so a
 // click is never answered by silence (law 6).
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Archive,
   Hash,
@@ -126,6 +127,23 @@ export function ChatModule() {
   // browsing act, not something every sidebar draw should pay for.
   const directory = useRoomDirectory(setError);
   const { channels, openId, setOpenId, creating, browsing, setBrowsing, dmQuery, setDmQuery, dmFound, setDmFound, finding, found, loadChannels, find, findPeople, openDm, renameRoom, describeRoom, archiveRoom, browse, joinRoom, createChannel } = directory;
+  // Another module's door into a conversation: /chat?channel=<id> opens the
+  // room, and &draft=<words> seeds the composer — the record panel's verb
+  // buttons arrive this way with the ask pre-filled (A8.4). The person still
+  // sends; nothing is said by navigation. Cleared once read, like Mail's
+  // ?open=.
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const seededChannel = searchParams.get("channel");
+    if (seededChannel === null) return;
+    const seededDraft = searchParams.get("draft");
+    setOpenId(seededChannel);
+    if (seededDraft !== null && seededDraft !== "") {
+      drafts.current.set(seededChannel, seededDraft);
+      setDraft(seededDraft);
+    }
+    setSearchParams({}, { replace: true });
+  }, [searchParams, setSearchParams, setOpenId]);
   const { feedRef, messages, setMessages, turns, palette, nameable, readUpTo, moreBehind, loadingOlder, loadMessages, loadTurns, loadOlder, editMessage, withdrawMessage, decide, react } = useChatFeed(openId, channels, loadChannels, setError);
   const { staged, setStaged, picking, setPicking, dropping, setDropping, shareDropped, mergePicked } = useChatAttachments(setError);
 

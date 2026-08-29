@@ -5868,6 +5868,45 @@ export const nl: Partial<Catalog> = {
     "De vaste instructies konden niet worden geladen.",
   agentInstructionCreateFailed: "Die instructie kon niet worden toegevoegd.",
   agentInstructionCancelFailed: "Dat kon niet worden geannuleerd.",
+  recordAgentTitle: "De agent van dit item",
+  recordAgentOriginNone: "Dit item zegt niet waar het vandaan komt.",
+  recordAgentOriginPerson: (who: string): string =>
+    `Aangemaakt door ${who}.`,
+  recordAgentOriginThread: (room: string): string =>
+    `Vastgelegd uit het gesprek “${room}”.`,
+  recordAgentOriginThreadUnnamed: "Vastgelegd uit een gesprek.",
+  recordAgentOriginEmail: "Ontstaan uit een e-mail.",
+  recordAgentOriginEvent: "Uit een agenda-afspraak.",
+  recordAgentOriginQuote: (quote: string): string =>
+    `Ontstaan uit offerte ${quote}.`,
+  recordAgentOriginFrom: (source: string): string => `Uit ${source}.`,
+  recordAgentOpenSource: "Openen",
+  recordAgentCanDo: (handle: string): string =>
+    `Wat @${handle} hier kan doen`,
+  recordAgentAskPlaceholder: (handle: string): string =>
+    `Vraag @${handle} hiernaar…`,
+  recordAgentAsk: "Vragen",
+  recordAgentAsking: (handle: string): string =>
+    `Vraag gesteld aan @${handle}…`,
+  recordAgentNoAnswerYet:
+    "Nog geen antwoord — het verschijnt in het gesprek.",
+  recordAgentOpenConversation: "Gesprek openen",
+  recordAgentAskFailed: "Die vraag kon niet worden gesteld.",
+  recordAgentVerbFailed: "Dat kon niet worden gestart.",
+  recordAgentAskAbout: (record: string, question: string): string =>
+    `Over “${record}”: ${question}`,
+  recordAgentVerbChaseTask: "Opvolgen",
+  recordAgentVerbSetTaskPriority: "Prioriteit instellen",
+  recordAgentVerbCompleteTask: "Afronden",
+  recordAgentVerbReassignTask: "Overdragen",
+  recordAgentDraftChaseTask: (task: string): string =>
+    `Volg “${task}” op.`,
+  recordAgentDraftSetTaskPriority: (task: string): string =>
+    `Zet de prioriteit van “${task}” op `,
+  recordAgentDraftCompleteTask: (task: string): string =>
+    `Markeer “${task}” als afgerond.`,
+  recordAgentDraftReassignTask: (task: string): string =>
+    `Wijs “${task}” toe aan `,
   chatAgentTag: "agent",
   chatAgentsAvailable: "Beschikbaar om toe te voegen",
   chatAgentsHere: "Agents in dit gesprek",

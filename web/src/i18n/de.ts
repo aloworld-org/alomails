@@ -1849,6 +1849,45 @@ export const de: Partial<Catalog> = {
   agentInstructionCreateFailed:
     "Die Anweisung konnte nicht hinzugefügt werden.",
   agentInstructionCancelFailed: "Das konnte nicht abgebrochen werden.",
+  recordAgentTitle: "Der Agent dieses Eintrags",
+  recordAgentOriginNone: "Dieser Eintrag sagt nicht, woher er stammt.",
+  recordAgentOriginPerson: (who: string): string =>
+    `Erstellt von ${who}.`,
+  recordAgentOriginThread: (room: string): string =>
+    `Festgehalten aus der Unterhaltung „${room}“.`,
+  recordAgentOriginThreadUnnamed: "Festgehalten aus einer Unterhaltung.",
+  recordAgentOriginEmail: "Entstanden aus einer E-Mail.",
+  recordAgentOriginEvent: "Aus einem Kalendertermin.",
+  recordAgentOriginQuote: (quote: string): string =>
+    `Entstanden aus Angebot ${quote}.`,
+  recordAgentOriginFrom: (source: string): string => `Aus ${source}.`,
+  recordAgentOpenSource: "Öffnen",
+  recordAgentCanDo: (handle: string): string =>
+    `Was @${handle} hier tun kann`,
+  recordAgentAskPlaceholder: (handle: string): string =>
+    `@${handle} dazu fragen…`,
+  recordAgentAsk: "Fragen",
+  recordAgentAsking: (handle: string): string =>
+    `Frage an @${handle} gestellt…`,
+  recordAgentNoAnswerYet:
+    "Noch keine Antwort — sie erscheint in der Unterhaltung.",
+  recordAgentOpenConversation: "Unterhaltung öffnen",
+  recordAgentAskFailed: "Die Frage konnte nicht gestellt werden.",
+  recordAgentVerbFailed: "Das konnte nicht gestartet werden.",
+  recordAgentAskAbout: (record: string, question: string): string =>
+    `Zu „${record}“: ${question}`,
+  recordAgentVerbChaseTask: "Nachhaken",
+  recordAgentVerbSetTaskPriority: "Priorität setzen",
+  recordAgentVerbCompleteTask: "Als erledigt markieren",
+  recordAgentVerbReassignTask: "Übergeben",
+  recordAgentDraftChaseTask: (task: string): string =>
+    `Hake bei „${task}“ nach.`,
+  recordAgentDraftSetTaskPriority: (task: string): string =>
+    `Setze die Priorität von „${task}“ auf `,
+  recordAgentDraftCompleteTask: (task: string): string =>
+    `Markiere „${task}“ als erledigt.`,
+  recordAgentDraftReassignTask: (task: string): string =>
+    `Übertrage „${task}“ an `,
   chatSearchPlaceholder: "Nachrichten, Personen, Kanäle durchsuchen…",
   chatSearchClear: "Suche leeren",
   chatSearchNothing: "Nichts gefunden.",

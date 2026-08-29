@@ -19,20 +19,23 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 
 import { DialogProvider } from "../ds";
 import { strings } from "../i18n";
 import { ChatModule } from "./ChatModule";
 import type { ChannelSummary, FeedMessage } from "./types";
 
-/** The module asks for dialogs, so it must be mounted the way the app mounts
- *  it — inside the provider. Rendering it bare tested a shape that never
- *  ships. */
+/** The module asks for dialogs and reads the URL's seeded room, so it must
+ *  be mounted the way the app mounts it — inside the provider and a router.
+ *  Rendering it bare tested a shape that never ships. */
 function mount() {
   return render(
-    <DialogProvider>
-      <ChatModule />
-    </DialogProvider>,
+    <MemoryRouter>
+      <DialogProvider>
+        <ChatModule />
+      </DialogProvider>
+    </MemoryRouter>,
   );
 }
 
