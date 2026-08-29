@@ -329,6 +329,18 @@ pub async fn get_task(
     else {
         return Err(Problem::with(StatusCode::NOT_FOUND, "no such task"));
     };
+    Ok(Json(task_record(&state, &account, &task).await?))
+}
+
+/// One task in full — the record `GET /tasks/:id` serves, shared with the
+/// Tasks agent's `task_lookup` executor (`crate::tasks_intents`) so both read
+/// the same view (A4.1b-style: behaviour unchanged, one assembly).
+pub(crate) async fn task_record(
+    state: &AppState,
+    account: &crate::state::Account,
+    task: &Task,
+) -> Result<Value, Problem> {
+    let tid = task.id.clone();
     let subtasks = account
         .acc
         .subtasks(&tid)
@@ -366,7 +378,7 @@ pub async fn get_task(
         .await
         .map_err(|_| Problem::server_error())?;
     let ts = state.store.for_tenant(account.tenant.clone());
-    let emails = resolve_emails(&ts, std::slice::from_ref(&task)).await;
+    let emails = resolve_emails(&ts, std::slice::from_ref(task)).await;
     // Resolve comment/activity actors too.
     let mut actor_ids: Vec<String> = comments.iter().map(|c| c.author.clone()).collect();
     actor_ids.extend(activity.iter().map(|a| a.actor.clone()));
@@ -380,8 +392,8 @@ pub async fn get_task(
         }
     }
     let name = |u: &str| actors.get(u).cloned().unwrap_or_else(|| u.to_owned());
-    Ok(Json(json!({
-        "task": task_json(&task, &emails),
+    Ok(json!({
+        "task": task_json(task, &emails),
         "subtasks": subtasks.iter().map(|s| json!({
             "id": s.id.as_str(), "title": s.title, "done": s.done,
         })).collect::<Vec<_>>(),
@@ -401,7 +413,7 @@ pub async fn get_task(
         "blockedBy": blocked_by.iter().map(|d| json!({
             "id": d.id.as_str(), "title": d.title, "status": d.status,
         })).collect::<Vec<_>>(),
-    })))
+    }))
 }
 
 /// `PUT /tasks/:id` → `{status:"ok"}` — edit title/description/assignee/due/

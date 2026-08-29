@@ -769,14 +769,18 @@ mod tests {
                 // write and is not here.
                 "find_a_time",
                 "meeting_prep",
-                // A2.7: the Tasks agent reads the list it used to be able only
-                // to add to — what is unfinished, who is late on the boards
-                // the asker can open, and what a room agreed. Changing a
-                // priority, chasing somebody and writing a conversation's
-                // actions down are writes and are not here.
+                // A2.7, AB.4: the Tasks agent reads the list it used to be
+                // able only to add to — what is unfinished, who is late on
+                // the boards the asker can open, what a room agreed, one
+                // board's open work and one task in full, rendered from the
+                // intent registry. Changing a priority, chasing somebody,
+                // writing a conversation's actions down, completing and
+                // handing over are writes and are not here.
                 "my_plate",
                 "overdue_by_owner",
                 "thread_actions",
+                "board_tasks",
+                "task_lookup",
                 // AC.1: the Chat agent's reads, rendered from the intent
                 // registry — the rooms, the unread, the membership, and the
                 // two the old tool set already had. Posting and creating a
@@ -893,7 +897,7 @@ mod tests {
                 "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 117);
+        assert_eq!(all_tools().len(), 121);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }

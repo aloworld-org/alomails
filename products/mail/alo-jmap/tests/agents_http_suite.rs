@@ -37,4 +37,5 @@ mod agent_sheets_http;
 mod agent_sheets_intents_http;
 mod agent_sites_http;
 mod agent_tasks_http;
+mod agent_tasks_intents_http;
 mod agent_two_questions_http;

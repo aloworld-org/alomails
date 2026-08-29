@@ -1,11 +1,15 @@
-//! Executing the **Tasks** agent's tools past `create_task` (ADR 0034, queue
-//! item A2.7) — what is on somebody's plate, who is late, and the two ways a
-//! conversation turns into work.
+//! Executing the **Tasks** agent's kept tools (ADR 0034, queue item A2.7) —
+//! adding to somebody's list, what is on their plate, who is late, and the
+//! two ways a conversation turns into work.
 //!
 //! Its own file rather than more functions in [`crate::agent`], because these
-//! are a product's tools rather than the assistant's: `create_task` stays in
-//! the dispatcher's own module only because it was there before agents had
-//! products, and everything A2.7 adds is here.
+//! are a product's tools rather than the assistant's: `create_task` sat in
+//! the dispatcher's own module from before agents had products until AB.4
+//! moved it home, and everything A2.7 added is here. The verbs AB.4 adds —
+//! one board's open work, one task in full, completing and handing over —
+//! execute in [`crate::tasks_intents`], which is also the module's one
+//! dispatch row; the helpers they share (the board reach, the title
+//! resolver) are this file's.
 //!
 //! Five rules hold the module together, and each is a way the obvious
 //! implementation would be wrong:
@@ -105,8 +109,10 @@ fn days_late(task: &Task, today: Date) -> Option<i64> {
     (due < today_start(today)).then(|| (today_start(today) - due).whole_days().max(1))
 }
 
-/// Every board the caller can open, newest-first-bounded, as `(id, name)`.
-async fn boards(account: &Account) -> Result<Vec<(ProjectId, String)>, Problem> {
+/// Every board the caller can open, newest-first-bounded, as `(id, name)` —
+/// the reach this module and the intent executors in
+/// [`crate::tasks_intents`] share.
+pub(crate) async fn boards(account: &Account) -> Result<Vec<(ProjectId, String)>, Problem> {
     Ok(account
         .acc
         .task_projects()
@@ -123,7 +129,7 @@ async fn boards(account: &Account) -> Result<Vec<(ProjectId, String)>, Problem> 
 ///
 /// "Unfinished" is the `done` column excluded, not `completed_at`: a task
 /// dragged out of `done` is open again, and the timestamp survives the drag.
-async fn open_tasks(account: &Account) -> Result<Vec<(Task, String)>, Problem> {
+pub(crate) async fn open_tasks(account: &Account) -> Result<Vec<(Task, String)>, Problem> {
     let mut out = Vec::new();
     for (id, name) in boards(account).await? {
         let tasks = account
@@ -435,7 +441,10 @@ async fn captured_from(account: &Account, channel: &ChatChannelId) -> Result<Vec
 /// # Errors
 /// 422 when nothing was named, when nothing matches, or when several tasks do
 /// — the last listing them, so the next turn can say which.
-async fn resolve_task(account: &Account, args: &Value) -> Result<(Task, String), Problem> {
+pub(crate) async fn resolve_task(
+    account: &Account,
+    args: &Value,
+) -> Result<(Task, String), Problem> {
     let wanted =
         string_arg(args, "task").ok_or_else(|| unprocessable("say which task, by its title"))?;
     let open = open_tasks(account).await?;
@@ -446,6 +455,51 @@ async fn resolve_task(account: &Account, args: &Value) -> Result<(Task, String),
         .collect();
     let at = pick(&wanted, candidates, "unfinished task")?;
     open.into_iter().nth(at).ok_or_else(Problem::server_error)
+}
+
+/// `create_task` — one to-do on the caller's personal project, active straight
+/// away. Reuses the same tenant-scoped `create_task` the `/tasks` route uses —
+/// no new storage path. Runs only from the asker's own approval (ADR 0047 §1).
+///
+/// # Errors
+/// 422 when no title was given; the store's own failure otherwise.
+pub async fn execute_create_task(account: &Account, args: &Value) -> Result<Json<Value>, Problem> {
+    let title = string_arg(args, "title").unwrap_or_default();
+    if title.is_empty() {
+        return Err(unprocessable("title required"));
+    }
+    let description = string_arg(args, "notes");
+    let due_at = args
+        .get("due")
+        .and_then(Value::as_str)
+        .and_then(crate::agent::parse_due);
+
+    let project = account
+        .acc
+        .ensure_personal_project()
+        .await
+        .map_err(map_store_err)?;
+    let new = NewTask {
+        title,
+        description,
+        status: None,
+        assignee: None,
+        due_at,
+        priority: None,
+        // Active — the user approved it (not a "proposed" suggestion).
+        state: None,
+        source_kind: None,
+        source_id: None,
+    };
+    let id = account
+        .acc
+        .create_task(&project, &new)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({
+        "ok": true,
+        "result": { "kind": "task", "id": id.as_str(), "title": new.title }
+    })))
 }
 
 /// `set_task_priority` — one task's priority, and nothing else about it. Runs

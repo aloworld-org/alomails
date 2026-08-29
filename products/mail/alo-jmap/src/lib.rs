@@ -249,6 +249,7 @@ pub mod spaces;
 pub mod state;
 pub mod submission;
 pub mod tasks;
+pub mod tasks_intents;
 pub mod unsubscribe;
 pub mod web_push;
 pub mod wopi;

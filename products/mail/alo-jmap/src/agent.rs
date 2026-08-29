@@ -13,7 +13,7 @@ use crate::agent_turn::{Turn, TurnContext, TurnResult, take_turn};
 use alo_ai::{AiConfig, InferenceError, WorkspaceSource};
 use alo_store::{
     CalendarEvent, ChatAgentId, ChatChannelId, EventId, MAX_PAGE, MailboxId, MessageId,
-    NewAgentToolRun, NewTask, Page,
+    NewAgentToolRun, Page,
 };
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
@@ -477,6 +477,7 @@ pub(crate) const MODULES: &[ModuleDispatcher] = &[
     crate::meet_intents::dispatch,
     crate::projects_intents::dispatch,
     crate::sheets_intents::dispatch,
+    crate::tasks_intents::dispatch,
 ];
 
 /// [`execute_tool`]'s boundary check and audit cannot be bypassed by a caller
@@ -493,25 +494,10 @@ async fn dispatch(
         }
     }
     match tool {
-        "create_task" => execute_create_task(account, args).await,
-        // alo Tasks' set beyond that one (A2.7), on the same seam. The three
-        // reads answer from the list rather than from a search — what is on the
-        // caller's plate, who is late on the boards they can open, and what a
-        // room agreed together with what has already been written down out of
-        // it; the three writes change one task's priority, leave a chase on a
-        // late one, and capture a conversation's actions as proposals the user
-        // still accepts one at a time (ADR 0023). There is deliberately no way
-        // for an agent to close a task, to reassign one, or to move one between
-        // columns — finishing somebody's work is not a thing to do on their
-        // behalf.
-        "my_plate" => crate::agent_tasks::execute_my_plate(account, args).await,
-        "overdue_by_owner" => {
-            crate::agent_tasks::execute_overdue_by_owner(account, args, state).await
-        }
-        "thread_actions" => crate::agent_tasks::execute_thread_actions(account, args).await,
-        "set_task_priority" => crate::agent_tasks::execute_set_task_priority(account, args).await,
-        "chase_task" => crate::agent_tasks::execute_chase_task(account, args, state).await,
-        "capture_actions" => crate::agent_tasks::execute_capture_actions(account, args).await,
+        // Tasks' verbs — `create_task` and the A2.7 six included — are
+        // dispatched by its module row above (AB.4). Completing and handing
+        // over a task exist there as previewed writes now; both still run
+        // only from the asker's own approval.
         "create_event" => execute_create_event(account, args).await,
         // Mail's verbs, the correspondence pair and the nine email actions
         // included, are dispatched by its module row above (AC.4); their
@@ -1043,55 +1029,6 @@ fn reply_references(parent_refs: &[String], parent_id: Option<&str>) -> Vec<Stri
     out
 }
 
-/// Create a task from approved args, on the caller's personal project. Reuses the
-/// same tenant-scoped `create_task` the `/tasks` route uses — no new storage path.
-async fn execute_create_task(account: &Account, args: &Value) -> Result<Json<Value>, Problem> {
-    let title = args
-        .get("title")
-        .and_then(Value::as_str)
-        .unwrap_or("")
-        .trim()
-        .to_owned();
-    if title.is_empty() {
-        return Err(Problem::with(
-            StatusCode::UNPROCESSABLE_ENTITY,
-            "title required",
-        ));
-    }
-    let description = args
-        .get("notes")
-        .and_then(Value::as_str)
-        .map(|s| s.trim().to_owned())
-        .filter(|s| !s.is_empty());
-    let due_at = args.get("due").and_then(Value::as_str).and_then(parse_due);
-
-    let project = account
-        .acc
-        .ensure_personal_project()
-        .await
-        .map_err(|_| Problem::server_error())?;
-    let new = NewTask {
-        title,
-        description,
-        status: None,
-        assignee: None,
-        due_at,
-        priority: None,
-        state: None, // active — the user approved it (not a "proposed" suggestion)
-        source_kind: None,
-        source_id: None,
-    };
-    let id = account
-        .acc
-        .create_task(&project, &new)
-        .await
-        .map_err(|_| Problem::server_error())?;
-    Ok(Json(json!({
-        "ok": true,
-        "result": { "kind": "task", "id": id.as_str(), "title": new.title }
-    })))
-}
-
 /// Schedule a calendar event from approved args, on the caller's personal
 /// calendar. Reuses the same tenant-scoped `create_event` the `/calendar/events`
 /// route uses (which checks edit permission on the calendar) — no new path.
@@ -1213,7 +1150,9 @@ fn today_where(tz: Option<&str>) -> String {
 
 /// Parse a `YYYY-MM-DD` due date to midnight UTC, or `None` if malformed (a bad
 /// date drops the due, never fails the task — the title is the essential part).
-fn parse_due(s: &str) -> Option<time::OffsetDateTime> {
+/// `pub(crate)` because `create_task`'s executor moved out with its module
+/// (AB.4) and still parses a due date exactly this way.
+pub(crate) fn parse_due(s: &str) -> Option<time::OffsetDateTime> {
     let mut it = s.trim().split('-');
     let year: i32 = it.next()?.parse().ok()?;
     let month: u8 = it.next()?.parse().ok()?;

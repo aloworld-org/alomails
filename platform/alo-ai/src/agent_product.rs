@@ -22,7 +22,6 @@ use alo_store::{ALL_AGENT_PRODUCTS, AgentProduct};
 use crate::agent_agenda::{AGENDA_GUIDANCE, AGENDA_TOOL_DOC, AGENDA_TOOLS};
 use crate::agent_hr::{HR_GUIDANCE, HR_TOOL_DOC, HR_TOOLS};
 use crate::agent_sites::{SITES_GUIDANCE, SITES_TOOL_DOC, SITES_TOOLS};
-use crate::agent_tasks::{TASKS_GUIDANCE, TASKS_TOOL_DOC, TASKS_TOOLS};
 use crate::agent_tool::AgentTool;
 use crate::billing_intents::BILLING as BILLING_INTENTS;
 use crate::chat_intents::CHAT as CHAT_INTENTS;
@@ -37,6 +36,7 @@ use crate::mail_intents::MAIL as MAIL_INTENTS;
 use crate::meet_intents::MEET as MEET_INTENTS;
 use crate::projects_intents::PROJECTS as PROJECTS_INTENTS;
 use crate::sheets_intents::SHEETS as SHEETS_INTENTS;
+use crate::tasks_intents::TASKS as TASKS_INTENTS;
 
 /// One module's contribution to a product's agent: what it may do, how each
 /// tool is described, and the rules that keep a proposal from it honest.
@@ -108,12 +108,10 @@ const fn intents(module: &'static IntentModule) -> ToolSet {
 }
 
 const AGENDA_SET: ToolSet = set(AGENDA_TOOLS, AGENDA_TOOL_DOC, AGENDA_GUIDANCE);
-const TASKS_SET: ToolSet = set(TASKS_TOOLS, TASKS_TOOL_DOC, TASKS_GUIDANCE);
 const HR_SET: ToolSet = set(HR_TOOLS, HR_TOOL_DOC, HR_GUIDANCE);
 const SITES_SET: ToolSet = set(SITES_TOOLS, SITES_TOOL_DOC, SITES_GUIDANCE);
 
 const AGENDA: &[ToolSet] = &[AGENDA_SET];
-const TASKS: &[ToolSet] = &[TASKS_SET];
 const HR: &[ToolSet] = &[HR_SET];
 const SITES: &[ToolSet] = &[SITES_SET];
 
@@ -140,6 +138,7 @@ pub const MOVED: &[(AgentProduct, &IntentModule)] = &[
     (AgentProduct::Meet, &MEET_INTENTS),
     (AgentProduct::Projects, &PROJECTS_INTENTS),
     (AgentProduct::Sheets, &SHEETS_INTENTS),
+    (AgentProduct::Tasks, &TASKS_INTENTS),
 ];
 
 /// The hand-written sets a product still carries — empty once it has moved.
@@ -147,7 +146,7 @@ fn static_sets(product: AgentProduct) -> &'static [ToolSet] {
     match product {
         AgentProduct::Mail => &[],
         AgentProduct::Agenda => AGENDA,
-        AgentProduct::Tasks => TASKS,
+        AgentProduct::Tasks => &[],
         AgentProduct::Chat => &[],
         AgentProduct::Drive => &[],
         AgentProduct::Sheets => &[],
@@ -329,10 +328,14 @@ mod tests {
                 "my_plate",
                 "overdue_by_owner",
                 "thread_actions",
+                "board_tasks",
+                "task_lookup",
                 "create_task",
                 "set_task_priority",
                 "chase_task",
                 "capture_actions",
+                "complete_task",
+                "reassign_task",
             ]
         );
         assert_eq!(
@@ -511,7 +514,7 @@ mod tests {
             .map(|tool| tool.name)
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
-        assert_eq!(workspace.len(), 117);
+        assert_eq!(workspace.len(), 121);
     }
 
     /// A moved module registers once (A4.1c): its row in [`MOVED`] is what puts
@@ -552,6 +555,7 @@ mod tests {
             concat!("MEET_", "INTENTS"),
             concat!("PROJECTS_", "INTENTS"),
             concat!("SHEETS_", "INTENTS"),
+            concat!("TASKS_", "INTENTS"),
         ] {
             assert_eq!(
                 source.matches(module).count(),
