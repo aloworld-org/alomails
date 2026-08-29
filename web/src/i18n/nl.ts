@@ -479,6 +479,12 @@ export const nl: Partial<Catalog> = {
   agendaAvailBusy: (names: string) => `Dan bezet: ${names}`,
   agendaAvailOutside: (names: string) =>
     `Dan buiten de werkuren: ${names}`,
+  agendaRoom: "Ruimte",
+  agendaRoomNone: "Geen ruimte",
+  agendaRoomHint:
+    "De ruimte wordt met de afspraak uitgenodigd en voor die tijd vastgehouden.",
+  agendaRoomSeats: (seats: number) => `${seats} plaatsen`,
+  agendaRoomTaken: (name: string) => `${name} is dan al geboekt.`,
   agendaWorkingHours: "Werkuren",
   agendaWorkingHoursHint:
     "Wie met u plant, ziet tijd buiten deze uren gemarkeerd.",

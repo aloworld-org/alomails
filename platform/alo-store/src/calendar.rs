@@ -62,52 +62,12 @@ impl AccountStore {
             .map(|e| e.id.as_str().to_owned())
             .collect();
         let overrides = self.overrides_for(&series_ids).await?;
-
-        let mut out = Vec::new();
-        for event in masters {
-            if event.recurrence.is_none() && event.rdates.is_empty() {
-                out.push(event);
-                continue;
-            }
-            let ovs = overrides.get(event.id.as_str());
-            let slots: Vec<OffsetDateTime> = ovs
-                .map(|v| v.iter().map(|(slot, _)| *slot).collect())
-                .unwrap_or_default();
-            out.extend(expand_occurrences(&event, from, to, &slots));
-            // Emit each override that lands in the window, in place of the
-            // default occurrence it replaced (which expansion skipped).
-            if let Some(ovs) = ovs {
-                for (slot, ov) in ovs {
-                    if ov.ends_at > from && ov.starts_at < to {
-                        out.push(CalendarEvent {
-                            id: event.id.clone(),
-                            calendar_id: event.calendar_id.clone(),
-                            summary: ov.summary.clone(),
-                            description: ov.description.clone(),
-                            location: ov.location.clone(),
-                            starts_at: ov.starts_at,
-                            ends_at: ov.ends_at,
-                            all_day: ov.all_day,
-                            recurrence: event.recurrence.clone(),
-                            attendees: event.attendees.clone(),
-                            exdates: Vec::new(),
-                            timezone: event.timezone.clone(),
-                            rdates: Vec::new(),
-                            recurrence_id: Some(*slot),
-                            reminder_minutes: event.reminder_minutes,
-                            attendee_status: event.attendee_status.clone(),
-                        });
-                    }
-                }
-            }
-        }
-        out.sort_by_key(|e| e.starts_at);
-        Ok(out)
+        Ok(expand_masters(masters, &overrides, from, to))
     }
 
     /// Loads every per-occurrence override for the given series, grouped by
     /// series id (slot → the overridden fields). Tenant-scoped.
-    async fn overrides_for(
+    pub(crate) async fn overrides_for(
         &self,
         series_ids: &[String],
     ) -> Result<HashMap<String, Vec<(OffsetDateTime, OccurrenceOverride)>>> {
@@ -162,17 +122,21 @@ impl AccountStore {
     /// first — for serving that calendar as its own CalDAV collection. Only if
     /// the calendar is visible to the caller (owner or a grant); otherwise empty.
     ///
+    /// A **resource** calendar (a room) answers with the events that booked it,
+    /// whoever owns them: the room belongs to the tenant, so its schedule is
+    /// the tenant's to read. Nobody may write there — `can_edit_calendar` says
+    /// no for every caller.
+    ///
     /// # Errors
     /// [`StoreError::Db`] on failure.
     pub async fn events_of_calendar(&self, calendar: &CalendarId) -> Result<Vec<CalendarEvent>> {
-        let visible = visible_pred();
+        let scope = calendar_scope_pred();
         let sql = format!(
             "SELECT e.id, e.calendar_id, e.summary, e.description, e.location, e.starts_at, \
                     e.ends_at, e.all_day, e.rrule, e.attendees, e.exdates, e.tzid, e.rdates, \
                     e.reminder_minutes, e.attendee_status \
              FROM calendar_events e \
-             WHERE e.tenant_id = $1 AND e.calendar_id = $3 AND e.calendar_id IN ( \
-                 SELECT c.id FROM calendars c WHERE c.tenant_id = $1 AND {visible}) \
+             WHERE e.tenant_id = $1 AND {scope} \
              ORDER BY e.starts_at, e.id",
         );
         let rows = sqlx::query_as::<_, EventRow>(&sql)
@@ -214,11 +178,24 @@ impl AccountStore {
     /// # Errors
     /// [`StoreError::Db`] on failure.
     pub async fn create_event(&self, event: &CalendarEvent) -> Result<EventId> {
+        let id = EventId::generate();
+        self.create_event_at(&id, event).await?;
+        Ok(id)
+    }
+
+    /// Creates an event at an id the **caller** chose, so the id can be spoken
+    /// for before the row exists — a room booking reserves the slot under this
+    /// id first, and only an accepted reservation is followed by the event
+    /// (see [`AccountStore::book_resources`]).
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the calendar is not one the caller may
+    /// edit; [`StoreError::Db`] on failure.
+    pub async fn create_event_at(&self, id: &EventId, event: &CalendarEvent) -> Result<()> {
         // Only place an event on a calendar the caller can edit.
         if !self.can_edit_calendar(&event.calendar_id).await? {
             return Err(StoreError::NotFound);
         }
-        let id = EventId::generate();
         let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
         sqlx::query(
             "INSERT INTO calendar_events \
@@ -254,7 +231,7 @@ impl AccountStore {
         )
         .await?;
         tx.commit().await.map_err(StoreError::Db)?;
-        Ok(id)
+        Ok(())
     }
 
     /// Creates or replaces an event at a **caller-chosen** id (CalDAV PUT: the
@@ -453,6 +430,17 @@ impl AccountStore {
             .execute(&mut *tx)
             .await
             .map_err(StoreError::Db)?;
+        // …and gives back any room it held. A left-behind link books nothing
+        // (every read joins the event), but a room's collection would list a
+        // ghost, so the booking goes with the meeting.
+        sqlx::query(
+            "DELETE FROM calendar_resource_bookings WHERE tenant_id = $1 AND event_id = $2",
+        )
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .execute(&mut *tx)
+        .await
+        .map_err(StoreError::Db)?;
         changes::bump_and_record(
             &mut tx,
             self.tenant.as_str(),
@@ -959,9 +947,19 @@ impl AccountStore {
             }
             _ => {}
         }
-        // Drop any per-occurrence overrides of events in this calendar first.
+        // Drop any per-occurrence overrides of events in this calendar first,
+        // and release the rooms those events held.
         sqlx::query(
             "DELETE FROM calendar_event_overrides WHERE tenant_id = $1 AND series_id IN \
+                 (SELECT id FROM calendar_events WHERE tenant_id = $1 AND calendar_id = $2)",
+        )
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .execute(&mut *tx)
+        .await
+        .map_err(StoreError::Db)?;
+        sqlx::query(
+            "DELETE FROM calendar_resource_bookings WHERE tenant_id = $1 AND event_id IN \
                  (SELECT id FROM calendar_events WHERE tenant_id = $1 AND calendar_id = $2)",
         )
         .bind(self.tenant.as_str())
@@ -1024,6 +1022,21 @@ impl CalendarRow {
     }
 }
 
+/// SQL predicate (event aliased `e`, tenant `$1`, viewer `$2`, calendar `$3`):
+/// the event belongs to that collection as the viewer may read it — an event
+/// placed on a calendar they can see, or an event that booked `$3` when `$3` is
+/// a resource calendar. The two are mutually exclusive by construction: a
+/// resource calendar never holds a placed event.
+fn calendar_scope_pred() -> String {
+    let visible = visible_pred();
+    format!(
+        "((e.calendar_id = $3 AND e.calendar_id IN ( \
+              SELECT c.id FROM calendars c WHERE c.tenant_id = $1 AND {visible})) \
+          OR EXISTS (SELECT 1 FROM calendar_resource_bookings b \
+              WHERE b.tenant_id = $1 AND b.resource_id = $3 AND b.event_id = e.id))"
+    )
+}
+
 /// SQL predicate `EXISTS(...)` — the viewer (tenant `$1`, user `$2`) has a grant
 /// on calendar `c`. `editor_only` narrows it to `editor` grants. Matches a grant
 /// to the user directly, or to any group the user belongs to. Tenant-scoped.
@@ -1044,16 +1057,26 @@ fn grant_exists(editor_only: bool) -> String {
 
 /// SQL predicate (calendar aliased `c`, viewer `$2`): the viewer may *see* the
 /// calendar — they own it or hold any grant (direct or via a group).
+///
+/// A **resource** calendar (a room, [`crate::calendar_resources`]) is
+/// deliberately outside this: it belongs to the tenant, not to a person, and
+/// folding it in here would drop every colleague's room booking into everyone's
+/// week. A room is reached through its own door, which answers times.
 pub(crate) fn visible_pred() -> String {
     let grant = grant_exists(false);
-    format!("(c.owner_user_id = $2 OR {grant})")
+    format!("(c.kind <> 'resource' AND (c.owner_user_id = $2 OR {grant}))")
 }
 
 /// SQL predicate (calendar aliased `c`, viewer `$2`): the viewer may *edit* the
 /// calendar — they own it or hold an `editor` grant (direct or via a group).
+///
+/// Never a resource calendar, not even for the admin whose row created it: a
+/// room's schedule is written only by booking it. This is the refusal every
+/// write path already routes through — `create_event`, `put_event` and the
+/// CalDAV PUT all ask this question first.
 fn editable_pred() -> String {
     let grant = grant_exists(true);
-    format!("(c.owner_user_id = $2 OR {grant})")
+    format!("(c.kind <> 'resource' AND (c.owner_user_id = $2 OR {grant}))")
 }
 
 /// Recurrence frequency (the `FREQ` of a supported `RRULE`).
@@ -1112,6 +1135,61 @@ pub fn series_occurs_in_range(
 /// Brussels weekly stays 09:00 local across a DST switch. Without one (or for
 /// all-day events, whose dates never shift), the math is plain UTC as before.
 /// `RDATE` instants are appended after the rule (deduplicated against it).
+/// Turns stored masters into the occurrences that fall in `[from, to)`: a
+/// one-off passes through, a series is expanded, and each per-occurrence
+/// override replaces the slot it was made for. Earliest first.
+///
+/// **The one expansion.** The Agenda range listing, the availability seam, a
+/// room's bookings and CalDAV all reach an occurrence list through here, so
+/// "when is this taken" can never mean two different things on two wires.
+pub(crate) fn expand_masters(
+    masters: Vec<CalendarEvent>,
+    overrides: &HashMap<String, Vec<(OffsetDateTime, OccurrenceOverride)>>,
+    from: OffsetDateTime,
+    to: OffsetDateTime,
+) -> Vec<CalendarEvent> {
+    let mut out = Vec::new();
+    for event in masters {
+        if event.recurrence.is_none() && event.rdates.is_empty() {
+            out.push(event);
+            continue;
+        }
+        let ovs = overrides.get(event.id.as_str());
+        let slots: Vec<OffsetDateTime> = ovs
+            .map(|v| v.iter().map(|(slot, _)| *slot).collect())
+            .unwrap_or_default();
+        out.extend(expand_occurrences(&event, from, to, &slots));
+        // Emit each override that lands in the window, in place of the
+        // default occurrence it replaced (which expansion skipped).
+        if let Some(ovs) = ovs {
+            for (slot, ov) in ovs {
+                if ov.ends_at > from && ov.starts_at < to {
+                    out.push(CalendarEvent {
+                        id: event.id.clone(),
+                        calendar_id: event.calendar_id.clone(),
+                        summary: ov.summary.clone(),
+                        description: ov.description.clone(),
+                        location: ov.location.clone(),
+                        starts_at: ov.starts_at,
+                        ends_at: ov.ends_at,
+                        all_day: ov.all_day,
+                        recurrence: event.recurrence.clone(),
+                        attendees: event.attendees.clone(),
+                        exdates: Vec::new(),
+                        timezone: event.timezone.clone(),
+                        rdates: Vec::new(),
+                        recurrence_id: Some(*slot),
+                        reminder_minutes: event.reminder_minutes,
+                        attendee_status: event.attendee_status.clone(),
+                    });
+                }
+            }
+        }
+    }
+    out.sort_by_key(|e| e.starts_at);
+    out
+}
+
 fn expand_occurrences(
     master: &CalendarEvent,
     from: OffsetDateTime,
@@ -1414,7 +1492,7 @@ fn parse_until(value: &str) -> Option<OffsetDateTime> {
 
 /// A raw `calendar_events` row.
 #[derive(sqlx::FromRow)]
-struct EventRow {
+pub(crate) struct EventRow {
     id: String,
     calendar_id: String,
     summary: String,
@@ -1448,7 +1526,7 @@ struct OverrideRow {
 }
 
 impl EventRow {
-    fn into_event(self) -> CalendarEvent {
+    pub(crate) fn into_event(self) -> CalendarEvent {
         CalendarEvent {
             id: EventId::new(self.id),
             calendar_id: CalendarId::new(self.calendar_id),

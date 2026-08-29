@@ -487,6 +487,12 @@ export const fr: Partial<Catalog> = {
   agendaAvailBusy: (names: string) => `Occupé(s) : ${names}`,
   agendaAvailOutside: (names: string) =>
     `Hors horaires de travail à ce moment-là : ${names}`,
+  agendaRoom: "Salle",
+  agendaRoomNone: "Aucune salle",
+  agendaRoomHint:
+    "La salle est invitée avec la réunion et réservée pour sa durée.",
+  agendaRoomSeats: (seats: number) => `${seats} places`,
+  agendaRoomTaken: (name: string) => `${name} est déjà réservée à ce moment-là.`,
   agendaWorkingHours: "Horaires de travail",
   agendaWorkingHoursHint:
     "Quand des collègues planifient avec vous, les heures hors de ces horaires sont signalées.",

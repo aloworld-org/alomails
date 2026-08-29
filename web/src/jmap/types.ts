@@ -473,8 +473,21 @@ export interface ShareableGroup {
 export interface FreeBusyPerson {
   email: string;
   known: boolean;
+  /** What the address turned out to be: a colleague, a room, or nobody the
+   *  workspace knows. Absent on older servers — treat that as `"user"`. */
+  kind?: "user" | "resource" | "unknown";
   busy: { start: string; end: string }[];
   outsideHours?: { start: string; end: string }[];
+}
+
+/** A bookable room or resource. A meeting books it by carrying `email` among
+ *  its attendees; the server refuses the save if it is already taken. */
+export interface CalendarResource {
+  id: string;
+  name: string;
+  email: string;
+  location: string | null;
+  capacity: number | null;
 }
 
 /** A person's working schedule as the wire spells it: ISO weekday numbers

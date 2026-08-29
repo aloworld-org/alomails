@@ -283,6 +283,14 @@ pub const AGENDA_EXCLUDED: &[Excluded] = &[
         route: "/calendar/working-hours",
         why: "A person's working schedule — days, hours, zone — is theirs to set in Agenda's settings; scheduling already reads its effect through free/busy.",
     },
+    Excluded {
+        route: "/calendar/resources",
+        why: "The workspace's rooms are an admin's to name and retire; a meeting books one by naming it, which book_meeting already does.",
+    },
+    Excluded {
+        route: "/calendar/resources/{id}",
+        why: "Editing or retiring a room belongs to whoever runs the building, not to an assistant working inside one diary.",
+    },
 ];
 
 /// The Agenda paragraph of the agent's general instructions.

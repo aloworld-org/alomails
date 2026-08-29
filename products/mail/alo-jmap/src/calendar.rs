@@ -125,14 +125,24 @@ pub async fn create(
     let account = authenticate(&state, &headers).await?;
     let req: EventBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
     let calendar_id = resolve_calendar(&account, &req).await?;
-    let event = build_event(EventId::generate(), calendar_id, req)?;
+    let id = EventId::generate();
+    let event = build_event(id.clone(), calendar_id, req)?;
+    // Any room the guest list names is held first: a refusal (409) must leave
+    // no half-made meeting behind, so the reservation is taken under the id the
+    // event is about to be written at.
+    let rooms = booked_resources(&account, &event).await?;
+    account
+        .acc
+        .book_resources(&id, &event, &rooms)
+        .await
+        .map_err(Problem::from)?;
     // create_event denies a calendar the caller can't edit with NotFound → 404,
     // so map through the store-error translator rather than a blanket 500.
-    let id = account
-        .acc
-        .create_event(&event)
-        .await
-        .map_err(map_store_err)?;
+    if let Err(error) = account.acc.create_event_at(&id, &event).await {
+        // The room was reserved for a meeting that never happened — give it back.
+        let _ = account.acc.unbook_event(&id).await;
+        return Err(map_store_err(error));
+    }
     let saved = CalendarEvent { id, ..event };
     send_invitations(&state, &account, &saved).await;
     Ok(Json(event_json(&saved)))
@@ -206,11 +216,20 @@ pub async fn update(
             event.timezone = prev.timezone;
         }
     }
+    // Re-hold the rooms the edited guest list names — against the new times, so
+    // moving a meeting into an hour its room is taken is refused (409) before
+    // anything is written. A room dropped from the list is released here.
+    let rooms = booked_resources(&account, &event).await?;
     account
         .acc
-        .update_event(&eid, &event)
+        .book_resources(&eid, &event, &rooms)
         .await
-        .map_err(map_store_err)?;
+        .map_err(Problem::from)?;
+    if let Err(error) = account.acc.update_event(&eid, &event).await {
+        // Not the caller's event after all: hold nothing on its behalf.
+        let _ = account.acc.unbook_event(&eid).await;
+        return Err(map_store_err(error));
+    }
     send_invitations(&state, &account, &event).await;
     Ok(Json(json!({ "status": "ok" })))
 }
@@ -1009,7 +1028,31 @@ pub async fn free_busy(
     for email in req.emails.iter().take(50) {
         let email = email.trim();
         let Ok(uid) = ts.user_by_email(email).await else {
-            out.push(json!({ "email": email, "known": false, "busy": [], "outsideHours": [] }));
+            // Not a person — a room answers the same question, in the same
+            // currency, so the scheduling grid needs no second call for it.
+            // A room keeps no working hours: it is free whenever nobody has it.
+            if let Ok(Some(resource)) = account.acc.calendar_resource_by_email(email).await {
+                let events = account
+                    .acc
+                    .resource_bookings_in_range(&resource.id, from, to)
+                    .await
+                    .map_err(|_| Problem::server_error())?;
+                out.push(json!({
+                    "email": email,
+                    "known": true,
+                    "kind": "resource",
+                    "busy": spans_json(&alo_store::merged_busy_spans(&events, from, to)),
+                    "outsideHours": [],
+                }));
+                continue;
+            }
+            out.push(json!({
+                "email": email,
+                "known": false,
+                "kind": "unknown",
+                "busy": [],
+                "outsideHours": [],
+            }));
             continue;
         };
         // Their own busy time (reusing the recurrence/override-aware expander),
@@ -1035,11 +1078,38 @@ pub async fn free_busy(
         out.push(json!({
             "email": email,
             "known": true,
+            "kind": "user",
             "busy": busy,
             "outsideHours": spans_json(&outside),
         }));
     }
     Ok(Json(json!({ "freebusy": out })))
+}
+
+/// The rooms an event's guest list names, in the order they appear and without
+/// repeats. An attendee that is nobody's room is just a guest — the same list
+/// carries both, which is what makes booking a room one act rather than two.
+///
+/// # Errors
+/// [`Problem`] 500 when the lookup fails.
+async fn booked_resources(
+    account: &Account,
+    event: &CalendarEvent,
+) -> Result<Vec<CalendarId>, Problem> {
+    let mut out: Vec<CalendarId> = Vec::new();
+    for attendee in &event.attendees {
+        let found = account
+            .acc
+            .calendar_resource_by_email(attendee)
+            .await
+            .map_err(|_| Problem::server_error())?;
+        if let Some(resource) = found
+            && !out.iter().any(|id| id.as_str() == resource.id.as_str())
+        {
+            out.push(resource.id);
+        }
+    }
+    Ok(out)
 }
 
 /// Spans as the free/busy wire spells them: `[{start, end}]`, RFC 3339 UTC.
@@ -1171,10 +1241,25 @@ async fn notify_attendees(
             return;
         }
     };
+    // A room is an attendee, not a correspondent: it has no mailbox, and an
+    // invitation addressed to one is a bounce. Its booking was already taken at
+    // save time, which is the room's answer.
+    let rooms: Vec<String> = account
+        .acc
+        .calendar_resources()
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .map(|r| r.email.to_lowercase())
+        .collect();
     let subject = crate::mime::encode_unstructured(&format!("{subject_prefix}: {}", event.summary));
     let plain_b64 = wrap76(&B64.encode(plain));
     let ics_b64 = wrap76(&B64.encode(alo_store::ical::to_imip(event, &organizer, method)));
-    for attendee in &event.attendees {
+    for attendee in event
+        .attendees
+        .iter()
+        .filter(|a| !rooms.contains(&a.trim().to_lowercase()))
+    {
         let message = format!(
             "From: {organizer}\r\n\
              To: {attendee}\r\n\

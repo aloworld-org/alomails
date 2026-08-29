@@ -80,6 +80,7 @@ pub mod billing_xrechnung_rules;
 pub mod blob;
 pub mod calendar;
 pub mod calendar_hours;
+pub mod calendar_resources;
 pub mod campaign_audience;
 pub mod campaign_consent;
 pub mod campaign_preview;

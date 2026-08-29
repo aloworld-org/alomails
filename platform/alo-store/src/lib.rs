@@ -63,6 +63,7 @@ pub mod billing_xml_tree;
 pub mod blob;
 pub mod calendar;
 pub mod calendar_availability;
+pub mod calendar_resources;
 pub mod calendar_working_hours;
 pub mod campaign_audience;
 pub mod campaign_bounce;
@@ -364,6 +365,7 @@ pub use billing_vat_report::{VatPeriod, VatPeriodBase, VatPeriodCurrency, VatPer
 pub use blob::GarageConfig;
 pub use blob::{BlobStore, ShareStream};
 pub use calendar_availability::{CalendarAvailability, CalendarBusySpan, merged_busy_spans};
+pub use calendar_resources::CalendarResource;
 pub use calendar_working_hours::{WorkingHours, outside_hours_spans};
 pub use campaign_audience::{
     AUDIENCE_PAGE_MAX, AudienceMember, AudiencePage, AudienceSource, CampaignRecipient,

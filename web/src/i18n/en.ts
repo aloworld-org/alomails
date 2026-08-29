@@ -536,6 +536,12 @@ export const en = {
   agendaAvailError: "Couldn't check availability.",
   agendaAvailOutside: (names: string) =>
     `Outside working hours then: ${names}`,
+  // Rooms and resources (the thing a meeting needs besides people)
+  agendaRoom: "Room",
+  agendaRoomNone: "No room",
+  agendaRoomHint: "The room is invited with the meeting and held for its time.",
+  agendaRoomSeats: (seats: number) => `seats ${seats}`,
+  agendaRoomTaken: (name: string) => `${name} is already booked then.`,
   // Working hours (the schedule colleagues' scheduling checks against)
   agendaWorkingHours: "Working hours",
   agendaWorkingHoursHint:

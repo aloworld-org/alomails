@@ -20,14 +20,14 @@ use crate::{
     billing_invoices, billing_payments, billing_price_connections, billing_products,
     billing_quote_designs, billing_quotes, billing_reminder, billing_reports, billing_schedules,
     billing_send, billing_sepa, billing_settings, blob, calendar, calendar_hours,
-    campaign_audience, campaign_consent, campaign_preview, campaign_record, campaign_segments,
-    campaign_suppression, campaign_unsubscribe, carddav, chat, chat_agent_memory,
-    chat_agent_routes, chat_goals, contacts, crm_activities, crm_deals, crm_handoff, crm_imports,
-    crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads, delegates, docs, drive,
-    filters, finance_approvals, finance_bank, finance_bank_match, finance_chart, finance_expenses,
-    finance_mileage, finance_periods, finance_receipts, finance_report_aged,
-    finance_report_balance, finance_report_pl, finance_report_vat, flagdue, hr_checklists,
-    hr_documents, hr_employees, hr_holidays, hr_leave_balances, hr_leave_policies,
+    calendar_resources, campaign_audience, campaign_consent, campaign_preview, campaign_record,
+    campaign_segments, campaign_suppression, campaign_unsubscribe, carddav, chat,
+    chat_agent_memory, chat_agent_routes, chat_goals, contacts, crm_activities, crm_deals,
+    crm_handoff, crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads,
+    delegates, docs, drive, filters, finance_approvals, finance_bank, finance_bank_match,
+    finance_chart, finance_expenses, finance_mileage, finance_periods, finance_receipts,
+    finance_report_aged, finance_report_balance, finance_report_pl, finance_report_vat, flagdue,
+    hr_checklists, hr_documents, hr_employees, hr_holidays, hr_leave_balances, hr_leave_policies,
     hr_leave_requests, hr_letters, hr_org, hr_payroll, hr_recruitment, imap_import_route, insights,
     insights_ask, insights_eval, insights_gallery, inventory_counts, inventory_locations,
     inventory_moves, inventory_order_book, inventory_po, inventory_po_print, inventory_po_receipts,
@@ -185,6 +185,16 @@ pub fn app_with_site_boundaries(
         // Free/busy: when are these people (in the tenant) busy?
         .route("/calendar/freebusy", post(calendar::free_busy))
         // The caller's own working schedule (days, hours, zone).
+        // Rooms and resources: everyone reads the list to book one; only an
+        // admin adds, edits or retires them.
+        .route(
+            "/calendar/resources",
+            get(calendar_resources::list).post(calendar_resources::create),
+        )
+        .route(
+            "/calendar/resources/{id}",
+            put(calendar_resources::update).delete(calendar_resources::delete),
+        )
         .route(
             "/calendar/working-hours",
             get(calendar_hours::get_working_hours).put(calendar_hours::put_working_hours),

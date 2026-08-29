@@ -11,6 +11,7 @@ mod autoconfig;
 mod bcc_wire;
 mod caldav;
 mod calendar_http;
+mod calendar_resources_http;
 mod carddav;
 mod categories;
 mod conformance;

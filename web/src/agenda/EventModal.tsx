@@ -9,6 +9,7 @@ import {
   CalendarDays,
   Check,
   Clock,
+  DoorOpen,
   FileText,
   Globe,
   MapPin,
@@ -25,13 +26,25 @@ import type { Meeting } from "../meet";
 import { Button } from "../ds";
 import {
   useJmapClient,
+  JmapError,
   type Calendar,
   type CalendarEvent,
+  type CalendarResource,
   type EventInput,
 } from "../jmap";
 import { addDays, toDateInput, toLocalInput } from "./dates";
 import { calendarColorMap } from "./colors";
 import styles from "./AgendaModule.module.css";
+
+/** How a room reads in the picker: its name, then whatever else is known —
+ *  where it is and how many it seats, so the choice needs no second screen. */
+function roomLabel(room: CalendarResource): string {
+  const extras = [
+    room.location ?? "",
+    room.capacity == null ? "" : strings.agendaRoomSeats(room.capacity),
+  ].filter((part) => part !== "");
+  return extras.length === 0 ? room.name : `${room.name} — ${extras.join(", ")}`;
+}
 
 /** The date part (YYYY-MM-DD) of a `datetime-local` string. */
 function dateOf(local: string): string {
@@ -175,7 +188,13 @@ export function EventModal({
       .then(setMeeting)
       .catch(() => setMeeting(null));
   }, [meet, event?.id]);
+  // The workspace's rooms, and the one this meeting holds. A room is an
+  // attendee like any other on the wire — the picker is here so nobody has to
+  // know that, and so the guest box stays about people.
+  const [rooms, setRooms] = useState<CalendarResource[]>([]);
+  const [roomId, setRoomId] = useState("");
   const [guests, setGuests] = useState((event?.attendees ?? []).join(", "));
+
   const [description, setDescription] = useState(event?.description ?? "");
   const [repeat, setRepeat] = useState<Repeat>(
     repeatOf(event?.recurrence ?? null),
@@ -191,6 +210,37 @@ export function EventModal({
   const [availability, setAvailability] = useState<string[] | null>(null);
   const [checking, setChecking] = useState(false);
   const client = useJmapClient();
+
+  useEffect(() => {
+    let live = true;
+    void client
+      .calendarResources()
+      .then((list) => {
+        if (!live) return;
+        setRooms(list);
+        // Whatever of this event's guest list is a room belongs in the picker,
+        // not in the guest box: the same address must not read as two things.
+        const addresses = new Set(list.map((r) => r.email.toLowerCase()));
+        const held = (event?.attendees ?? []).find((a) =>
+          addresses.has(a.trim().toLowerCase()),
+        );
+        if (held !== undefined) {
+          const room = list.find(
+            (r) => r.email.toLowerCase() === held.trim().toLowerCase(),
+          );
+          setRoomId(room?.id ?? "");
+          setGuests(
+            (event?.attendees ?? [])
+              .filter((a) => !addresses.has(a.trim().toLowerCase()))
+              .join(", "),
+          );
+        }
+      })
+      .catch(() => setRooms([]));
+    return () => {
+      live = false;
+    };
+  }, [client, event?.attendees]);
 
   const colorMap = useMemo(() => calendarColorMap(calendars), [calendars]);
 
@@ -212,13 +262,19 @@ export function EventModal({
       .filter((g) => g.includes("@"));
   }
 
+  /** The chosen room's address as a one-or-zero-item list. */
+  function roomAddress(): string[] {
+    const room = rooms.find((r) => r.id === roomId);
+    return room === undefined ? [] : [room.email];
+  }
+
   /** Ask the server who among the guests is busy — or outside their working
    *  hours — over the chosen window. Two separate findings, reported apart:
    *  a colleague can be free yet asleep in their time zone. */
   async function checkAvailability() {
     const t = readTimes();
     if (t === null) return;
-    const people = guestList();
+    const people = [...guestList(), ...roomAddress()];
     if (people.length === 0) {
       setAvailability([strings.agendaAvailNoGuests]);
       return;
@@ -234,11 +290,19 @@ export function EventModal({
           (b) =>
             new Date(b.start).getTime() < e && new Date(b.end).getTime() > s,
         );
-      const clash = fb.filter((p) => overlaps(p.busy)).map((p) => p.email);
-      const outside = fb
+      // A taken room is its own finding: it is not "someone is busy", it is
+      // the meeting having nowhere to happen.
+      const takenRooms = fb
+        .filter((p) => p.kind === "resource" && overlaps(p.busy))
+        .map((p) => roomName(p.email));
+      const people2 = fb.filter((p) => p.kind !== "resource");
+      const clash = people2.filter((p) => overlaps(p.busy)).map((p) => p.email);
+      const outside = people2
         .filter((p) => overlaps(p.outsideHours))
         .map((p) => p.email);
       const findings: string[] = [];
+      if (takenRooms.length > 0)
+        findings.push(strings.agendaRoomTaken(takenRooms.join(", ")));
       if (clash.length > 0)
         findings.push(strings.agendaAvailBusy(clash.join(", ")));
       if (outside.length > 0)
@@ -251,6 +315,14 @@ export function EventModal({
     } finally {
       setChecking(false);
     }
+  }
+
+  /** A room's name for an address, falling back to the address itself. */
+  function roomName(email: string): string {
+    const room = rooms.find(
+      (r) => r.email.toLowerCase() === email.trim().toLowerCase(),
+    );
+    return room?.name ?? email;
   }
 
   /** The form's start/end as RFC 3339 UTC, or null if the range is invalid. */
@@ -290,7 +362,9 @@ export function EventModal({
     if (reminder !== "") input.reminderMinutes = Number(reminder);
     if (calendarId !== "") input.calendarId = calendarId;
     // Guests: address-like tokens only. The server validates and mails each.
-    const people = guestList();
+    // The room rides in the same list — booking one is naming it, and the
+    // server holds it (or refuses the save) from there.
+    const people = [...guestList(), ...roomAddress()];
     if (people.length > 0) input.attendees = people;
     return input;
   }
@@ -300,8 +374,16 @@ export function EventModal({
     setBusy(true);
     try {
       await fn();
-    } catch {
-      setError(strings.agendaSaveError);
+    } catch (e) {
+      // The one refusal a save can meet that the person can act on: the room
+      // is already in another meeting. Say which room, not which status code.
+      const taken = e instanceof JmapError && e.status === 409;
+      const room = rooms.find((r) => r.id === roomId);
+      setError(
+        taken && room !== undefined
+          ? strings.agendaRoomTaken(room.name)
+          : strings.agendaSaveError,
+      );
       setBusy(false);
     }
   }
@@ -603,6 +685,30 @@ export function EventModal({
                 <MapPin size={15} className={styles.emControlTrail} />
               </div>
             </div>
+            {rooms.length > 0 && (
+              <div className={styles.emField}>
+                <span className={styles.emLabel}>
+                  <DoorOpen size={15} /> {strings.agendaRoom}
+                </span>
+                <div className={styles.emControl}>
+                  <select
+                    aria-label={strings.agendaRoom}
+                    value={roomId}
+                    onChange={(e) => setRoomId(e.target.value)}
+                  >
+                    <option value="">{strings.agendaRoomNone}</option>
+                    {rooms.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {roomLabel(r)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <small className={styles.fieldHint}>
+                  {strings.agendaRoomHint}
+                </small>
+              </div>
+            )}
             {inMeeting !== null && (
               <MeetRoom
                 meetingId={inMeeting}

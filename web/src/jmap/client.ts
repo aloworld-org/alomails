@@ -62,13 +62,20 @@ import {
   type AgentAnswerDto,
   type AgentExecuteResultDto,
   type UserModuleAccess,
+  type CalendarResource,
 } from "./types";
 import { API_BASE } from "../platform/runtime";
 
 export class JmapError extends Error {
-  constructor(message: string) {
+  /** The HTTP status the server answered with, when the failure came from a
+   *  response rather than the network. A caller that needs to tell one refusal
+   *  from another — a booked room (409) from a broken save — reads this. */
+  readonly status: number | undefined;
+
+  constructor(message: string, status?: number) {
     super(message);
     this.name = "JmapError";
+    this.status = status;
   }
 }
 
@@ -2519,7 +2526,7 @@ export class JmapClient {
       headers: { "content-type": "application/json" },
       body: JSON.stringify(input),
     });
-    if (!res.ok) throw new JmapError(`calendar create ${res.status}`);
+    if (!res.ok) throw new JmapError(`calendar create ${res.status}`, res.status);
     return (await res.json()) as CalendarEvent;
   }
 
@@ -2533,7 +2540,7 @@ export class JmapClient {
         body: JSON.stringify(input),
       },
     );
-    if (!res.ok) throw new JmapError(`calendar update ${res.status}`);
+    if (!res.ok) throw new JmapError(`calendar update ${res.status}`, res.status);
   }
 
   /** Override a single occurrence of a recurring series in place: `occurrence`
@@ -3018,6 +3025,16 @@ export class JmapClient {
     });
     if (!res.ok) throw new JmapError(`freebusy ${res.status}`);
     return ((await res.json()) as { freebusy: FreeBusyPerson[] }).freebusy;
+  }
+
+  /** The workspace's bookable rooms and resources, by name. Any member may
+   *  read them: you cannot pick a room you cannot see. */
+  async calendarResources(): Promise<CalendarResource[]> {
+    const res = await this.#fetch(`${API_BASE}/api/calendar/resources`, {
+      method: "GET",
+    });
+    if (!res.ok) throw new JmapError(`calendar resources ${res.status}`);
+    return ((await res.json()) as { resources: CalendarResource[] }).resources;
   }
 
   /** The caller's own working schedule (the Mon–Fri 09:00–17:00 default until
