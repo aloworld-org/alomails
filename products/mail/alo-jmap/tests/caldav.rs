@@ -926,3 +926,406 @@ async fn put_captures_phone_originated_per_occurrence_edits() {
     assert!(body.contains("EXDATE:20260921T090000Z"), "{body}");
     assert!(!body.contains("RECURRENCE-ID"), "{body}");
 }
+
+/// A UTC instant on the hour, spelled the way the assertions below read.
+fn at(y: i32, mo: u8, d: u8, hour: u8) -> time::OffsetDateTime {
+    time::OffsetDateTime::new_utc(
+        time::Date::from_calendar_date(y, time::Month::try_from(mo).unwrap(), d).unwrap(),
+        time::Time::from_hms(hour, 0, 0).unwrap(),
+    )
+}
+
+/// An ics carrying an ATTENDEE — how a phone books a room over CalDAV.
+fn ics_with_attendee(uid: &str, summary: &str, start: &str, end: &str, attendee: &str) -> String {
+    format!(
+        "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//caldav//EN\r\n\
+         BEGIN:VEVENT\r\nUID:{uid}\r\nDTSTAMP:20260101T000000Z\r\n\
+         DTSTART:{start}\r\nDTEND:{end}\r\nSUMMARY:{summary}\r\n\
+         ATTENDEE;ROLE=REQ-PARTICIPANT:mailto:{attendee}\r\n\
+         END:VEVENT\r\nEND:VCALENDAR\r\n"
+    )
+}
+
+/// A room is a collection of the meetings that booked it, readable by every
+/// member of the tenant and writable by none — including the bookings of
+/// colleagues whose own calendars stay private (AS.4b).
+#[tokio::test]
+async fn a_room_is_a_read_only_collection_of_its_bookings() {
+    let h = harness("caldav-room").await;
+    let uid = &h.account_id;
+    let room_email = format!("board-{}@example.test", h.tenant);
+    let room_id = h
+        .acc
+        .create_calendar_resource(&alo_store::CalendarResource {
+            id: alo_store::CalendarId::new(String::new()),
+            name: "Board room".to_owned(),
+            email: room_email.clone(),
+            location: Some("2nd floor, east wing".to_owned()),
+            capacity: Some(8),
+        })
+        .await
+        .unwrap();
+
+    // A COLLEAGUE's meeting books it — the room's members are other people's
+    // meetings, which is the whole difficulty this collection exists to solve.
+    let mate_email = format!("mate-{}@example.test", h.tenant);
+    let mate = h.ts.create_user(&mate_email).await.unwrap();
+    let mate_acc = h.store.for_account(h.tenant.clone(), mate.clone());
+    let mate_cal = mate_acc.ensure_personal_calendar().await.unwrap();
+    let booked = alo_store::EventId::generate();
+    let meeting = alo_store::model::CalendarEvent {
+        id: booked.clone(),
+        calendar_id: mate_cal.clone(),
+        summary: "Board meeting".to_owned(),
+        description: None,
+        location: None,
+        starts_at: at(2026, 9, 2, 10),
+        ends_at: at(2026, 9, 2, 11),
+        all_day: false,
+        recurrence: None,
+        attendees: vec![room_email.clone()],
+        exdates: Vec::new(),
+        timezone: None,
+        rdates: Vec::new(),
+        recurrence_id: None,
+        reminder_minutes: None,
+        attendee_status: Vec::new(),
+    };
+    mate_acc
+        .book_resources(&booked, &meeting, std::slice::from_ref(&room_id))
+        .await
+        .unwrap();
+    mate_acc.create_event_at(&booked, &meeting).await.unwrap();
+
+    // The calendar home lists the room beside the personal calendar, named,
+    // located, and read-only.
+    let (status, _h, xml) = dav(
+        &h,
+        "PROPFIND",
+        &format!("/dav/calendars/{uid}/"),
+        Some("1"),
+        "",
+    )
+    .await;
+    assert_eq!(status, StatusCode::MULTI_STATUS);
+    let room_coll = format!("/dav/calendars/{uid}/{}/", room_id.as_str());
+    assert!(xml.contains(&room_coll), "the room is a collection: {xml}");
+    assert!(
+        xml.contains("<d:displayname>Board room</d:displayname>"),
+        "{xml}"
+    );
+    assert!(xml.contains("2nd floor, east wing"), "{xml}");
+    assert!(xml.contains("urn:alo:room:"), "its own token scheme: {xml}");
+
+    // Depth 1 on the room: the colleague's booking, under the ROOM's segment —
+    // never under the collection the event actually sits on.
+    let (status, _h, xml) = dav(&h, "PROPFIND", &room_coll, Some("1"), "").await;
+    assert_eq!(status, StatusCode::MULTI_STATUS);
+    let obj = format!("{room_coll}{}.ics", booked.as_str());
+    assert!(xml.contains(&obj), "href under the room: {xml}");
+    assert!(
+        !xml.contains(mate_cal.as_str()),
+        "never the booker's own collection: {xml}"
+    );
+
+    // GET of somebody else's booking works here, and the room rides out as a
+    // room (RFC 5545 §3.2.3) rather than as a guest who has not replied.
+    let (status, _h, body) = dav(&h, "GET", &obj, None, "").await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(body.contains("Board meeting"), "{body}");
+    assert!(body.replace("\r\n ", "").contains("CUTYPE=ROOM"), "{body}");
+    // …while the colleague's calendar itself stays shut.
+    assert_eq!(
+        dav(
+            &h,
+            "GET",
+            &format!("/dav/calendars/{uid}/default/{}.ics", booked.as_str()),
+            None,
+            ""
+        )
+        .await
+        .0,
+        StatusCode::NOT_FOUND,
+        "the booking is readable through the room, not through one's own calendar"
+    );
+
+    // A multiget over the room answers with the data; free-busy answers times
+    // and nothing else.
+    let multiget = format!(
+        "<c:calendar-multiget xmlns:d=\"DAV:\" xmlns:c=\"urn:ietf:params:xml:ns:caldav\">\
+         <d:href>{obj}</d:href></c:calendar-multiget>"
+    );
+    let (status, _h, xml) = dav(&h, "REPORT", &room_coll, Some("1"), &multiget).await;
+    assert_eq!(status, StatusCode::MULTI_STATUS);
+    assert!(xml.contains("calendar-data"), "{xml}");
+    let fb = "<c:free-busy-query xmlns:c=\"urn:ietf:params:xml:ns:caldav\">\
+              <c:time-range start=\"20260101T000000Z\" end=\"20270101T000000Z\"/>\
+              </c:free-busy-query>";
+    let (status, _h, body) = dav(&h, "REPORT", &room_coll, None, fb).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(body.contains("BEGIN:VFREEBUSY"), "{body}");
+    assert!(
+        body.contains("FREEBUSY;FBTYPE=BUSY:20260902T100000Z/20260902T110000Z"),
+        "{body}"
+    );
+    assert!(
+        !body.contains("Board meeting"),
+        "free/busy leaks no titles: {body}"
+    );
+
+    // A calendar-query narrowed away from the booking returns no members.
+    let query = "<c:calendar-query xmlns:d=\"DAV:\" xmlns:c=\"urn:ietf:params:xml:ns:caldav\">\
+                 <c:filter><c:comp-filter name=\"VCALENDAR\"><c:comp-filter name=\"VEVENT\">\
+                 <c:time-range start=\"20300101T000000Z\" end=\"20300102T000000Z\"/>\
+                 </c:comp-filter></c:comp-filter></c:filter></c:calendar-query>";
+    let (_s, _h, xml) = dav(&h, "REPORT", &room_coll, Some("1"), query).await;
+    assert!(!xml.contains(&obj), "outside the window: {xml}");
+
+    // Every write into a room is refused as the permission it is — and the
+    // colleague's meeting is still there afterwards.
+    let mine = format!("mine-{uid}");
+    let (status, ..) = dav(
+        &h,
+        "PUT",
+        &format!("{room_coll}{mine}.ics"),
+        None,
+        &ics(&mine, "Squatting", "20260610T090000Z", "20260610T100000Z"),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::FORBIDDEN,
+        "a room is never written into"
+    );
+    assert_eq!(
+        dav(&h, "DELETE", &obj, None, "").await.0,
+        StatusCode::FORBIDDEN,
+        "a colleague's booking is not deletable from the room"
+    );
+    assert_eq!(dav(&h, "GET", &obj, None, "").await.0, StatusCode::OK);
+
+    // The room is not one of the caller's own calendars: no room booking ever
+    // lands in the week grid.
+    let (_s, _h, xml) = dav(
+        &h,
+        "PROPFIND",
+        &format!("/dav/calendars/{uid}/default/"),
+        Some("1"),
+        "",
+    )
+    .await;
+    assert!(!xml.contains("Board meeting"), "{xml}");
+}
+
+/// A resource attendee arriving on a CalDAV PUT books the room through the one
+/// check the Agenda uses; a collision is refused with `409` (RFC 4791 §5.3.2).
+#[tokio::test]
+async fn a_caldav_put_books_the_room_and_a_clash_is_refused() {
+    let h = harness("caldav-book").await;
+    let uid = &h.account_id;
+    let room_email = format!("board-{}@example.test", h.tenant);
+    let room_id = h
+        .acc
+        .create_calendar_resource(&alo_store::CalendarResource {
+            id: alo_store::CalendarId::new(String::new()),
+            name: "Board room".to_owned(),
+            email: room_email.clone(),
+            location: None,
+            capacity: Some(8),
+        })
+        .await
+        .unwrap();
+
+    let first = format!("first-{uid}");
+    let (status, ..) = dav(
+        &h,
+        "PUT",
+        &format!("/dav/calendars/{uid}/default/{first}.ics"),
+        None,
+        &ics_with_attendee(
+            &first,
+            "Board meeting",
+            "20260902T100000Z",
+            "20260902T110000Z",
+            &room_email,
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let window = (at(2026, 9, 2, 0), at(2026, 9, 3, 0));
+    assert_eq!(
+        h.acc
+            .resource_bookings_in_range(&room_id, window.0, window.1)
+            .await
+            .unwrap()
+            .len(),
+        1,
+        "the PUT took the room"
+    );
+
+    // An overlapping PUT is refused, and says which room and which slot.
+    let second = format!("second-{uid}");
+    let clashing = format!("/dav/calendars/{uid}/default/{second}.ics");
+    let (status, _h, body) = dav(
+        &h,
+        "PUT",
+        &clashing,
+        None,
+        &ics_with_attendee(
+            &second,
+            "Standup",
+            "20260902T103000Z",
+            "20260902T113000Z",
+            &room_email,
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CONFLICT);
+    assert!(body.contains("Board room"), "{body}");
+    assert!(body.contains("2026-09-02T10:00:00Z"), "{body}");
+    // A refused PUT leaves nothing behind: no event, no hold.
+    assert_eq!(
+        dav(&h, "GET", &clashing, None, "").await.0,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(
+        h.acc
+            .resource_bookings_in_range(&room_id, window.0, window.1)
+            .await
+            .unwrap()
+            .len(),
+        1
+    );
+
+    // Back-to-back is not a clash.
+    let third = format!("third-{uid}");
+    let (status, ..) = dav(
+        &h,
+        "PUT",
+        &format!("/dav/calendars/{uid}/default/{third}.ics"),
+        None,
+        &ics_with_attendee(
+            &third,
+            "Retro",
+            "20260902T110000Z",
+            "20260902T120000Z",
+            &room_email,
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+
+    // Re-PUT the first meeting without the room: the body is the whole
+    // resource, so the room is let go and the refused slot opens.
+    let (status, ..) = dav(
+        &h,
+        "PUT",
+        &format!("/dav/calendars/{uid}/default/{first}.ics"),
+        None,
+        &ics(
+            &first,
+            "Board meeting",
+            "20260902T100000Z",
+            "20260902T110000Z",
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    let (status, ..) = dav(
+        &h,
+        "PUT",
+        &clashing,
+        None,
+        &ics_with_attendee(
+            &second,
+            "Standup",
+            "20260902T103000Z",
+            "20260902T110000Z",
+            &room_email,
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "the released slot is bookable");
+}
+
+/// A room's sync-token is a state hash, not a sequence: an initial sync gets
+/// every member, the current token gets nothing, and a stale one is answered
+/// `403 DAV:valid-sync-token` (RFC 6578 §3.2) so the client re-lists.
+#[tokio::test]
+async fn a_rooms_sync_token_is_the_state_of_its_bookings() {
+    let h = harness("caldav-roomsync").await;
+    let uid = &h.account_id;
+    let room_email = format!("board-{}@example.test", h.tenant);
+    let room_id = h
+        .acc
+        .create_calendar_resource(&alo_store::CalendarResource {
+            id: alo_store::CalendarId::new(String::new()),
+            name: "Board room".to_owned(),
+            email: room_email.clone(),
+            location: None,
+            capacity: None,
+        })
+        .await
+        .unwrap();
+    let room_coll = format!("/dav/calendars/{uid}/{}/", room_id.as_str());
+
+    let first = format!("first-{uid}");
+    let (status, ..) = dav(
+        &h,
+        "PUT",
+        &format!("/dav/calendars/{uid}/default/{first}.ics"),
+        None,
+        &ics_with_attendee(
+            &first,
+            "Board meeting",
+            "20260902T100000Z",
+            "20260902T110000Z",
+            &room_email,
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+
+    // Initial sync: every member, plus the token.
+    let initial = "<d:sync-collection xmlns:d=\"DAV:\"><d:sync-token/></d:sync-collection>";
+    let (status, _h, xml) = dav(&h, "REPORT", &room_coll, None, initial).await;
+    assert_eq!(status, StatusCode::MULTI_STATUS);
+    assert!(xml.contains(&format!("{first}.ics")), "{xml}");
+    let token = xml
+        .split("<d:sync-token>")
+        .nth(1)
+        .and_then(|s| s.split("</d:sync-token>").next())
+        .expect("a token")
+        .to_owned();
+    assert!(token.starts_with("urn:alo:room:"), "{token}");
+
+    // Nothing changed: no members, the same token.
+    let same = format!(
+        "<d:sync-collection xmlns:d=\"DAV:\"><d:sync-token>{token}</d:sync-token></d:sync-collection>"
+    );
+    let (status, _h, xml) = dav(&h, "REPORT", &room_coll, None, &same).await;
+    assert_eq!(status, StatusCode::MULTI_STATUS);
+    assert!(!xml.contains(&format!("{first}.ics")), "{xml}");
+    assert!(xml.contains(&token), "{xml}");
+
+    // A second booking moves the state, so the held token is stale.
+    let second = format!("second-{uid}");
+    let (status, ..) = dav(
+        &h,
+        "PUT",
+        &format!("/dav/calendars/{uid}/default/{second}.ics"),
+        None,
+        &ics_with_attendee(
+            &second,
+            "Retro",
+            "20260902T110000Z",
+            "20260902T120000Z",
+            &room_email,
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let (status, _h, xml) = dav(&h, "REPORT", &room_coll, None, &same).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert!(xml.contains("valid-sync-token"), "{xml}");
+}

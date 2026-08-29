@@ -7,6 +7,12 @@
 //! one collection per calendar the user can see. The principal advertises
 //! both home-sets so a client discovers whichever it asks for.
 //!
+//! A **room** ([`alo_store::CalendarResource`]) is a collection too, at its own
+//! id, read-only to every member of the tenant: its members are the meetings
+//! that booked it, whoever owns them, and every write into it is `403` — a
+//! room's schedule is written by booking it. An `ATTENDEE` that names a room is
+//! served with `CUTYPE=ROOM` and, arriving on a PUT, takes the booking.
+//!
 //! CardDAV: address-object resources are `<contactId>.vcf`. Discovery is the
 //! standard WebDAV dance (`.well-known/carddav` → principal →
 //! addressbook-home-set → addressbook). Incremental sync uses the
@@ -30,7 +36,8 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
 use alo_store::{
-    AccountStore, Calendar, CalendarEvent, CalendarId, Contact, ContactId, EventId, ical, vcard,
+    AccountStore, Calendar, CalendarEvent, CalendarId, CalendarResource, Contact, ContactId,
+    EventId, ical, vcard,
 };
 use axum::body::Body;
 use axum::extract::State;
@@ -44,6 +51,11 @@ use crate::state::AppState;
 const NS: &str = "xmlns:d=\"DAV:\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\"";
 const SYNC_PREFIX: &str = "urn:alo:contacts:";
 const CAL_SYNC_PREFIX: &str = "urn:alo:calendar:";
+/// A room collection's token prefix. Deliberately a different scheme from
+/// [`CAL_SYNC_PREFIX`]: a room's members are other people's meetings, so the
+/// account modseq cannot describe its state and the token is a hash of it
+/// instead (see [`room_tag`]).
+const ROOM_SYNC_PREFIX: &str = "urn:alo:room:";
 const MAX_SYNC: i64 = 5000;
 
 /// `GET /.well-known/carddav` (and PROPFIND on it): send clients to the
@@ -223,14 +235,31 @@ async fn propfind(
         Resource::CalHome => {
             responses.push_str(&cal_home_response(uid));
             if depth >= 1 {
-                // One collection per calendar the user can see (own + shared).
+                // One collection per calendar the user can see (own + shared)…
                 let cals = acc.calendars().await.unwrap_or_default();
                 for cal in &cals {
                     responses.push_str(&calendar_response(acc, uid, cal).await);
                 }
+                // …then the tenant's rooms, read-only, so a phone can subscribe
+                // to a room's schedule the way it subscribes to a colleague's.
+                for room in acc.calendar_resources().await.unwrap_or_default() {
+                    let bookings = room_bookings(acc, &room.id).await;
+                    responses.push_str(&room_response(uid, &room, &room_tag(&bookings)));
+                }
             }
         }
         Resource::Calendar(coll) => {
+            if let Some(room) = room_of(acc, coll).await {
+                let bookings = room_bookings(acc, &room.id).await;
+                responses.push_str(&room_response(uid, &room, &room_tag(&bookings)));
+                if depth >= 1 {
+                    let rooms = room_addresses(acc).await;
+                    for (e, ovs) in &bookings {
+                        responses.push_str(&event_propstat(uid, coll, e, false, ovs, &rooms));
+                    }
+                }
+                return multistatus(&responses);
+            }
             let cal_id = resolve_collection(uid, coll);
             if let Some(cal) = acc
                 .calendars()
@@ -251,19 +280,21 @@ async fn propfind(
                     Ok(e) => e,
                     Err(_) => return status(StatusCode::INTERNAL_SERVER_ERROR),
                 };
+                let rooms = room_addresses(acc).await;
                 for e in &events {
                     // The ETag covers the override set, so it is loaded even
                     // without calendar-data (cheap: only recurring series hit
                     // the query).
                     let ovs = overrides_for_ics(acc, e).await;
-                    responses.push_str(&event_propstat(uid, e, false, &ovs));
+                    responses.push_str(&event_propstat(uid, coll, e, false, &ovs, &rooms));
                 }
             }
         }
-        Resource::CalObject(_coll, id) => match fetch_event(acc, id).await {
+        Resource::CalObject(coll, id) => match fetch_in_collection(acc, coll, id).await {
             Some(e) => {
                 let ovs = overrides_for_ics(acc, &e).await;
-                responses.push_str(&event_propstat(uid, &e, false, &ovs));
+                let rooms = room_addresses(acc).await;
+                responses.push_str(&event_propstat(uid, coll, &e, false, &ovs, &rooms));
             }
             None => return status(StatusCode::NOT_FOUND),
         },
@@ -373,13 +404,21 @@ async fn calendar_response(acc: &AccountStore, uid: &str, cal: &Calendar) -> Str
 
 /// A `<response>` for one event object: its href + getetag, and (when
 /// `with_data`) the iCalendar as `calendar-data`.
+///
+/// `coll` is the collection the object is being listed **in**, not the calendar
+/// the event sits on: the same meeting appears under its own calendar and under
+/// every room it booked, and a client must be handed the href it asked about —
+/// an href built from the event's own calendar would point a room's client at a
+/// colleague's collection it cannot read.
 fn event_propstat(
     uid: &str,
+    coll: &str,
     e: &CalendarEvent,
     with_data: bool,
     overrides: &[CalendarEvent],
+    rooms: &[String],
 ) -> String {
-    let href = event_href(uid, e);
+    let href = format!("/dav/calendars/{uid}/{coll}/{}.ics", e.id.as_str());
     let etag = event_etag(e, overrides);
     let mut props = format!(
         "<d:getetag>{etag}</d:getetag>\
@@ -390,10 +429,111 @@ fn event_propstat(
         // per-occurrence edits (equals to_ics when there are none).
         props.push_str(&format!(
             "<cal:calendar-data>{}</cal:calendar-data>",
-            esc(&ical::to_ics_series(e, overrides))
+            esc(&ical::to_ics_series_with_rooms(e, overrides, rooms))
         ));
     }
     response(&href, &props)
+}
+
+/// The room a collection segment names, or `None` when the segment is an
+/// ordinary calendar. Every member of the tenant may see every room, so this
+/// asks only the resource table — no grant, no ownership.
+async fn room_of(acc: &AccountStore, coll: &str) -> Option<CalendarResource> {
+    if coll == "default" {
+        return None;
+    }
+    acc.calendar_resource(&CalendarId::new(coll.to_owned()))
+        .await
+        .ok()
+        .flatten()
+}
+
+/// A room collection's members: every meeting that booked it — whoever owns
+/// it — each with the override set its served body and ETag cover.
+async fn room_bookings(
+    acc: &AccountStore,
+    room: &CalendarId,
+) -> Vec<(CalendarEvent, Vec<CalendarEvent>)> {
+    let events = acc.events_of_calendar(room).await.unwrap_or_default();
+    let mut out = Vec::with_capacity(events.len());
+    for e in events {
+        let ovs = overrides_for_ics(acc, &e).await;
+        out.push((e, ovs));
+    }
+    out
+}
+
+/// A room collection's change tag, doubling as its sync-token.
+///
+/// The account modseq — every other collection's tag — cannot serve here: a
+/// room's members are other people's meetings, and their writes never touch
+/// this caller's modseq, so a modseq-based tag would sit still while the room
+/// filled up. A hash of the members' own ETags moves exactly when the room's
+/// schedule does.
+fn room_tag(bookings: &[(CalendarEvent, Vec<CalendarEvent>)]) -> String {
+    let mut hasher = DefaultHasher::new();
+    for (e, ovs) in bookings {
+        e.id.as_str().hash(&mut hasher);
+        event_etag(e, ovs).hash(&mut hasher);
+    }
+    format!("{ROOM_SYNC_PREFIX}{:016x}", hasher.finish())
+}
+
+/// Every room address in the tenant, so a served `ATTENDEE` that names one
+/// carries `CUTYPE=ROOM` (RFC 5545 §3.2.3).
+async fn room_addresses(acc: &AccountStore) -> Vec<String> {
+    acc.calendar_resources()
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .map(|r| r.email)
+        .collect()
+}
+
+/// A `<response>` for one room collection: a calendar like any other, minus
+/// every write privilege. `calendar-description` carries where the room is —
+/// the one fact a phone can show that a name cannot, and data rather than
+/// prose, so nothing here needs translating.
+fn room_response(uid: &str, room: &CalendarResource, tag: &str) -> String {
+    let href = format!("/dav/calendars/{uid}/{}/", room.id.as_str());
+    let name = esc(&room.name);
+    let description = room.location.as_deref().map_or_else(String::new, |loc| {
+        format!(
+            "<cal:calendar-description>{}</cal:calendar-description>",
+            esc(loc)
+        )
+    });
+    let props = format!(
+        "<d:resourcetype><d:collection/><cal:calendar/></d:resourcetype>\
+         <d:displayname>{name}</d:displayname>\
+         {description}\
+         <cs:getctag>{tag}</cs:getctag>\
+         <d:sync-token>{tag}</d:sync-token>\
+         <cal:supported-calendar-component-set><cal:comp name=\"VEVENT\"/></cal:supported-calendar-component-set>\
+         <d:current-user-privilege-set><d:privilege><d:read/></d:privilege></d:current-user-privilege-set>\
+         <d:supported-report-set>\
+           <d:supported-report><d:report><d:sync-collection/></d:report></d:supported-report>\
+           <d:supported-report><d:report><cal:calendar-multiget/></d:report></d:supported-report>\
+           <d:supported-report><d:report><cal:calendar-query/></d:report></d:supported-report>\
+           <d:supported-report><d:report><cal:free-busy-query/></d:report></d:supported-report>\
+         </d:supported-report-set>",
+    );
+    response(&href, &props)
+}
+
+/// The event a `<coll>/<id>.ics` path names. Under a room's collection that is
+/// the booking itself, whoever owns it — the point of a shared room calendar;
+/// anywhere else it is the caller's own visible event, as it has always been
+/// (an href whose collection segment has gone stale still resolves).
+async fn fetch_in_collection(acc: &AccountStore, coll: &str, id: &str) -> Option<CalendarEvent> {
+    match room_of(acc, coll).await {
+        Some(room) => acc
+            .event_in_calendar(&room.id, &EventId::new(id.to_owned()))
+            .await
+            .ok()
+            .flatten(),
+        None => fetch_event(acc, id).await,
+    }
 }
 
 /// The overrides to include alongside a recurring event's `calendar-data` (empty
@@ -447,6 +587,9 @@ async fn report_contacts(acc: &AccountStore, uid: &str, text: &str) -> Response 
 }
 
 async fn report_events(acc: &AccountStore, uid: &str, coll: &str, text: &str) -> Response {
+    if let Some(room) = room_of(acc, coll).await {
+        return report_room(acc, uid, coll, &room, text).await;
+    }
     if text.contains("sync-collection") {
         return cal_sync_collection(acc, uid, coll, text).await;
     }
@@ -456,6 +599,7 @@ async fn report_events(acc: &AccountStore, uid: &str, coll: &str, text: &str) ->
     // calendar-multiget (explicit hrefs), or a calendar-query — which we answer
     // by its <C:time-range> when present, else the whole collection.
     let hrefs = extract_hrefs(text);
+    let rooms = room_addresses(acc).await;
     let mut responses = String::new();
     if hrefs.is_empty() {
         let cal_id = resolve_collection(uid, coll);
@@ -465,26 +609,11 @@ async fn report_events(acc: &AccountStore, uid: &str, coll: &str, text: &str) ->
         };
         let range = extract_time_range(text);
         for e in &events {
-            let mut ovs: Option<Vec<CalendarEvent>> = None;
-            if let Some((start, end)) = range
-                && !event_overlaps(e, start, end)
-            {
-                // A per-occurrence override can still have moved an
-                // instance INTO the window; check before dropping.
-                let loaded = overrides_for_ics(acc, e).await;
-                if !loaded
-                    .iter()
-                    .any(|o| o.starts_at < end && o.ends_at > start)
-                {
-                    continue;
-                }
-                ovs = Some(loaded);
+            let ovs = overrides_for_ics(acc, e).await;
+            if !in_window(e, &ovs, range) {
+                continue;
             }
-            let ovs = match ovs {
-                Some(v) => v,
-                None => overrides_for_ics(acc, e).await,
-            };
-            responses.push_str(&event_propstat(uid, e, true, &ovs));
+            responses.push_str(&event_propstat(uid, coll, e, true, &ovs, &rooms));
         }
     } else {
         for href in hrefs {
@@ -492,7 +621,7 @@ async fn report_events(acc: &AccountStore, uid: &str, coll: &str, text: &str) ->
                 Some(id) => match fetch_event(acc, &id).await {
                     Some(e) => {
                         let ovs = overrides_for_ics(acc, &e).await;
-                        responses.push_str(&event_propstat(uid, &e, true, &ovs));
+                        responses.push_str(&event_propstat(uid, coll, &e, true, &ovs, &rooms));
                     }
                     None => responses.push_str(&not_found_response(&href)),
                 },
@@ -501,6 +630,129 @@ async fn report_events(acc: &AccountStore, uid: &str, coll: &str, text: &str) ->
         }
     }
     multistatus(&responses)
+}
+
+/// Whether an event belongs in a `calendar-query`'s answer. No range → every
+/// member. With one, the store's expansion decides (the same function the
+/// Agenda uses), and a per-occurrence override is checked too: an instance
+/// moved INTO the window would otherwise be dropped with its series.
+fn in_window(
+    e: &CalendarEvent,
+    overrides: &[CalendarEvent],
+    range: Option<(OffsetDateTime, OffsetDateTime)>,
+) -> bool {
+    let Some((start, end)) = range else {
+        return true;
+    };
+    event_overlaps(e, start, end)
+        || overrides
+            .iter()
+            .any(|o| o.starts_at < end && o.ends_at > start)
+}
+
+/// Every REPORT a room's collection answers. Its members are read once and the
+/// whole report is served from that list — a multiget over a room is scoped by
+/// construction then, because an href the room does not hold is simply not in
+/// it.
+async fn report_room(
+    acc: &AccountStore,
+    uid: &str,
+    coll: &str,
+    room: &CalendarResource,
+    text: &str,
+) -> Response {
+    if text.contains("free-busy-query") {
+        return room_free_busy(acc, room, text).await;
+    }
+    let bookings = room_bookings(acc, &room.id).await;
+    if text.contains("sync-collection") {
+        return room_sync_collection(uid, coll, &bookings, text);
+    }
+    let rooms = room_addresses(acc).await;
+    let hrefs = extract_hrefs(text);
+    let mut responses = String::new();
+    if hrefs.is_empty() {
+        let range = extract_time_range(text);
+        for (e, ovs) in &bookings {
+            if in_window(e, ovs, range) {
+                responses.push_str(&event_propstat(uid, coll, e, true, ovs, &rooms));
+            }
+        }
+    } else {
+        for href in hrefs {
+            let found = cal_href_object_id(&href)
+                .and_then(|id| bookings.iter().find(|(e, _)| e.id.as_str() == id));
+            match found {
+                Some((e, ovs)) => {
+                    responses.push_str(&event_propstat(uid, coll, e, true, ovs, &rooms));
+                }
+                None => responses.push_str(&not_found_response(&href)),
+            }
+        }
+    }
+    multistatus(&responses)
+}
+
+/// `sync-collection` on a room (RFC 6578). The token is a state hash, not a
+/// sequence, so this answers the two cases it can answer exactly and refuses
+/// the third rather than guessing: no token → an initial sync carrying every
+/// member; the current token → nothing changed; any other token → `403`
+/// `DAV:valid-sync-token` (§3.2), which sends the client to a full listing —
+/// the same round it would make on a changed ctag.
+fn room_sync_collection(
+    uid: &str,
+    coll: &str,
+    bookings: &[(CalendarEvent, Vec<CalendarEvent>)],
+    body: &str,
+) -> Response {
+    let token = room_tag(bookings);
+    match extract_sync_token(body) {
+        Some(sent) if sent == token => sync_multistatus(String::new(), &token),
+        Some(_) => xml_response(
+            StatusCode::FORBIDDEN,
+            format!(
+                "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n\
+                 <d:error {NS}><d:valid-sync-token/></d:error>"
+            ),
+        ),
+        None => {
+            let mut responses = String::new();
+            for (e, ovs) in bookings {
+                responses.push_str(&event_propstat(uid, coll, e, false, ovs, &[]));
+            }
+            sync_multistatus(responses, &token)
+        }
+    }
+}
+
+/// A room collection's `free-busy-query` (RFC 4791 §7.10): when the room is
+/// taken, never by whom or for what. The bookings come back through the one
+/// expansion, so a moved instance is busy where it moved to.
+async fn room_free_busy(acc: &AccountStore, room: &CalendarResource, body: &str) -> Response {
+    let Some((from, to)) = extract_time_range(body) else {
+        return status(StatusCode::BAD_REQUEST);
+    };
+    if to <= from {
+        return status(StatusCode::BAD_REQUEST);
+    }
+    let held = match acc.resource_bookings_in_range(&room.id, from, to).await {
+        Ok(e) => e,
+        Err(_) => return status(StatusCode::INTERNAL_SERVER_ERROR),
+    };
+    let busy = alo_store::merged_busy_spans(&held, from, to);
+    let ics = ical::to_vfreebusy(
+        &format!("freebusy-{}", room.id.as_str()),
+        from,
+        to,
+        &busy,
+        OffsetDateTime::now_utc(),
+    );
+    let mut resp = (StatusCode::OK, ics).into_response();
+    resp.headers_mut().insert(
+        header::CONTENT_TYPE,
+        header::HeaderValue::from_static("text/calendar; charset=utf-8"),
+    );
+    resp
 }
 
 async fn cal_sync_collection(acc: &AccountStore, uid: &str, coll: &str, body: &str) -> Response {
@@ -521,7 +773,7 @@ async fn cal_sync_collection(acc: &AccountStore, uid: &str, coll: &str, body: &s
             && e.calendar_id.as_str() == cal_id
         {
             let ovs = overrides_for_ics(acc, &e).await;
-            responses.push_str(&event_propstat(uid, &e, false, &ovs));
+            responses.push_str(&event_propstat(uid, coll, &e, false, &ovs, &[]));
         }
     }
     for id in &changes.destroyed {
@@ -531,7 +783,15 @@ async fn cal_sync_collection(acc: &AccountStore, uid: &str, coll: &str, body: &s
             "/dav/calendars/{uid}/{coll}/{id}.ics"
         )));
     }
-    let token = format!("{CAL_SYNC_PREFIX}{}", changes.new_state);
+    sync_multistatus(
+        responses,
+        &format!("{CAL_SYNC_PREFIX}{}", changes.new_state),
+    )
+}
+
+/// A `sync-collection` answer: the member responses plus the token the client
+/// sends back next time.
+fn sync_multistatus(responses: String, token: &str) -> Response {
     let xml = format!(
         "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n\
          <d:multistatus {NS}>{responses}<d:sync-token>{token}</d:sync-token></d:multistatus>"
@@ -618,12 +878,7 @@ async fn sync_collection(acc: &AccountStore, uid: &str, body: &str) -> Response 
             &ContactId::new(id.clone()),
         )));
     }
-    let token = format!("{SYNC_PREFIX}{}", changes.new_state);
-    let xml = format!(
-        "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n\
-         <d:multistatus {NS}>{responses}<d:sync-token>{token}</d:sync-token></d:multistatus>"
-    );
-    xml_response(StatusCode::MULTI_STATUS, xml)
+    sync_multistatus(responses, &format!("{SYNC_PREFIX}{}", changes.new_state))
 }
 
 // ---- GET / PUT / DELETE ----------------------------------------------
@@ -639,12 +894,13 @@ async fn get_object(acc: &AccountStore, resource: &Resource, head: bool) -> Resp
             ),
             None => status(StatusCode::NOT_FOUND),
         },
-        Resource::CalObject(_coll, id) => match fetch_event(acc, id).await {
+        Resource::CalObject(coll, id) => match fetch_in_collection(acc, coll, id).await {
             Some(e) => {
                 let ovs = overrides_for_ics(acc, &e).await;
+                let rooms = room_addresses(acc).await;
                 serve(
                     head,
-                    ical::to_ics_series(&e, &ovs),
+                    ical::to_ics_series_with_rooms(&e, &ovs, &rooms),
                     &event_etag(&e, &ovs),
                     "text/calendar; charset=utf-8",
                 )
@@ -730,6 +986,13 @@ async fn put_event_object(
     headers: &HeaderMap,
     body: &[u8],
 ) -> Response {
+    // A room's collection is read-only to everyone, admin included: its members
+    // are meetings that booked it, and the only door into a room's schedule is
+    // that booking. Refused here rather than through the store's `can_edit`, so
+    // the answer is the permission it is (403) and no write is ever attempted.
+    if room_of(acc, coll).await.is_some() {
+        return status(StatusCode::FORBIDDEN);
+    }
     let existing = fetch_event(acc, id).await;
     if header_has(headers, header::IF_NONE_MATCH, "*") && existing.is_some() {
         return status(StatusCode::PRECONDITION_FAILED);
@@ -771,6 +1034,23 @@ async fn put_event_object(
     } else {
         Vec::new()
     };
+    // An ATTENDEE that names a room books it — the same one check the Agenda and
+    // the JSON API run, so a phone cannot take a room the web app would have
+    // refused. The hold is taken BEFORE the write, so a refusal leaves no
+    // half-made meeting behind; RFC 4791 §5.3.2 sanctions a PUT answering 409.
+    let rooms = match resources_named(acc, &event.attendees).await {
+        Ok(r) => r,
+        Err(()) => return status(StatusCode::INTERNAL_SERVER_ERROR),
+    };
+    if rooms.is_empty() {
+        // The PUT body is the whole resource: a room dropped from the guest list
+        // is a room let go of.
+        if acc.unbook_event(&event.id).await.is_err() {
+            return status(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    } else if let Err(err) = acc.book_resources(&event.id, &event, &rooms).await {
+        return booking_refusal(err);
+    }
     match acc.put_event(&event.id, &event).await {
         Ok(created) => {
             // The PUT body is the whole resource: reconcile the stored
@@ -795,10 +1075,57 @@ async fn put_event_object(
         // grant — the denial is a permission, not existence) and 404 when it
         // isn't, so an unshared calendar id stays unprobeable.
         Err(alo_store::StoreError::NotFound) => {
+            // The room was held for a meeting that never happened — give it back.
+            let _ = acc.unbook_event(&event.id).await;
             cal_write_denial(acc, event.calendar_id.as_str()).await
         }
-        Err(_) => status(StatusCode::INTERNAL_SERVER_ERROR),
+        Err(_) => {
+            let _ = acc.unbook_event(&event.id).await;
+            status(StatusCode::INTERNAL_SERVER_ERROR)
+        }
     }
+}
+
+/// The rooms a guest list names, in order and without repeats. An attendee that
+/// is nobody's room is just a guest — one list carries both, which is what makes
+/// booking a room one act rather than two.
+///
+/// # Errors
+/// `Err(())` when the lookup fails (the caller answers 500 — refusing is the
+/// only safe answer when we cannot tell whether a room was named).
+async fn resources_named(acc: &AccountStore, attendees: &[String]) -> Result<Vec<CalendarId>, ()> {
+    let mut out: Vec<CalendarId> = Vec::new();
+    for attendee in attendees {
+        let found = acc
+            .calendar_resource_by_email(attendee)
+            .await
+            .map_err(|_| ())?;
+        if let Some(resource) = found
+            && !out.iter().any(|id| id.as_str() == resource.id.as_str())
+        {
+            out.push(resource.id);
+        }
+    }
+    Ok(out)
+}
+
+/// A refused room booking on the wire. `409` is what RFC 4791 §5.3.2 leaves a
+/// PUT for a state the server cannot accept; the store's own words ride along
+/// as the body, naming the room and the slot it is already taken for, because a
+/// client that shows the server's reason beats one that says "error".
+fn booking_refusal(err: alo_store::StoreError) -> Response {
+    let detail = match err {
+        alo_store::StoreError::Conflict(detail) => detail,
+        // A room retired between reading the guest list and taking the lock.
+        alo_store::StoreError::NotFound => "that resource is no longer bookable".to_owned(),
+        _ => return status(StatusCode::INTERNAL_SERVER_ERROR),
+    };
+    let mut resp = (StatusCode::CONFLICT, detail).into_response();
+    resp.headers_mut().insert(
+        header::CONTENT_TYPE,
+        header::HeaderValue::from_static("text/plain; charset=utf-8"),
+    );
+    resp
 }
 
 /// The wire status for a refused calendar write: `403` when the caller can
@@ -844,7 +1171,13 @@ async fn delete_object(acc: &AccountStore, resource: &Resource, headers: &Header
             }
             store_delete(acc.delete_contact(&ContactId::new(id.to_owned())).await)
         }
-        Resource::CalObject(_coll, id) => {
+        Resource::CalObject(coll, id) => {
+            // Cancelling out of a room is done by editing the meeting, not by
+            // deleting it from the room's collection — which is somebody else's
+            // meeting as often as not.
+            if room_of(acc, coll).await.is_some() {
+                return status(StatusCode::FORBIDDEN);
+            }
             if let Some(want) = want {
                 match fetch_event(acc, id).await {
                     Some(e) => {
@@ -985,11 +1318,6 @@ fn event_etag(e: &CalendarEvent, overrides: &[CalendarEvent]) -> String {
         ov.all_day.hash(&mut hasher);
     }
     format!("\"{:016x}\"", hasher.finish())
-}
-
-fn event_href(uid: &str, e: &CalendarEvent) -> String {
-    let coll = collection_for(uid, e.calendar_id.as_str());
-    format!("/dav/calendars/{uid}/{coll}/{}.ics", e.id.as_str())
 }
 
 fn cal_href_object_id(href: &str) -> Option<String> {

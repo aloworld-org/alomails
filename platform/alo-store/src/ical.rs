@@ -35,7 +35,7 @@ pub fn to_ics_at(event: &CalendarEvent, dtstamp: OffsetDateTime) -> String {
         format!("PRODID:{PRODID}"),
     ];
     lines.extend(vtimezone_lines(&[event]));
-    lines.extend(vevent_lines(event, None, dtstamp));
+    lines.extend(vevent_lines(event, None, dtstamp, &[]));
     lines.push("END:VCALENDAR".to_owned());
     fold_join(&lines)
 }
@@ -48,12 +48,35 @@ pub fn to_ics_series(master: &CalendarEvent, overrides: &[CalendarEvent]) -> Str
     to_ics_series_at(master, overrides, OffsetDateTime::now_utc())
 }
 
+/// [`to_ics_series`] naming which attendee addresses are **rooms**, so each is
+/// served as `CUTYPE=ROOM` (RFC 5545 §3.2.3). The store knows a room by its
+/// address, not the serializer, so the caller passes the tenant's set in; an
+/// empty set is exactly [`to_ics_series`].
+pub fn to_ics_series_with_rooms(
+    master: &CalendarEvent,
+    overrides: &[CalendarEvent],
+    rooms: &[String],
+) -> String {
+    to_ics_series_rooms_at(master, overrides, rooms, OffsetDateTime::now_utc())
+}
+
 /// [`to_ics_series`] with a caller-supplied `DTSTAMP` instant — the same
 /// deterministic seam as [`to_ics_at`], so the round-trip corpus can pin a
 /// multi-`VEVENT` series byte-for-byte.
 pub fn to_ics_series_at(
     master: &CalendarEvent,
     overrides: &[CalendarEvent],
+    dtstamp: OffsetDateTime,
+) -> String {
+    to_ics_series_rooms_at(master, overrides, &[], dtstamp)
+}
+
+/// The one body behind [`to_ics_series_at`] and [`to_ics_series_with_rooms`]:
+/// a pinned `DTSTAMP` and the room set, both explicit.
+pub fn to_ics_series_rooms_at(
+    master: &CalendarEvent,
+    overrides: &[CalendarEvent],
+    rooms: &[String],
     dtstamp: OffsetDateTime,
 ) -> String {
     let mut lines = vec![
@@ -63,9 +86,9 @@ pub fn to_ics_series_at(
     ];
     let events: Vec<&CalendarEvent> = std::iter::once(master).chain(overrides).collect();
     lines.extend(vtimezone_lines(&events));
-    lines.extend(vevent_lines(master, None, dtstamp));
+    lines.extend(vevent_lines(master, None, dtstamp, rooms));
     for ov in overrides {
-        lines.extend(vevent_lines(ov, None, dtstamp));
+        lines.extend(vevent_lines(ov, None, dtstamp, rooms));
     }
     lines.push("END:VCALENDAR".to_owned());
     fold_join(&lines)
@@ -86,6 +109,7 @@ pub fn to_imip(event: &CalendarEvent, organizer: &str, method: &str) -> String {
         event,
         Some(organizer),
         OffsetDateTime::now_utc(),
+        &[],
     ));
     lines.push("END:VCALENDAR".to_owned());
     fold_join(&lines)
@@ -240,10 +264,13 @@ fn fmt_offset(secs: i32) -> String {
 
 /// The `VEVENT` body shared by [`to_ics`] and [`to_imip`]; an `organizer`, when
 /// given, adds the `ORGANIZER` property (present only in scheduling messages).
+/// `rooms` are the attendee addresses that name a resource, so each is served
+/// with `CUTYPE=ROOM` (RFC 5545 §3.2.3) instead of the default `INDIVIDUAL`.
 fn vevent_lines(
     event: &CalendarEvent,
     organizer: Option<&str>,
     dtstamp: OffsetDateTime,
+    rooms: &[String],
 ) -> Vec<String> {
     // A series that follows a zone's wall-clock serializes its date-times as
     // `;TZID=<zone>:<local>` so clients expand the recurrence in that zone
@@ -312,9 +339,19 @@ fn vevent_lines(
         lines.push(format!("DESCRIPTION:{}", escape(desc)));
     }
     for a in &event.attendees {
-        lines.push(format!(
-            "ATTENDEE;ROLE=REQ-PARTICIPANT;RSVP=TRUE;PARTSTAT=NEEDS-ACTION:mailto:{a}"
-        ));
+        // A room is an attendee like any other on the wire, distinguished by its
+        // calendar user type (RFC 5545 §3.2.3) — which is what lets a client show
+        // it as the meeting's location rather than as a person who has not replied.
+        // A room does not RSVP: it was booked, and the booking is the answer.
+        if rooms.iter().any(|r| r.eq_ignore_ascii_case(a)) {
+            lines.push(format!(
+                "ATTENDEE;CUTYPE=ROOM;ROLE=REQ-PARTICIPANT;RSVP=FALSE;PARTSTAT=ACCEPTED:mailto:{a}"
+            ));
+        } else {
+            lines.push(format!(
+                "ATTENDEE;ROLE=REQ-PARTICIPANT;RSVP=TRUE;PARTSTAT=NEEDS-ACTION:mailto:{a}"
+            ));
+        }
     }
     // A reminder becomes a display VALARM triggered `n` minutes before the start,
     // so the alert fires natively in the client (phone/Apple Calendar).
@@ -1090,6 +1127,66 @@ mod tests {
         assert_eq!(back.recurrence.as_deref(), Some("FREQ=WEEKLY"));
         assert_eq!(back.attendees, vec!["guest@example.com".to_owned()]);
         assert!(!back.all_day);
+    }
+
+    #[test]
+    fn a_room_attendee_is_served_as_cutype_room() {
+        let e = CalendarEvent {
+            id: EventId::new("mtg-room".to_owned()),
+            calendar_id: CalendarId::new("cal".to_owned()),
+            summary: "Kickoff".into(),
+            description: None,
+            location: None,
+            starts_at: OffsetDateTime::new_utc(
+                Date::from_calendar_date(2026, time::Month::September, 1).unwrap(),
+                Time::from_hms(14, 0, 0).unwrap(),
+            ),
+            ends_at: OffsetDateTime::new_utc(
+                Date::from_calendar_date(2026, time::Month::September, 1).unwrap(),
+                Time::from_hms(15, 0, 0).unwrap(),
+            ),
+            all_day: false,
+            recurrence: None,
+            attendees: vec![
+                "guest@example.com".to_owned(),
+                "board@example.com".to_owned(),
+            ],
+            exdates: vec![],
+            timezone: None,
+            rdates: vec![],
+            recurrence_id: None,
+            reminder_minutes: None,
+            attendee_status: vec![],
+        };
+        // The address is matched case-insensitively — an admin typed it once.
+        let rooms = vec!["BOARD@Example.com".to_owned()];
+        let ics = unfold(&to_ics_series_with_rooms(&e, &[], &rooms));
+        assert!(
+            ics.contains(
+                "ATTENDEE;CUTYPE=ROOM;ROLE=REQ-PARTICIPANT;RSVP=FALSE;PARTSTAT=ACCEPTED:mailto:board@example.com"
+            ),
+            "{ics}"
+        );
+        // A person beside it is untouched.
+        assert!(
+            ics.contains(
+                "ATTENDEE;ROLE=REQ-PARTICIPANT;RSVP=TRUE;PARTSTAT=NEEDS-ACTION:mailto:guest@example.com"
+            ),
+            "{ics}"
+        );
+        // With no room set the output is exactly the old one.
+        assert_eq!(
+            to_ics_series_rooms_at(&e, &[], &[], e.starts_at),
+            to_ics_series_at(&e, &[], e.starts_at)
+        );
+        assert!(!to_ics_series_at(&e, &[], e.starts_at).contains("CUTYPE"));
+        // A room attendee still parses back as a plain address.
+        assert_eq!(
+            from_ics(&to_ics_series_with_rooms(&e, &[], &rooms), "fallback")
+                .unwrap()
+                .attendees,
+            e.attendees
+        );
     }
 
     #[test]

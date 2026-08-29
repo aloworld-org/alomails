@@ -320,6 +320,75 @@ async fn deleting_the_meeting_gives_the_room_back() {
 }
 
 #[tokio::test]
+async fn a_room_serves_a_colleagues_booking_as_its_own_collection_member() {
+    let store = common::test_store().await;
+    let tenant = store.create_tenant("t-res-member").await.unwrap();
+    let ts = store.for_tenant(tenant.clone());
+    let mine = ts.create_user("mine@res-member.test").await.unwrap();
+    let theirs = ts.create_user("theirs@res-member.test").await.unwrap();
+    let a = store.for_account(tenant.clone(), mine);
+    let b = store.for_account(tenant.clone(), theirs);
+
+    let room_id = a
+        .create_calendar_resource(&room("Board room", "board@res-member.test"))
+        .await
+        .unwrap();
+    // A colleague's meeting takes the room, on the colleague's own calendar.
+    let theirs_cal = b.ensure_personal_calendar().await.unwrap();
+    let booked = EventId::generate();
+    let event = meeting(&theirs_cal, odt(2026, 9, 2, 10, 0), odt(2026, 9, 2, 11, 0));
+    b.book_resources(&booked, &event, std::slice::from_ref(&room_id))
+        .await
+        .unwrap();
+    b.create_event_at(&booked, &event).await.unwrap();
+    // …and a private one that books nothing.
+    let private = EventId::generate();
+    let alone = meeting(&theirs_cal, odt(2026, 9, 2, 15, 0), odt(2026, 9, 2, 16, 0));
+    b.create_event_at(&private, &alone).await.unwrap();
+
+    // Through the room, the booking reads — the point of a shared room calendar.
+    let read = a
+        .event_in_calendar(&room_id, &booked)
+        .await
+        .unwrap()
+        .expect("the booking is a member of the room's collection");
+    assert_eq!(read.starts_at, odt(2026, 9, 2, 10, 0));
+    // Through any other door it does not: it is still the colleague's event.
+    assert!(a.event(&booked).await.unwrap().is_none());
+    let mine_cal = a.ensure_personal_calendar().await.unwrap();
+    assert!(
+        a.event_in_calendar(&mine_cal, &booked)
+            .await
+            .unwrap()
+            .is_none()
+    );
+    // And the room answers only for what booked it, never for the rest of a
+    // colleague's diary.
+    assert!(
+        a.event_in_calendar(&room_id, &private)
+            .await
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        a.event_in_calendar(&room_id, &EventId::new("no-such-event"))
+            .await
+            .unwrap()
+            .is_none()
+    );
+    // One's own event still reads through one's own calendar.
+    let ours = EventId::generate();
+    let ours_event = meeting(&mine_cal, odt(2026, 9, 3, 10, 0), odt(2026, 9, 3, 11, 0));
+    a.create_event_at(&ours, &ours_event).await.unwrap();
+    assert!(
+        a.event_in_calendar(&mine_cal, &ours)
+            .await
+            .unwrap()
+            .is_some()
+    );
+}
+
+#[tokio::test]
 async fn one_tenants_rooms_are_invisible_and_unbookable_from_another() {
     let store = common::test_store().await;
     let t1 = store.create_tenant("t-res-iso-a").await.unwrap();
@@ -377,6 +446,14 @@ async fn one_tenants_rooms_are_invisible_and_unbookable_from_another() {
                 .is_empty()
         );
         assert!(other.events_of_calendar(&room_id).await.unwrap().is_empty());
+        // …nor read one of its bookings by id, even knowing both ids.
+        assert!(
+            other
+                .event_in_calendar(&room_id, &first)
+                .await
+                .unwrap()
+                .is_none()
+        );
         // …nor rename or retire it.
         assert!(matches!(
             other

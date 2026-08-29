@@ -171,6 +171,39 @@ impl AccountStore {
         Ok(row.map(EventRow::into_event))
     }
 
+    /// One event **as a member of one collection** — the object behind a
+    /// `<calendar>/<id>.ics` CalDAV path. On a calendar the caller can see this
+    /// is [`Self::event`] narrowed to that calendar; on a **resource** calendar
+    /// (a room) it is the booking itself, whoever owns it, so a colleague can
+    /// read the meeting that holds the room. Anything else — another tenant's
+    /// event, a calendar the caller was never shown — is `None`, so a guessed
+    /// id stays unprobeable.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn event_in_calendar(
+        &self,
+        calendar: &CalendarId,
+        id: &EventId,
+    ) -> Result<Option<CalendarEvent>> {
+        let scope = calendar_scope_pred();
+        let sql = format!(
+            "SELECT e.id, e.calendar_id, e.summary, e.description, e.location, e.starts_at, \
+                    e.ends_at, e.all_day, e.rrule, e.attendees, e.exdates, e.tzid, e.rdates, \
+                    e.reminder_minutes, e.attendee_status \
+             FROM calendar_events e \
+             WHERE e.tenant_id = $1 AND e.id = $4 AND {scope}",
+        );
+        let row = sqlx::query_as::<_, EventRow>(&sql)
+            .bind(self.tenant.as_str())
+            .bind(self.user.as_str())
+            .bind(calendar.as_str())
+            .bind(id.as_str())
+            .fetch_optional(&self.pool)
+            .await?;
+        Ok(row.map(EventRow::into_event))
+    }
+
     /// Creates an event and returns its id. The caller validates the fields
     /// (non-empty summary, `ends_at >= starts_at`); the store persists what it
     /// is given.
