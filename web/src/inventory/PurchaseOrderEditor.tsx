@@ -28,7 +28,16 @@ import { ArrowLeft, Printer } from "lucide-react";
 
 import { RecordHistory } from "../audit";
 import { TotalsPanel, printSheet, useBillingApi, type BillingProduct } from "../billing";
-import { Button, Spinner, useDialogs } from "../ds";
+import {
+  Button,
+  Field,
+  Input,
+  Select,
+  Spinner,
+  Toolbar,
+  ToolbarSpacer,
+  useDialogs,
+} from "../ds";
 import { strings } from "../i18n";
 import { inventoryMessage, useInventoryApi } from "./api";
 import { dayLabel, poStatusLabel, poStatusTone, qtyLabel } from "./format";
@@ -37,7 +46,7 @@ import { FulfilmentList, type FulfilmentEntry } from "./Fulfilments";
 import { OrderLines } from "./OrderLines";
 import { blankOrderRow, orderRowFromLine, orderRowsDraft, type OrderRow } from "./orderRows";
 import { useOrdersApi } from "./orders";
-import { ErrorBanner, Field, StatusChip } from "./parts";
+import { ErrorBanner, StatusChip } from "./parts";
 import type { InvLocation, InvSupplier, OrderPatch, PurchaseOrder, Receipt } from "./types";
 import styles from "./InventoryModule.module.css";
 
@@ -273,7 +282,12 @@ export function PurchaseOrderEditor() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.toolbar}>
+      {/* On a phone the stylesheet stretched every toolbar button across the
+          row it wraps onto; the child variant says the same thing once. */}
+      <Toolbar
+        label={strings.inventoryTabPurchasing}
+        className="max-[48rem]:[&>button]:flex-auto"
+      >
         <button
           type="button"
           className={styles.linkAction}
@@ -284,13 +298,13 @@ export function PurchaseOrderEditor() {
         <h2 className={styles.documentTitle}>
           {order?.number ?? strings.inventoryDraftOrder}
         </h2>
-        <span className={styles.chips}>
+        <span className="inline-flex flex-wrap items-center gap-2">
           {order !== null && (
             <StatusChip tone={poStatusTone(order.status)} label={poStatusLabel(order.status)} />
           )}
           {order?.late === true && <StatusChip tone="warn" label={strings.inventoryOrderLate} />}
         </span>
-        <span className={styles.toolbarSpacer} />
+        <ToolbarSpacer />
         {(loading || busy) && <Spinner size={16} />}
         {id !== undefined && order !== null && !editable && (
           <Button variant="ghost" onClick={() => void print()} disabled={busy}>
@@ -323,7 +337,7 @@ export function PurchaseOrderEditor() {
               : strings.inventoryCancelOrder}
           </Button>
         )}
-      </div>
+      </Toolbar>
 
       {error !== null && <ErrorBanner message={error} />}
       {notice !== null && <p className={styles.notice}>{notice}</p>}
@@ -338,83 +352,97 @@ export function PurchaseOrderEditor() {
 
       <div className={styles.headerGrid}>
         <Field label={strings.inventoryColSupplier} hint={strings.inventorySupplierHint}>
-          {editable ? (
-            <select
-              className={styles.select}
-              value={supplierId}
-              onChange={(e) => {
-                setSupplierId(e.target.value);
-                setDirty(true);
-              }}
-            >
-              <option value="">{strings.inventoryPickSupplier}</option>
-              {/* The stored supplier is always offered, even if they have since
-                  been archived: a document must be able to say who it is with. */}
-              {order !== null &&
-                !suppliers.some((supplier) => supplier.id === order.supplierId) && (
-                  <option value={order.supplierId}>{order.supplierName}</option>
-                )}
-              {suppliers.map((supplier) => (
-                <option key={supplier.id} value={supplier.id}>
-                  {supplier.name}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <p className={styles.readOnlyValue}>{order?.supplierName ?? ""}</p>
-          )}
+          {(control) =>
+            editable ? (
+              <Select
+                id={control.id}
+                aria-describedby={control["aria-describedby"]}
+                fullWidth
+                value={supplierId}
+                onChange={(e) => {
+                  setSupplierId(e.target.value);
+                  setDirty(true);
+                }}
+              >
+                <option value="">{strings.inventoryPickSupplier}</option>
+                {/* The stored supplier is always offered, even if they have since
+                    been archived: a document must be able to say who it is with. */}
+                {order !== null &&
+                  !suppliers.some((supplier) => supplier.id === order.supplierId) && (
+                    <option value={order.supplierId}>{order.supplierName}</option>
+                  )}
+                {suppliers.map((supplier) => (
+                  <option key={supplier.id} value={supplier.id}>
+                    {supplier.name}
+                  </option>
+                ))}
+              </Select>
+            ) : (
+              <p className={styles.readOnlyValue}>{order?.supplierName ?? ""}</p>
+            )
+          }
         </Field>
 
         <Field label={strings.inventoryColExpected} hint={strings.inventoryExpectedHint}>
-          {editable ? (
-            <input
-              className={styles.input}
-              type="date"
-              value={expectedDate}
-              onChange={(e) => {
-                setExpectedDate(e.target.value);
-                setDirty(true);
-              }}
-            />
-          ) : (
-            <p className={styles.readOnlyValue}>{dayLabel(order?.expectedDate ?? null)}</p>
-          )}
+          {(control) =>
+            editable ? (
+              <Input
+                id={control.id}
+                aria-describedby={control["aria-describedby"]}
+                type="date"
+                value={expectedDate}
+                onChange={(e) => {
+                  setExpectedDate(e.target.value);
+                  setDirty(true);
+                }}
+              />
+            ) : (
+              <p className={styles.readOnlyValue}>{dayLabel(order?.expectedDate ?? null)}</p>
+            )
+          }
         </Field>
 
         <Field label={strings.inventoryFieldReference} hint={strings.inventoryReferenceHint}>
-          {editable ? (
-            <input
-              className={styles.input}
-              value={reference}
-              onChange={(e) => {
-                setReference(e.target.value);
-                setDirty(true);
-              }}
-            />
-          ) : (
-            <p className={styles.readOnlyValue}>{order?.reference ?? ""}</p>
-          )}
+          {(control) =>
+            editable ? (
+              <Input
+                id={control.id}
+                aria-describedby={control["aria-describedby"]}
+                value={reference}
+                onChange={(e) => {
+                  setReference(e.target.value);
+                  setDirty(true);
+                }}
+              />
+            ) : (
+              <p className={styles.readOnlyValue}>{order?.reference ?? ""}</p>
+            )
+          }
         </Field>
 
         <Field label={strings.inventoryFieldOrdered}>
-          <p className={styles.readOnlyValue}>{dayLabel(order?.orderedDate ?? null)}</p>
+          {() => <p className={styles.readOnlyValue}>{dayLabel(order?.orderedDate ?? null)}</p>}
         </Field>
       </div>
 
       <Field label={strings.inventoryFieldNote} hint={strings.inventoryOrderNoteHint}>
-        {editable ? (
-          <textarea
-            className={`${styles.input} ${styles.textarea}`}
-            value={note}
-            onChange={(e) => {
-              setNote(e.target.value);
-              setDirty(true);
-            }}
-            rows={2}
-          />
-        ) : (
-          <p className={styles.readOnlyValue}>{order?.note ?? ""}</p>
-        )}
+        {(control) =>
+          editable ? (
+            <textarea
+              id={control.id}
+              aria-describedby={control["aria-describedby"]}
+              className={styles.textarea}
+              value={note}
+              onChange={(e) => {
+                setNote(e.target.value);
+                setDirty(true);
+              }}
+              rows={2}
+            />
+          ) : (
+            <p className={styles.readOnlyValue}>{order?.note ?? ""}</p>
+          )
+        }
       </Field>
 
       <OrderLines

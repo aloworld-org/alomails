@@ -21,7 +21,7 @@
 import { Plus, Trash2 } from "lucide-react";
 
 import { formatAmount, formatQty, formatRate, isBlankRow, type BillingProduct } from "../billing";
-import { IconButton, cx } from "../ds";
+import { IconButton, Input, Select, Table, Td, Th, cx } from "../ds";
 import { strings, useLocale } from "../i18n";
 import {
   blankOrderRow,
@@ -127,184 +127,173 @@ export function OrderLines({
       {rows.length === 0 ? (
         <p className={styles.noMatches}>{strings.inventoryNoLines}</p>
       ) : (
-        <div className={styles.tableWrap} data-allow-overflow="">
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th scope="col">{strings.inventoryColDescription}</th>
-                <th scope="col">{strings.inventoryColUnit}</th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.inventoryColQuantity}
-                </th>
-                {progress.map((column) => (
-                  <th key={column.key} scope="col" className={styles.numeric}>
-                    {column.label}
-                  </th>
-                ))}
-                <th scope="col" className={styles.numeric}>
-                  {strings.inventoryColUnitPrice}
-                </th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.inventoryColVatRate}
-                </th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.inventoryColNet}
-                </th>
-                {!readOnly && (
-                  <th scope="col">
-                    <span className={styles.srOnly}>{strings.inventoryColActions}</span>
-                  </th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, index) => {
-                const problem = orderRowProblem(row);
-                const stored = storedIndex.get(row.key);
-                const line = stored === undefined ? undefined : savedLines[stored];
-                return (
-                  <tr key={row.key}>
-                    <td className={styles.lineDescription}>
-                      {readOnly ? (
-                        row.description
-                      ) : (
-                        <>
-                          <input
-                            className={styles.input}
-                            value={row.description}
-                            onChange={(e) =>
-                              replace(index, { ...row, description: e.target.value })
-                            }
-                            placeholder={strings.inventoryDescriptionPlaceholder}
-                            aria-label={strings.inventoryColDescription}
-                            aria-invalid={problem === "description"}
-                          />
-                          {products.length > 0 && (
-                            <select
-                              className={styles.select}
-                              value={row.productId}
-                              aria-label={strings.inventoryPickProduct}
-                              onChange={(e) => {
-                                const picked = products.find((p) => p.id === e.target.value);
-                                replace(
-                                  index,
-                                  picked === undefined
-                                    ? // Clearing the picker unlinks the line
-                                      // without rewriting what somebody typed:
-                                      // the words stay, the goods stop moving.
-                                      { ...row, productId: "" }
-                                    : orderRowFromProduct(row, picked, priceSide),
-                                );
-                              }}
-                            >
-                              <option value="">{strings.inventoryPickProduct}</option>
-                              {products.map((product) => (
-                                <option key={product.id} value={product.id}>
-                                  {product.name}
-                                </option>
-                              ))}
-                            </select>
-                          )}
-                          {problem !== null && (
-                            <span className={styles.fieldError}>{problemMessage(problem)}</span>
-                          )}
-                        </>
-                      )}
-                    </td>
-                    <td>
-                      {readOnly ? (
-                        row.unit
-                      ) : (
-                        <input
-                          className={cx(styles.input, styles.inputNarrow)}
-                          value={row.unit}
-                          onChange={(e) => replace(index, { ...row, unit: e.target.value })}
-                          placeholder={strings.inventoryUnitPlaceholder}
-                          aria-label={strings.inventoryColUnit}
+        <Table label={strings.inventoryLines}>
+          <thead>
+            <tr>
+              <Th className={styles.lineDescription}>{strings.inventoryColDescription}</Th>
+              <Th className="w-[8ch]">{strings.inventoryColUnit}</Th>
+              <Th numeric className="w-[8ch]">
+                {strings.inventoryColQuantity}
+              </Th>
+              {progress.map((column) => (
+                <Th key={column.key} numeric>
+                  {column.label}
+                </Th>
+              ))}
+              <Th numeric className="w-[8ch]">
+                {strings.inventoryColUnitPrice}
+              </Th>
+              <Th numeric className="w-[8ch]">
+                {strings.inventoryColVatRate}
+              </Th>
+              <Th numeric>{strings.inventoryColNet}</Th>
+              {!readOnly && <Th hideLabel>{strings.inventoryColActions}</Th>}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => {
+              const problem = orderRowProblem(row);
+              const stored = storedIndex.get(row.key);
+              const line = stored === undefined ? undefined : savedLines[stored];
+              return (
+                <tr key={row.key}>
+                  <td className={styles.lineDescription}>
+                    {readOnly ? (
+                      row.description
+                    ) : (
+                      <>
+                        <Input
+                          value={row.description}
+                          onChange={(e) =>
+                            replace(index, { ...row, description: e.target.value })
+                          }
+                          placeholder={strings.inventoryDescriptionPlaceholder}
+                          aria-label={strings.inventoryColDescription}
+                          invalid={problem === "description"}
                         />
-                      )}
-                    </td>
-                    <td className={styles.numeric}>
-                      {readOnly ? (
-                        line === undefined ? (
-                          row.qty
-                        ) : (
-                          formatQty(line.qtyMilli, locale)
-                        )
-                      ) : (
-                        <input
-                          className={cx(styles.input, styles.inputNarrow, styles.numeric)}
-                          value={row.qty}
-                          onChange={(e) => replace(index, { ...row, qty: e.target.value })}
-                          placeholder={strings.inventoryQtyPlaceholder}
-                          inputMode="decimal"
-                          aria-label={strings.inventoryColQuantity}
-                          aria-invalid={problem === "qty"}
-                        />
-                      )}
-                    </td>
-                    {progress.map((column) => (
-                      <td key={column.key} className={cx(styles.numeric, styles.muted)}>
-                        {stored === undefined ? "" : (column.values[stored] ?? "")}
-                      </td>
-                    ))}
-                    <td className={styles.numeric}>
-                      {readOnly ? (
-                        line === undefined ? (
-                          row.price
-                        ) : (
-                          formatAmount(line.unitPriceCents, locale, currency)
-                        )
-                      ) : (
-                        <input
-                          className={cx(styles.input, styles.inputNarrow, styles.numeric)}
-                          value={row.price}
-                          onChange={(e) => replace(index, { ...row, price: e.target.value })}
-                          placeholder={strings.inventoryAmountPlaceholder}
-                          inputMode="decimal"
-                          aria-label={strings.inventoryColUnitPrice}
-                          aria-invalid={problem === "price"}
-                        />
-                      )}
-                    </td>
-                    <td className={styles.numeric}>
-                      {readOnly ? (
-                        line === undefined ? (
-                          row.rate
-                        ) : (
-                          formatRate(line.vatRateBp, locale)
-                        )
-                      ) : (
-                        <input
-                          className={cx(styles.input, styles.inputNarrow, styles.numeric)}
-                          value={row.rate}
-                          onChange={(e) => replace(index, { ...row, rate: e.target.value })}
-                          placeholder={strings.inventoryRatePlaceholder}
-                          inputMode="decimal"
-                          aria-label={strings.inventoryColVatRate}
-                          aria-invalid={problem === "rate"}
-                        />
-                      )}
-                    </td>
-                    <td className={cx(styles.numeric, !saved && styles.stale)}>
-                      {line === undefined ? "" : formatAmount(line.netCents, locale, currency)}
-                    </td>
-                    {!readOnly && (
-                      <td className={styles.rowActions}>
-                        <IconButton
-                          label={strings.inventoryRemoveLine}
-                          icon={<Trash2 size={15} />}
-                          size="sm"
-                          onClick={() => onChange(rows.filter((_, i) => i !== index))}
-                        />
-                      </td>
+                        {products.length > 0 && (
+                          <Select
+                            value={row.productId}
+                            aria-label={strings.inventoryPickProduct}
+                            onChange={(e) => {
+                              const picked = products.find((p) => p.id === e.target.value);
+                              replace(
+                                index,
+                                picked === undefined
+                                  ? // Clearing the picker unlinks the line
+                                    // without rewriting what somebody typed:
+                                    // the words stay, the goods stop moving.
+                                    { ...row, productId: "" }
+                                  : orderRowFromProduct(row, picked, priceSide),
+                              );
+                            }}
+                          >
+                            <option value="">{strings.inventoryPickProduct}</option>
+                            {products.map((product) => (
+                              <option key={product.id} value={product.id}>
+                                {product.name}
+                              </option>
+                            ))}
+                          </Select>
+                        )}
+                        {problem !== null && (
+                          <span className="text-xs text-danger">{problemMessage(problem)}</span>
+                        )}
+                      </>
                     )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                  </td>
+                  <td>
+                    {readOnly ? (
+                      row.unit
+                    ) : (
+                      <Input
+                        value={row.unit}
+                        onChange={(e) => replace(index, { ...row, unit: e.target.value })}
+                        placeholder={strings.inventoryUnitPlaceholder}
+                        aria-label={strings.inventoryColUnit}
+                      />
+                    )}
+                  </td>
+                  <Td numeric>
+                    {readOnly ? (
+                      line === undefined ? (
+                        row.qty
+                      ) : (
+                        formatQty(line.qtyMilli, locale)
+                      )
+                    ) : (
+                      <Input
+                        className={styles.numeric}
+                        value={row.qty}
+                        onChange={(e) => replace(index, { ...row, qty: e.target.value })}
+                        placeholder={strings.inventoryQtyPlaceholder}
+                        inputMode="decimal"
+                        aria-label={strings.inventoryColQuantity}
+                        invalid={problem === "qty"}
+                      />
+                    )}
+                  </Td>
+                  {progress.map((column) => (
+                    <Td key={column.key} numeric className={styles.muted}>
+                      {stored === undefined ? "" : (column.values[stored] ?? "")}
+                    </Td>
+                  ))}
+                  <Td numeric>
+                    {readOnly ? (
+                      line === undefined ? (
+                        row.price
+                      ) : (
+                        formatAmount(line.unitPriceCents, locale, currency)
+                      )
+                    ) : (
+                      <Input
+                        className={styles.numeric}
+                        value={row.price}
+                        onChange={(e) => replace(index, { ...row, price: e.target.value })}
+                        placeholder={strings.inventoryAmountPlaceholder}
+                        inputMode="decimal"
+                        aria-label={strings.inventoryColUnitPrice}
+                        invalid={problem === "price"}
+                      />
+                    )}
+                  </Td>
+                  <Td numeric>
+                    {readOnly ? (
+                      line === undefined ? (
+                        row.rate
+                      ) : (
+                        formatRate(line.vatRateBp, locale)
+                      )
+                    ) : (
+                      <Input
+                        className={styles.numeric}
+                        value={row.rate}
+                        onChange={(e) => replace(index, { ...row, rate: e.target.value })}
+                        placeholder={strings.inventoryRatePlaceholder}
+                        inputMode="decimal"
+                        aria-label={strings.inventoryColVatRate}
+                        invalid={problem === "rate"}
+                      />
+                    )}
+                  </Td>
+                  <Td numeric className={cx(!saved && styles.stale)}>
+                    {line === undefined ? "" : formatAmount(line.netCents, locale, currency)}
+                  </Td>
+                  {!readOnly && (
+                    <td className={styles.rowActions}>
+                      <IconButton
+                        label={strings.inventoryRemoveLine}
+                        icon={<Trash2 size={15} />}
+                        size="sm"
+                        onClick={() => onChange(rows.filter((_, i) => i !== index))}
+                      />
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </Table>
       )}
     </section>
   );

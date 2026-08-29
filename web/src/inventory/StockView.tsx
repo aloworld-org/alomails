@@ -21,7 +21,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Boxes, ScanLine } from "lucide-react";
 
-import { Button, Spinner } from "../ds";
+import {
+  Button,
+  Checkbox,
+  Input,
+  Select,
+  Spinner,
+  Table,
+  Td,
+  Th,
+  Toolbar,
+  ToolbarSpacer,
+} from "../ds";
 import { strings } from "../i18n";
 import { inventoryMessage, useInventoryApi } from "./api";
 import { MoveHistory } from "./MoveHistory";
@@ -117,9 +128,9 @@ export function StockView() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.toolbar}>
-        <input
-          className={styles.search}
+      <Toolbar label={strings.inventoryTabStock}>
+        <Input
+          className="basis-[260px] max-[48rem]:basis-full"
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -128,33 +139,30 @@ export function StockView() {
         />
         <label className={styles.filterField}>
           {strings.inventoryFilterLocation}
-          <select
-            className={styles.select}
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-          >
+          <Select value={location} onChange={(e) => setLocation(e.target.value)}>
             <option value="">{strings.inventoryAllLocations}</option>
             {places.map((place) => (
               <option key={place.id} value={place.id}>
                 {place.code} — {place.name}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
-        <label className={styles.toggle}>
-          <input
-            type="checkbox"
-            checked={includeVirtual}
-            onChange={(e) => setIncludeVirtual(e.target.checked)}
-          />
-          {strings.inventoryShowCounterparties}
-        </label>
-        <span className={styles.toolbarSpacer} />
+        <Checkbox
+          checked={includeVirtual}
+          onChange={setIncludeVirtual}
+          label={strings.inventoryShowCounterparties}
+        />
+        <ToolbarSpacer />
         {loading && <Spinner size={16} />}
-        <Button variant="ghost" onClick={() => setScanning(true)}>
+        <Button
+          variant="ghost"
+          className="max-[48rem]:flex-auto"
+          onClick={() => setScanning(true)}
+        >
           <ScanLine size={16} /> {strings.inventoryScan}
         </Button>
-      </div>
+      </Toolbar>
 
       {error !== null && <ErrorBanner message={error} />}
 
@@ -173,58 +181,50 @@ export function StockView() {
         <p className={styles.noMatches}>{strings.inventoryNoMatches}</p>
       ) : (
         <>
-          <div className={styles.tableWrap} data-allow-overflow="">
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th scope="col">{strings.inventoryColProduct}</th>
-                  <th scope="col">{strings.inventoryColLocation}</th>
-                  <th scope="col" className={styles.numeric}>
-                    {strings.inventoryColOnHand}
-                  </th>
-                  <th scope="col" className={styles.numeric}>
-                    {strings.inventoryColValue}
-                  </th>
-                  <th scope="col">{strings.inventoryColLastMove}</th>
-                  <th scope="col">
-                    <span className={styles.srOnly}>{strings.inventoryColActions}</span>
-                  </th>
+          <Table label={strings.inventoryTabStock} interactiveRows>
+            <thead>
+              <tr>
+                <Th>{strings.inventoryColProduct}</Th>
+                <Th>{strings.inventoryColLocation}</Th>
+                <Th numeric>{strings.inventoryColOnHand}</Th>
+                <Th numeric>{strings.inventoryColValue}</Th>
+                <Th>{strings.inventoryColLastMove}</Th>
+                <Th hideLabel>{strings.inventoryColActions}</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((level) => (
+                <tr key={`${level.productId}:${level.locationId}`}>
+                  <td>
+                    {level.productName}
+                    {level.sku !== "" && <span className={styles.subtle}>{level.sku}</span>}
+                  </td>
+                  <td>
+                    {level.locationCode}
+                    <span className={styles.subtle}>
+                      {level.real
+                        ? level.locationName
+                        : `${level.locationName} · ${locationKindLabel(level.locationKind)}`}
+                    </span>
+                  </td>
+                  <Td numeric>{qtyLabel(level.qtyMilli)}</Td>
+                  <Td numeric>{valueLabel(level.valueCents)}</Td>
+                  <td className={styles.muted}>
+                    {level.lastMoveAt === null ? "" : momentLabel(level.lastMoveAt)}
+                  </td>
+                  <td className={styles.rowActions}>
+                    <button
+                      type="button"
+                      className={styles.linkAction}
+                      onClick={() => setOpened({ level })}
+                    >
+                      {strings.inventoryOpenHistory}
+                    </button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {shown.map((level) => (
-                  <tr key={`${level.productId}:${level.locationId}`}>
-                    <td>
-                      {level.productName}
-                      {level.sku !== "" && <span className={styles.subtle}>{level.sku}</span>}
-                    </td>
-                    <td>
-                      {level.locationCode}
-                      <span className={styles.subtle}>
-                        {level.real
-                          ? level.locationName
-                          : `${level.locationName} · ${locationKindLabel(level.locationKind)}`}
-                      </span>
-                    </td>
-                    <td className={styles.numeric}>{qtyLabel(level.qtyMilli)}</td>
-                    <td className={styles.numeric}>{valueLabel(level.valueCents)}</td>
-                    <td className={styles.muted}>
-                      {level.lastMoveAt === null ? "" : momentLabel(level.lastMoveAt)}
-                    </td>
-                    <td className={styles.rowActions}>
-                      <button
-                        type="button"
-                        className={styles.linkAction}
-                        onClick={() => setOpened({ level })}
-                      >
-                        {strings.inventoryOpenHistory}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </Table>
           <p className={styles.totalLine}>
             {strings.inventoryReferenceValue(valueLabel(totalValueCents))}
           </p>

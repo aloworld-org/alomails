@@ -2,10 +2,13 @@
 // read as one module — and as the same module family as Billing, CRM, Projects
 // and Finance, whose parts these mirror. Presentational only: no data loading,
 // no rules, no arithmetic.
-import type { ReactNode } from "react";
+//
+// Since D2.09b the state word draws as a `ds/Badge`, and the module's own
+// `Field` is gone entirely — `ds/Field` binds the label to the control and
+// announces the error, which the hand-rolled column never did.
 import type { LucideIcon } from "lucide-react";
 
-import { Button, cx } from "../ds";
+import { Badge, Button } from "../ds";
 import styles from "./InventoryModule.module.css";
 
 /** A failure the page could not hide: shown, never swallowed, in the server's
@@ -48,34 +51,33 @@ export function EmptyState({
 }
 
 /** The visual weight of a state chip. Named after what it means rather than
- *  after its colour, so a theme can restyle it without renaming anything. */
+ *  after its colour, so a theme can restyle it without renaming anything.
+ *  It stays the module's vocabulary rather than becoming the design system's
+ *  tone names, because `format.ts` maps eleven order states onto it and that
+ *  mapping is tested. */
 export type ChipTone = "neutral" | "info" | "good" | "warn" | "muted";
 
-/** A small state label: what an order is, or what is wrong with it. */
+/** A small state label: what an order is, or what is wrong with it.
+ *
+ *  A `ds/Badge` rather than a `ds/Chip`: the design system's line is that a
+ *  badge is read and a chip is acted on, and not one of these is pressable.
+ *  Only the drawing is the design system's — the five tones stay this
+ *  module's, folded onto `Badge`'s four. `muted` loses its distinct quiet
+ *  ink and reads as `neutral`, whose ink is already the tertiary colour. */
 export function StatusChip({ tone, label }: { tone: ChipTone; label: string }) {
-  return <span className={cx(styles.chip, styles[`chip_${tone}`])}>{label}</span>;
-}
-
-/** One labelled control of a document header, with the hint that explains what
- *  the field decides — or, when it is wrong, the sentence that says so in place
- *  of the hint, because a person correcting a field does not need advice. */
-export function Field({
-  label,
-  hint,
-  error,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  error?: string | undefined;
-  children: ReactNode;
-}) {
   return (
-    <label className={styles.field}>
-      <span className={styles.fieldLabel}>{label}</span>
-      {children}
-      {error !== undefined && <span className={styles.fieldError}>{error}</span>}
-      {error === undefined && hint !== undefined && <span className={styles.hint}>{hint}</span>}
-    </label>
+    <Badge
+      tone={
+        tone === "info"
+          ? "accent"
+          : tone === "good"
+            ? "success"
+            : tone === "warn"
+              ? "danger"
+              : "neutral"
+      }
+    >
+      {label}
+    </Badge>
   );
 }

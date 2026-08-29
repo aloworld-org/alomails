@@ -21,7 +21,7 @@ import { useNavigate } from "react-router-dom";
 import { BookOpen } from "lucide-react";
 
 import { formatAmount } from "../billing";
-import { Spinner } from "../ds";
+import { Select, Spinner, Table, Td, Th, Toolbar, ToolbarSpacer } from "../ds";
 import { getLocale, strings } from "../i18n";
 import { qtyLabel, soStatusLabel, soStatusTone } from "./format";
 import { inventoryMessage } from "./api";
@@ -89,24 +89,20 @@ export function OrderBookView() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.toolbar}>
+      <Toolbar label={strings.inventoryTabOrderBook}>
         <label className={styles.filterField}>
           {strings.inventoryFilterScope}
-          <select
-            className={styles.select}
-            value={scope}
-            onChange={(e) => setScope(e.target.value as BookScope)}
-          >
+          <Select value={scope} onChange={(e) => setScope(e.target.value as BookScope)}>
             {SCOPES.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label()}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
-        <span className={styles.toolbarSpacer} />
+        <ToolbarSpacer />
         {loading && <Spinner size={16} />}
-      </div>
+      </Toolbar>
 
       {error !== null && <ErrorBanner message={error} />}
 
@@ -125,109 +121,97 @@ export function OrderBookView() {
           }
         />
       ) : (
-        <div className={styles.tableWrap} data-allow-overflow="">
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th scope="col">{strings.inventoryColOrder}</th>
-                <th scope="col">{strings.inventoryColCustomer}</th>
-                <th scope="col">{strings.inventoryColState}</th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.inventoryColOrdered}
-                </th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.inventoryColReserved}
-                </th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.inventoryColDelivered}
-                </th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.inventoryColInvoiced}
-                </th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.inventoryColOutstanding}
-                </th>
+        <Table label={strings.inventoryTabOrderBook} interactiveRows>
+          <thead>
+            <tr>
+              <Th>{strings.inventoryColOrder}</Th>
+              <Th>{strings.inventoryColCustomer}</Th>
+              <Th>{strings.inventoryColState}</Th>
+              <Th numeric>{strings.inventoryColOrdered}</Th>
+              <Th numeric>{strings.inventoryColReserved}</Th>
+              <Th numeric>{strings.inventoryColDelivered}</Th>
+              <Th numeric>{strings.inventoryColInvoiced}</Th>
+              <Th numeric>{strings.inventoryColOutstanding}</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {orders.map((row) => (
+              <tr key={row.id}>
+                <td>
+                  <button
+                    type="button"
+                    className={styles.rowName}
+                    onClick={() => void navigate(`/inventory/sales-orders/${row.id}`)}
+                  >
+                    {row.number ?? strings.inventoryDraftOrder}
+                  </button>
+                </td>
+                <td>{row.customerName}</td>
+                <td>
+                  <StatusChip
+                    tone={soStatusTone(row.status)}
+                    label={soStatusLabel(row.status)}
+                  />
+                </td>
+                <Td numeric>
+                  {formatAmount(row.figures.orderedNetCents, locale, row.currency)}
+                </Td>
+                <Td numeric>
+                  {formatAmount(row.figures.reservedNetCents, locale, row.currency)}
+                </Td>
+                <Td numeric>
+                  {formatAmount(row.figures.deliveredNetCents, locale, row.currency)}
+                </Td>
+                <Td numeric>
+                  {formatAmount(row.figures.invoicedNetCents, locale, row.currency)}
+                </Td>
+                <Td numeric>
+                  {formatAmount(row.figures.outstandingNetCents, locale, row.currency)}
+                  {/* What is owed in goods, beside what it is owed in money —
+                      zero on an order of pure services, which is why it is
+                      shown only when there is something to move. */}
+                  {row.figures.outstandingQtyMilli !== 0 && (
+                    <span className={styles.subtle}>
+                      {strings.inventoryBookQtyHint(qtyLabel(row.figures.outstandingQtyMilli))}
+                    </span>
+                  )}
+                </Td>
               </tr>
-            </thead>
-            <tbody>
-              {orders.map((row) => (
-                <tr key={row.id}>
-                  <td>
-                    <button
-                      type="button"
-                      className={styles.rowName}
-                      onClick={() => void navigate(`/inventory/sales-orders/${row.id}`)}
-                    >
-                      {row.number ?? strings.inventoryDraftOrder}
-                    </button>
-                  </td>
-                  <td>{row.customerName}</td>
-                  <td>
-                    <StatusChip
-                      tone={soStatusTone(row.status)}
-                      label={soStatusLabel(row.status)}
-                    />
-                  </td>
-                  <td className={styles.numeric}>
-                    {formatAmount(row.figures.orderedNetCents, locale, row.currency)}
-                  </td>
-                  <td className={styles.numeric}>
-                    {formatAmount(row.figures.reservedNetCents, locale, row.currency)}
-                  </td>
-                  <td className={styles.numeric}>
-                    {formatAmount(row.figures.deliveredNetCents, locale, row.currency)}
-                  </td>
-                  <td className={styles.numeric}>
-                    {formatAmount(row.figures.invoicedNetCents, locale, row.currency)}
-                  </td>
-                  <td className={styles.numeric}>
-                    {formatAmount(row.figures.outstandingNetCents, locale, row.currency)}
-                    {/* What is owed in goods, beside what it is owed in money —
-                        zero on an order of pure services, which is why it is
-                        shown only when there is something to move. */}
-                    {row.figures.outstandingQtyMilli !== 0 && (
-                      <span className={styles.subtle}>
-                        {strings.inventoryBookQtyHint(qtyLabel(row.figures.outstandingQtyMilli))}
-                      </span>
-                    )}
+            ))}
+          </tbody>
+          {book !== null && (
+            <tfoot>
+              {totalCurrency === undefined ? (
+                <tr>
+                  <td colSpan={8} className={styles.muted}>
+                    {strings.inventoryBookMixedCurrencies(currencyList(currencies, locale))}
                   </td>
                 </tr>
-              ))}
-            </tbody>
-            {book !== null && (
-              <tfoot>
-                {totalCurrency === undefined ? (
-                  <tr>
-                    <td colSpan={8} className={styles.muted}>
-                      {strings.inventoryBookMixedCurrencies(currencyList(currencies, locale))}
-                    </td>
-                  </tr>
-                ) : (
-                  <tr>
-                    <th scope="row" colSpan={3}>
-                      {strings.inventoryBookTotal}
-                    </th>
-                    <td className={styles.numeric}>
-                      {formatAmount(book.totals.orderedNetCents, locale, totalCurrency)}
-                    </td>
-                    <td className={styles.numeric}>
-                      {formatAmount(book.totals.reservedNetCents, locale, totalCurrency)}
-                    </td>
-                    <td className={styles.numeric}>
-                      {formatAmount(book.totals.deliveredNetCents, locale, totalCurrency)}
-                    </td>
-                    <td className={styles.numeric}>
-                      {formatAmount(book.totals.invoicedNetCents, locale, totalCurrency)}
-                    </td>
-                    <td className={styles.numeric}>
-                      {formatAmount(book.totals.outstandingNetCents, locale, totalCurrency)}
-                    </td>
-                  </tr>
-                )}
-              </tfoot>
-            )}
-          </table>
-        </div>
+              ) : (
+                <tr>
+                  <th scope="row" colSpan={3}>
+                    {strings.inventoryBookTotal}
+                  </th>
+                  <Td numeric>
+                    {formatAmount(book.totals.orderedNetCents, locale, totalCurrency)}
+                  </Td>
+                  <Td numeric>
+                    {formatAmount(book.totals.reservedNetCents, locale, totalCurrency)}
+                  </Td>
+                  <Td numeric>
+                    {formatAmount(book.totals.deliveredNetCents, locale, totalCurrency)}
+                  </Td>
+                  <Td numeric>
+                    {formatAmount(book.totals.invoicedNetCents, locale, totalCurrency)}
+                  </Td>
+                  <Td numeric>
+                    {formatAmount(book.totals.outstandingNetCents, locale, totalCurrency)}
+                  </Td>
+                </tr>
+              )}
+            </tfoot>
+          )}
+        </Table>
       )}
     </div>
   );

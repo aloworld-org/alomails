@@ -31,7 +31,18 @@ import {
   useBillingApi,
   type BillingProduct,
 } from "../billing";
-import { Button, Spinner, useDialogs } from "../ds";
+import {
+  Button,
+  Checkbox,
+  Input,
+  Spinner,
+  Table,
+  Td,
+  Th,
+  Toolbar,
+  ToolbarSpacer,
+  useDialogs,
+} from "../ds";
 import { getLocale, strings } from "../i18n";
 import { inventoryMessage, useInventoryApi } from "./api";
 import { qtyLabel } from "./format";
@@ -156,40 +167,43 @@ export function CatalogView() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.toolbar}>
-        <input
-          className={styles.search}
+      <Toolbar label={strings.inventoryTabCatalog}>
+        {/* The stylesheet's `flex: 0 1 260px`, taking the whole row on a
+            phone so the action buttons can share the next one. */}
+        <Input
+          className="basis-[260px] max-[48rem]:basis-full"
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={strings.inventorySearchCatalog}
           aria-label={strings.inventorySearchCatalog}
         />
-        <label className={styles.toggle}>
-          <input
-            type="checkbox"
-            checked={stockedOnly}
-            onChange={(e) => setStockedOnly(e.target.checked)}
-          />
-          {strings.inventoryStockedOnly}
-        </label>
-        <label className={styles.toggle}>
-          <input
-            type="checkbox"
-            checked={includeArchived}
-            onChange={(e) => setIncludeArchived(e.target.checked)}
-          />
-          {strings.inventoryShowArchived}
-        </label>
-        <span className={styles.toolbarSpacer} />
+        <Checkbox
+          checked={stockedOnly}
+          onChange={setStockedOnly}
+          label={strings.inventoryStockedOnly}
+        />
+        <Checkbox
+          checked={includeArchived}
+          onChange={setIncludeArchived}
+          label={strings.inventoryShowArchived}
+        />
+        <ToolbarSpacer />
         {loading && <Spinner size={16} />}
-        <Button variant="ghost" onClick={() => setScanning(true)}>
+        <Button
+          variant="ghost"
+          className="max-[48rem]:flex-auto"
+          onClick={() => setScanning(true)}
+        >
           <ScanLine size={16} /> {strings.inventoryScan}
         </Button>
-        <Button onClick={() => setEditing({ product: null })}>
+        <Button
+          className="max-[48rem]:flex-auto"
+          onClick={() => setEditing({ product: null })}
+        >
           <Plus size={16} /> {strings.inventoryNewProduct}
         </Button>
-      </div>
+      </Toolbar>
 
       {error !== null && <ErrorBanner message={error} />}
 
@@ -204,84 +218,70 @@ export function CatalogView() {
       ) : shown.length === 0 && !loading ? (
         <p className={styles.noMatches}>{strings.inventoryNoMatches}</p>
       ) : (
-        <div className={styles.tableWrap} data-allow-overflow="">
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th scope="col">{strings.inventoryColProduct}</th>
-                <th scope="col">{strings.inventoryColSku}</th>
-                <th scope="col">{strings.inventoryColBarcode}</th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.inventoryColOnHand}
-                </th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.inventoryColPurchasePrice}
-                </th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.inventoryColSalePrice}
-                </th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.inventoryColVatRate}
-                </th>
-                <th scope="col">
-                  <span className={styles.srOnly}>{strings.inventoryColActions}</span>
-                </th>
+        <Table label={strings.inventoryTabCatalog} interactiveRows>
+          <thead>
+            <tr>
+              <Th>{strings.inventoryColProduct}</Th>
+              <Th>{strings.inventoryColSku}</Th>
+              <Th>{strings.inventoryColBarcode}</Th>
+              <Th numeric>{strings.inventoryColOnHand}</Th>
+              <Th numeric>{strings.inventoryColPurchasePrice}</Th>
+              <Th numeric>{strings.inventoryColSalePrice}</Th>
+              <Th numeric>{strings.inventoryColVatRate}</Th>
+              <Th hideLabel>{strings.inventoryColActions}</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map((product) => (
+              <tr key={product.id} className={product.archived ? styles.archivedRow : undefined}>
+                <td>
+                  <button
+                    type="button"
+                    className={styles.rowName}
+                    onClick={() => setEditing({ product })}
+                  >
+                    {product.name}
+                  </button>
+                  <span className={styles.subtle}>
+                    {product.stocked
+                      ? strings.inventoryTypeStocked
+                      : strings.inventoryTypeService}
+                    {product.unit !== "" && ` · ${product.unit}`}
+                    {product.archived && ` · ${strings.inventoryArchived}`}
+                  </span>
+                </td>
+                <td className={styles.code}>{product.sku}</td>
+                <td className={styles.code}>{product.barcode}</td>
+                <Td numeric>
+                  {product.stocked ? (
+                    qtyLabel(onHand.get(product.id) ?? 0)
+                  ) : (
+                    <span className={styles.muted}>{strings.inventoryNotStocked}</span>
+                  )}
+                </Td>
+                <Td numeric>{formatAmount(product.purchasePriceCents, locale)}</Td>
+                <Td numeric>{formatAmount(product.unitPriceCents, locale)}</Td>
+                <Td numeric>{formatRate(product.vatRateBp, locale)}</Td>
+                <td className={styles.rowActions}>
+                  <button
+                    type="button"
+                    className={styles.linkAction}
+                    onClick={() => setEditing({ product })}
+                  >
+                    {strings.inventoryEdit}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.linkAction}
+                    onClick={() => void toggleArchived(product)}
+                  >
+                    {product.archived ? strings.inventoryRestore : strings.inventoryArchive}
+                  </button>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {shown.map((product) => (
-                <tr key={product.id} className={product.archived ? styles.archivedRow : undefined}>
-                  <td>
-                    <button
-                      type="button"
-                      className={styles.rowName}
-                      onClick={() => setEditing({ product })}
-                    >
-                      {product.name}
-                    </button>
-                    <span className={styles.subtle}>
-                      {product.stocked
-                        ? strings.inventoryTypeStocked
-                        : strings.inventoryTypeService}
-                      {product.unit !== "" && ` · ${product.unit}`}
-                      {product.archived && ` · ${strings.inventoryArchived}`}
-                    </span>
-                  </td>
-                  <td className={styles.code}>{product.sku}</td>
-                  <td className={styles.code}>{product.barcode}</td>
-                  <td className={styles.numeric}>
-                    {product.stocked ? (
-                      qtyLabel(onHand.get(product.id) ?? 0)
-                    ) : (
-                      <span className={styles.muted}>{strings.inventoryNotStocked}</span>
-                    )}
-                  </td>
-                  <td className={styles.numeric}>
-                    {formatAmount(product.purchasePriceCents, locale)}
-                  </td>
-                  <td className={styles.numeric}>{formatAmount(product.unitPriceCents, locale)}</td>
-                  <td className={styles.numeric}>{formatRate(product.vatRateBp, locale)}</td>
-                  <td className={styles.rowActions}>
-                    <button
-                      type="button"
-                      className={styles.linkAction}
-                      onClick={() => setEditing({ product })}
-                    >
-                      {strings.inventoryEdit}
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.linkAction}
-                      onClick={() => void toggleArchived(product)}
-                    >
-                      {product.archived ? strings.inventoryRestore : strings.inventoryArchive}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </Table>
       )}
 
       {scanning && (

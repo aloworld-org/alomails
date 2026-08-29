@@ -22,12 +22,23 @@
 import { useState } from "react";
 import { PackageCheck, X } from "lucide-react";
 
-import { Button, Spinner } from "../ds";
+import {
+  Button,
+  Field,
+  IconButton,
+  Input,
+  Modal,
+  Select,
+  Spinner,
+  Table,
+  Td,
+  Th,
+} from "../ds";
 import { strings } from "../i18n";
 import { inventoryMessage } from "./api";
 import { qtyLabel } from "./format";
 import { fulfilDraft, type FulfilRow } from "./orderRows";
-import { ErrorBanner, Field } from "./parts";
+import { ErrorBanner } from "./parts";
 import type { FulfilmentDraft, InvLocation } from "./types";
 import { milliToInput } from "../billing";
 import styles from "./InventoryModule.module.css";
@@ -119,125 +130,112 @@ export function FulfilDialog({
   }
 
   return (
-    <div className={styles.scrim} role="presentation" onMouseDown={onClose}>
-      <div
-        className={styles.modalWide}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        onMouseDown={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") onClose();
-        }}
-      >
-        <div className={styles.modalHead}>
-          <span className={styles.modalIcon} aria-hidden="true">
-            <PackageCheck size={19} />
-          </span>
-          <div className={styles.modalHeadText}>
-            <h2>{title}</h2>
-            <p>{subtitle}</p>
-          </div>
-          <button
-            type="button"
-            className={styles.modalClose}
-            onClick={onClose}
-            aria-label={strings.inventoryClose}
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className={styles.modalBody}>
-          {error !== null && <ErrorBanner message={error} />}
-
-          <Field label={locationLabel} hint={locationHint}>
-            <select
-              className={styles.select}
-              value={locationId}
-              onChange={(e) => setLocationId(e.target.value)}
-            >
-              {locations.length === 0 && <option value="">{strings.inventoryNoPlaces}</option>}
-              {locations.map((place) => (
-                <option key={place.id} value={place.id}>
-                  {place.code} — {place.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          <div className={styles.tableWrap} data-allow-overflow="">
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th scope="col">{strings.inventoryColDescription}</th>
-                  <th scope="col" className={styles.numeric}>
-                    {strings.inventoryColOutstanding}
-                  </th>
-                  <th scope="col" className={styles.numeric}>
-                    {strings.inventoryColThisConsignment}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {lines.map((line) => {
-                  const row = rows.find((r) => r.lineId === line.lineId);
-                  return (
-                    <tr key={line.lineId}>
-                      <td>
-                        {line.description}
-                        {line.unit !== "" && <span className={styles.subtle}>{line.unit}</span>}
-                      </td>
-                      <td className={styles.numeric}>
-                        {line.outstandingQtyMilli > 0 ? (
-                          qtyLabel(line.outstandingQtyMilli)
-                        ) : (
-                          <span className={styles.muted}>{strings.inventoryNotStocked}</span>
-                        )}
-                      </td>
-                      <td className={styles.numeric}>
-                        {line.outstandingQtyMilli > 0 ? (
-                          <input
-                            className={`${styles.input} ${styles.inputNarrow} ${styles.numeric}`}
-                            value={row?.qty ?? ""}
-                            onChange={(e) => setQty(line.lineId, e.target.value)}
-                            inputMode="decimal"
-                            aria-label={`${strings.inventoryColThisConsignment} — ${line.description}`}
-                          />
-                        ) : (
-                          // A charge in words has nothing to arrive; a box here
-                          // would invite a number the server must refuse.
-                          <span className={styles.muted}>{strings.inventoryNotStocked}</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <Field label={strings.inventoryFieldNote} hint={strings.inventoryFulfilNoteHint}>
-            <textarea
-              className={`${styles.input} ${styles.textarea}`}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              rows={2}
-            />
-          </Field>
-        </div>
-
-        <div className={styles.modalFooter}>
+    <Modal
+      title={title}
+      onClose={onClose}
+      wide
+      icon={<PackageCheck size={19} />}
+      actions={
+        <IconButton
+          label={strings.inventoryClose}
+          icon={<X size={18} />}
+          onClick={onClose}
+        />
+      }
+      footer={
+        <>
           {busy && <Spinner size={16} />}
-          <span className={styles.modalFooterSpacer} />
+          <span className="flex-1" aria-hidden="true" />
           <Button variant="ghost" onClick={onClose} disabled={busy}>
             {strings.inventoryCancelAction}
           </Button>
           <Button onClick={() => void submit()} disabled={busy}>
             {submitLabel}
           </Button>
-        </div>
-      </div>
-    </div>
+        </>
+      }
+    >
+      {/* The sentence under the title. `ds/Modal`'s header is the name and the
+          controls, so the question this sheet is asking reads as the first
+          line of the body rather than as a second heading. */}
+      <p className="m-0 text-sm text-tertiary">{subtitle}</p>
+      {error !== null && <ErrorBanner message={error} />}
+
+      <Field label={locationLabel} hint={locationHint}>
+        {(control) => (
+          <Select
+            id={control.id}
+            aria-describedby={control["aria-describedby"]}
+            value={locationId}
+            onChange={(e) => setLocationId(e.target.value)}
+          >
+            {locations.length === 0 && <option value="">{strings.inventoryNoPlaces}</option>}
+            {locations.map((place) => (
+              <option key={place.id} value={place.id}>
+                {place.code} — {place.name}
+              </option>
+            ))}
+          </Select>
+        )}
+      </Field>
+
+      <Table label={title}>
+        <thead>
+          <tr>
+            <Th>{strings.inventoryColDescription}</Th>
+            <Th numeric>{strings.inventoryColOutstanding}</Th>
+            <Th numeric>{strings.inventoryColThisConsignment}</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {lines.map((line) => {
+            const row = rows.find((r) => r.lineId === line.lineId);
+            return (
+              <tr key={line.lineId}>
+                <td>
+                  {line.description}
+                  {line.unit !== "" && <span className={styles.subtle}>{line.unit}</span>}
+                </td>
+                <Td numeric>
+                  {line.outstandingQtyMilli > 0 ? (
+                    qtyLabel(line.outstandingQtyMilli)
+                  ) : (
+                    <span className={styles.muted}>{strings.inventoryNotStocked}</span>
+                  )}
+                </Td>
+                <Td numeric>
+                  {line.outstandingQtyMilli > 0 ? (
+                    <Input
+                      className={styles.numeric}
+                      value={row?.qty ?? ""}
+                      onChange={(e) => setQty(line.lineId, e.target.value)}
+                      inputMode="decimal"
+                      aria-label={`${strings.inventoryColThisConsignment} — ${line.description}`}
+                    />
+                  ) : (
+                    // A charge in words has nothing to arrive; a box here
+                    // would invite a number the server must refuse.
+                    <span className={styles.muted}>{strings.inventoryNotStocked}</span>
+                  )}
+                </Td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </Table>
+
+      <Field label={strings.inventoryFieldNote} hint={strings.inventoryFulfilNoteHint}>
+        {(control) => (
+          <textarea
+            id={control.id}
+            aria-describedby={control["aria-describedby"]}
+            className={styles.textarea}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={2}
+          />
+        )}
+      </Field>
+    </Modal>
   );
 }

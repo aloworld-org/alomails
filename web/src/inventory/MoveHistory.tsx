@@ -14,7 +14,7 @@
 import { useEffect, useState } from "react";
 import { History, X } from "lucide-react";
 
-import { Button, Spinner } from "../ds";
+import { Button, IconButton, Modal, Spinner, Table, Td, Th } from "../ds";
 import { strings } from "../i18n";
 import { inventoryMessage, useInventoryApi } from "./api";
 import { adjustReasonLabel, momentLabel, moveReasonLabel, qtyLabel } from "./format";
@@ -70,116 +70,100 @@ export function MoveHistory({
   }, [api, productId, locationId]);
 
   return (
-    <div className={styles.scrim} role="presentation" onMouseDown={onClose}>
-      <div
-        className={styles.modalWide}
-        role="dialog"
-        aria-modal="true"
-        aria-label={strings.inventoryHistoryTitle(productName)}
-        onMouseDown={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") onClose();
-        }}
-      >
-        <div className={styles.modalHead}>
-          <span className={styles.modalIcon} aria-hidden="true">
-            <History size={19} />
-          </span>
-          <div className={styles.modalHeadText}>
-            <h2>{strings.inventoryHistoryTitle(productName)}</h2>
-            <p>{strings.inventoryHistorySubtitle(locationLabel)}</p>
-          </div>
-          <button
-            type="button"
-            className={styles.modalClose}
-            onClick={onClose}
-            aria-label={strings.inventoryClose}
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className={styles.modalBody}>
-          {error !== null && <ErrorBanner message={error} />}
-          {loading && <Spinner size={16} />}
-
-          {!loading && moves.length === 0 && error === null && (
-            <p className={styles.noMatches}>{strings.inventoryHistoryEmpty}</p>
-          )}
-
-          {moves.length > 0 && (
-            <div className={styles.tableWrap} data-allow-overflow="">
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th scope="col">{strings.inventoryColWhen}</th>
-                    <th scope="col">{strings.inventoryColMovement}</th>
-                    <th scope="col" className={styles.numeric}>
-                      {strings.inventoryColQuantity}
-                    </th>
-                    <th scope="col">{strings.inventoryColWhy}</th>
-                    <th scope="col">{strings.inventoryColDocument}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {moves.map((move) => (
-                    <tr key={move.id}>
-                      <td className={styles.muted}>{momentLabel(move.occurredAt)}</td>
-                      <td>
-                        {/* The direction, in the words of the two ends rather
-                            than as a sign: "MAIN → VAN1" is read the same way
-                            by everybody, and "−4" is not. */}
-                        {move.fromCode} → {move.toCode}
-                        <span className={styles.subtle}>
-                          {move.fromName} → {move.toName}
-                        </span>
-                      </td>
-                      <td className={styles.numeric}>{qtyLabel(move.qtyMilli)}</td>
-                      <td>
-                        {moveReasonLabel(move.reason)}
-                        {move.reasonCode !== null && (
-                          <span className={styles.subtle}>
-                            {adjustReasonLabel(move.reasonCode)}
-                          </span>
-                        )}
-                        {move.note !== null && move.note !== "" && (
-                          <span className={styles.subtle}>{move.note}</span>
-                        )}
-                      </td>
-                      <td className={styles.muted}>
-                        {move.refKind === null ? (
-                          strings.inventoryNoDocument
-                        ) : (
-                          <>
-                            {move.refKind}
-                            {move.refId !== null && (
-                              <span className={styles.subtle}>{move.refId}</span>
-                            )}
-                          </>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Said only when it is true: a page filled to the server's cap has
-              older movements behind it, and a person reading a warehouse's
-              history must not take a truncated list for the whole story. */}
-          {limit > 0 && moves.length >= limit && (
-            <p className={styles.notice}>{strings.inventoryHistoryCapped(limit)}</p>
-          )}
-        </div>
-
-        <div className={styles.modalFooter}>
-          <span className={styles.modalFooterSpacer} />
+    <Modal
+      title={strings.inventoryHistoryTitle(productName)}
+      onClose={onClose}
+      wide
+      icon={<History size={19} />}
+      actions={
+        <IconButton
+          label={strings.inventoryClose}
+          icon={<X size={18} />}
+          onClick={onClose}
+        />
+      }
+      footer={
+        <>
+          <span className="flex-1" aria-hidden="true" />
           <Button variant="ghost" onClick={onClose}>
             {strings.inventoryClose}
           </Button>
-        </div>
-      </div>
-    </div>
+        </>
+      }
+    >
+      {/* The sentence under the title. `ds/Modal`'s header is the name and the
+          controls, so which place this history is filtered to reads as the
+          first line of the body rather than as a second heading. */}
+      <p className="m-0 text-sm text-tertiary">
+        {strings.inventoryHistorySubtitle(locationLabel)}
+      </p>
+      {error !== null && <ErrorBanner message={error} />}
+      {loading && <Spinner size={16} />}
+
+      {!loading && moves.length === 0 && error === null && (
+        <p className={styles.noMatches}>{strings.inventoryHistoryEmpty}</p>
+      )}
+
+      {moves.length > 0 && (
+        <Table label={strings.inventoryHistoryTitle(productName)}>
+          <thead>
+            <tr>
+              <Th>{strings.inventoryColWhen}</Th>
+              <Th>{strings.inventoryColMovement}</Th>
+              <Th numeric>{strings.inventoryColQuantity}</Th>
+              <Th>{strings.inventoryColWhy}</Th>
+              <Th>{strings.inventoryColDocument}</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {moves.map((move) => (
+              <tr key={move.id}>
+                <td className={styles.muted}>{momentLabel(move.occurredAt)}</td>
+                <td>
+                  {/* The direction, in the words of the two ends rather
+                      than as a sign: "MAIN → VAN1" is read the same way
+                      by everybody, and "−4" is not. */}
+                  {move.fromCode} → {move.toCode}
+                  <span className={styles.subtle}>
+                    {move.fromName} → {move.toName}
+                  </span>
+                </td>
+                <Td numeric>{qtyLabel(move.qtyMilli)}</Td>
+                <td>
+                  {moveReasonLabel(move.reason)}
+                  {move.reasonCode !== null && (
+                    <span className={styles.subtle}>
+                      {adjustReasonLabel(move.reasonCode)}
+                    </span>
+                  )}
+                  {move.note !== null && move.note !== "" && (
+                    <span className={styles.subtle}>{move.note}</span>
+                  )}
+                </td>
+                <td className={styles.muted}>
+                  {move.refKind === null ? (
+                    strings.inventoryNoDocument
+                  ) : (
+                    <>
+                      {move.refKind}
+                      {move.refId !== null && (
+                        <span className={styles.subtle}>{move.refId}</span>
+                      )}
+                    </>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      )}
+
+      {/* Said only when it is true: a page filled to the server's cap has
+          older movements behind it, and a person reading a warehouse's
+          history must not take a truncated list for the whole story. */}
+      {limit > 0 && moves.length >= limit && (
+        <p className={styles.notice}>{strings.inventoryHistoryCapped(limit)}</p>
+      )}
+    </Modal>
   );
 }

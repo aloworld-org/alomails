@@ -53,7 +53,7 @@ export function FulfilmentList({
                 <span className={styles.subtleInline}>
                   {entry.when} · {entry.place}
                 </span>
-                <span className={styles.toolbarSpacer} />
+                <span className="flex-1" aria-hidden="true" />
                 {entry.aside}
               </div>
               <ul className={styles.fulfilLines}>

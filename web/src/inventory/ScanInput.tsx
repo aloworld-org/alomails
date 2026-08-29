@@ -29,7 +29,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Camera, ScanLine, X } from "lucide-react";
 
-import { Button, Spinner } from "../ds";
+import { Button, Field, IconButton, Input, Modal, Spinner } from "../ds";
 import { strings } from "../i18n";
 import { InventoryError, inventoryMessage, useInventoryApi } from "./api";
 import { qtyLabel } from "./format";
@@ -213,48 +213,45 @@ export function ScanInput({ onClose, action, onUnknown }: Props) {
   }, [cameraOn, lookup]);
 
   return (
-    <div className={styles.scrim} role="presentation" onMouseDown={onClose}>
-      <div
-        className={styles.scanModal}
-        role="dialog"
-        aria-modal="true"
-        aria-label={strings.inventoryScanTitle}
-        onMouseDown={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") onClose();
+    <Modal
+      title={strings.inventoryScanTitle}
+      onClose={onClose}
+      icon={<ScanLine size={19} />}
+      actions={
+        <IconButton
+          label={strings.inventoryClose}
+          icon={<X size={18} />}
+          onClick={onClose}
+        />
+      }
+      footer={
+        <>
+          <span className="flex-1" aria-hidden="true" />
+          <Button variant="ghost" onClick={onClose}>
+            {strings.inventoryClose}
+          </Button>
+        </>
+      }
+    >
+      {/* The sentence under the title, as the body's first line — `ds/Modal`'s
+          header is the name and the controls. */}
+      <p className="m-0 text-sm text-tertiary">{strings.inventoryScanSubtitle}</p>
+      <form
+        className={styles.scanForm}
+        onSubmit={(e) => {
+          e.preventDefault();
+          void lookup(code);
         }}
       >
-        <div className={styles.modalHead}>
-          <span className={styles.modalIcon} aria-hidden="true">
-            <ScanLine size={19} />
-          </span>
-          <div className={styles.modalHeadText}>
-            <h2>{strings.inventoryScanTitle}</h2>
-            <p>{strings.inventoryScanSubtitle}</p>
-          </div>
-          <button
-            type="button"
-            className={styles.modalClose}
-            onClick={onClose}
-            aria-label={strings.inventoryClose}
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className={styles.modalBody}>
-          <form
-            className={styles.scanForm}
-            onSubmit={(e) => {
-              e.preventDefault();
-              void lookup(code);
-            }}
-          >
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>{strings.inventoryScanFieldCode}</span>
-              <input
+        {/* The stylesheet's `flex: 1 1 220px`: the field takes the row and
+            the two buttons sit on its baseline. */}
+        <div className="flex-auto basis-[220px]">
+          <Field label={strings.inventoryScanFieldCode} hint={strings.inventoryScanHint}>
+            {(control) => (
+              <Input
                 ref={inputRef}
-                className={styles.input}
+                id={control.id}
+                aria-describedby={control["aria-describedby"]}
                 type="text"
                 // A numeric keypad on a phone, and never a browser's guess at
                 // what a thirteen-digit number "should" be.
@@ -265,111 +262,103 @@ export function ScanInput({ onClose, action, onUnknown }: Props) {
                 onChange={(e) => setCode(e.target.value)}
                 placeholder={strings.inventoryScanPlaceholder}
               />
-              <span className={styles.hint}>{strings.inventoryScanHint}</span>
-            </label>
-            <Button type="submit" disabled={busy || code.trim() === ""}>
-              {strings.inventoryScanLookup}
-            </Button>
-            {cameraPossible && (
-              <Button variant="ghost" onClick={() => setCameraOn(!cameraOn)}>
-                <Camera size={16} />{" "}
-                {cameraOn ? strings.inventoryScanCameraStop : strings.inventoryScanCameraStart}
-              </Button>
             )}
-            {busy && <Spinner size={16} />}
-          </form>
-
-          {/* Said only where it is true, and never as an apology on a machine
-              that has a scanner plugged into it. */}
-          {!cameraPossible && <p className={styles.hint}>{strings.inventoryScanNoCamera}</p>}
-          {cameraError !== null && <ErrorBanner message={cameraError} />}
-
-          {cameraOn && (
-            <div className={styles.scanCamera}>
-              {/* Muted and inline, or a phone browser refuses to play it at
-                  all; no audio track is requested in the first place. */}
-              <video ref={videoRef} className={styles.scanVideo} muted playsInline />
-              <p className={styles.hint}>{strings.inventoryScanAiming}</p>
-            </div>
-          )}
-
-          {error !== null && <ErrorBanner message={error} />}
-
-          {unknown !== null && onUnknown !== undefined && (
-            <p className={styles.notice}>
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  onUnknown.run(unknown);
-                }}
-              >
-                {onUnknown.label}
-              </Button>
-            </p>
-          )}
-
-          {found !== null && (
-            <div className={styles.scanResult}>
-              <p className={styles.scanProduct}>
-                {found.product.name}
-                <span className={styles.subtle}>
-                  {found.product.sku === ""
-                    ? found.code
-                    : `${found.product.sku} · ${found.code}`}
-                </span>
-              </p>
-
-              {found.product.stocked ? (
-                <>
-                  <p className={styles.scanTotal}>
-                    {strings.inventoryScanOnHand(qtyLabel(found.onHandQtyMilli))}
-                  </p>
-                  {found.stock.length === 0 ? (
-                    <p className={styles.muted}>{strings.inventoryScanNowhere}</p>
-                  ) : (
-                    <ul className={styles.scanPlaces}>
-                      {found.stock.map((level) => (
-                        <li key={level.locationId} className={styles.scanPlace}>
-                          <span>
-                            {level.locationCode}
-                            <span className={styles.subtle}>{level.locationName}</span>
-                          </span>
-                          <span className={styles.numeric}>{qtyLabel(level.qtyMilli)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </>
-              ) : (
-                // A service has no shelf and no quantity — not a zero, which
-                // would read as an empty one.
-                <p className={styles.muted}>{strings.inventoryScanServiceNote}</p>
-              )}
-
-              {action !== undefined && (
-                <Button
-                  onClick={() => {
-                    action.run(found);
-                  }}
-                >
-                  {action.label}
-                </Button>
-              )}
-            </div>
-          )}
-
-          {found === null && error === null && !busy && (
-            <p className={styles.noMatches}>{strings.inventoryScanWaiting}</p>
-          )}
+          </Field>
         </div>
-
-        <div className={styles.modalFooter}>
-          <span className={styles.modalFooterSpacer} />
-          <Button variant="ghost" onClick={onClose}>
-            {strings.inventoryClose}
+        <Button type="submit" disabled={busy || code.trim() === ""}>
+          {strings.inventoryScanLookup}
+        </Button>
+        {cameraPossible && (
+          <Button variant="ghost" onClick={() => setCameraOn(!cameraOn)}>
+            <Camera size={16} />{" "}
+            {cameraOn ? strings.inventoryScanCameraStop : strings.inventoryScanCameraStart}
           </Button>
+        )}
+        {busy && <Spinner size={16} />}
+      </form>
+
+      {/* Said only where it is true, and never as an apology on a machine
+          that has a scanner plugged into it. */}
+      {!cameraPossible && <p className={styles.hint}>{strings.inventoryScanNoCamera}</p>}
+      {cameraError !== null && <ErrorBanner message={cameraError} />}
+
+      {cameraOn && (
+        <div className={styles.scanCamera}>
+          {/* Muted and inline, or a phone browser refuses to play it at
+              all; no audio track is requested in the first place. */}
+          <video ref={videoRef} className={styles.scanVideo} muted playsInline />
+          <p className={styles.hint}>{strings.inventoryScanAiming}</p>
         </div>
-      </div>
-    </div>
+      )}
+
+      {error !== null && <ErrorBanner message={error} />}
+
+      {unknown !== null && onUnknown !== undefined && (
+        <p className={styles.notice}>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              onUnknown.run(unknown);
+            }}
+          >
+            {onUnknown.label}
+          </Button>
+        </p>
+      )}
+
+      {found !== null && (
+        <div className={styles.scanResult}>
+          <p className={styles.scanProduct}>
+            {found.product.name}
+            <span className={styles.subtle}>
+              {found.product.sku === ""
+                ? found.code
+                : `${found.product.sku} · ${found.code}`}
+            </span>
+          </p>
+
+          {found.product.stocked ? (
+            <>
+              <p className={styles.scanTotal}>
+                {strings.inventoryScanOnHand(qtyLabel(found.onHandQtyMilli))}
+              </p>
+              {found.stock.length === 0 ? (
+                <p className={styles.muted}>{strings.inventoryScanNowhere}</p>
+              ) : (
+                <ul className={styles.scanPlaces}>
+                  {found.stock.map((level) => (
+                    <li key={level.locationId} className={styles.scanPlace}>
+                      <span>
+                        {level.locationCode}
+                        <span className={styles.subtle}>{level.locationName}</span>
+                      </span>
+                      <span className={styles.numeric}>{qtyLabel(level.qtyMilli)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          ) : (
+            // A service has no shelf and no quantity — not a zero, which
+            // would read as an empty one.
+            <p className={styles.muted}>{strings.inventoryScanServiceNote}</p>
+          )}
+
+          {action !== undefined && (
+            <Button
+              onClick={() => {
+                action.run(found);
+              }}
+            >
+              {action.label}
+            </Button>
+          )}
+        </div>
+      )}
+
+      {found === null && error === null && !busy && (
+        <p className={styles.noMatches}>{strings.inventoryScanWaiting}</p>
+      )}
+    </Modal>
   );
 }

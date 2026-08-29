@@ -11,7 +11,17 @@ import { useNavigate } from "react-router-dom";
 import { ClipboardList, Plus } from "lucide-react";
 
 import { formatAmount } from "../billing";
-import { Button, Spinner } from "../ds";
+import {
+  Button,
+  Input,
+  Select,
+  Spinner,
+  Table,
+  Td,
+  Th,
+  Toolbar,
+  ToolbarSpacer,
+} from "../ds";
 import { getLocale, strings } from "../i18n";
 import { dayLabel, soStatusLabel, soStatusTone } from "./format";
 import { inventoryMessage } from "./api";
@@ -71,9 +81,9 @@ export function SalesOrdersView() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.toolbar}>
-        <input
-          className={styles.search}
+      <Toolbar label={strings.inventoryTabSales}>
+        <Input
+          className="basis-[260px] max-[48rem]:basis-full"
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -82,8 +92,7 @@ export function SalesOrdersView() {
         />
         <label className={styles.filterField}>
           {strings.inventoryFilterStatus}
-          <select
-            className={styles.select}
+          <Select
             value={status}
             onChange={(e) => setStatus(e.target.value as SalesOrderStatus | "")}
           >
@@ -93,14 +102,17 @@ export function SalesOrdersView() {
                 {soStatusLabel(value)}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
-        <span className={styles.toolbarSpacer} />
+        <ToolbarSpacer />
         {loading && <Spinner size={16} />}
-        <Button onClick={() => void navigate("/inventory/sales-orders/new")}>
+        <Button
+          className="max-[48rem]:flex-auto"
+          onClick={() => void navigate("/inventory/sales-orders/new")}
+        >
           <Plus size={16} /> {strings.inventoryNewSalesOrder}
         </Button>
-      </div>
+      </Toolbar>
 
       {error !== null && <ErrorBanner message={error} />}
 
@@ -121,53 +133,49 @@ export function SalesOrdersView() {
       ) : shown.length === 0 && !loading ? (
         <p className={styles.noMatches}>{strings.inventoryNoMatches}</p>
       ) : (
-        <div className={styles.tableWrap} data-allow-overflow="">
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th scope="col">{strings.inventoryColOrder}</th>
-                <th scope="col">{strings.inventoryColCustomer}</th>
-                <th scope="col">{strings.inventoryColPromised}</th>
-                <th scope="col">{strings.inventoryColState}</th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.inventoryColTotal}
-                </th>
+        <Table label={strings.inventoryTabSales} interactiveRows>
+          <thead>
+            <tr>
+              <Th>{strings.inventoryColOrder}</Th>
+              <Th>{strings.inventoryColCustomer}</Th>
+              <Th>{strings.inventoryColPromised}</Th>
+              <Th>{strings.inventoryColState}</Th>
+              <Th numeric>{strings.inventoryColTotal}</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map((order) => (
+              <tr key={order.id}>
+                <td>
+                  <button
+                    type="button"
+                    className={styles.rowName}
+                    onClick={() => void navigate(`/inventory/sales-orders/${order.id}`)}
+                  >
+                    {order.number ?? strings.inventoryDraftOrder}
+                  </button>
+                  {order.reference !== "" && (
+                    <span className={styles.subtle}>{order.reference}</span>
+                  )}
+                </td>
+                <td>{order.customerName}</td>
+                <td className={styles.muted}>{dayLabel(order.expectedDate)}</td>
+                <td>
+                  <span className="inline-flex flex-wrap items-center gap-2">
+                    <StatusChip
+                      tone={soStatusTone(order.status)}
+                      label={soStatusLabel(order.status)}
+                    />
+                    {order.late && <StatusChip tone="warn" label={strings.inventoryOrderLate} />}
+                  </span>
+                </td>
+                <Td numeric>
+                  {formatAmount(order.totals.grossCents, locale, order.currency)}
+                </Td>
               </tr>
-            </thead>
-            <tbody>
-              {shown.map((order) => (
-                <tr key={order.id}>
-                  <td>
-                    <button
-                      type="button"
-                      className={styles.rowName}
-                      onClick={() => void navigate(`/inventory/sales-orders/${order.id}`)}
-                    >
-                      {order.number ?? strings.inventoryDraftOrder}
-                    </button>
-                    {order.reference !== "" && (
-                      <span className={styles.subtle}>{order.reference}</span>
-                    )}
-                  </td>
-                  <td>{order.customerName}</td>
-                  <td className={styles.muted}>{dayLabel(order.expectedDate)}</td>
-                  <td>
-                    <span className={styles.chips}>
-                      <StatusChip
-                        tone={soStatusTone(order.status)}
-                        label={soStatusLabel(order.status)}
-                      />
-                      {order.late && <StatusChip tone="warn" label={strings.inventoryOrderLate} />}
-                    </span>
-                  </td>
-                  <td className={styles.numeric}>
-                    {formatAmount(order.totals.grossCents, locale, order.currency)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </Table>
       )}
     </div>
   );
