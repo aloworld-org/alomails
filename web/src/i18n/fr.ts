@@ -6126,6 +6126,27 @@ export const fr: Partial<Catalog> = {
   recordAgentVerbSitePublish: "Le publier",
   recordAgentDraftSitePublish: (site: string): string =>
     `Publie « ${site} ».`,
+  recordAgentOriginQuoteUnnamed: "Établie à partir d’un devis accepté.",
+  recordAgentOriginSchedule: "Établie par une facturation récurrente.",
+  recordAgentOriginCorrection: "Établie pour corriger une facture.",
+  recordAgentVerbChaseInvoice: "La relancer",
+  recordAgentDraftChaseInvoice: (invoice: string): string =>
+    `Rédige une relance pour la facture ${invoice}.`,
+  recordAgentVerbRecordPayment: "Enregistrer un paiement",
+  recordAgentDraftRecordPayment: (invoice: string): string =>
+    `Enregistre un paiement sur la facture ${invoice}.`,
+  recordAgentVerbQuoteToInvoice: "En faire une facture",
+  recordAgentDraftQuoteToInvoice: (quote: string): string =>
+    `Le devis ${quote} est accepté — établis la facture correspondante.`,
+  recordAgentVerbCustomerStanding: "Où en sommes-nous avec eux",
+  recordAgentDraftCustomerStanding: (customer: string): string =>
+    `Où en sommes-nous avec ${customer} ?`,
+  recordAgentVerbCustomerUnpaid: "Ce qu’ils nous doivent",
+  recordAgentDraftCustomerUnpaid: (customer: string): string =>
+    `Que nous doit encore ${customer} ?`,
+  recordAgentVerbCustomerOpenQuotes: "Ce qui est en cours avec eux",
+  recordAgentDraftCustomerOpenQuotes: (customer: string): string =>
+    `Qu’est-ce qui est en cours avec ${customer} ?`,
   chatAgentTag: "agent",
   chatAgentsAvailable: "Disponibles à ajouter",
   chatAgentsHere: "Agents dans cette conversation",

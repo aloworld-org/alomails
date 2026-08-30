@@ -19,6 +19,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { RecordHistory } from "../audit";
 import { strings, useLocale } from "../i18n";
 import { useBillingApi } from "./api";
+import { BillingRecordAgent, documentOrigin } from "./BillingRecordAgent";
 import { formatDocumentDate } from "./dates";
 import type { DocumentAction } from "./DocumentActions";
 import { DocumentEditor } from "./DocumentEditor";
@@ -278,6 +279,26 @@ export function InvoiceEditor() {
                   ))}
                 </ul>
               </section>
+            )}
+            {/* The invoice's own agent (A8.4/AW.7): where the document came
+                from, what @billing can do with it, and an ask — above the
+                history for the same reason the history is below the numbers.
+                Its verbs are offered only on a document that is actually owed:
+                a draft, a void and a credit note keep the origin and the ask
+                and are offered nothing they cannot do, which is the same rule
+                the payments panel above follows. */}
+            {id !== undefined && (
+              <BillingRecordAgent
+                recordKind={
+                  !invoice.creditNote &&
+                  (invoice.status === "issued" || invoice.status === "paid")
+                    ? "invoiceOwed"
+                    : "invoice"
+                }
+                recordId={id}
+                recordLabel={invoice.number ?? strings.billingDraftInvoice}
+                origin={documentOrigin(invoice)}
+              />
             )}
             {/* Who did what to this invoice, and when (B2.13). Below the
                 document rather than beside it: a bookkeeper reads the numbers

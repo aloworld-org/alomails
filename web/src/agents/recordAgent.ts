@@ -291,6 +291,56 @@ export const RECORD_VERBS: Readonly<Record<string, readonly RecordVerb[]>> = {
       draft: (site) => strings.recordAgentDraftSitePublish(site),
     },
   ],
+  // Billing's records are a document and the party it is for (AW.7). A
+  // document's verbs follow its STATE, not its type, because that is what the
+  // intents themselves ask for: `draft_payment_reminder` and `record_payment`
+  // name an invoice by its number and are refused on anything not owed, and
+  // `quote_to_invoice` closes an offer that is still open. So the two states
+  // that carry verbs are their own kinds — `invoiceOwed` (issued or paid, not
+  // a credit note) and `quoteOpen` (sent, not yet answered) — and a plain
+  // `invoice` or `quote` keeps its origin and its ask while offering nothing
+  // it cannot do. Issuing and sending are deliberately absent: both are one
+  // button away on the same screen, and a second, slower path to them would
+  // be a worse one.
+  billing: [
+    {
+      tool: "draft_payment_reminder",
+      label: () => strings.recordAgentVerbChaseInvoice,
+      draft: (invoice) => strings.recordAgentDraftChaseInvoice(invoice),
+      kinds: ["invoiceOwed"],
+    },
+    {
+      tool: "record_payment",
+      label: () => strings.recordAgentVerbRecordPayment,
+      draft: (invoice) => strings.recordAgentDraftRecordPayment(invoice),
+      kinds: ["invoiceOwed"],
+    },
+    {
+      tool: "quote_to_invoice",
+      label: () => strings.recordAgentVerbQuoteToInvoice,
+      draft: (quote) => strings.recordAgentDraftQuoteToInvoice(quote),
+      kinds: ["quoteOpen"],
+    },
+    {
+      tool: "customer_lookup",
+      label: () => strings.recordAgentVerbCustomerStanding,
+      draft: (customer) => strings.recordAgentDraftCustomerStanding(customer),
+      kinds: ["customer"],
+    },
+    {
+      tool: "unpaid_invoices",
+      label: () => strings.recordAgentVerbCustomerUnpaid,
+      draft: (customer) => strings.recordAgentDraftCustomerUnpaid(customer),
+      kinds: ["customer"],
+    },
+    {
+      tool: "open_quotes",
+      label: () => strings.recordAgentVerbCustomerOpenQuotes,
+      draft: (customer) =>
+        strings.recordAgentDraftCustomerOpenQuotes(customer),
+      kinds: ["customer"],
+    },
+  ],
   hr: [
     {
       tool: "approve_leave_request",

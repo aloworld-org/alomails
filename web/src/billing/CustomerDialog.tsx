@@ -13,6 +13,7 @@ import { Building2 } from "lucide-react";
 import { Input } from "../ds";
 import { strings } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
+import { BillingRecordAgent } from "./BillingRecordAgent";
 import {
   BILLING_BASE_CURRENCY,
   BILLING_HOME_COUNTRY,
@@ -154,6 +155,24 @@ export function CustomerDialog({ customer, onClose, onSaved }: Props) {
       }
       onClose={onClose}
       onSubmit={() => void save()}
+      // The customer's own agent (A8.4/AW.7). In the frame's `aside` slot, not
+      // among the fields: the panel carries its own `<form>` for the ask, and
+      // HTML forbids nesting one form in another. Only on a customer that
+      // exists — a form for a record nobody has saved has no id to ask about.
+      // A customer carries no provenance the API says out loud, so the panel
+      // says it does not know rather than inventing one; its three verbs read
+      // the party's standing, and they are what makes this dialog the
+      // customer's record view rather than only its form.
+      aside={
+        customer !== null && (
+          <BillingRecordAgent
+            recordKind="customer"
+            recordId={customer.id}
+            recordLabel={customer.name}
+            onBeforeNavigate={onClose}
+          />
+        )
+      }
     >
       <Field label={strings.billingFieldName}>
         <Input

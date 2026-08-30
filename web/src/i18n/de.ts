@@ -2020,6 +2020,27 @@ export const de: Partial<Catalog> = {
   recordAgentVerbSitePublish: "Veröffentlichen",
   recordAgentDraftSitePublish: (site: string): string =>
     `Veröffentliche „${site}“.`,
+  recordAgentOriginQuoteUnnamed: "Aus einem angenommenen Angebot erstellt.",
+  recordAgentOriginSchedule: "Von einer wiederkehrenden Abrechnung erstellt.",
+  recordAgentOriginCorrection: "Zur Korrektur einer Rechnung erstellt.",
+  recordAgentVerbChaseInvoice: "Anmahnen",
+  recordAgentDraftChaseInvoice: (invoice: string): string =>
+    `Schreibe eine Erinnerung zur Rechnung ${invoice}.`,
+  recordAgentVerbRecordPayment: "Zahlung erfassen",
+  recordAgentDraftRecordPayment: (invoice: string): string =>
+    `Erfasse eine Zahlung zur Rechnung ${invoice}.`,
+  recordAgentVerbQuoteToInvoice: "Daraus eine Rechnung machen",
+  recordAgentDraftQuoteToInvoice: (quote: string): string =>
+    `Angebot ${quote} wurde angenommen — erstelle die Rechnung dazu.`,
+  recordAgentVerbCustomerStanding: "Wie wir dastehen",
+  recordAgentDraftCustomerStanding: (customer: string): string =>
+    `Wie stehen wir bei ${customer}?`,
+  recordAgentVerbCustomerUnpaid: "Was sie schulden",
+  recordAgentDraftCustomerUnpaid: (customer: string): string =>
+    `Was schuldet uns ${customer} noch?`,
+  recordAgentVerbCustomerOpenQuotes: "Was bei ihnen offen ist",
+  recordAgentDraftCustomerOpenQuotes: (customer: string): string =>
+    `Was ist bei ${customer} offen?`,
   chatSearchPlaceholder: "Nachrichten, Personen, Kanäle durchsuchen…",
   chatSearchClear: "Suche leeren",
   chatSearchNothing: "Nichts gefunden.",

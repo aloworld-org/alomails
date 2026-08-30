@@ -12,6 +12,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { DialogProvider } from "../ds";
@@ -91,8 +92,15 @@ const PRODUCT: BillingProduct = {
   updatedAt: "2026-08-06T10:00:00Z",
 };
 
+// Under a router, as these views really are: the customer's agent panel links
+// back to the records it cites, so it needs the navigation the module always
+// gives it (AW.7).
 function ui(children: React.ReactNode) {
-  return render(<DialogProvider>{children}</DialogProvider>);
+  return render(
+    <MemoryRouter>
+      <DialogProvider>{children}</DialogProvider>
+    </MemoryRouter>,
+  );
 }
 
 beforeEach(() => {
@@ -185,10 +193,14 @@ describe("the customer list", () => {
     ];
     fireEvent.click(screen.getByRole("button", { name: strings.billingSave }));
 
-    await waitFor(() => expect(calls.length).toBeGreaterThan(1));
-    expect(calls[1]?.method).toBe("PATCH");
-    expect(calls[1]?.url).toContain("/billing/customers/c-1");
-    expect(calls[1]?.body).toEqual({ vatId: null });
+    // By verb, not by position: an existing customer's dialog also carries its
+    // agent panel, whose two reads land between the list and the save (AW.7).
+    await waitFor(() =>
+      expect(calls.some((call) => call.method === "PATCH")).toBe(true),
+    );
+    const patch = calls.find((call) => call.method === "PATCH");
+    expect(patch?.url).toContain("/billing/customers/c-1");
+    expect(patch?.body).toEqual({ vatId: null });
   });
 
   test("a refusal is shown in the server's own words, with the form intact", async () => {

@@ -6059,6 +6059,27 @@ export const nl: Partial<Catalog> = {
   recordAgentVerbSitePublish: "Publiceren",
   recordAgentDraftSitePublish: (site: string): string =>
     `Publiceer “${site}”.`,
+  recordAgentOriginQuoteUnnamed: "Opgemaakt uit een aanvaarde offerte.",
+  recordAgentOriginSchedule: "Opgemaakt door een terugkerende afspraak.",
+  recordAgentOriginCorrection: "Opgemaakt om een factuur te corrigeren.",
+  recordAgentVerbChaseInvoice: "Herinneren",
+  recordAgentDraftChaseInvoice: (invoice: string): string =>
+    `Schrijf een herinnering over factuur ${invoice}.`,
+  recordAgentVerbRecordPayment: "Betaling vastleggen",
+  recordAgentDraftRecordPayment: (invoice: string): string =>
+    `Leg een betaling vast op factuur ${invoice}.`,
+  recordAgentVerbQuoteToInvoice: "Er een factuur van maken",
+  recordAgentDraftQuoteToInvoice: (quote: string): string =>
+    `Offerte ${quote} is aanvaard — maak er de factuur voor op.`,
+  recordAgentVerbCustomerStanding: "Hoe we ervoor staan",
+  recordAgentDraftCustomerStanding: (customer: string): string =>
+    `Hoe staan we ervoor bij ${customer}?`,
+  recordAgentVerbCustomerUnpaid: "Wat ze nog schuldig zijn",
+  recordAgentDraftCustomerUnpaid: (customer: string): string =>
+    `Wat is ${customer} ons nog schuldig?`,
+  recordAgentVerbCustomerOpenQuotes: "Wat er openstaat bij hen",
+  recordAgentDraftCustomerOpenQuotes: (customer: string): string =>
+    `Wat staat er open bij ${customer}?`,
   chatAgentTag: "agent",
   chatAgentsAvailable: "Beschikbaar om toe te voegen",
   chatAgentsHere: "Agents in dit gesprek",

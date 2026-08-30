@@ -2338,6 +2338,29 @@ export const en = {
     `Review “${site}” for search engines.`,
   recordAgentVerbSitePublish: "Publish it",
   recordAgentDraftSitePublish: (site: string): string => `Publish “${site}”.`,
+  // Billing (AW.7): a document's provenance, and the verbs that take one
+  // document or one customer.
+  recordAgentOriginQuoteUnnamed: "Raised from an accepted offer.",
+  recordAgentOriginSchedule: "Raised by a recurring arrangement.",
+  recordAgentOriginCorrection: "Raised to correct an invoice.",
+  recordAgentVerbChaseInvoice: "Chase it",
+  recordAgentDraftChaseInvoice: (invoice: string): string =>
+    `Write a reminder about invoice ${invoice}.`,
+  recordAgentVerbRecordPayment: "Record a payment",
+  recordAgentDraftRecordPayment: (invoice: string): string =>
+    `Record a payment against invoice ${invoice}.`,
+  recordAgentVerbQuoteToInvoice: "Turn it into an invoice",
+  recordAgentDraftQuoteToInvoice: (quote: string): string =>
+    `Quote ${quote} was accepted — raise the invoice for it.`,
+  recordAgentVerbCustomerStanding: "Where we are with them",
+  recordAgentDraftCustomerStanding: (customer: string): string =>
+    `Where are we with ${customer}?`,
+  recordAgentVerbCustomerUnpaid: "What they owe",
+  recordAgentDraftCustomerUnpaid: (customer: string): string =>
+    `What does ${customer} still owe us?`,
+  recordAgentVerbCustomerOpenQuotes: "What’s open with them",
+  recordAgentDraftCustomerOpenQuotes: (customer: string): string =>
+    `What is open with ${customer}?`,
   chatSearchPlaceholder: "Search messages, people, channels…",
   chatSearchClear: "Clear search",
   chatSearchNothing: "Nothing matched.",

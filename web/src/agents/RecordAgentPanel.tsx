@@ -10,6 +10,12 @@
 // read that renders the verbs — plus, when a thread origin arrives without a
 // name, the one room read that lets the origin be cited by name. No
 // summaries, no suggestions, nothing generated.
+//
+// Widened for Billing (AW.7) rather than forked for it: a billing document's
+// provenance is a standing arrangement, an accepted offer or the invoice it
+// corrects, and none of those three had a sentence here. Three origin kinds
+// and two source links, in the same shape as the ones already present — the
+// rule every module in this wave followed.
 import { useEffect, useState } from "react";
 import { Bot } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -197,8 +203,20 @@ export function RecordAgentPanel({
         return strings.recordAgentOriginSender(label ?? from.id);
       case "event":
         return strings.recordAgentOriginEvent;
+      // An offer cites its number when the record view knows it and says so
+      // plainly when it does not — a raw id is not a citation (AW.7: Billing's
+      // invoice carries `quoteId`, never the offer's number).
       case "quote":
-        return strings.recordAgentOriginQuote(label ?? from.id);
+        return label === null
+          ? strings.recordAgentOriginQuoteUnnamed
+          : strings.recordAgentOriginQuote(label);
+      // A document a standing arrangement raised on its due date, and a
+      // document raised to correct one the customer already holds. Both are
+      // Billing's (AW.7) and both are provenance the record itself carries.
+      case "schedule":
+        return strings.recordAgentOriginSchedule;
+      case "correction":
+        return strings.recordAgentOriginCorrection;
       case "import":
         return strings.recordAgentOriginImport(label ?? from.id);
       default:
@@ -215,6 +233,15 @@ export function RecordAgentPanel({
     }
     if (from.kind === "message") {
       return `/mail?open=${encodeURIComponent(from.id)}`;
+    }
+    // Billing's two (AW.7): the offer an invoice was raised from, and the
+    // invoice a credit note corrects. A schedule has no record screen of its
+    // own, so that origin is a sentence with nothing to open.
+    if (from.kind === "quote") {
+      return `/billing/quotes/${encodeURIComponent(from.id)}`;
+    }
+    if (from.kind === "correction") {
+      return `/billing/invoices/${encodeURIComponent(from.id)}`;
     }
     return null;
   }

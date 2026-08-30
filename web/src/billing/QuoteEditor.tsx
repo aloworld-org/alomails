@@ -5,6 +5,7 @@ import { RecordHistory } from "../audit";
 import { useDialogs } from "../ds";
 import { strings, useLocale } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
+import { BillingRecordAgent } from "./BillingRecordAgent";
 import { formatDocumentDate } from "./dates";
 import { saveFile } from "./saveFile";
 import type { DocumentAction } from "./DocumentActions";
@@ -386,6 +387,19 @@ export function QuoteEditor() {
                   {strings.billingQuoteInvoice}
                 </button>
               </p>
+            )}
+            {/* The offer's own agent (A8.4/AW.7). A quote carries no
+                provenance — nothing in `/billing/quotes/{id}` says what it
+                grew out of — so the panel says it does not know rather than
+                inventing a source. Turning it into an invoice is offered only
+                while the offer is open, which is exactly when this screen
+                offers "accept" itself. */}
+            {id !== undefined && (
+              <BillingRecordAgent
+                recordKind={quote.status === "sent" ? "quoteOpen" : "quote"}
+                recordId={id}
+                recordLabel={quote.number ?? strings.billingDraftQuote}
+              />
             )}
             {/* Who did what to this quote, and when (B2.13). A quote that was
                 never saved has no id and therefore no history. */}
