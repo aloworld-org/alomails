@@ -5406,6 +5406,7 @@ export const de: Partial<Catalog> = {
   sitesBlankPreviewNote:
     "Sie beginnen mit einer leeren Startseite und fügen die Abschnitte hinzu, die Sie wollen.",
   sitesHomePageTitle: "Startseite",
+  sitesAiChanges: "KI-Änderungen",
   sitesAiEditTitle: "Eine Seitenänderung beschreiben",
   sitesAiEditBody:
     "alo bereitet eine prüfbare Änderungsliste vor. Nichts ändert sich, bevor Sie zustimmen.",

@@ -3630,6 +3630,7 @@ export const nl: Partial<Catalog> = {
   sitesBlankPreviewNote:
     "U begint met een lege startpagina en voegt zelf de secties toe die u wilt.",
   sitesHomePageTitle: "Home",
+  sitesAiChanges: "AI-wijzigingen",
   sitesAiEditTitle: "Beschrijf een paginawijziging",
   sitesAiEditBody:
     "alo maakt een controleerbare lijst. Er verandert niets tot u goedkeurt.",

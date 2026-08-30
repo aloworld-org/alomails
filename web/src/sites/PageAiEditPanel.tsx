@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Sparkles } from "lucide-react";
+import { Sparkles, X } from "lucide-react";
 
-import { Button, Input } from "../ds";
+import { Button, IconButton, Input, Modal } from "../ds";
 import { strings } from "../i18n";
 import { sitesMessage, useSitesApi } from "./api";
 import { kindLabel } from "./sectionInfo";
@@ -34,17 +34,22 @@ export function PageAiEditPanel({
   pageId,
   onApplied,
   onPreviewChange,
+  navigation = false,
 }: {
   siteId: string;
   pageId: string;
   onApplied: (sections: SectionsEnvelope) => void;
   onPreviewChange: (html: string | null) => void;
+  /** Presents page-wide assisted editing as a command and focused review
+   * dialog instead of permanent content in the section outline. */
+  navigation?: boolean;
 }) {
   const api = useSitesApi();
   const [instruction, setInstruction] = useState("");
   const [proposal, setProposal] = useState<SiteEditEnvelope | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
 
   async function propose() {
     setBusy(true);
@@ -81,9 +86,13 @@ export function PageAiEditPanel({
     }
   }
 
-  return (
+  const panel = (
     <section
-      className="border-b border-subtle bg-raised/60 px-4 py-4"
+      className={
+        navigation
+          ? ""
+          : "border-b border-subtle bg-raised/60 px-4 py-4"
+      }
       aria-labelledby="sites-ai-edit-title"
     >
       <div className="flex items-start gap-3">
@@ -164,5 +173,44 @@ export function PageAiEditPanel({
         </div>
       )}
     </section>
+  );
+
+  if (!navigation) return panel;
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="sm"
+        icon={<Sparkles size="var(--icon-size-inline)" />}
+        className={
+          proposal === null
+            ? undefined
+            : "!border-accent/20 !bg-accent-soft !text-accent"
+        }
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen(true)}
+      >
+        {strings.sitesAiChanges}
+      </Button>
+      {open && (
+        <Modal
+          title={strings.sitesAiChanges}
+          wide
+          icon={<Sparkles size="var(--icon-size-control)" />}
+          actions={
+            <IconButton
+              label={strings.close}
+              icon={<X size="var(--icon-size-control)" />}
+              onClick={() => setOpen(false)}
+            />
+          }
+          onClose={() => setOpen(false)}
+        >
+          {panel}
+        </Modal>
+      )}
+    </>
   );
 }

@@ -324,6 +324,9 @@ describe("reviewed page changes", () => {
     await waitFor(() =>
       expect(frame.getAttribute("srcdoc")).toContain("Before copy"),
     );
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesAiChanges }),
+    );
     fireEvent.change(await screen.findByLabelText(strings.sitesAiInstruction), {
       target: { value: "Make the welcome clearer" },
     });

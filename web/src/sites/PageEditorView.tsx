@@ -1009,6 +1009,21 @@ export function PageEditorView() {
               >
                 {strings.sitesTheme}
               </Button>
+              {locale === null && (
+                <PageAiEditPanel
+                  navigation
+                  siteId={siteId}
+                  pageId={pageId}
+                  onPreviewChange={(html) => {
+                    setProposedPreviewHtml(html);
+                    setPreviewVersion(html === null ? "before" : "after");
+                  }}
+                  onApplied={(envelope) => {
+                    setSections(envelope.sections);
+                    setError(null);
+                  }}
+                />
+              )}
               <PagePassword
                 navigation
                 siteId={siteId}
@@ -1199,21 +1214,6 @@ export function PageEditorView() {
                     setPaletteOver(null);
                   }}
                   onClose={closePalette}
-                />
-              )}
-
-              {locale === null && (
-                <PageAiEditPanel
-                  siteId={siteId}
-                  pageId={pageId}
-                  onPreviewChange={(html) => {
-                    setProposedPreviewHtml(html);
-                    setPreviewVersion(html === null ? "before" : "after");
-                  }}
-                  onApplied={(envelope) => {
-                    setSections(envelope.sections);
-                    setError(null);
-                  }}
                 />
               )}
 

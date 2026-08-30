@@ -3570,6 +3570,7 @@ export const en = {
   sitesBlankPreviewNote:
     "You start with an empty Home page and add the sections you want.",
   sitesHomePageTitle: "Home",
+  sitesAiChanges: "AI changes",
   sitesAiEditTitle: "Describe a page change",
   sitesAiEditBody:
     "alo prepares a reviewable change list. Nothing changes until you approve it.",

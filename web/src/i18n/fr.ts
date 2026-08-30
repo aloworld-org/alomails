@@ -3677,6 +3677,7 @@ export const fr: Partial<Catalog> = {
   sitesBlankPreviewNote:
     "Vous commencez avec une page d’accueil vide et ajoutez les sections de votre choix.",
   sitesHomePageTitle: "Accueil",
+  sitesAiChanges: "Modifications IA",
   sitesAiEditTitle: "Décrivez une modification de page",
   sitesAiEditBody:
     "alo prépare une liste à vérifier. Rien ne change avant votre approbation.",
