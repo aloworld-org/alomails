@@ -1395,6 +1395,8 @@ export const de: Partial<Catalog> = {
   driveMemberError:
     "Diese Person konnte nicht hinzugefügt werden — prüfen Sie die E-Mail-Adresse und Ihre Rolle.",
   driveNewDoc: "Neues Doc",
+  driveCreateDocument: "Neues Dokument",
+  driveCreateMore: "Weitere Erstelloptionen",
   driveNewDocPrompt: "Namen für das neue Doc eingeben",
   driveNewSheetPrompt: "Namen für das neue Sheet eingeben",
   driveImporting: (name: string): string => `${name} wird importiert…`,
@@ -7484,7 +7486,8 @@ export const de: Partial<Catalog> = {
   quoteStudioDividerAppearanceHelp:
     "Legen Sie fest, wie diese Trennlinie im Kundenangebot erscheint.",
   quoteStudioDividerStyle: "Linienstil",
-  quoteStudioDividerStyleHelp: "Wählen Sie, wie die Trennlinie in Ihrem Angebot dargestellt wird.",
+  quoteStudioDividerStyleHelp:
+    "Wählen Sie, wie die Trennlinie in Ihrem Angebot dargestellt wird.",
   quoteStudioDividerSolid: "Durchgezogen",
   quoteStudioDividerDashed: "Gestrichelt",
   quoteStudioDividerDotted: "Gepunktet",

@@ -13,11 +13,7 @@ import {
   Copy,
   Download,
   FileText,
-  FileType,
   FolderOpen,
-  FolderPlus,
-  Presentation,
-  Sheet,
   HardDrive,
   History,
   Grid2X2,
@@ -39,7 +35,9 @@ import { getLocale, strings } from "../i18n";
 import { useJmapClient, type DriveNodeDto, type SpaceDto } from "../jmap";
 import { Menu, Spinner, useDialogs, type MenuItem } from "../ds";
 import { DestinationDialog, MembersDialog, VersionsDialog } from "./dialogs";
+import { DriveCreateActions } from "./DriveCreateActions";
 import { blankOfficeFile, type OfficeExt } from "./blankTemplates";
+import { nextUntitledName } from "./driveCreation";
 // BlockNote is heavy and only needed when a doc opens — code-split it out.
 const DocEditor = lazy(() => import("./DocEditor").then((m) => ({ default: m.DocEditor })));
 // Univer is heavy; the native Sheet editor only loads when a sheet is opened.
@@ -466,8 +464,10 @@ export function DriveModule() {
   }
 
   async function newDoc() {
-    const name = (await prompt({ message: strings.driveNewDocPrompt }))?.trim();
-    if (!name) return;
+    const name = nextUntitledName(
+      strings.docsUntitled,
+      nodes?.map((node) => node.name) ?? [],
+    );
     try {
       const id = await client.driveCreateDoc(location, parent, name);
       await load();
@@ -908,34 +908,24 @@ export function DriveModule() {
             )}
             {canWrite && !trashView && (
               <>
-                <button type="button" className={styles.ghostBtn} onClick={() => void newFolder()}>
-                  <FolderPlus size={17} /> {strings.driveNewFolder}
-                </button>
-                <button type="button" className={styles.ghostBtn} onClick={() => void newDoc()}>
-                  <FileText size={17} /> {strings.driveKindDoc}
-                </button>
-                <button type="button" className={styles.ghostBtn} onPointerEnter={() => void loadSheetEditor()} onFocus={() => void loadSheetEditor()} onClick={() => void newSheet()}>
-                  <Sheet size={17} /> {strings.driveKindSheet}
-                </button>
-                <Menu
-                  triggerLabel={strings.driveNew}
-                  label={strings.driveNew}
-                  icon={<Plus size={15} />}
-                  align="end"
-                  items={[
-                    { key: "doc", label: strings.driveKindDoc, icon: <FileText size={15} />, onClick: () => void newDoc() },
-                    { key: "sheet", label: strings.driveKindSheet, icon: <Sheet size={15} />, onClick: () => void newSheet() },
-                    // Spreadsheets are alo Sheet only now (ADR 0033): "Sheet"
-                    // creates one, and it exports to .xlsx. Word/Slides stay on
-                    // Collabora until their native stages land.
-                    { key: "word", label: strings.driveKindWord, icon: <FileType size={15} />, onClick: () => void newOffice("docx"), divider: true },
-                    { key: "slides", label: strings.driveKindSlides, icon: <Presentation size={15} />, onClick: () => void newOffice("pptx") },
-                    { key: "folder", label: strings.driveKindFolder, icon: <FolderPlus size={15} />, onClick: () => void newFolder(), divider: true },
-                  ]}
+                <DriveCreateActions
+                  labels={{
+                    createDocument: strings.driveCreateDocument,
+                    more: strings.driveCreateMore,
+                    sheet: strings.driveKindSheet,
+                    word: strings.driveKindWord,
+                    slides: strings.driveKindSlides,
+                    folder: strings.driveNewFolder,
+                    upload: uploading ? strings.driveUploading : strings.driveUpload,
+                  }}
+                  onCreateDocument={() => void newDoc()}
+                  onCreateSheet={() => void newSheet()}
+                  onCreateWord={() => void newOffice("docx")}
+                  onCreateSlides={() => void newOffice("pptx")}
+                  onCreateFolder={() => void newFolder()}
+                  onUpload={() => chooseUpload()}
+                  uploadDisabled={uploading}
                 />
-                <button type="button" className={styles.primaryBtn} onClick={() => chooseUpload()} disabled={uploading}>
-                  <Upload size={15} /> {uploading ? strings.driveUploading : strings.driveUpload}
-                </button>
                 <input
                   ref={fileRef}
                   type="file"
@@ -977,12 +967,25 @@ export function DriveModule() {
             </p>
             {canWrite && !trashView && (
               <div className={styles.emptyActions}>
-                <button type="button" className={styles.emptyPrimary} onClick={() => chooseUpload()}>
-                  <Upload size={17} /> {strings.driveUpload}
-                </button>
-                <button type="button" className={styles.emptySecondary} onClick={() => void newFolder()}>
-                  <FolderPlus size={17} /> {strings.driveNewFolder}
-                </button>
+                <DriveCreateActions
+                  labels={{
+                    createDocument: strings.driveCreateDocument,
+                    more: strings.driveCreateMore,
+                    sheet: strings.driveKindSheet,
+                    word: strings.driveKindWord,
+                    slides: strings.driveKindSlides,
+                    folder: strings.driveNewFolder,
+                    upload: uploading ? strings.driveUploading : strings.driveUpload,
+                  }}
+                  onCreateDocument={() => void newDoc()}
+                  onCreateSheet={() => void newSheet()}
+                  onCreateWord={() => void newOffice("docx")}
+                  onCreateSlides={() => void newOffice("pptx")}
+                  onCreateFolder={() => void newFolder()}
+                  onUpload={() => chooseUpload()}
+                  uploadDisabled={uploading}
+                  align="start"
+                />
               </div>
             )}
           </div>

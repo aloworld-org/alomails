@@ -1614,6 +1614,8 @@ export const en = {
   driveRemoveMemberConfirm: (who: string) => `Remove ${who} from this Space?`,
   driveMemberError: "Couldn’t add that person — check the email and your role.",
   driveNewDoc: "New doc",
+  driveCreateDocument: "New document",
+  driveCreateMore: "More creation options",
   driveNewDocPrompt: "Name the new doc",
   driveNewSheetPrompt: "Name the new sheet",
   driveImporting: (name: string): string => `Importing ${name}…`,
@@ -7519,7 +7521,8 @@ export const en = {
   quoteStudioDividerAppearanceHelp:
     "Choose how this divider appears in the customer quotation.",
   quoteStudioDividerStyle: "Line style",
-  quoteStudioDividerStyleHelp: "Choose how the divider line appears in your quotation.",
+  quoteStudioDividerStyleHelp:
+    "Choose how the divider line appears in your quotation.",
   quoteStudioDividerSolid: "Solid",
   quoteStudioDividerDashed: "Dashed",
   quoteStudioDividerDotted: "Dotted",

@@ -5788,6 +5788,8 @@ export const nl: Partial<Catalog> = {
   driveNewBase: "Nieuwe base",
   driveNewBasePrompt: "Geef de nieuwe base een naam",
   driveNewDoc: "Nieuw doc",
+  driveCreateDocument: "Nieuw document",
+  driveCreateMore: "Meer aanmaakopties",
   driveNewDocPrompt: "Geef het nieuwe doc een naam",
   driveNewFolder: "Nieuwe map",
   driveNewFolderPrompt: "Geef de nieuwe map een naam",
@@ -7375,7 +7377,8 @@ export const nl: Partial<Catalog> = {
   quoteStudioDividerAppearanceHelp:
     "Kies hoe deze scheidslijn in de offerte voor de klant wordt weergegeven.",
   quoteStudioDividerStyle: "Lijnstijl",
-  quoteStudioDividerStyleHelp: "Kies hoe de scheidingslijn in je offerte wordt weergegeven.",
+  quoteStudioDividerStyleHelp:
+    "Kies hoe de scheidingslijn in je offerte wordt weergegeven.",
   quoteStudioDividerSolid: "Doorgetrokken",
   quoteStudioDividerDashed: "Streepjes",
   quoteStudioDividerDotted: "Stippen",

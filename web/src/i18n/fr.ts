@@ -5855,6 +5855,8 @@ export const fr: Partial<Catalog> = {
   driveNewBase: "Nouvelle base",
   driveNewBasePrompt: "Nommez la nouvelle base",
   driveNewDoc: "Nouveau doc",
+  driveCreateDocument: "Nouveau document",
+  driveCreateMore: "Plus d’options de création",
   driveNewDocPrompt: "Nommez le nouveau doc",
   driveNewFolder: "Nouveau dossier",
   driveNewFolderPrompt: "Nommez le nouveau dossier",
@@ -7448,7 +7450,8 @@ export const fr: Partial<Catalog> = {
   quoteStudioDividerAppearanceHelp:
     "Choisissez l’apparence de ce séparateur dans le devis client.",
   quoteStudioDividerStyle: "Style du trait",
-  quoteStudioDividerStyleHelp: "Choisissez l’apparence du trait de séparation dans votre devis.",
+  quoteStudioDividerStyleHelp:
+    "Choisissez l’apparence du trait de séparation dans votre devis.",
   quoteStudioDividerSolid: "Continu",
   quoteStudioDividerDashed: "Tirets",
   quoteStudioDividerDotted: "Pointillés",
