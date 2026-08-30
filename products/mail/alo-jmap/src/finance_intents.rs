@@ -40,11 +40,23 @@ use crate::state::{Account, AppState};
 const MAX_LISTED: usize = 12;
 
 /// The day one end of a period is read from, or the default the verb states.
-fn period_day(args: &Value, key: &str, default: Date) -> Result<Date, Problem> {
+pub(crate) fn period_day(args: &Value, key: &str, default: Date) -> Result<Date, Problem> {
     match string_arg(args, key).filter(|raw| !raw.trim().is_empty()) {
         None => Ok(default),
         Some(raw) => parse_iso_date(&raw)
             .ok_or_else(|| unprocessable(format!("{key} must be a date, YYYY-MM-DD"))),
+    }
+}
+
+/// The same day, for a verb whose end of the period has **no** default — where
+/// the absence of a bound means "however far back the records go" rather than a
+/// day this file would have to pick.
+pub(crate) fn optional_period_day(args: &Value, key: &str) -> Result<Option<Date>, Problem> {
+    match string_arg(args, key).filter(|raw| !raw.trim().is_empty()) {
+        None => Ok(None),
+        Some(raw) => parse_iso_date(&raw)
+            .ok_or_else(|| unprocessable(format!("{key} must be a date, YYYY-MM-DD")))
+            .map(Some),
     }
 }
 
@@ -73,6 +85,18 @@ fn receivable_sums(lines: &[LedgerLine]) -> (i64, i64, i64, i64) {
 /// "how much have we invoiced this year, and how much is unpaid?", which is a
 /// different answer from Billing's list of documents: this one is what was
 /// **booked**.
+///
+/// A different answer, and until A10.2 an unexplained one. Documents have only
+/// been posted to the journal since the document paths were wired to the posting
+/// rules, so on a tenant that invoiced before that upgrade this read returned
+/// `0.00` for a year Billing and Insights reported in full — two agents
+/// contradicting each other on the same tenant in the same minute, neither of
+/// them saying why. So the reading now **sets the period's documents against the
+/// entries it found** ([`crate::agent_finance_books::gap_json`]): the figures
+/// stay the books', and beside them the reply says how many issued documents the
+/// journal does not hold, what they come to, and what puts them in. A reader can
+/// no longer take the journal's figure for the whole truth without being told it
+/// is not.
 pub async fn execute_ledger_summary(account: &Account, args: &Value) -> Reply {
     account.require_finance()?;
     let day = today();
@@ -109,6 +133,21 @@ pub async fn execute_ledger_summary(account: &Account, args: &Value) -> Reply {
         .await
         .map_err(map_store_err)?;
     let (invoiced, credit_noted, paid, other) = receivable_sums(&ledger.lines);
+    // What the document list says for the same period, set against the issue
+    // entries the ledger above actually holds. A cut-short page cannot answer
+    // "is this document in the books?" — an absence there means "I stopped
+    // looking" — so a truncated read says so instead of naming documents.
+    let documents = if ledger.truncated {
+        crate::agent_finance_books::not_compared_json()
+    } else {
+        let issued =
+            crate::agent_finance_books::issued_documents(&account.acc, Some(from), to).await?;
+        crate::agent_finance_books::gap_json(
+            &currency,
+            &issued,
+            &crate::agent_finance_books::booked_documents(&ledger.lines),
+        )
+    };
     // The latest movements, newest first — the evidence behind the figures.
     let entries: Vec<Value> = ledger
         .lines
@@ -144,6 +183,9 @@ pub async fn execute_ledger_summary(account: &Account, args: &Value) -> Reply {
         // When the page was cut short the sums are of what was read, not of
         // the period — said rather than left to read as a total.
         "truncated": ledger.truncated,
+        // …and what the documents say, which is the same thing for a tenant
+        // whose books hold them all and a different thing for one whose do not.
+        "documents": documents,
     }))
 }
 
@@ -274,12 +316,7 @@ pub async fn execute_account_balance(account: &Account, args: &Value) -> Reply {
     }
     let one = resolve_account(&chart, &wanted)?;
     let to = period_day(args, "to", today())?;
-    let from = match string_arg(args, "from").filter(|raw| !raw.trim().is_empty()) {
-        None => None,
-        Some(raw) => Some(
-            parse_iso_date(&raw).ok_or_else(|| unprocessable("from must be a date, YYYY-MM-DD"))?,
-        ),
-    };
+    let from = optional_period_day(args, "from")?;
     if from.is_some_and(|from| from > to) {
         return Err(unprocessable("from is after to"));
     }
@@ -353,6 +390,9 @@ pub(crate) fn dispatch<'a>(
         "approve_expense" => Box::pin(crate::agent_finance::execute_approve_expense(
             account, args, state,
         )),
+        "post_missing_documents" => Box::pin(
+            crate::agent_finance_books::execute_post_missing_documents(account, args),
+        ),
         _ => return None,
     };
     Some(run)

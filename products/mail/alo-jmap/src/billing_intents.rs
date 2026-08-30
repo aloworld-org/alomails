@@ -61,7 +61,7 @@ pub(crate) fn ok(result: Value) -> Reply {
 }
 
 /// `24900` in EUR as `249.00 EUR`; `-1250` as `-12.50 EUR`.
-fn money(cents: i64, currency: &str) -> String {
+pub(crate) fn money(cents: i64, currency: &str) -> String {
     let sign = if cents < 0 { "-" } else { "" };
     let magnitude = cents.unsigned_abs();
     format!(

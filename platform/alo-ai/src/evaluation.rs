@@ -162,7 +162,7 @@ mod tests {
             }
         }
         // Grown, never trimmed: one case per `answers` entry, in registry
-        // order. The census is pinned like the registry's own (136 tools), so
+        // order. The census is pinned like the registry's own (137 tools), so
         // a shrink is a visible change to this line and not a quiet loss of
         // coverage.
         let entries: usize = MOVED
@@ -171,7 +171,7 @@ mod tests {
             .map(|intent| intent.answers.len())
             .sum();
         assert_eq!(set.len(), entries);
-        assert_eq!(set.len(), 369, "the evaluation set census moved");
+        assert_eq!(set.len(), 372, "the evaluation set census moved");
     }
 
     /// A case is askable as written: its ask has words, its handle is its

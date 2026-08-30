@@ -7,7 +7,7 @@
 //! asker's tenant-scoped store, and answer with the same figures the
 //! `/finance/*` routes serve — the journal's, never a second sum.
 //!
-//! Four rules from the module shape the wording, each a mistake it exists to
+//! Five rules from the module shape the wording, each a mistake it exists to
 //! prevent:
 //!
 //! - **The model does not classify anything.** `categorise_transactions` asks
@@ -26,6 +26,15 @@
 //!   write here that changes what the books say, and like every write it is
 //!   proposed, previewed and approved by the person who asked before it runs
 //!   — and the executors gate it exactly as the approvals inbox is gated.
+//! - **A books figure that is short says so** (A10.2). `ledger_summary` reads
+//!   the journal, and the journal has only held documents since the day the
+//!   document paths were wired to post them, so on an older tenant it answered
+//!   `0.00` where Billing answered in full. Its reply now carries the period's
+//!   documents beside the entries, and `post_missing_documents` — the one write
+//!   here that puts a *past* event in the books rather than making a new one —
+//!   closes the difference. It takes no amount, no account and no date to book
+//!   on: every posting is the store's own rule applied to a document that
+//!   already exists.
 
 use crate::agent_tool::Effect;
 use crate::intent::{Arg, Excluded, IntentModule, IntentSpec};
@@ -223,6 +232,34 @@ pub const FINANCE_INTENTS: &[IntentSpec] = &[
         undo: None,
         routes: &["/finance/expenses/{id}/approve"],
     },
+    IntentSpec {
+        name: "post_missing_documents",
+        purpose: "Put into the books the invoices and credit notes that were already issued but were never posted to the journal — each at its own issue date, by the same rules an issue made today uses, together with the payments recorded against them. Documents raised before the books began recording documents are why Finance can report less than Billing for the same period; ledger_summary says how many there are. It is safe to run twice: a document already in the books is left alone. It invents nothing — a document in a closed period, or one with no usable exchange rate, is refused and named rather than booked. There is NO argument for an amount, an account or a date to book on.",
+        effect: Effect::Write,
+        args: &[
+            Arg::optional(
+                "from",
+                "date",
+                "only documents issued on or after this day, YYYY-MM-DD; default: however far back the records go",
+            ),
+            TO_OPT,
+        ],
+        answers: &[
+            "are all our invoices in the books",
+            "the books show less than the invoices we raised",
+            "put the documents that are missing from the books into them",
+        ],
+        preview: Some(
+            "Every issued document the books do not hold will be posted to the journal at its own date, with the payments recorded against it. Nothing already in the books changes.",
+        ),
+        // Un-booking a journal entry is not a verb this product has, and it
+        // should not be: a correction to a posted document is a reversal an
+        // accountant writes, not an undo of a repair.
+        undo: None,
+        // The repair walks the documents and calls the store's posting doors;
+        // no /finance route serves it, so this verb stands behind none.
+        routes: &[],
+    },
 ];
 
 /// The Finance routes deliberately without a verb, each with its reason.
@@ -350,7 +387,7 @@ pub const FINANCE_EXCLUDED: &[Excluded] = &[
 ];
 
 /// The Finance paragraph of the agent's general instructions.
-pub const FINANCE_GUIDANCE: &str = "For a Finance verb, NEVER invent a category, an account or an amount: the categories are the tenant's own words in their own language, the figures are in their books, and anything you compose yourself would be a number in somebody's accounts that nobody can trace. Resolve a relative period (this month, last quarter) against today's date below into plain YYYY-MM-DD days. To answer a question about the books, USE a reading verb first and answer from what it returned, quoting amounts as returned (amounts are integer cents: 500000 is 5000.00) and adding none it did not return. A suggestion categorise_transactions writes is not a decision: never tell the user something has been classified, booked or filed — say it is waiting for them. What flag_anomalies finds names entries and never a person: report it as something worth looking at rather than as a verdict about anybody, and never propose it for a question about somebody's spending.\n";
+pub const FINANCE_GUIDANCE: &str = "For a Finance verb, NEVER invent a category, an account or an amount: the categories are the tenant's own words in their own language, the figures are in their books, and anything you compose yourself would be a number in somebody's accounts that nobody can trace. Resolve a relative period (this month, last quarter) against today's date below into plain YYYY-MM-DD days. To answer a question about the books, USE a reading verb first and answer from what it returned, quoting amounts as returned (amounts are integer cents: 500000 is 5000.00) and adding none it did not return. A suggestion categorise_transactions writes is not a decision: never tell the user something has been classified, booked or filed — say it is waiting for them. What flag_anomalies finds names entries and never a person: report it as something worth looking at rather than as a verdict about anybody, and never propose it for a question about somebody's spending. When a reading's \"documents\" block says issued documents are not in the books, NEVER report the journal's figure as the whole truth: say the books' figure, then say how many documents are missing and what they come to, and offer post_missing_documents — a Finance figure that is quietly short is how one agent comes to contradict another about the same period.\n";
 
 /// The module, as the registry reads it.
 pub static FINANCE: IntentModule = IntentModule {
@@ -371,6 +408,7 @@ mod tests {
         "ledger_summary",
         "flag_anomalies",
         "categorise_transactions",
+        "post_missing_documents",
     ];
 
     #[test]

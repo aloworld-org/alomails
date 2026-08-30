@@ -453,7 +453,10 @@ mod tests {
                 "expenses_awaiting",
                 "account_balance",
                 "categorise_transactions",
-                "approve_expense"
+                "approve_expense",
+                // A10.2: the repair that puts documents issued before the
+                // books were keeping them into the journal.
+                "post_missing_documents"
             ]
         );
         assert_eq!(
@@ -543,7 +546,7 @@ mod tests {
             .map(|tool| tool.name)
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
-        assert_eq!(workspace.len(), 136);
+        assert_eq!(workspace.len(), 137);
     }
 
     /// A moved module registers once (A4.1c): its row in [`MOVED`] is what puts

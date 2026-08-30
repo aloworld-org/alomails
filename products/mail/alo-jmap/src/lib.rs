@@ -27,6 +27,7 @@ pub mod agent_docs;
 pub mod agent_drive;
 pub mod agent_finance;
 pub mod agent_finance_answers;
+pub mod agent_finance_books;
 pub mod agent_hr;
 pub mod agent_insights;
 pub mod agent_instructions;
