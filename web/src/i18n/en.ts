@@ -4507,6 +4507,7 @@ export const en = {
   // visitor meets: an unlock screen that shows nothing of the page, not even
   // its title. An owner who expects to see the page's own name there would
   // otherwise think it broke.
+  sitesPageAccess: "Page access",
   sitesPagePasswordTitle: "Who can open this page",
   sitesPagePasswordLoading: "Checking who can open this page",
   sitesPagePasswordLoadFailed:

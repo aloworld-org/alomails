@@ -3530,6 +3530,7 @@ export const fr: Partial<Catalog> = {
     `Ce site n’a pas pu être publié le ${moment} : ${reason}`,
 
   // Sites — une page derrière un mot de passe (S2.06b).
+  sitesPageAccess: "Accès à la page",
   sitesPagePasswordTitle: "Qui peut ouvrir cette page",
   sitesPagePasswordLoading: "Vérification de qui peut ouvrir cette page",
   sitesPagePasswordLoadFailed:

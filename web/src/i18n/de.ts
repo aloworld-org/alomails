@@ -6329,6 +6329,7 @@ export const de: Partial<Catalog> = {
     `Diese Website hat sich am ${moment} von selbst veröffentlicht.`,
   sitesScheduleFailed: (moment: string, reason: string) =>
     `Diese Website konnte am ${moment} nicht veröffentlichen: ${reason}`,
+  sitesPageAccess: "Seitenzugriff",
   sitesPagePasswordTitle: "Wer diese Seite öffnen kann",
   sitesPagePasswordLoading: "Es wird geprüft, wer diese Seite öffnen kann",
   sitesPagePasswordLoadFailed:

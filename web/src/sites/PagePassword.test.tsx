@@ -69,6 +69,28 @@ test("the compact editor row keeps its access action on protected spacing", asyn
   expect(action.parentElement?.className).toContain("w-full");
 });
 
+test("the navigation control keeps access loaded and reveals its focused dialog", async () => {
+  const seen: boolean[] = [];
+  render(
+    <PagePassword
+      siteId="site-1"
+      pageId="page-1"
+      navigation
+      onChange={(isProtected) => seen.push(isProtected)}
+    />,
+  );
+
+  const access = screen.getByRole("button", { name: strings.sitesPageAccess });
+  expect(screen.queryByRole("dialog")).toBeNull();
+  await waitFor(() => expect(seen).toEqual([false]));
+
+  fireEvent.click(access);
+  expect(
+    screen.getByRole("dialog", { name: strings.sitesPageAccess }),
+  ).toBeTruthy();
+  expect(await screen.findByText(strings.sitesPagePasswordPublic)).toBeTruthy();
+});
+
 test("a public page says the internet can read it, and offers the password", async () => {
   const seen: boolean[] = [];
   render(

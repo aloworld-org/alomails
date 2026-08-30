@@ -3485,6 +3485,7 @@ export const nl: Partial<Catalog> = {
     `Deze site kon niet worden gepubliceerd op ${moment}: ${reason}`,
 
   // Sites — een pagina achter een wachtwoord (S2.06b).
+  sitesPageAccess: "Toegang tot pagina",
   sitesPagePasswordTitle: "Wie deze pagina kan openen",
   sitesPagePasswordLoading: "Nagaan wie deze pagina kan openen",
   sitesPagePasswordLoadFailed:

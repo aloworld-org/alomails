@@ -990,6 +990,9 @@ describe("who can open the page", () => {
     replies = [pageReply([HERO]), protectionReply({ protected: false })];
     ui();
 
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesPageAccess }),
+    );
     expect(
       await screen.findByText(strings.sitesPagePasswordPublic),
     ).toBeTruthy();
@@ -1007,10 +1010,13 @@ describe("who can open the page", () => {
   test("protecting sends the password on the wire-verified route, and the preview says so", async () => {
     replies = [pageReply([HERO]), protectionReply({ protected: false })];
     ui();
-    await screen.findByText(strings.sitesPagePasswordPublic);
     fireEvent.click(
-      screen.getByRole("button", { name: strings.sitesShowPreview }),
+      await screen.findByRole("button", { name: strings.sitesShowPreview }),
     );
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesPageAccess }),
+    );
+    await screen.findByText(strings.sitesPagePasswordPublic);
 
     fireEvent.click(
       screen.getByRole("button", { name: strings.sitesPagePasswordProtect }),
@@ -1061,6 +1067,10 @@ describe("who can open the page", () => {
       }),
     ];
     ui();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesPageAccess }),
+    );
 
     fireEvent.click(
       await screen.findByRole("button", {

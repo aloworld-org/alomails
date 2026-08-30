@@ -22,9 +22,9 @@
 // is public the moment it lands — and disclosure cannot be undone. So it arms
 // first, exactly as taking a live site off the air does.
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Eye, EyeOff, KeyRound, Lock, Unlock } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Lock, Unlock, X } from "lucide-react";
 
-import { Button, Input, Spinner } from "../ds";
+import { Button, IconButton, Input, Modal, Spinner } from "../ds";
 import { strings } from "../i18n";
 import { sitesMessage, useSitesApi } from "./api";
 import type { SitePageProtection } from "./types";
@@ -48,6 +48,7 @@ export function PagePassword({
   pageId,
   multilingual = false,
   compact = false,
+  navigation = false,
   onChange,
 }: {
   siteId: string;
@@ -59,6 +60,9 @@ export function PagePassword({
   /** Uses the editor toolbar's surrounding surface instead of drawing a
    * second settings card around the same control. */
   compact?: boolean;
+  /** Keeps the access state loaded while presenting its editor as a page-level
+   * navigation action and focused dialog. */
+  navigation?: boolean;
   /** Called with the page's protection state whenever it is known or changes,
    *  so the editor around this panel can tell the truth about its preview. */
   onChange?: (isProtected: boolean) => void;
@@ -73,6 +77,7 @@ export function PagePassword({
   const [error, setError] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<"saved" | "removed" | null>(null);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
+  const [accessOpen, setAccessOpen] = useState(false);
 
   // Held in a ref rather than watched as a dependency, for the reason
   // SchedulePublish holds its callback that way: an inline arrow from the
@@ -107,6 +112,16 @@ export function PagePassword({
     setError(null);
     setConfirmingRemove(false);
     setEditing(true);
+  }
+
+  function closeNavigation() {
+    setAccessOpen(false);
+    setEditing(false);
+    setPassword("");
+    setVisible(false);
+    setError(null);
+    setOutcome(null);
+    setConfirmingRemove(false);
   }
 
   async function save() {
@@ -159,10 +174,12 @@ export function PagePassword({
   const isProtected = protection?.protected === true;
   const since = protection === null ? null : setOn(protection);
 
-  return (
+  const panel = (
     <section
       className={`flex flex-col gap-3 ${
-        compact
+        navigation
+          ? ""
+          : compact
           ? "border-t border-subtle px-4 py-3 sm:px-5"
           : "rounded-2xl border border-subtle bg-surface p-5 shadow-sm"
       }`}
@@ -345,5 +362,56 @@ export function PagePassword({
         </p>
       )}
     </section>
+  );
+
+  if (!navigation) return panel;
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="sm"
+        icon={
+          isProtected ? (
+            <Lock size="var(--icon-size-inline)" />
+          ) : (
+            <Unlock size="var(--icon-size-inline)" />
+          )
+        }
+        className={
+          isProtected
+            ? "!border-accent/20 !bg-accent-soft !text-accent"
+            : undefined
+        }
+        aria-haspopup="dialog"
+        aria-expanded={accessOpen}
+        onClick={() => setAccessOpen(true)}
+      >
+        {strings.sitesPageAccess}
+      </Button>
+      {accessOpen && (
+        <Modal
+          title={strings.sitesPageAccess}
+          wide
+          icon={
+            isProtected ? (
+              <Lock size="var(--icon-size-control)" />
+            ) : (
+              <Unlock size="var(--icon-size-control)" />
+            )
+          }
+          actions={
+            <IconButton
+              label={strings.close}
+              icon={<X size="var(--icon-size-control)" />}
+              onClick={closeNavigation}
+            />
+          }
+          onClose={closeNavigation}
+        >
+          {panel}
+        </Modal>
+      )}
+    </>
   );
 }

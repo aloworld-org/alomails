@@ -1009,6 +1009,13 @@ export function PageEditorView() {
               >
                 {strings.sitesTheme}
               </Button>
+              <PagePassword
+                navigation
+                siteId={siteId}
+                pageId={pageId}
+                multilingual={enabledLocales.length > 1}
+                onChange={setPageProtected}
+              />
               <Button
                 variant="ghost"
                 size="sm"
@@ -1055,13 +1062,6 @@ export function PageEditorView() {
                 </div>
               </nav>
             </div>
-            <PagePassword
-              compact
-              siteId={siteId}
-              pageId={pageId}
-              multilingual={enabledLocales.length > 1}
-              onChange={setPageProtected}
-            />
           </section>
 
           {locale !== null && translationFallback && (
