@@ -2,7 +2,14 @@
 // per-currency groups and books-currency filing summary. Period changes apply on
 // submit so the visible dates always match the visible report.
 import { useCallback, useEffect, useState } from "react";
-import { CalendarRange, Download, FileSpreadsheet } from "lucide-react";
+import {
+  BadgeEuro,
+  CalendarRange,
+  Download,
+  FileSpreadsheet,
+  Files,
+  ReceiptText,
+} from "lucide-react";
 
 import { Button, Spinner } from "../ds";
 import { strings, useLocale } from "../i18n";
@@ -23,7 +30,7 @@ const dateInput =
 const quickAction =
   "inline-flex h-10 items-center justify-center whitespace-nowrap rounded-lg border border-default bg-surface !px-4 text-sm font-medium !text-secondary !no-underline transition-colors hover:border-accent hover:bg-[var(--accent-soft)] hover:!text-accent hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20";
 const tableShell =
-  "min-h-0 overflow-auto rounded-xl border border-subtle bg-surface shadow-sm";
+  "overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm";
 const tableClass = "w-full border-collapse text-sm";
 const headCell =
   "sticky top-0 z-[1] whitespace-nowrap border-b border-default bg-sunken px-4 py-3 text-left text-xs font-semibold text-tertiary";
@@ -86,6 +93,11 @@ export function VatReportView() {
   }
 
   const readable = (day: string) => formatDocumentDate(day, locale, day);
+  const documentCount =
+    report?.currencies.reduce(
+      (count, group) => count + group.invoiceCount + group.creditNoteCount,
+      0,
+    ) ?? 0;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-8 pb-8 pt-6 max-sm:px-4">
@@ -171,6 +183,61 @@ export function VatReportView() {
         />
       )}
 
+      {report !== null && report.currencies.length > 0 && (
+        <section
+          className="mx-auto mb-8 w-full max-w-[90rem] rounded-2xl border border-subtle bg-surface p-5 shadow-sm"
+          aria-labelledby="vat-overview-title"
+        >
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <div>
+              <h3 id="vat-overview-title" className="m-0 text-base font-semibold text-primary">
+                {strings.billingReportOverview}
+              </h3>
+              <p className="mb-0 mt-1 text-xs text-tertiary">
+                {strings.billingReportBaseCaption(report.base.currency)}
+              </p>
+            </div>
+            <span className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-semibold text-accent">
+              {report.base.currency}
+            </span>
+          </div>
+          <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-sm:grid-cols-1">
+            {[
+              {
+                label: strings.billingReportTaxableNet,
+                value: formatAmount(report.base.netCents, locale, report.base.currency),
+                icon: <ReceiptText className="size-4" aria-hidden="true" />,
+              },
+              {
+                label: strings.billingReportVatDue,
+                value: formatAmount(report.base.vatCents, locale, report.base.currency),
+                icon: <BadgeEuro className="size-4" aria-hidden="true" />,
+              },
+              {
+                label: strings.billingReportGrossBilled,
+                value: formatAmount(report.base.grossCents, locale, report.base.currency),
+                icon: <FileSpreadsheet className="size-4" aria-hidden="true" />,
+              },
+              {
+                label: strings.billingReportDocuments,
+                value: new Intl.NumberFormat(locale).format(documentCount),
+                icon: <Files className="size-4" aria-hidden="true" />,
+              },
+            ].map((item) => (
+              <div key={item.label} className="rounded-xl bg-sunken p-4">
+                <div className="mb-3 flex size-8 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-accent">
+                  {item.icon}
+                </div>
+                <p className="m-0 text-xs font-medium text-tertiary">{item.label}</p>
+                <p className="mb-0 mt-1 text-xl font-semibold tabular-nums text-primary">
+                  {item.value}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {loading ? (
         <div
           className="flex min-h-72 flex-1 items-center justify-center rounded-xl border border-subtle bg-surface"
@@ -195,15 +262,15 @@ export function VatReportView() {
           </p>
         </section>
       ) : (
-        report?.currencies.map((group) => (
+        report?.currencies.map((group, index) => (
           <section
             key={group.currency}
-            className={`${tableShell} mx-auto w-full max-w-[90rem]`}
+            className={`${tableShell} mx-auto mb-4 w-full max-w-[90rem]`}
           >
             <div className="flex items-center justify-between border-b border-subtle px-5 py-4">
               <div>
                 <h3 className="m-0 text-sm font-semibold text-primary">
-                  {strings.billingReportCaption(group.currency)}
+                  {index === 0 ? strings.billingReportCurrencyDetail : strings.billingReportCaption(group.currency)}
                 </h3>
                 <p className="mb-0 mt-1 text-xs text-tertiary">
                   {strings.billingReportCounts(
@@ -216,6 +283,7 @@ export function VatReportView() {
                 {group.currency}
               </span>
             </div>
+            <div className="overflow-x-auto">
             <table className={tableClass}>
               <caption className="sr-only">
                 {strings.billingReportCaption(group.currency)}
@@ -283,6 +351,7 @@ export function VatReportView() {
                 </tr>
               </tfoot>
             </table>
+            </div>
           </section>
         ))
       )}
@@ -294,7 +363,7 @@ export function VatReportView() {
       {report !== null &&
         report.currencies.length > 0 &&
         vatReportRestatesAnything(report) && (
-          <section className={tableShell}>
+          <section className={`${tableShell} mx-auto mt-2 w-full max-w-[90rem]`}>
             <p className="m-0 border-b border-subtle px-4 py-3 text-sm text-secondary">
               {strings.billingReportBaseIntro(report.base.currency)}
             </p>
@@ -305,6 +374,7 @@ export function VatReportView() {
                 )}
               />
             )}
+            <div className="overflow-x-auto">
             <table className={tableClass}>
               <caption className="sr-only">
                 {strings.billingReportBaseCaption(report.base.currency)}
@@ -392,6 +462,7 @@ export function VatReportView() {
                 </tr>
               </tfoot>
             </table>
+            </div>
           </section>
         )}
     </div>

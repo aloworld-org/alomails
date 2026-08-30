@@ -491,6 +491,16 @@ export interface VatReport {
   base: VatReportBase;
 }
 
+/** A customer-ready covering email stored in the caller's own Drafts. Billing
+ * never accepts an arbitrary recipient; the server resolves the address from
+ * the document's tenant-scoped customer and renders the attached PDF itself. */
+export interface BillingDocumentMailDraft {
+  id: string;
+  to: string;
+  subject: string;
+  attachment: { name: string; sizeBytes: number };
+}
+
 /**
  * One stored exchange rate: on this day, one euro bought this much of this
  * currency (B1.21).

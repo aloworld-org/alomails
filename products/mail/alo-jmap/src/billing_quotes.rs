@@ -548,6 +548,13 @@ impl PrintableQuote {
         })
     }
 
+    /// The lifecycle state used by customer-delivery guards. Kept on the
+    /// printable so the mail path and PDF path load one identical document.
+    #[must_use]
+    pub fn status(&self) -> QuoteStatus {
+        self.document.quote.status
+    }
+
     /// The document as the renderers take it.
     ///
     /// The same page an invoice prints on, with an offer's words: its two dates

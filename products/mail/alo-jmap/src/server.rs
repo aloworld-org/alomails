@@ -1419,6 +1419,10 @@ pub fn app_with_site_boundaries(
             post(billing_quotes::send_quote),
         )
         .route(
+            "/billing/quotes/{id}/email-draft",
+            post(billing_send::draft_quote_email),
+        )
+        .route(
             "/billing/quotes/{id}/accept",
             post(billing_quotes::accept_quote),
         )

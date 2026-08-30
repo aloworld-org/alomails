@@ -2826,10 +2826,14 @@ export const de: Partial<Catalog> = {
     "Das hat nicht geklappt. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
   billingActionsWaitForSave:
     "Diese warten, bis Ihre letzte Änderung gespeichert ist.",
-  billingIssue: "Ausstellen",
-  billingIssueTitle: "Diese Rechnung ausstellen?",
+  billingIssue: "Ausstellen und E-Mail vorbereiten",
+  billingIssueTitle: "Ausstellen und Kunden-E-Mail vorbereiten?",
   billingIssueConfirm:
-    "Das Ausstellen verbraucht die nächste Nummer Ihrer Serie, datiert das Dokument und friert es ein. Es kann nie wieder geändert werden — ein Fehler danach wird mit einer Gutschrift korrigiert. Dem Kunden wird nichts gemailt.",
+    "Dadurch erhält die Rechnung die nächste Nummer, wird datiert und gesperrt. Anschließend öffnet sich eine vollständige Kunden-E-Mail mit angehängter PDF, die Sie vor dem Versand in Mail prüfen.",
+  billingPrepareInvoiceEmail: "Kunden-E-Mail vorbereiten",
+  billingPrepareInvoiceEmailTitle: "Diese Rechnung für den Kunden vorbereiten?",
+  billingPrepareInvoiceEmailConfirm:
+    "In Mail wird eine vollständige E-Mail an den Kunden mit dieser Rechnung im Anhang geöffnet. Nichts wird versendet, bevor Sie auf Senden drücken.",
   billingVoid: "Stornieren",
   billingVoidTitle: "Diese Rechnung stornieren?",
   billingVoidConfirm:
@@ -2888,6 +2892,12 @@ export const de: Partial<Catalog> = {
   billingReportColVat: "MwSt.",
   billingReportTotal: "Gesamt",
   billingReportGross: "Inklusive MwSt.",
+  billingReportOverview: "Übersicht der Meldung",
+  billingReportTaxableNet: "Steuerpflichtiger Nettobetrag",
+  billingReportVatDue: "Fällige MwSt.",
+  billingReportGrossBilled: "Brutto fakturiert",
+  billingReportDocuments: "Dokumente",
+  billingReportCurrencyDetail: "Details nach Währung",
   billingReportCaption: (currency: string) => `MwSt.-Übersicht in ${currency}`,
   billingReportCounts: (invoices: number, creditNotes: number) =>
     `Aus ${invoices === 1 ? "1 Rechnung" : `${invoices} Rechnungen`} und ${creditNotes === 1 ? "1 Gutschrift" : `${creditNotes} Gutschriften`}.`,
@@ -2975,13 +2985,17 @@ export const de: Partial<Catalog> = {
   billingDeleteQuoteDraft: "Entwurf löschen",
   billingDeleteQuoteDraftConfirm:
     "Diesen Entwurf löschen? Er trägt keine Nummer und wurde niemandem unterbreitet — und nichts lässt sich wiederherstellen.",
-  billingQuoteSentNotice: "In alo finalisiert. Es wurde keine E-Mail gesendet.",
+  billingQuoteSentNotice: "In alo finalisiert und bereit für den Kunden.",
   billingQuoteClosedNotice:
     "Dieses Angebot ist abgeschlossen und kann nicht mehr geändert werden.",
-  billingSendQuote: "Angebot finalisieren",
-  billingSendQuoteTitle: "Dieses Angebot finalisieren?",
+  billingSendQuote: "Finalisieren und E-Mail vorbereiten",
+  billingSendQuoteTitle: "Finalisieren und Kunden-E-Mail vorbereiten?",
   billingSendQuoteConfirm:
-    "Dies vergibt die nächste Angebotsnummer, hält das Finalisierungsdatum fest und friert die Preise ein. Dem Kunden wird nichts gemailt.",
+    "Dies vergibt die nächste Angebotsnummer, hält das Datum fest und sperrt die Preise. Anschließend öffnet sich eine vollständige Kunden-E-Mail mit angehängter PDF, die Sie vor dem Versand in Mail prüfen.",
+  billingPrepareQuoteEmail: "Kunden-E-Mail vorbereiten",
+  billingPrepareQuoteEmailTitle: "Dieses Angebot für den Kunden vorbereiten?",
+  billingPrepareQuoteEmailConfirm:
+    "In Mail wird eine vollständige E-Mail an den Kunden mit diesem Angebot im Anhang geöffnet. Nichts wird versendet, bevor Sie auf Senden drücken.",
   billingAcceptQuote: "Angebot annehmen",
   billingAcceptQuoteTitle: "Der Kunde hat angenommen?",
   billingAcceptQuoteConfirm:

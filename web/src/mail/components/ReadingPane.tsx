@@ -21,6 +21,7 @@ import {
   Printer,
   Reply,
   ReplyAll,
+  Send,
   ShieldAlert,
   Sparkles,
   Star,
@@ -94,6 +95,9 @@ interface ReadingPaneProps {
   onReply: () => void;
   onReplyAll: () => void;
   onForward: () => void;
+  /** Submit an already prepared message from Drafts through Mail's ordinary
+   * audited send queue. Present only for a real `$draft` message. */
+  onSendDraft: () => void;
   onToggleFlag: () => void;
   onArchive: () => void;
   onDelete: () => void;
@@ -145,6 +149,7 @@ export function ReadingPane({
   onReply,
   onReplyAll,
   onForward,
+  onSendDraft,
   onToggleFlag,
   onArchive,
   onDelete,
@@ -286,6 +291,7 @@ export function ReadingPane({
   }
 
   const flagged = flagOverrides.get(latest.id) ?? latest.keywords[KEYWORD_FLAGGED] === true;
+  const isDraft = latest.keywords.$draft === true;
   // Categories present on any message of the conversation, and their catalog
   // entries (for the pills below the subject).
   const activeCategoryIds = threadCategoryIds(messages, categories);
@@ -439,15 +445,23 @@ export function ReadingPane({
             onClick={onBack}
           />
         )}
-        <Button size="sm" icon={<Reply />} onClick={onReply}>
-          {strings.reply}
-        </Button>
-        <Button size="sm" variant="ghost" icon={<ReplyAll />} onClick={onReplyAll}>
-          {strings.replyAll}
-        </Button>
-        <Button size="sm" variant="ghost" icon={<Forward />} onClick={onForward}>
-          {strings.forward}
-        </Button>
+        {isDraft ? (
+          <Button size="sm" icon={<Send />} onClick={onSendDraft}>
+            {strings.composeSend}
+          </Button>
+        ) : (
+          <>
+            <Button size="sm" icon={<Reply />} onClick={onReply}>
+              {strings.reply}
+            </Button>
+            <Button size="sm" variant="ghost" icon={<ReplyAll />} onClick={onReplyAll}>
+              {strings.replyAll}
+            </Button>
+            <Button size="sm" variant="ghost" icon={<Forward />} onClick={onForward}>
+              {strings.forward}
+            </Button>
+          </>
+        )}
         <ToolbarSpacer />
         {canSnooze && <SnoozeMenu onPick={onSnooze} />}
         <IconButton size="sm" label={strings.archive} icon={<Archive />} onClick={onArchive} />

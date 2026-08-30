@@ -939,6 +939,18 @@ export function MailModule() {
         onReply={() => latest !== undefined && setCompose({ mode: "reply", replyTo: latest })}
         onReplyAll={() => latest !== undefined && setCompose({ mode: "replyAll", replyTo: latest })}
         onForward={() => latest !== undefined && setCompose({ mode: "forward", replyTo: latest })}
+        onSendDraft={() => {
+          if (latest === undefined || latest.keywords.$draft !== true) return;
+          const fromEmail = latest.from?.[0]?.email;
+          const rcpts = [...(latest.to ?? []), ...(latest.cc ?? []), ...(latest.bcc ?? [])]
+            .map((address) => address.email)
+            .filter((address) => address.length > 0);
+          if (fromEmail === undefined || rcpts.length === 0) {
+            setToast(strings.composeSendError);
+            return;
+          }
+          queueSend({ emailId: latest.id, fromEmail, rcpts });
+        }}
         onToggleFlag={() => latest !== undefined && toggleFlag(latest)}
         onArchive={archiveThread}
         onDelete={deleteThread}

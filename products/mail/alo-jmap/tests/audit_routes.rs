@@ -298,6 +298,7 @@ POST /billing/products/{id}/archive -> billing.product.archive
 POST /billing/quotes -> billing.quote.create
 POST /billing/quotes/{id}/accept -> billing.quote.accept
 POST /billing/quotes/{id}/decline -> billing.quote.decline
+POST /billing/quotes/{id}/email-draft -> billing.quote.email_draft
 POST /billing/quotes/{id}/expire -> billing.quote.expire
 POST /billing/quotes/{id}/send -> billing.quote.send
 POST /billing/schedules -> billing.schedule.create

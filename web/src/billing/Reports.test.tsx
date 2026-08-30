@@ -144,6 +144,11 @@ describe("the VAT report", () => {
     // the server converted document by document (B1.21).
     const tables = await screen.findAllByRole("table");
     expect(tables.length).toBe(3);
+    expect(screen.getByText(strings.billingReportOverview)).toBeTruthy();
+    expect(screen.getByText(strings.billingReportTaxableNet)).toBeTruthy();
+    expect(screen.getByText(strings.billingReportVatDue)).toBeTruthy();
+    expect(screen.getByText(strings.billingReportGrossBilled)).toBeTruthy();
+    expect(screen.getByText(strings.billingReportDocuments)).toBeTruthy();
     const euro = within(tables[0] as HTMLElement);
     // The rate rows are the server's, formatted but not recomputed.
     expect(euro.getByText("9%")).toBeTruthy();

@@ -1,6 +1,6 @@
-//! Sending an invoice **to the customer** (alo Billing, ADR 0035, wave B1.18) —
-//! the step between a document that exists and a document that has been put in
-//! front of the person who owes it.
+//! Preparing an invoice or quotation **for the customer** (alo Billing, ADR
+//! 0035, wave B1.18) — the step between a numbered document and Mail's audited
+//! delivery queue.
 //!
 //! `POST /billing/invoices/{id}/send` composes a short covering email to the
 //! customer's own address, attaches the invoice PDF ([`crate::billing_pdf`]),
@@ -25,9 +25,10 @@
 //! The one thing that *is* the caller's is `?lang=`, which picks the words of
 //! both the covering note and the document, exactly as on `/print` and `/pdf`.
 //!
-//! **Not to be confused with `POST /billing/quotes/{id}/send`**, which is a
-//! lifecycle transition (a quote becomes *sent*) and touches no mail. This
-//! route writes a draft and changes nothing about the invoice.
+//! `POST /billing/quotes/{id}/send` remains the lifecycle transition that
+//! finalizes a quotation. The additive `…/email-draft` route prepares its
+//! customer mail only after that transition, so retrying delivery never spends
+//! another number. Both mail routes write a draft and change no billing record.
 
 use axum::Json;
 use axum::extract::{Path, Query, State};
@@ -35,12 +36,14 @@ use axum::http::{HeaderMap, StatusCode};
 use serde_json::{Value, json};
 use time::OffsetDateTime;
 
-use alo_store::BillingInvoiceId;
 use alo_store::billing_invoices::InvoiceStatus;
+use alo_store::billing_quotes::QuoteStatus;
+use alo_store::{BillingInvoiceId, BillingQuoteId};
 
 use crate::billing_invoices::printable;
 use crate::billing_pdf as pdf;
 use crate::billing_print::PrintQuery;
+use crate::billing_quotes::PrintableQuote;
 use crate::document_mail::{self, mail_strings_for};
 use crate::drafts;
 use crate::error::Problem;
@@ -90,6 +93,37 @@ pub async fn send_invoice(
     Ok(Json(json!({ "draft": draft })))
 }
 
+/// `POST /billing/quotes/{id}/email-draft[?lang=]` writes the same reviewed,
+/// audited Mail draft as an invoice delivery, with the finalized quotation PDF
+/// attached. Finalizing remains a separate lifecycle transition so retrying a
+/// failed mail preparation can never spend another quotation number.
+pub async fn draft_quote_email(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Query(query): Query<PrintQuery>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let printable = PrintableQuote::load(&account.acc, &BillingQuoteId::new(id)).await?;
+    quote_sendable(printable.status())?;
+
+    let document = printable.as_document();
+    let strings = query.strings();
+    let words = mail_strings_for(query.lang.as_deref().unwrap_or_default());
+    let from = drafts::from_address(&account, &state).await?;
+    let file = pdf::render(&document, strings, pdf::stamp(OffsetDateTime::now_utc()));
+    let letter = document_mail::compose(
+        &document,
+        strings,
+        words,
+        from,
+        pdf::file_name(&document, strings),
+        file,
+    )?;
+    let draft = document_mail::save(&account, &letter).await?;
+    Ok(Json(json!({ "draft": draft })))
+}
+
 /// Whether a document in this state is one to put in front of a customer.
 ///
 /// Issued and paid both are: a paid invoice is legitimately re-sent as a copy
@@ -106,6 +140,20 @@ fn sendable(status: InvoiceStatus) -> Result<(), Problem> {
         InvoiceStatus::Void => Err(Problem::with(
             StatusCode::CONFLICT,
             "a void invoice is not sent to a customer",
+        )),
+    }
+}
+
+fn quote_sendable(status: QuoteStatus) -> Result<(), Problem> {
+    match status {
+        QuoteStatus::Sent | QuoteStatus::Accepted => Ok(()),
+        QuoteStatus::Draft => Err(Problem::with(
+            StatusCode::CONFLICT,
+            "a draft quotation is not sent to a customer — finalize it first",
+        )),
+        QuoteStatus::Declined | QuoteStatus::Expired => Err(Problem::with(
+            StatusCode::CONFLICT,
+            "a closed quotation is not sent to a customer",
         )),
     }
 }
@@ -135,5 +183,14 @@ mod tests {
                 problem.detail
             );
         }
+    }
+
+    #[test]
+    fn only_an_open_or_accepted_quotation_may_be_prepared() {
+        assert!(quote_sendable(QuoteStatus::Sent).is_ok());
+        assert!(quote_sendable(QuoteStatus::Accepted).is_ok());
+        assert!(quote_sendable(QuoteStatus::Draft).is_err());
+        assert!(quote_sendable(QuoteStatus::Declined).is_err());
+        assert!(quote_sendable(QuoteStatus::Expired).is_err());
     }
 }

@@ -385,6 +385,10 @@ pub const BILLING_EXCLUDED: &[Excluded] = &[
         why: "Composes a mail draft with the PDF; the agent's draft_payment_reminder covers chasing, sending an invoice is a later intent.",
     },
     Excluded {
+        route: "/billing/quotes/{id}/email-draft",
+        why: "Composes a customer mail draft with the finalized quotation PDF; customer delivery remains a deliberate action in the app.",
+    },
+    Excluded {
         route: "/billing/bills/import",
         why: "Takes a file.",
     },

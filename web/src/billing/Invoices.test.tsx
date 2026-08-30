@@ -204,6 +204,7 @@ function ui(path: string, state?: unknown) {
             path="/projects/:projectId/overview"
             element={<p>Project overview destination</p>}
           />
+          <Route path="/mail" element={<p>customer email ready</p>} />
         </Routes>
       </DialogProvider>
     </MemoryRouter>,
@@ -449,7 +450,7 @@ describe("the draft editor", () => {
 });
 
 describe("the lifecycle actions", () => {
-  test("issuing says what it will do, spends nothing until confirmed, and freezes", async () => {
+  test("issuing prepares the numbered customer email and opens it in Mail", async () => {
     reply("/billing/invoices/inv-1", "GET", { invoice: DRAFT, creditNotes: [] });
     ui("/billing/invoices/inv-1");
     await screen.findByText("€226.88");
@@ -467,21 +468,20 @@ describe("the lifecycle actions", () => {
     fireEvent.click(screen.getByRole("button", { name: strings.billingIssue }));
     await screen.findByText(strings.billingIssueConfirm);
     reply("/billing/invoices/inv-1/issue", "POST", { invoice: { ...ISSUED, id: "inv-1" } });
+    reply("/billing/invoices/inv-1/send", "POST", {
+      draft: {
+        id: "mail-invoice-1",
+        to: CUSTOMER.email,
+        subject: "Invoice INV-2026-00007",
+        attachment: { name: "INV-2026-00007.pdf", sizeBytes: 30000 },
+      },
+    });
     press(strings.billingIssue);
 
-    await waitFor(() => expect(lastWrite()).toBeTruthy());
-    const write = lastWrite();
-    expect(write?.method).toBe("POST");
-    expect(write?.url).toContain("/billing/invoices/inv-1/issue");
-    // A transition carries no input: what the document becomes is the route,
-    // never a field a stale form could have sent.
-    expect(write?.body).toBeUndefined();
-
-    // The document the server answered with, not an optimistic guess.
-    expect(await screen.findByText("INV-2026-00007")).toBeTruthy();
-    expect(screen.getByText(strings.billingFrozenNotice)).toBeTruthy();
-    expect(screen.queryByLabelText(strings.billingColQty)).toBeNull();
-    expect(screen.queryByRole("button", { name: strings.billingIssue })).toBeNull();
+    expect(await screen.findByText("customer email ready")).toBeTruthy();
+    const writes = calls.filter((call) => call.method === "POST");
+    expect(writes.some((call) => call.url.includes("/billing/invoices/inv-1/issue"))).toBe(true);
+    expect(writes.some((call) => call.url.includes("/billing/invoices/inv-1/send"))).toBe(true);
   });
 
   test("each state offers only its own transitions", async () => {

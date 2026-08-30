@@ -1816,10 +1816,14 @@ export const fr: Partial<Catalog> = {
     "Cela n’a pas abouti. Vérifiez votre connexion et réessayez.",
   billingActionsWaitForSave:
     "Ces actions attendent l’enregistrement de votre dernière modification.",
-  billingIssue: "Émettre",
-  billingIssueTitle: "Émettre cette facture ?",
+  billingIssue: "Émettre et préparer l’e-mail",
+  billingIssueTitle: "Émettre et préparer l’e-mail au client ?",
   billingIssueConfirm:
-    "L’émission consomme le numéro suivant de votre série, date le document et le fige. Il ne pourra plus jamais être modifié — une erreur se corrige ensuite par un avoir. Rien n’est envoyé par courriel au client.",
+    "Cette action attribue le prochain numéro, date et fige la facture, puis ouvre un e-mail complet avec le PDF en pièce jointe. Vous le vérifiez dans Mail avant l’envoi.",
+  billingPrepareInvoiceEmail: "Préparer l’e-mail au client",
+  billingPrepareInvoiceEmailTitle: "Préparer cette facture pour le client ?",
+  billingPrepareInvoiceEmailConfirm:
+    "Un e-mail complet adressé au client s’ouvrira dans Mail avec cette facture en pièce jointe. Rien ne part avant que vous appuyiez sur Envoyer.",
   billingVoid: "Annuler",
   billingVoidTitle: "Annuler cette facture ?",
   billingVoidConfirm:
@@ -1886,6 +1890,12 @@ export const fr: Partial<Catalog> = {
   billingReportColVat: "TVA",
   billingReportTotal: "Total",
   billingReportGross: "TTC",
+  billingReportOverview: "Aperçu de la déclaration",
+  billingReportTaxableNet: "Net imposable",
+  billingReportVatDue: "TVA due",
+  billingReportGrossBilled: "Total facturé",
+  billingReportDocuments: "Documents",
+  billingReportCurrencyDetail: "Détail par devise",
   billingReportCaption: (currency: string) =>
     `Récapitulatif de TVA en ${currency}`,
   billingReportCounts: (invoices: number, creditNotes: number) =>
@@ -1979,13 +1989,17 @@ export const fr: Partial<Catalog> = {
   billingDeleteQuoteDraft: "Supprimer le brouillon",
   billingDeleteQuoteDraftConfirm:
     "Supprimer ce brouillon ? Il ne porte aucun numéro et n’a jamais été proposé à personne — et rien ne pourra être récupéré.",
-  billingQuoteSentNotice: "Finalisé dans alo. Aucun e-mail n’a été envoyé.",
+  billingQuoteSentNotice: "Finalisé dans alo et prêt à être partagé avec le client.",
   billingQuoteClosedNotice:
     "Cette offre est close et ne peut plus être modifiée.",
-  billingSendQuote: "Finaliser le devis",
-  billingSendQuoteTitle: "Finaliser ce devis ?",
+  billingSendQuote: "Finaliser et préparer l’e-mail",
+  billingSendQuoteTitle: "Finaliser et préparer l’e-mail au client ?",
   billingSendQuoteConfirm:
-    "Ceci attribue le prochain numéro de devis, enregistre la date de finalisation et verrouille les prix. Aucun e-mail ne sera envoyé au client.",
+    "Cette action attribue le prochain numéro de devis, enregistre la date et verrouille les prix, puis ouvre un e-mail complet avec le PDF en pièce jointe. Vous le vérifiez dans Mail avant l’envoi.",
+  billingPrepareQuoteEmail: "Préparer l’e-mail au client",
+  billingPrepareQuoteEmailTitle: "Préparer ce devis pour le client ?",
+  billingPrepareQuoteEmailConfirm:
+    "Un e-mail complet adressé au client s’ouvrira dans Mail avec ce devis en pièce jointe. Rien ne part avant que vous appuyiez sur Envoyer.",
   billingAcceptQuote: "Accepter le devis",
   billingAcceptQuoteTitle: "Le client a accepté ?",
   billingAcceptQuoteConfirm:

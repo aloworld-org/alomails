@@ -99,7 +99,10 @@ export function InvoiceEditor() {
         message: strings.billingIssueConfirm,
         primary: true,
         run: async () => {
-          draft.adopt(await api.issueInvoice(id));
+          const issued = await api.issueInvoice(id);
+          draft.adopt(issued);
+          const mail = await api.sendInvoice(id);
+          await navigate(`/mail?open=${encodeURIComponent(mail.id)}`);
         },
       });
     }
@@ -107,11 +110,21 @@ export function InvoiceEditor() {
     // so crediting leads and voiding is the quiet option beside it.
     if (invoice.status === "issued" || invoice.status === "paid") {
       actions.push({
+        key: "prepare-email",
+        label: strings.billingPrepareInvoiceEmail,
+        title: strings.billingPrepareInvoiceEmailTitle,
+        message: strings.billingPrepareInvoiceEmailConfirm,
+        primary: true,
+        run: async () => {
+          const mail = await api.sendInvoice(id);
+          await navigate(`/mail?open=${encodeURIComponent(mail.id)}`);
+        },
+      });
+      actions.push({
         key: "credit-note",
         label: strings.billingCreditNoteAction,
         title: strings.billingCreditNoteTitle,
         message: strings.billingCreditNoteConfirm,
-        primary: true,
         run: async () => {
           const credit = await api.createCreditNote(id);
           await navigate(`../${credit.id}`);

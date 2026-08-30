@@ -20,6 +20,7 @@ import { RestError, problemDetail, restMessage } from "../platform/rest";
 import type { PriceConnection, PriceConnectionDraft, PriceConnectionHealth } from "./priceConnectionsModel";
 import type {
   BillingCustomer,
+  BillingDocumentMailDraft,
   BillingInvoice,
   BillingInvoiceSummary,
   BillingPayment,
@@ -305,6 +306,14 @@ export class BillingApi {
     ).then((r) => r.invoice);
   }
 
+  /** Prepares the complete customer email for a numbered invoice in the
+   * caller's Drafts. Mail performs the final audited submission. */
+  sendInvoice(id: string): Promise<BillingDocumentMailDraft> {
+    return this.#act<{ draft: BillingDocumentMailDraft }>(
+      `/billing/invoices/${encodeURIComponent(id)}/send${langQuery()}`,
+    ).then((r) => r.draft);
+  }
+
   /** Cancels an issued invoice. It keeps its number and stays readable — a
    *  document the customer already holds is corrected with a credit note. */
   voidInvoice(id: string): Promise<BillingInvoice> {
@@ -463,6 +472,13 @@ export class BillingApi {
     return this.#act<{ quote: BillingQuote }>(
       `/billing/quotes/${encodeURIComponent(id)}/send`,
     ).then((r) => r.quote);
+  }
+
+  /** Prepares a finalized quotation and its covering note in Mail. */
+  draftQuoteEmail(id: string): Promise<BillingDocumentMailDraft> {
+    return this.#act<{ draft: BillingDocumentMailDraft }>(
+      `/billing/quotes/${encodeURIComponent(id)}/email-draft${langQuery()}`,
+    ).then((r) => r.draft);
   }
 
   /** The customer took the offer. One server transaction closes the quote and

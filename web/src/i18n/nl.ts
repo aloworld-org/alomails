@@ -1773,10 +1773,14 @@ export const nl: Partial<Catalog> = {
     "Dat is niet gelukt. Controleer uw verbinding en probeer opnieuw.",
   billingActionsWaitForSave:
     "Deze wachten tot uw laatste wijziging is opgeslagen.",
-  billingIssue: "Uitgeven",
-  billingIssueTitle: "Deze factuur uitgeven?",
+  billingIssue: "Uitgeven en e-mail voorbereiden",
+  billingIssueTitle: "Uitgeven en de klantmail voorbereiden?",
   billingIssueConfirm:
-    "Uitgeven neemt het volgende nummer uit uw reeks, dateert het document en zet het vast. Het kan daarna nooit meer worden gewijzigd — een fout wordt achteraf met een creditnota gecorrigeerd. Er wordt niets naar de klant gemaild.",
+    "Dit neemt het volgende factuurnummer, dateert en vergrendelt het document en opent daarna een volledige klantmail met de pdf als bijlage. U controleert die in Mail vóór verzending.",
+  billingPrepareInvoiceEmail: "Klantmail voorbereiden",
+  billingPrepareInvoiceEmailTitle: "Deze factuur voor de klant voorbereiden?",
+  billingPrepareInvoiceEmailConfirm:
+    "In Mail wordt een volledige e-mail aan de klant geopend met deze factuur als bijlage. Er wordt niets verzonden totdat u op Verzenden drukt.",
   billingVoid: "Annuleren",
   billingVoidTitle: "Deze factuur annuleren?",
   billingVoidConfirm:
@@ -1844,6 +1848,12 @@ export const nl: Partial<Catalog> = {
   billingReportColVat: "Btw",
   billingReportTotal: "Totaal",
   billingReportGross: "Inclusief btw",
+  billingReportOverview: "Overzicht aangifte",
+  billingReportTaxableNet: "Belastbaar netto",
+  billingReportVatDue: "Verschuldigde btw",
+  billingReportGrossBilled: "Bruto gefactureerd",
+  billingReportDocuments: "Documenten",
+  billingReportCurrencyDetail: "Details per valuta",
   billingReportCaption: (currency: string) => `Btw-overzicht in ${currency}`,
   billingReportCounts: (invoices: number, creditNotes: number) =>
     `Uit ${invoices} ${invoices === 1 ? "factuur" : "facturen"} en ${creditNotes} ${
@@ -1936,13 +1946,17 @@ export const nl: Partial<Catalog> = {
   billingDeleteQuoteDraftConfirm:
     "Dit concept verwijderen? Het draagt geen nummer en is nooit aan iemand aangeboden — en er kan niets worden teruggehaald.",
   billingQuoteSentNotice:
-    "Definitief gemaakt in alo. Er is geen e-mail verstuurd.",
+    "Definitief gemaakt in alo en klaar om met de klant te delen.",
   billingQuoteClosedNotice:
     "Deze offerte is gesloten en kan niet meer worden gewijzigd.",
-  billingSendQuote: "Offerte definitief maken",
-  billingSendQuoteTitle: "Deze offerte definitief maken?",
+  billingSendQuote: "Definitief maken en e-mail voorbereiden",
+  billingSendQuoteTitle: "Definitief maken en de klantmail voorbereiden?",
   billingSendQuoteConfirm:
-    "Dit kent het volgende offertenummer toe, registreert de definitieve datum en vergrendelt de prijzen. Er wordt geen e-mail naar de klant verstuurd.",
+    "Dit kent het volgende offertenummer toe, registreert de datum en vergrendelt de prijzen, en opent daarna een volledige klantmail met de pdf als bijlage. U controleert die in Mail vóór verzending.",
+  billingPrepareQuoteEmail: "Klantmail voorbereiden",
+  billingPrepareQuoteEmailTitle: "Deze offerte voor de klant voorbereiden?",
+  billingPrepareQuoteEmailConfirm:
+    "In Mail wordt een volledige e-mail aan de klant geopend met deze offerte als bijlage. Er wordt niets verzonden totdat u op Verzenden drukt.",
   billingAcceptQuote: "Offerte accepteren",
   billingAcceptQuoteTitle: "Heeft de klant geaccepteerd?",
   billingAcceptQuoteConfirm:

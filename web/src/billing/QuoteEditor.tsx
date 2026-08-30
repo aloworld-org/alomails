@@ -205,18 +205,31 @@ export function QuoteEditor() {
         message: strings.billingSendQuoteConfirm,
         primary: true,
         run: async () => {
-          draft.adopt(await api.sendQuote(id));
+          const finalized = await api.sendQuote(id);
+          draft.adopt(finalized);
+          const mail = await api.draftQuoteEmail(id);
+          await navigate(`/mail?open=${encodeURIComponent(mail.id)}`);
         },
       });
     }
     if (quote.status === "sent") {
       actions.push(
         {
+          key: "prepare-email",
+          label: strings.billingPrepareQuoteEmail,
+          title: strings.billingPrepareQuoteEmailTitle,
+          message: strings.billingPrepareQuoteEmailConfirm,
+          primary: true,
+          run: async () => {
+            const mail = await api.draftQuoteEmail(id);
+            await navigate(`/mail?open=${encodeURIComponent(mail.id)}`);
+          },
+        },
+        {
           key: "accept",
           label: strings.billingAcceptQuote,
           title: strings.billingAcceptQuoteTitle,
           message: strings.billingAcceptQuoteConfirm,
-          primary: true,
           run: async () => {
             // What the offer became depends on its lines: one naming a
             // price-list item is for goods and raises a sales order, one naming

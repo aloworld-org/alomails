@@ -227,6 +227,7 @@ function ui(path: string) {
             path="/inventory/sales-orders/:id"
             element={<OrderScreenStub />}
           />
+          <Route path="/mail" element={<p>customer email ready</p>} />
         </Routes>
       </DialogProvider>
     </MemoryRouter>,
@@ -719,7 +720,7 @@ describe("the offer's transitions", () => {
     }
   });
 
-  test("sending says it takes a number and freezes the prices, then does exactly that", async () => {
+  test("finalizing prepares the exact customer email and opens it in Mail", async () => {
     reply("/billing/quotes/quo-1", "GET", { quote: DRAFT, invoiceId: null });
     ui("/billing/quotes/quo-1");
     await screen.findByText("€226.88");
@@ -745,18 +746,20 @@ describe("the offer's transitions", () => {
     reply("/billing/quotes/quo-1/send", "POST", {
       quote: { ...SENT, id: "quo-1", expired: false },
     });
+    reply("/billing/quotes/quo-1/email-draft", "POST", {
+      draft: {
+        id: "mail-quote-1",
+        to: CUSTOMER.email,
+        subject: "Quotation QUO-2026-00004",
+        attachment: { name: "QUO-2026-00004.pdf", sizeBytes: 32000 },
+      },
+    });
     press(strings.billingSendQuote);
 
-    await waitFor(() => expect(lastWrite()).toBeTruthy());
-    expect(lastWrite()?.url).toContain("/billing/quotes/quo-1/send");
-    // A transition carries no input at all.
-    expect(lastWrite()?.body).toBeUndefined();
-
-    expect(
-      (await screen.findAllByText("QUO-2026-00004")).length,
-    ).toBeGreaterThan(0);
-    expect(screen.getByText(strings.billingQuoteSentNotice)).toBeTruthy();
-    expect(screen.queryByLabelText(strings.billingColQty)).toBeNull();
+    expect(await screen.findByText("customer email ready")).toBeTruthy();
+    const writes = calls.filter((call) => call.method === "POST");
+    expect(writes.some((call) => call.url.includes("/billing/quotes/quo-1/send"))).toBe(true);
+    expect(writes.some((call) => call.url.includes("/billing/quotes/quo-1/email-draft"))).toBe(true);
   });
 
   test("accepting closes the offer and lands on the draft invoice it raised", async () => {

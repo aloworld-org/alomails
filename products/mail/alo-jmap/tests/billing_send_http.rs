@@ -131,6 +131,30 @@ async fn an_issued_invoice(h: &Harness, customer: &str, description: &str) -> (S
     (id, number)
 }
 
+/// A finalized quotation of `h`'s tenant and the number it drew.
+async fn a_finalized_quote(h: &Harness, customer: &str, description: &str) -> (String, String) {
+    let id = created_id(
+        "quote",
+        post(
+            &h.app,
+            &h.token,
+            "/billing/quotes",
+            json!({ "customerId": customer, "reference": "RFQ-42", "lines": lines(description) }),
+        )
+        .await,
+    );
+    let (status, body) = post(
+        &h.app,
+        &h.token,
+        &format!("/billing/quotes/{id}/send"),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "finalize failed: {body}");
+    let number = body["quote"]["number"].as_str().unwrap().to_owned();
+    (id, number)
+}
+
 /// A tenant with its identity saved, one customer, and one issued invoice.
 async fn ready(
     tag: &str,
@@ -280,6 +304,52 @@ async fn the_route_needs_a_token_and_an_id_that_exists() {
     assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
     // Nothing was written for a request that never named a real document.
     assert_eq!(role_count(&h.acc, "drafts").await, None);
+}
+
+#[tokio::test]
+async fn a_finalized_quotation_opens_a_tenant_scoped_customer_draft() {
+    let h = harness("bill-quote-mail").await;
+    common::seed_default_chart(&h.acc).await;
+    let (status, body) = patch(
+        &h.app,
+        &h.token,
+        "/billing/settings",
+        identity("Northstar Studio BV", "NL91ABNA0417164300"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let customer = a_customer(
+        &h.app,
+        &h.token,
+        "Atlas Customer GmbH",
+        Some("accounts@atlas.example"),
+    )
+    .await;
+    let (quote, number) = a_finalized_quote(&h, &customer, "Discovery workshop").await;
+
+    let (status, body) = post(
+        &h.app,
+        &h.token,
+        &format!("/billing/quotes/{quote}/email-draft"),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let draft = stored_draft(&h.acc, body["draft"]["id"].as_str().unwrap()).await;
+    assert!(draft.header("to").contains("accounts@atlas.example"));
+    assert!(draft.document().contains(&number));
+    assert_eq!(role_count(&h.acc, "sent").await.unwrap_or(0), 0);
+
+    let stranger = harness("bill-quote-mail-stranger").await;
+    let (status, _) = post(
+        &stranger.app,
+        &stranger.token,
+        &format!("/billing/quotes/{quote}/email-draft"),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(role_count(&stranger.acc, "drafts").await, None);
 }
 
 #[tokio::test]

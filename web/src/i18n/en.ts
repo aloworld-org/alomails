@@ -2949,10 +2949,14 @@ export const en = {
     "That did not go through. Check your connection and try again.",
   billingActionsWaitForSave:
     "These wait until your last change has been saved.",
-  billingIssue: "Issue",
-  billingIssueTitle: "Issue this invoice?",
+  billingIssue: "Issue & prepare email",
+  billingIssueTitle: "Issue and prepare the customer email?",
   billingIssueConfirm:
-    "Issuing takes the next number in your series, dates the document and freezes it. It can never be changed again — a mistake afterwards is corrected with a credit note. Nothing is emailed to the customer.",
+    "This takes the next invoice number, dates and freezes the document, then opens a complete customer email with the PDF attached. You review it in Mail before sending.",
+  billingPrepareInvoiceEmail: "Prepare customer email",
+  billingPrepareInvoiceEmailTitle: "Prepare this invoice for the customer?",
+  billingPrepareInvoiceEmailConfirm:
+    "A complete email addressed to the customer will open in Mail with this invoice attached. Nothing is sent until you press Send.",
   billingVoid: "Void",
   billingVoidTitle: "Void this invoice?",
   billingVoidConfirm:
@@ -3018,6 +3022,12 @@ export const en = {
   billingReportColVat: "VAT",
   billingReportTotal: "Total",
   billingReportGross: "Including VAT",
+  billingReportOverview: "Filing overview",
+  billingReportTaxableNet: "Taxable net",
+  billingReportVatDue: "VAT due",
+  billingReportGrossBilled: "Gross billed",
+  billingReportDocuments: "Documents",
+  billingReportCurrencyDetail: "Currency detail",
   billingReportCaption: (currency: string) => `VAT summary in ${currency}`,
   billingReportCounts: (invoices: number, creditNotes: number) =>
     `From ${invoices} invoices and ${creditNotes} credit notes.`,
@@ -3108,13 +3118,17 @@ export const en = {
   billingDeleteQuoteDraft: "Delete draft",
   billingDeleteQuoteDraftConfirm:
     "Delete this draft? It carries no number and was never made to anybody — and nothing can be recovered.",
-  billingQuoteSentNotice: "Finalized in alo. No email was sent.",
+  billingQuoteSentNotice: "Finalized in alo and ready to share with the customer.",
   billingQuoteClosedNotice:
     "This offer is closed and can no longer be changed.",
-  billingSendQuote: "Finalize quote",
-  billingSendQuoteTitle: "Finalize this quote?",
+  billingSendQuote: "Finalize & prepare email",
+  billingSendQuoteTitle: "Finalize and prepare the customer email?",
   billingSendQuoteConfirm:
-    "This assigns the next quote number, records the finalization date and locks the prices. Nothing will be emailed to the customer.",
+    "This assigns the next quote number, records the date and locks the prices, then opens a complete customer email with the PDF attached. You review it in Mail before sending.",
+  billingPrepareQuoteEmail: "Prepare customer email",
+  billingPrepareQuoteEmailTitle: "Prepare this quotation for the customer?",
+  billingPrepareQuoteEmailConfirm:
+    "A complete email addressed to the customer will open in Mail with this quotation attached. Nothing is sent until you press Send.",
   billingAcceptQuote: "Accept quote",
   billingAcceptQuoteTitle: "The customer accepted?",
   billingAcceptQuoteConfirm:
