@@ -16,6 +16,12 @@ import { awayNames, localDayKey, type AbsentColleague } from "./absences";
 import { addDays, sameDay, startOfDay } from "./dates";
 import styles from "./AgendaModule.module.css";
 
+/** The media query under which `AgendaModule.module.css` hides `.dayPanel`
+ *  outright — written once here so the event editor knows exactly when the
+ *  meeting in focus has nowhere else to live and must carry the agent itself.
+ *  Change the stylesheet's `@media (max-width: 1100px)` and change this. */
+export const DAY_PANEL_HIDDEN = "(max-width: 1100px)";
+
 interface Props {
   day: Date;
   today: Date;

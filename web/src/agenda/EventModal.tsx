@@ -2,7 +2,13 @@
 // converts to/from the UTC RFC 3339 the API speaks at save time. All-day events
 // use date-only bounds (end is exclusive, so a one-day event ends the next
 // midnight).
-import { useEffect, useMemo, useState } from "react";
+//
+// Below the width where the day panel disappears, this is also where a saved
+// meeting's agent lives (AS.6): the day panel is the record-in-focus surface on
+// a wide screen, and a phone never sees it, so the editor mounts the very same
+// `RecordAgentPanel` under the form. Never both at once — on a wide screen this
+// modal is what it always was.
+import { useEffect, useId, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import {
   Bell,
@@ -20,10 +26,11 @@ import {
   X,
 } from "lucide-react";
 
+import { RecordAgentPanel } from "../agents";
 import { strings } from "../i18n";
 import { MeetRoom, useMeetApi } from "../meet";
 import type { Meeting } from "../meet";
-import { Button } from "../ds";
+import { Button, useMediaQuery } from "../ds";
 import {
   useJmapClient,
   JmapError,
@@ -33,6 +40,7 @@ import {
   type EventInput,
 } from "../jmap";
 import { addDays, toDateInput, toLocalInput } from "./dates";
+import { DAY_PANEL_HIDDEN } from "./DayPanel";
 import { calendarColorMap } from "./colors";
 import styles from "./AgendaModule.module.css";
 
@@ -210,6 +218,14 @@ export function EventModal({
   const [availability, setAvailability] = useState<string[] | null>(null);
   const [checking, setChecking] = useState(false);
   const client = useJmapClient();
+  // The agent panel carries its own `<form>` (its one-line ask), and HTML
+  // forbids nesting one form in another — so the fields are their own form,
+  // named, and the footer's submit button points at it by id. The same shape
+  // Finance's `DialogFrame` settled on for the same reason.
+  const formId = useId();
+  // Wide screens keep the meeting in focus in the day panel; below the width
+  // that hides it, this modal is the only surface the meeting has.
+  const dayPanelHidden = useMediaQuery(DAY_PANEL_HIDDEN);
 
   useEffect(() => {
     let live = true;
@@ -455,9 +471,8 @@ export function EventModal({
       aria-modal="true"
       onMouseDown={onClose}
     >
-      <form
+      <div
         className={styles.emModal}
-        onSubmit={submitSeries}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className={styles.emHead}>
@@ -486,6 +501,7 @@ export function EventModal({
           </button>
         </div>
 
+        <form id={formId} onSubmit={submitSeries}>
         <fieldset disabled={readOnly} className={styles.emBody}>
           <input
             className={styles.emTitle}
@@ -817,6 +833,26 @@ export function EventModal({
             />
           </div>
         </fieldset>
+        </form>
+
+        {/* The meeting in focus and its agent, where the day panel cannot be:
+            the same panel that panel mounts, with the record this modal
+            already holds. An unsaved event has no record to ask about, and a
+            calendar event carries no source of its own — `/calendar/events`
+            says nothing about which mail, room or person it grew out of — so
+            the origin is `null` here exactly as it is there. */}
+        {dayPanelHidden && event !== null && (
+          <RecordAgentPanel
+            product="agenda"
+            recordKind="event"
+            recordId={event.id}
+            recordLabel={
+              summary.trim() === "" ? strings.agendaUntitledEvent : summary
+            }
+            origin={null}
+            onBeforeNavigate={onClose}
+          />
+        )}
 
         {readOnly && (
           <p className={styles.fieldHint} role="note">
@@ -890,13 +926,18 @@ export function EventModal({
                   {strings.agendaSaveAll}
                 </Button>
               ) : (
-                <Button type="submit" icon={<Check aria-hidden="true" />} disabled={busy || summary.trim() === ""}>
+                <Button
+                  type="submit"
+                  form={formId}
+                  icon={<Check aria-hidden="true" />}
+                  disabled={busy || summary.trim() === ""}
+                >
                   {event ? strings.agendaSave : strings.agendaCreateEvent}
                 </Button>
               ))}
           </div>
         </div>
-      </form>
+      </div>
     </div>
   );
 }
