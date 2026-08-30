@@ -3686,6 +3686,9 @@ export const en = {
     `${count} ${count === 1 ? "page" : "pages"}`,
   sitesSiteTools: "Site tools",
   sitesSiteToolsHint: "Content, commerce, insights, and settings",
+  sitesManageWebsite: "Manage your website",
+  sitesManageWebsiteHint:
+    "Publishing, collaborators, languages, and connected tools",
   sitesNewPage: "New page",
   sitesNoPagesTitle: "No pages yet",
   sitesNoPagesBody:

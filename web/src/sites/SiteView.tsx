@@ -15,17 +15,17 @@ import {
   Globe2,
   ArrowRight,
   Check,
+  ChevronDown,
   Handshake,
   History,
   Inbox,
   Languages,
-  Lock,
   Newspaper,
   Package,
-  Palette,
   Receipt,
   ShoppingBag,
   Sparkles,
+  SlidersHorizontal,
   Rows3,
   Ticket,
   X,
@@ -38,8 +38,9 @@ import { sitesMessage, useSitesApi } from "./api";
 import { NewPageDialog } from "./NewPageDialog";
 import { SchedulePublish } from "./SchedulePublish";
 import { SiteCollaborators } from "./SiteCollaborators";
+import { SitePagesPanel } from "./SitePagesPanel";
 import { ThemeDialog } from "./ThemeDialog";
-import { EmptyState, ErrorBanner } from "./parts";
+import { ErrorBanner } from "./parts";
 import type {
   SiteDetail,
   SitePage,
@@ -259,26 +260,31 @@ export function SiteView() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-[96rem] flex-col gap-6 px-4 py-5 sm:px-6 lg:px-8">
-      <header className="flex min-h-14 flex-wrap items-center gap-4">
-        <Link
-          to=".."
-          relative="path"
-          className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-text-secondary no-underline transition-colors hover:bg-surface-raised hover:text-text-primary"
-        >
-          <ArrowLeft size={16} aria-hidden="true" />
-          {strings.sitesBack}
-        </Link>
-        {site !== null && (
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
-            <h1 className="m-0 truncate text-2xl font-bold tracking-tight text-text-primary sm:text-3xl">
-              {site.name}
-            </h1>
-            <span className="font-mono text-sm text-text-secondary">
-              {site.subdomain}
-            </span>
-          </div>
-        )}
+    <div className="mx-auto flex w-full max-w-[80rem] flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+      <header className="flex min-h-14 items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-col gap-2">
+          <Link
+            to=".."
+            relative="path"
+            className="-ml-2 inline-flex min-h-9 w-fit items-center gap-2 rounded-lg px-2 text-sm font-semibold text-accent no-underline transition-colors hover:bg-accent-soft"
+          >
+            <ArrowLeft size={16} aria-hidden="true" />
+            {strings.sitesBack}
+          </Link>
+          {site !== null && (
+            <div className="flex min-w-0 flex-col gap-1">
+              <h1 className="m-0 truncate text-2xl font-bold tracking-tight text-text-primary sm:text-3xl">
+                {site.name}
+              </h1>
+              <span className="inline-flex min-w-0 items-center gap-1.5 text-sm text-text-secondary">
+                <Globe2 className="shrink-0" size={14} aria-hidden="true" />
+                <span className="truncate font-mono">
+                  {host ?? site.subdomain}
+                </span>
+              </span>
+            </div>
+          )}
+        </div>
         {loading && <Spinner size={16} />}
       </header>
 
@@ -291,7 +297,7 @@ export function SiteView() {
         {site !== null && (
           <>
             <section className="overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm">
-              <div className="flex flex-col gap-5 px-5 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-col gap-4 px-5 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex min-w-0 items-start gap-3">
                   <span
                     className={`mt-0.5 grid size-10 shrink-0 place-items-center rounded-xl ${live ? "bg-success-tint text-success" : "bg-accent-soft text-accent"}`}
@@ -321,6 +327,22 @@ export function SiteView() {
                     {!live && host !== null && (
                       <span>{strings.sitesGoesLiveAt(host)}</span>
                     )}
+                    <span className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-tertiary">
+                      <span className="inline-flex items-center gap-1.5">
+                        <FileText size={14} aria-hidden="true" />
+                        {strings.sitesPageCount(pages.length)}
+                      </span>
+                      {readiness !== null && readiness.totalPages > 0 && (
+                        <span className="inline-flex items-center gap-1.5">
+                          <Languages size={14} aria-hidden="true" />
+                          {missingTranslations === 0
+                            ? strings.sitesTranslationAllReady
+                            : strings.sitesTranslationPublishHint(
+                                missingTranslations,
+                              )}
+                        </span>
+                      )}
+                    </span>
                     {publishError !== null && (
                       <span className="font-medium text-danger" role="alert">
                         {publishError}
@@ -343,20 +365,20 @@ export function SiteView() {
                     variant="ghost"
                     size="sm"
                     icon={<Globe2 size="var(--icon-size-inline)" />}
+                    aria-label={strings.sitesDomains}
+                    title={strings.sitesDomains}
                     onClick={() => navigate("domains")}
-                  >
-                    {strings.sitesDomains}
-                  </Button>
+                  />
                   {/* History belongs beside Publish: it is the question "what did
                   the last publish look like, and can I have it back?". */}
                   <Button
                     variant="ghost"
                     size="sm"
                     icon={<History size="var(--icon-size-inline)" />}
+                    aria-label={strings.sitesHistory}
+                    title={strings.sitesHistory}
                     onClick={() => navigate("history")}
-                  >
-                    {strings.sitesHistory}
-                  </Button>
+                  />
                   {live && (
                     <Button
                       variant={confirmingOffline ? "danger" : "ghost"}
@@ -378,39 +400,37 @@ export function SiteView() {
                   </Button>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-subtle bg-surface-raised px-5 py-3 text-sm text-text-secondary sm:px-6">
-                <span className="inline-flex items-center gap-2">
-                  <FileText size={15} aria-hidden="true" />
-                  {strings.sitesPageCount(pages.length)}
-                </span>
-                {readiness !== null && readiness.totalPages > 0 && (
-                  <span className="inline-flex items-center gap-2">
-                    <Languages size={15} aria-hidden="true" />
-                    {missingTranslations === 0
-                      ? strings.sitesTranslationAllReady
-                      : strings.sitesTranslationPublishHint(
-                          missingTranslations,
-                        )}
-                  </span>
-                )}
-              </div>
             </section>
 
-            {/* The site as a record (A8.4), directly under how it stands:
-                what @sites can do with this website — read where it stands,
-                go through it for search engines, put the draft live — each
-                one proposed in the agent's room and approved there, never
-                run from here. */}
-            <RecordAgentPanel
-              product="sites"
-              recordKind="site"
-              recordId={site.id}
-              recordLabel={site.name}
-              // A site keeps no provenance: neither `/sites` nor `/sites/{id}`
-              // says who made it or which template it grew from, so the panel
-              // says it does not know rather than inventing a source (A8.4).
-              origin={null}
+            <SitePagesPanel
+              pages={pages}
+              loading={loading}
+              protectedPages={protectedPages}
+              onTheme={() => setTheming(true)}
+              onCreate={() => setCreating(true)}
             />
+
+            <section aria-labelledby="site-management-title">
+              <div className="flex items-start gap-3 px-1 py-1">
+                <span
+                  className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent"
+                  aria-hidden="true"
+                >
+                  <SlidersHorizontal size={18} />
+                </span>
+                <div>
+                  <h2
+                    id="site-management-title"
+                    className="m-0 text-lg font-semibold text-text-primary"
+                  >
+                    {strings.sitesManageWebsite}
+                  </h2>
+                  <p className="mb-0 mt-0.5 text-sm text-text-secondary">
+                    {strings.sitesManageWebsiteHint}
+                  </p>
+                </div>
+              </div>
+            </section>
 
             {/* Publishing later belongs directly under publishing now: they are
               the same decision, one of them with a moment attached. */}
@@ -439,6 +459,11 @@ export function SiteView() {
                 <span className="text-sm font-medium text-text-secondary">
                   {site.enabledLocales.length}
                 </span>
+                <ChevronDown
+                  className="shrink-0 text-text-tertiary transition-transform group-open:rotate-180"
+                  size={18}
+                  aria-hidden="true"
+                />
               </summary>
               <section
                 className="flex flex-col gap-5 border-t border-subtle px-5 py-5 sm:px-6"
@@ -690,94 +715,27 @@ export function SiteView() {
               </section>
             </details>
 
-            <section className="overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm">
-              <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 border-b border-subtle px-5 py-3 sm:px-6">
-                <div>
-                  <h2 className="m-0 text-lg font-semibold text-text-primary">
-                    {strings.sitesPages}
-                  </h2>
-                  <p className="m-0 text-sm text-text-secondary">
-                    {strings.sitesPageCount(pages.length)}
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={<Palette size="var(--icon-size-inline)" />}
-                    onClick={() => setTheming(true)}
-                  >
-                    {strings.sitesTheme}
-                  </Button>
-                  <Button size="sm" onClick={() => setCreating(true)}>
-                    {strings.sitesNewPage}
-                  </Button>
-                </div>
-              </div>
-
-              {pages.length === 0 && !loading ? (
-                <EmptyState
-                  Icon={FileText}
-                  title={strings.sitesNoPagesTitle}
-                  body={strings.sitesNoPagesBody}
-                  cta={strings.sitesNewPage}
-                  onCta={() => setCreating(true)}
-                />
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse text-left">
-                    <thead className="bg-surface-raised text-xs font-semibold uppercase tracking-wide text-text-secondary">
-                      <tr>
-                        <th className="px-5 py-3 sm:px-6" scope="col">
-                          {strings.sitesColPage}
-                        </th>
-                        <th className="px-5 py-3 sm:px-6" scope="col">
-                          {strings.sitesColPath}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pages.map((p) => (
-                        <tr
-                          className="border-t border-subtle transition-colors first:border-t-0 hover:bg-surface-raised"
-                          key={p.id}
-                        >
-                          <td className="px-5 py-4 sm:px-6">
-                            <Link
-                              to={`pages/${p.id}`}
-                              className="font-semibold text-text-primary no-underline hover:text-accent"
-                            >
-                              {p.title}
-                            </Link>
-                            {p.home && (
-                              <span className="ml-2 inline-flex rounded-full bg-surface-raised px-2 py-0.5 text-xs font-medium text-text-secondary">
-                                {strings.sitesHomeBadge}
-                              </span>
-                            )}
-                            {protectedPages.has(p.id) && (
-                              <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-surface-raised px-2 py-0.5 text-xs font-medium text-text-secondary">
-                                <Lock size={11} aria-hidden="true" />
-                                {strings.sitesPagePasswordBadge}
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-5 py-4 font-mono text-sm text-text-secondary sm:px-6">
-                            /{p.slug}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-
             <details className="group rounded-2xl border border-subtle bg-surface shadow-sm">
-              <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between rounded-2xl px-5 py-3 font-semibold text-text-primary marker:content-none hover:bg-surface-raised sm:px-6">
-                <span>{strings.sitesSiteTools}</span>
-                <span className="text-sm font-normal text-text-secondary">
-                  {strings.sitesSiteToolsHint}
+              <summary className="flex min-h-16 cursor-pointer list-none items-center gap-3 rounded-2xl px-5 py-3 marker:content-none hover:bg-surface-raised sm:px-6">
+                <span
+                  className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent"
+                  aria-hidden="true"
+                >
+                  <Rows3 size={20} />
                 </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-semibold text-text-primary">
+                    {strings.sitesSiteTools}
+                  </span>
+                  <span className="block truncate text-sm font-normal text-text-secondary">
+                    {strings.sitesSiteToolsHint}
+                  </span>
+                </span>
+                <ChevronDown
+                  className="shrink-0 text-text-tertiary transition-transform group-open:rotate-180"
+                  size={18}
+                  aria-hidden="true"
+                />
               </summary>
               <div className="grid gap-2 border-t border-subtle p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 <Button
@@ -874,16 +832,19 @@ export function SiteView() {
                 >
                   {strings.sitesFunnel}
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  icon={<Globe2 size="var(--icon-size-inline)" />}
-                  onClick={() => navigate("domains")}
-                >
-                  {strings.sitesDomains}
-                </Button>
               </div>
             </details>
+
+            {/* The site agent is support for the record, not the main task on
+                this screen. Keeping it after the site's own controls preserves
+                every capability without competing with pages and publishing. */}
+            <RecordAgentPanel
+              product="sites"
+              recordKind="site"
+              recordId={site.id}
+              recordLabel={site.name}
+              origin={null}
+            />
           </>
         )}
       </div>

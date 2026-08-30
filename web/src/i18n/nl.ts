@@ -3783,6 +3783,9 @@ export const nl: Partial<Catalog> = {
     `${count} ${count === 1 ? "pagina" : "pagina's"}`,
   sitesSiteTools: "Websitehulpmiddelen",
   sitesSiteToolsHint: "Inhoud, handel, inzichten en instellingen",
+  sitesManageWebsite: "Beheer je website",
+  sitesManageWebsiteHint:
+    "Publiceren, medewerkers, talen en gekoppelde hulpmiddelen",
   sitesNewPage: "Nieuwe pagina",
   sitesNoPagesTitle: "Nog geen pagina’s",
   sitesNoPagesBody:

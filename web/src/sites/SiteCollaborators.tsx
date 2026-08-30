@@ -5,7 +5,6 @@ import { Button, Spinner } from "../ds";
 import { strings } from "../i18n";
 import { sitesMessage, useSitesApi } from "./api";
 import type { SiteCollaborator } from "./types";
-import styles from "./SitesModule.module.css";
 
 export function SiteCollaborators({ siteId }: { siteId: string }) {
   const api = useSitesApi();
@@ -97,24 +96,38 @@ export function SiteCollaborators({ siteId }: { siteId: string }) {
   }
 
   return (
-    <section className={styles.collaboratorPanel} aria-labelledby="site-collaborators-title">
-      <div className={styles.collaboratorIntro}>
-        <span className={styles.collaboratorIcon} aria-hidden="true">
+    <section
+      className="grid gap-5 rounded-2xl border border-subtle bg-surface px-5 py-5 shadow-sm sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,1fr)] lg:items-start"
+      aria-labelledby="site-collaborators-title"
+    >
+      <div className="flex items-start gap-3">
+        <span
+          className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent [&>svg]:size-5"
+          aria-hidden="true"
+        >
           <Users />
         </span>
         <div>
-          <h2 id="site-collaborators-title" className={styles.collaboratorTitle}>
+          <h2
+            id="site-collaborators-title"
+            className="m-0 text-base font-semibold text-text-primary"
+          >
             {strings.sitesCollaborators}
           </h2>
-          <p className={styles.collaboratorHint}>{strings.sitesCollaboratorsHint}</p>
+          <p className="mb-0 mt-1 max-w-xl text-sm leading-5 text-text-secondary">
+            {strings.sitesCollaboratorsHint}
+          </p>
         </div>
       </div>
 
-      <form className={styles.collaboratorInvite} onSubmit={submit}>
-        <label className={styles.collaboratorEmail}>
+      <form
+        className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end"
+        onSubmit={submit}
+      >
+        <label className="flex min-w-0 flex-1 flex-col gap-1.5 text-xs font-medium text-text-secondary">
           <span>{strings.sitesCollaboratorEmail}</span>
           <input
-            className={styles.input}
+            className="min-h-11 w-full rounded-xl border border-default bg-surface px-3.5 text-sm text-text-primary outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-60"
             type="email"
             autoComplete="email"
             value={email}
@@ -134,23 +147,35 @@ export function SiteCollaborators({ siteId }: { siteId: string }) {
       </form>
 
       {loading && (
-        <div className={styles.collaboratorStatus} role="status">
+        <div
+          className="flex items-center gap-2 text-sm text-text-tertiary lg:col-span-2"
+          role="status"
+        >
           <Spinner size={16} />
           {strings.sitesCollaboratorsLoading}
         </div>
       )}
       {error !== null && (
-        <p className={styles.publishError} role="alert">
+        <p
+          className="m-0 rounded-xl border border-danger bg-danger-tint px-4 py-3 text-sm text-text-primary lg:col-span-2"
+          role="alert"
+        >
           {error}
         </p>
       )}
       {notice !== null && (
-        <p className={styles.collaboratorNotice} role="status">
+        <p
+          className="m-0 rounded-xl border-l-2 border-success bg-surface-raised px-4 py-3 text-sm text-success lg:col-span-2"
+          role="status"
+        >
           {notice}
         </p>
       )}
       {revoked !== null && (
-        <div className={styles.collaboratorUndo} role="status">
+        <div
+          className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-surface-raised px-4 py-3 text-sm text-text-secondary lg:col-span-2"
+          role="status"
+        >
           <span>{strings.sitesCollaboratorRevoked(revoked.email)}</span>
           <Button
             variant="ghost"
@@ -165,25 +190,35 @@ export function SiteCollaborators({ siteId }: { siteId: string }) {
       )}
 
       {!loading && collaborators.length === 0 && (
-        <p className={styles.collaboratorEmpty}>{strings.sitesNoCollaborators}</p>
+        <p className="m-0 rounded-xl bg-surface-raised px-4 py-3 text-sm text-text-secondary lg:col-span-2">
+          {strings.sitesNoCollaborators}
+        </p>
       )}
-      <div className={styles.collaboratorRows}>
+      <div className="flex flex-col gap-1 lg:col-span-2">
         {collaborators.map((collaborator) => {
           const inviteLink = inviteLinks[collaborator.id];
           return (
-            <div className={styles.collaboratorRow} key={collaborator.id}>
-              <span className={styles.collaboratorAvatar} aria-hidden="true">
+            <div
+              className="flex min-h-12 flex-wrap items-center gap-3 rounded-xl px-2 py-1 hover:bg-surface-raised"
+              key={collaborator.id}
+            >
+              <span
+                className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-semibold text-text-primary"
+                aria-hidden="true"
+              >
                 {collaborator.email.slice(0, 1).toUpperCase()}
               </span>
-              <span className={styles.collaboratorIdentity}>
-                <strong>{collaborator.email}</strong>
-                <span>
+              <span className="flex min-w-0 flex-1 flex-col gap-1">
+                <strong className="truncate text-sm font-medium text-text-primary">
+                  {collaborator.email}
+                </strong>
+                <span className="text-xs text-text-tertiary">
                   {collaborator.status === "pending"
                     ? strings.sitesCollaboratorPending
                     : strings.sitesCollaboratorActive}
                 </span>
               </span>
-              <span className={styles.collaboratorActions}>
+              <span className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
                 {collaborator.status === "pending" && inviteLink === undefined && (
                   <Button
                     variant="ghost"

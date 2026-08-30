@@ -1043,6 +1043,34 @@ describe("one site", () => {
     expect(screen.getByText("/about")).toBeTruthy();
   });
 
+  test("keeps pages ahead of secondary website management", async () => {
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: { ...ALPHA, publish: null },
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/pages"),
+        status: 200,
+        body: { pages: [HOME] },
+      },
+    ];
+    ui("/sites/site-1");
+
+    const pagesHeading = await screen.findByRole("heading", {
+      name: strings.sitesPages,
+    });
+    const managementHeading = screen.getByRole("heading", {
+      name: strings.sitesManageWebsite,
+    });
+
+    expect(
+      pagesHeading.compareDocumentPosition(managementHeading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   test("a page behind a password is marked in the list, in one read", async () => {
     replies = [
       {
