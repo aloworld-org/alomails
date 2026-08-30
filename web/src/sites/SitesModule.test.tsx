@@ -205,6 +205,7 @@ describe("the site list", () => {
     ui("/sites");
     expect(await screen.findByText(strings.sitesNoSitesTitle)).toBeTruthy();
     expect(screen.getByRole("region", { name: strings.moduleSites })).toBeTruthy();
+    expect(screen.getByRole("region", { name: strings.sitesNoSitesTitle })).toBeTruthy();
     expect(screen.getAllByRole("button", { name: strings.sitesNewSite })).toHaveLength(1);
   });
 

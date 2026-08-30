@@ -99,11 +99,14 @@ export function SitesListView() {
         {error !== null && <ErrorBanner message={error} />}
 
         {loading ? (
-          <div className="flex min-h-80 items-center justify-center rounded-2xl border border-default bg-surface shadow-sm">
+          <div className="flex min-h-80 flex-1 items-center justify-center rounded-2xl border border-default bg-surface shadow-sm">
             <Spinner />
           </div>
         ) : sites.length === 0 ? (
-          <section className="flex min-h-80 rounded-2xl border border-default bg-surface shadow-sm">
+          <section
+            className="flex min-h-80 flex-1 rounded-2xl border border-default bg-surface shadow-sm"
+            aria-label={strings.sitesNoSitesTitle}
+          >
             <EmptyState
               Icon={Globe2}
               title={strings.sitesNoSitesTitle}
