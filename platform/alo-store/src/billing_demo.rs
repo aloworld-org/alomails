@@ -211,6 +211,22 @@ impl AccountStore {
                 .await
                 .map_err(StoreError::Db)?;
         if already == Some(VERSION) {
+            // Earlier v1 corpora deliberately omitted every eleventh invoice
+            // address. Every demo customer also owns a quote and invoice, so
+            // those records exposed a delivery action that could never work.
+            // Converge an existing corpus as well as a fresh one: `seed` is a
+            // safe repair command, not only a duplicate-prevention check.
+            for i in 0..100usize {
+                sqlx::query(
+                    "UPDATE billing_customers SET email=$1 WHERE tenant_id=$2 AND id=$3 AND email IS NULL",
+                )
+                .bind(format!("accounts+{:03}@customer.example", i + 1))
+                .bind(self.tenant.as_str())
+                .bind(id("customer", i + 1))
+                .execute(&mut *tx)
+                .await
+                .map_err(StoreError::Db)?;
+            }
             tx.commit().await.map_err(StoreError::Db)?;
             return counts(self).await;
         }
@@ -290,7 +306,11 @@ impl AccountStore {
                 forms[(i / 10) % forms.len()],
                 i + 1
             );
-            let email = (i % 11 != 0).then(|| format!("accounts+{:03}@customer.example", i + 1));
+            // Every customer is linked to a quote, invoice and recurring
+            // schedule, so every one needs a routable-looking invoice address.
+            // Optional-field coverage remains in VAT ids, contacts and address
+            // lines without making the primary delivery journey a dead end.
+            let email = Some(format!("accounts+{:03}@customer.example", i + 1));
             let vat = (i % 13 != 0).then(|| fictional_vat_id(country, i + 1));
             let contact = contact_id(self, i + 1);
             let contact_email = format!(

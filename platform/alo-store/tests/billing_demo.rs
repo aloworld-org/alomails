@@ -113,6 +113,10 @@ async fn demo_numbers_totals_vat_and_relationships_are_sound() {
 
     let customer_ids: std::collections::HashSet<_> =
         customers.iter().map(|c| c.id.as_str()).collect();
+    assert!(
+        customers.iter().all(|customer| customer.email.is_some()),
+        "every demo customer owns deliverable billing documents"
+    );
     let contact_ids: std::collections::HashSet<_> =
         contacts.iter().map(|contact| contact.id.as_str()).collect();
     let product_ids: std::collections::HashSet<_> =
