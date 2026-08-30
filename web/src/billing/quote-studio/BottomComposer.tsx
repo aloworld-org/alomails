@@ -96,22 +96,22 @@ export function BottomComposer({ index, onAdd, onImage }: BottomComposerProps) {
   );
 
   return (
-    <div className="relative flex flex-col items-center py-2" aria-label={strings.quoteStudioAddContentA11y}>
-      <div className="flex w-full items-center gap-3">
-        <span className="h-px flex-1 bg-[var(--quote-table-header)]" aria-hidden="true" />
+    <div
+      className="relative flex flex-col items-center py-3"
+      aria-label={strings.quoteStudioAddContentA11y}
+    >
+      <div className="flex w-full items-center justify-center">
         <button
           type="button"
-          className="group inline-flex min-h-9 items-center gap-2 rounded-full px-3 text-xs font-semibold text-secondary transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
+          className="grid size-10 place-items-center rounded-full !bg-accent-soft !p-0 !text-accent transition-colors hover:!bg-accent hover:!text-on-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15"
           aria-expanded={open}
           aria-label={strings.quoteStudioAddContentBelow}
+          title={strings.quoteStudioAddContent}
           onClick={() => setOpen((value) => !value)}
         >
-          <span className="grid size-6 place-items-center rounded-full bg-accent-soft text-accent transition-colors group-hover:bg-accent group-hover:text-on-accent">
-            <Plus className="size-3.5" aria-hidden="true" />
-          </span>
-          {strings.quoteStudioAddContent}
+          <Plus className="size-4" aria-hidden="true" />
+          <span className="sr-only">{strings.quoteStudioAddContent}</span>
         </button>
-        <span className="h-px flex-1 bg-[var(--quote-table-header)]" aria-hidden="true" />
       </div>
       {open && (
         // A dialog, not a panel in the document. Rendered inline, the picker

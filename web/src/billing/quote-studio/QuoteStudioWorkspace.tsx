@@ -440,11 +440,11 @@ export const QuoteStudioWorkspace = forwardRef<
           "overflow-hidden bg-[var(--quote-background)]",
           preview
             ? "rounded-none"
-            : "rounded-2xl border border-default shadow-sm",
+            : "rounded-2xl shadow-sm",
         )}
       >
         {!preview && (
-          <header className="flex flex-wrap items-center justify-between gap-4 border-b border-subtle px-6 py-4 max-md:px-4">
+          <header className="flex flex-wrap items-center justify-between gap-4 bg-raised/30 px-6 py-4 max-md:px-4">
             <div>
               <h2 className="text-base font-semibold text-primary">
                 {strings.quoteStudioBuildTitle}
@@ -491,7 +491,7 @@ export const QuoteStudioWorkspace = forwardRef<
               >
                 <div
                   className={cx(
-                    "flex min-w-0 gap-5",
+                    "flex min-w-0 gap-5 max-sm:pr-16",
                     design.headerStyle === "stacked"
                       ? "flex-col items-start gap-3"
                       : "items-center",
@@ -718,12 +718,15 @@ export const QuoteStudioWorkspace = forwardRef<
               {!readOnly && (
                 <button
                   type="button"
-                  className="absolute right-4 top-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-accent-soft px-4 py-2 text-sm font-medium text-accent transition-colors duration-150 hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15"
+                  className="absolute right-4 top-4 grid size-10 place-items-center rounded-xl !bg-accent-soft !p-0 !text-accent transition-colors duration-150 hover:!bg-accent hover:!text-on-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15"
                   onClick={() => setCustomizeMode("header")}
                   aria-label={strings.quoteStudioEditHeader}
+                  title={strings.quoteStudioEditHeader}
                 >
                   <Pencil className="size-4" aria-hidden="true" />
-                  {strings.quoteStudioEditHeader}
+                  <span className="sr-only">
+                    {strings.quoteStudioEditHeader}
+                  </span>
                 </button>
               )}
             </div>
@@ -741,11 +744,11 @@ export const QuoteStudioWorkspace = forwardRef<
                         "group/quote-block bg-[var(--quote-background)] text-[var(--quote-text)]",
                         readOnly
                           ? "overflow-visible"
-                          : "overflow-hidden rounded-xl border border-[var(--quote-table-header)] shadow-sm",
+                          : "overflow-hidden rounded-xl ring-1 ring-transparent transition-[box-shadow] duration-150 hover:ring-default focus-within:bg-surface/40 focus-within:ring-accent/30 focus-within:shadow-sm",
                       )}
                     >
                       {!readOnly && (
-                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--quote-table-header)] bg-raised/40 px-4 py-2.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2 bg-raised/40 px-4 py-2.5">
                           {block.kind === "pricing" ? (
                             <label className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
                               <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-tertiary">
@@ -781,7 +784,7 @@ export const QuoteStudioWorkspace = forwardRef<
                             {(block.kind === "pricing" ||
                               block.kind === "image" ||
                               block.kind === "divider") && (
-                              <div className="flex flex-wrap items-center gap-2 border-r border-default pr-3">
+                              <div className="flex flex-wrap items-center gap-2 pr-1">
                                 {block.kind === "pricing" && (
                                   <>
                                     {design.blocks.filter(

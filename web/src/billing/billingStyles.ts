@@ -125,9 +125,9 @@ const styles = {
   dataLoading:
     "flex min-h-48 flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-subtle bg-surface text-sm text-secondary",
   editor:
-    "min-h-full shrink-0 overflow-hidden rounded-t-2xl border border-b-0 border-default bg-surface shadow-sm",
+    "min-h-full shrink-0 overflow-hidden rounded-t-2xl bg-surface shadow-sm",
   editorHead:
-    "flex min-h-20 flex-wrap items-center gap-3 border-b border-subtle bg-surface px-6 py-4 max-[52rem]:px-4",
+    "flex min-h-20 flex-wrap items-center gap-3 bg-surface px-6 py-4 max-[52rem]:px-4",
   editorTitle: "m-0 text-xl font-semibold tracking-tight text-primary",
   saveState: "ml-auto whitespace-nowrap text-xs text-tertiary",
   editorBody: "flex flex-col gap-6 px-6 pb-8 pt-6 max-[52rem]:px-4",
@@ -147,10 +147,10 @@ const styles = {
   quoteMetric:
     "flex min-h-24 flex-col justify-center gap-1 px-5 py-4 [&>span]:text-xs [&>span]:font-semibold [&>span]:uppercase [&>span]:tracking-wide [&>span]:text-tertiary [&>strong]:text-lg [&>strong]:font-semibold [&>strong]:tabular-nums [&>strong]:text-primary [&>small]:text-xs [&>small]:text-tertiary",
   documentSummary:
-    "overflow-hidden rounded-xl border border-default bg-surface shadow-sm",
+    "overflow-hidden rounded-xl bg-raised/40",
   headerFields:
     "grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-x-8 gap-y-5 p-5",
-  documentNote: "border-t border-subtle bg-raised/40 px-5 py-4",
+  documentNote: "px-5 pb-5",
   readOnlyValue:
     "m-0 min-h-5 py-1 text-[0.9375rem] font-medium leading-relaxed text-primary",
   createBar:
