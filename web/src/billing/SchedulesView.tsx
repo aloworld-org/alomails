@@ -19,7 +19,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { RefreshCw } from "lucide-react";
 
-import { Button, Spinner, Table, Td, Th, Toolbar, useDialogs } from "../ds";
+import { Button, Spinner, Table, Td, Th, Toolbar, cx, useDialogs } from "../ds";
 import { strings, useLocale } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
 import { BillingPagination } from "./BillingPagination";
@@ -191,15 +191,26 @@ export function SchedulesView() {
           </thead>
           <tbody>
             {paged.records.map((schedule) => (
-              <tr key={schedule.id}>
+              <tr
+                key={schedule.id}
+                role="button"
+                tabIndex={0}
+                aria-label={`${schedule.name}: ${
+                  names.get(schedule.customerId) ?? strings.billingUnknownCustomer
+                }`}
+                className="group cursor-pointer focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[-2px]"
+                onClick={() => setEditing(schedule)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setEditing(schedule);
+                  }
+                }}
+              >
                 <td>
-                  <button
-                    type="button"
-                    className={styles.rowName}
-                    onClick={() => setEditing(schedule)}
-                  >
+                  <span className={cx(styles.rowName, "group-hover:text-accent")}>
                     {schedule.name}
-                  </button>
+                  </span>
                 </td>
                 <td>
                   {names.get(schedule.customerId) ??
@@ -227,7 +238,11 @@ export function SchedulesView() {
                   )}
                 </Td>
                 <Td numeric>{schedule.raisedCount}</Td>
-                <td className={styles.rowActions}>
+                <td
+                  className={styles.rowActions}
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => event.stopPropagation()}
+                >
                   <button
                     type="button"
                     className={styles.linkAction}
