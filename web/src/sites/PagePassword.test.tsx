@@ -59,6 +59,16 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
+test("the compact editor row keeps its access action on protected spacing", async () => {
+  render(<PagePassword siteId="site-1" pageId="page-1" compact />);
+
+  const action = await screen.findByRole("button", {
+    name: strings.sitesPagePasswordProtect,
+  });
+  expect(action).toBeTruthy();
+  expect(action.parentElement?.className).toContain("w-full");
+});
+
 test("a public page says the internet can read it, and offers the password", async () => {
   const seen: boolean[] = [];
   render(
@@ -125,11 +135,11 @@ test("protecting sends what was typed and states what visitors now meet", async 
     ),
   );
   expect(
-    await screen.findByText(strings.sitesPagePasswordProtected(readable(SET_ON))),
+    await screen.findByText(
+      strings.sitesPagePasswordProtected(readable(SET_ON)),
+    ),
   ).toBeTruthy();
-  expect(
-    screen.getByText(strings.sitesPagePasswordProtectedHint),
-  ).toBeTruthy();
+  expect(screen.getByText(strings.sitesPagePasswordProtectedHint)).toBeTruthy();
   expect(screen.getByText(strings.sitesPagePasswordSaved)).toBeTruthy();
   await waitFor(() => expect(seen).toEqual([false, true]));
 });
@@ -175,11 +185,8 @@ test("a password the server refuses is reported in the server's own words", asyn
   ).toBeTruthy();
   // The refusal keeps the form open with what was typed, so it can be fixed.
   expect(
-    (
-      screen.getByLabelText(
-        strings.sitesPagePasswordField,
-      ) as HTMLInputElement
-    ).value,
+    (screen.getByLabelText(strings.sitesPagePasswordField) as HTMLInputElement)
+      .value,
   ).toBe("short");
 });
 

@@ -24,11 +24,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Eye, EyeOff, KeyRound, Lock, Unlock } from "lucide-react";
 
-import { Button, Spinner } from "../ds";
+import { Button, Input, Spinner } from "../ds";
 import { strings } from "../i18n";
 import { sitesMessage, useSitesApi } from "./api";
 import type { SitePageProtection } from "./types";
-import styles from "./SitesModule.module.css";
 
 /** How the day a password was set is named: a date a person recognises, in
  *  their own locale. The hour it happened is nobody's decision to review. */
@@ -48,6 +47,7 @@ export function PagePassword({
   siteId,
   pageId,
   multilingual = false,
+  compact = false,
   onChange,
 }: {
   siteId: string;
@@ -56,6 +56,9 @@ export function PagePassword({
    *  says out loud that a password holds for all of them, because the reader
    *  is looking at one language's tab while deciding. */
   multilingual?: boolean;
+  /** Uses the editor toolbar's surrounding surface instead of drawing a
+   * second settings card around the same control. */
+  compact?: boolean;
   /** Called with the page's protection state whenever it is known or changes,
    *  so the editor around this panel can tell the truth about its preview. */
   onChange?: (isProtected: boolean) => void;
@@ -158,22 +161,33 @@ export function PagePassword({
 
   return (
     <section
-      className={styles.protectPanel}
+      className={`flex flex-col gap-3 ${
+        compact
+          ? "border-t border-subtle px-4 py-3 sm:px-5"
+          : "rounded-2xl border border-subtle bg-surface p-5 shadow-sm"
+      }`}
       aria-labelledby="page-password-title"
     >
-      <div className={styles.protectSummary}>
+      <div className="flex flex-wrap items-start gap-3">
         <span
-          className={isProtected ? styles.protectIconOn : styles.protectIcon}
+          className={`inline-flex size-10 shrink-0 items-center justify-center rounded-xl ${
+            isProtected
+              ? "bg-accent-soft text-accent"
+              : "bg-raised text-tertiary"
+          }`}
           aria-hidden="true"
         >
-          {isProtected ? <Lock /> : <Unlock />}
+          {isProtected ? <Lock size={18} /> : <Unlock size={18} />}
         </span>
-        <div className={styles.protectCopy}>
-          <h2 id="page-password-title" className={styles.protectTitle}>
+        <div className="min-w-0 flex-1">
+          <h2
+            id="page-password-title"
+            className="text-sm font-semibold text-primary"
+          >
             {strings.sitesPagePasswordTitle}
           </h2>
           {loading ? (
-            <p className={styles.protectHint}>
+            <p className="mt-1 flex items-center gap-2 text-sm text-secondary">
               <Spinner size={14} /> {strings.sitesPagePasswordLoading}
             </p>
           ) : protection === null ? (
@@ -181,30 +195,43 @@ export function PagePassword({
             // here would be a guess about who can read the owner's work, and
             // a wrong guess in the reassuring direction; the error below says
             // what happened instead.
-            <p className={styles.protectHint}>
+            <p className="mt-1 text-sm text-secondary">
               {strings.sitesPagePasswordUnknown}
             </p>
           ) : (
             <>
-              <p className={styles.protectState} role="status">
+              <p className="mt-1 text-sm text-primary" role="status">
                 {isProtected
                   ? since === null
                     ? strings.sitesPagePasswordProtectedUndated
                     : strings.sitesPagePasswordProtected(since)
                   : strings.sitesPagePasswordPublic}
               </p>
-              <p className={styles.protectHint}>
+              <p
+                className={
+                  compact
+                    ? "sr-only"
+                    : "mt-1 max-w-2xl text-sm leading-6 text-secondary"
+                }
+              >
                 {isProtected
                   ? strings.sitesPagePasswordProtectedHint
                   : strings.sitesPagePasswordPublicHint}
               </p>
               {isProtected && multilingual && (
-                <p className={styles.protectHint}>
+                <p
+                  className={
+                    compact ? "sr-only" : "mt-1 text-sm text-secondary"
+                  }
+                >
                   {strings.sitesPagePasswordEveryLanguage}
                 </p>
               )}
               {outcome !== null && (
-                <p className={styles.protectOutcome} role="status">
+                <p
+                  className="mt-1 text-sm font-medium text-primary"
+                  role="status"
+                >
                   {outcome === "saved"
                     ? strings.sitesPagePasswordSaved
                     : strings.sitesPagePasswordRemoved}
@@ -213,7 +240,7 @@ export function PagePassword({
             </>
           )}
         </div>
-        <div className={styles.protectActions}>
+        <div className="flex w-full items-center justify-end gap-2 sm:ml-auto sm:w-auto">
           {isProtected && (
             <Button
               variant={confirmingRemove ? "danger" : "ghost"}
@@ -244,12 +271,11 @@ export function PagePassword({
       </div>
 
       {editing && (
-        <div className={styles.protectForm}>
-          <label className={styles.protectField}>
+        <div className="flex flex-wrap items-end gap-3 rounded-xl bg-raised p-3">
+          <label className="flex min-w-64 flex-1 flex-col gap-1.5 text-xs font-medium text-secondary">
             <span>{strings.sitesPagePasswordField}</span>
-            <span className={styles.protectFieldRow}>
-              <input
-                className={styles.input}
+            <span className="flex items-center gap-2">
+              <Input
                 type={visible ? "text" : "password"}
                 value={password}
                 autoComplete="new-password"
@@ -281,11 +307,11 @@ export function PagePassword({
               </Button>
             </span>
           </label>
-          <p className={styles.protectFieldHint}>
+          <p className="flex min-w-48 flex-1 flex-col gap-1 text-xs leading-5 text-secondary">
             <span>{strings.sitesPagePasswordFieldHint}</span>
             <span>{strings.sitesPagePasswordEffective}</span>
           </p>
-          <div className={styles.protectFormActions}>
+          <div className="ml-auto flex items-center gap-2">
             <Button
               variant="ghost"
               size="sm"
@@ -311,7 +337,10 @@ export function PagePassword({
       )}
 
       {error !== null && (
-        <p className={styles.publishError} role="alert">
+        <p
+          className="rounded-lg bg-danger-tint px-3 py-2 text-sm text-primary"
+          role="alert"
+        >
           {error}
         </p>
       )}

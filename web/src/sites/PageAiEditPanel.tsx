@@ -1,22 +1,27 @@
 import { useState } from "react";
 import { Sparkles } from "lucide-react";
 
-import { Button } from "../ds";
+import { Button, Input } from "../ds";
 import { strings } from "../i18n";
 import { sitesMessage, useSitesApi } from "./api";
 import { kindLabel } from "./sectionInfo";
 import type { SectionsEnvelope } from "./sections";
 import type { SiteEditEnvelope, SiteEditOperation } from "./types";
-import styles from "./SitesModule.module.css";
 
 function operationLabel(operation: SiteEditOperation): string {
   switch (operation.op) {
     case "add_section":
-      return strings.sitesAiAddChange(kindLabel(operation.section.type), operation.at + 1);
+      return strings.sitesAiAddChange(
+        kindLabel(operation.section.type),
+        operation.at + 1,
+      );
     case "remove_section":
       return strings.sitesAiRemoveChange(kindLabel(operation.target.type));
     case "reorder_section":
-      return strings.sitesAiMoveChange(kindLabel(operation.target.type), operation.to + 1);
+      return strings.sitesAiMoveChange(
+        kindLabel(operation.target.type),
+        operation.to + 1,
+      );
     case "set_prop":
       return strings.sitesAiSettingChange(kindLabel(operation.target.type));
     case "rewrite_copy":
@@ -45,7 +50,11 @@ export function PageAiEditPanel({
     setBusy(true);
     setError(null);
     try {
-      const prepared = await api.proposePageEdit(siteId, pageId, instruction.trim());
+      const prepared = await api.proposePageEdit(
+        siteId,
+        pageId,
+        instruction.trim(),
+      );
       setProposal(prepared.proposal);
       onPreviewChange(prepared.previewHtml);
     } catch (reason) {
@@ -73,20 +82,42 @@ export function PageAiEditPanel({
   }
 
   return (
-    <section className={styles.aiEditPanel} aria-labelledby="sites-ai-edit-title">
-      <div className={styles.aiEditHeading}>
-        <Sparkles aria-hidden="true" />
-        <div>
-          <h3 id="sites-ai-edit-title">{strings.sitesAiEditTitle}</h3>
-          <p>{strings.sitesAiEditBody}</p>
+    <section
+      className="border-b border-subtle bg-raised/60 px-4 py-4"
+      aria-labelledby="sites-ai-edit-title"
+    >
+      <div className="flex items-start gap-3">
+        <span
+          className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent"
+          aria-hidden="true"
+        >
+          <Sparkles size={17} />
+        </span>
+        <div className="min-w-0">
+          <h3
+            id="sites-ai-edit-title"
+            className="text-sm font-semibold text-primary"
+          >
+            {strings.sitesAiEditTitle}
+          </h3>
+          <p className="mt-0.5 text-xs leading-5 text-secondary">
+            {strings.sitesAiEditBody}
+          </p>
         </div>
       </div>
-      {error !== null && <p className={styles.aiEditError} role="alert">{error}</p>}
+      {error !== null && (
+        <p
+          className="mt-3 rounded-lg bg-danger-tint px-3 py-2 text-sm text-primary"
+          role="alert"
+        >
+          {error}
+        </p>
+      )}
       {proposal === null ? (
-        <div className={styles.aiEditComposer}>
-          <input
+        <div className="mt-3 flex items-center gap-2 max-sm:flex-col max-sm:items-stretch">
+          <Input
             id="sites-ai-instruction"
-            className={styles.input}
+            className="min-w-0 flex-1"
             aria-label={strings.sitesAiInstruction}
             value={instruction}
             onChange={(event) => setInstruction(event.target.value)}
@@ -100,15 +131,21 @@ export function PageAiEditPanel({
           </Button>
         </div>
       ) : (
-        <div className={styles.aiProposal} aria-live="polite">
-          <h4>{strings.sitesAiProposalCount(proposal.operations.length)}</h4>
-          <p className={styles.aiProposalHint}>{strings.sitesAiPreviewHint}</p>
-          <ol>
+        <div className="mt-3 border-t border-subtle pt-3" aria-live="polite">
+          <h4 className="text-sm font-semibold text-primary">
+            {strings.sitesAiProposalCount(proposal.operations.length)}
+          </h4>
+          <p className="mt-1 text-xs text-secondary">
+            {strings.sitesAiPreviewHint}
+          </p>
+          <ol className="my-3 list-decimal space-y-1 pl-5 text-sm text-secondary">
             {proposal.operations.map((operation, index) => (
-              <li key={`${operation.op}-${index}`}>{operationLabel(operation)}</li>
+              <li key={`${operation.op}-${index}`}>
+                {operationLabel(operation)}
+              </li>
             ))}
           </ol>
-          <div className={styles.aiProposalActions}>
+          <div className="flex items-center justify-between gap-2 border-t border-subtle pt-3">
             <Button
               variant="ghost"
               disabled={busy}

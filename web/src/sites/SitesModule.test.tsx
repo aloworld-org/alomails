@@ -570,7 +570,7 @@ describe("creating a site", () => {
     expect(await screen.findByText(strings.sitesNoSectionsTitle)).toBeTruthy();
     // One click from adding a hero (S1.30c): the empty page's CTA opens the
     // section palette, and an unseeded hero tile opens its prop form.
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesAddFirstSection }));
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesAddSection }));
     const heroTile = document.querySelector<HTMLElement>('[data-palette-tile="hero"]');
     if (heroTile === null) throw new Error("no hero tile in the palette");
     fireEvent.click(heroTile);

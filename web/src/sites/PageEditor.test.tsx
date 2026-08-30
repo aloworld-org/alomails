@@ -411,7 +411,9 @@ describe("adding a section", () => {
     replies = [pageReply([])];
     ui();
     // Empty page → empty state; the header control opens the palette.
-    fireEvent.click((await screen.findAllByRole("button", { name: strings.sitesAddSection }))[0]!);
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesAddSection }),
+    );
 
     for (const kind of SECTION_KINDS) {
       expect(paletteTile(kind)).toBeTruthy();
@@ -450,7 +452,9 @@ describe("adding a section", () => {
   test("a list section sends every entry the user added", async () => {
     replies = [pageReply([])];
     ui();
-    fireEvent.click((await screen.findAllByRole("button", { name: strings.sitesAddSection }))[0]!);
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesAddSection }),
+    );
     fireEvent.click(paletteTile("faq"));
     // The form starts with one blank entry; fill it, add a second.
     fireEvent.change(screen.getByLabelText(strings.sitesFieldQuestion), {
@@ -492,7 +496,9 @@ describe("adding a section", () => {
   test("the server's refusal is shown in the form, which stays open", async () => {
     replies = [pageReply([])];
     ui();
-    fireEvent.click((await screen.findAllByRole("button", { name: strings.sitesAddSection }))[0]!);
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesAddSection }),
+    );
     fireEvent.click(paletteTile("cta"));
     replies = [
       {

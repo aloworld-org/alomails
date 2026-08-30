@@ -36,6 +36,7 @@ import {
   Monitor,
   Palette,
   Pencil,
+  Plus,
   Redo2,
   SearchCheck,
   Smartphone,
@@ -83,7 +84,7 @@ import {
   type SectionLayouts,
 } from "./sectionLayout";
 import { SectionLayoutControls } from "./SectionLayoutControls";
-import { EmptyState, ErrorBanner } from "./parts";
+import { ErrorBanner } from "./parts";
 import { insertionIndex, type PaletteTile } from "./palette";
 import type { Section, SectionKind, SectionsEnvelope } from "./sections";
 import type { SitePageDetail } from "./types";
@@ -868,8 +869,8 @@ export function PageEditorView() {
   }
 
   return (
-    <div className="min-h-full bg-bg-app px-4 py-5 text-text-primary sm:px-6 lg:px-8">
-      <header className="mx-auto flex w-full max-w-[1600px] flex-wrap items-center gap-3 border-b border-subtle pb-5">
+    <div className="min-h-full bg-bg-app px-4 py-4 text-text-primary sm:px-6 lg:px-8">
+      <header className="mx-auto flex w-full max-w-[1600px] flex-wrap items-center gap-3 pb-4">
         <Link
           to={`/sites/${siteId}`}
           className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 font-semibold text-text-primary no-underline transition-colors hover:bg-surface-raised"
@@ -883,7 +884,7 @@ export function PageEditorView() {
               <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl">
                 {page.title}
               </h1>
-              <span className="rounded-lg bg-surface-raised px-2 py-1 font-mono text-xs text-text-secondary">
+              <span className="font-mono text-sm text-text-secondary">
                 /{page.slug}
               </span>
               {page.home && (
@@ -901,32 +902,95 @@ export function PageEditorView() {
 
       {page !== null && (
         <>
-          <nav
-            className="mx-auto mt-5 flex w-full max-w-[1600px] flex-wrap items-center justify-between gap-3 rounded-2xl border border-subtle bg-surface px-4 py-3 shadow-sm sm:px-5"
-            aria-label={strings.sitesLanguagesLabel}
-          >
-            <span className="text-sm font-semibold text-text-secondary">
-              {strings.sitesEditingLanguage}
-            </span>
-            <div className="flex flex-wrap items-center gap-1 rounded-xl bg-surface-raised p-1">
-              {enabledLocales.map((enabledLocale) => (
+          <section className="mx-auto w-full max-w-[1600px] overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm">
+            <div className="flex flex-wrap items-center gap-2 px-4 py-3 sm:px-5">
+              {!empty && (
                 <Button
-                  key={enabledLocale}
+                  size="sm"
+                  icon={<Plus size={16} />}
+                  data-add-section=""
+                  aria-expanded={picking}
+                  onClick={() => (picking ? closePalette() : setPicking(true))}
+                  disabled={working || translationBusy || translationFallback}
+                >
+                  {strings.sitesAddSection}
+                </Button>
+              )}
+              {locale === null && (
+                <>
+                  <IconButton
+                    size="sm"
+                    label={strings.sitesUndoEdit}
+                    icon={<Undo2 size={15} />}
+                    disabled={working || history.past.length === 0}
+                    onClick={() => void undoEdits()}
+                  />
+                  <IconButton
+                    size="sm"
+                    label={strings.sitesRedoEdit}
+                    icon={<Redo2 size={15} />}
+                    disabled={working || history.future.length === 0}
+                    onClick={() => void redoEdits()}
+                  />
+                </>
+              )}
+              <span
+                className="mx-1 hidden h-6 w-px bg-border-subtle sm:block"
+                aria-hidden="true"
+              />
+              {locale === null && (
+                <Button
                   variant="ghost"
                   size="sm"
-                  className={
-                    requestedLanguage === enabledLocale
-                      ? "bg-surface text-accent shadow-sm"
-                      : "text-text-secondary"
-                  }
-                  aria-pressed={requestedLanguage === enabledLocale}
-                  onClick={() => chooseLocale(enabledLocale)}
+                  icon={<SearchCheck size={14} />}
+                  onClick={() => setSeoOpen(true)}
                 >
-                  {enabledLocale.toUpperCase()}
+                  {strings.sitesSeoAction}
                 </Button>
-              ))}
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Palette size={14} />}
+                onClick={() => setThemeOpen(true)}
+              >
+                {strings.sitesTheme}
+              </Button>
+              <nav
+                className="ml-auto flex items-center gap-2"
+                aria-label={strings.sitesLanguagesLabel}
+              >
+                <span className="hidden text-sm font-medium text-secondary sm:inline">
+                  {strings.sitesEditingLanguage}
+                </span>
+                <div className="flex items-center gap-1 rounded-xl bg-raised p-1">
+                  {enabledLocales.map((enabledLocale) => (
+                    <Button
+                      key={enabledLocale}
+                      variant="ghost"
+                      size="sm"
+                      className={
+                        requestedLanguage === enabledLocale
+                          ? "bg-surface text-accent shadow-sm"
+                          : "text-secondary"
+                      }
+                      aria-pressed={requestedLanguage === enabledLocale}
+                      onClick={() => chooseLocale(enabledLocale)}
+                    >
+                      {enabledLocale.toUpperCase()}
+                    </Button>
+                  ))}
+                </div>
+              </nav>
             </div>
-          </nav>
+            <PagePassword
+              compact
+              siteId={siteId}
+              pageId={pageId}
+              multilingual={enabledLocales.length > 1}
+              onChange={setPageProtected}
+            />
+          </section>
 
           {locale !== null && translationFallback && (
             <section
@@ -1024,18 +1088,9 @@ export function PageEditorView() {
             <ErrorBanner message={translationError} />
           )}
 
-          {/* Who may read this page sits above how it is built: it is a fact
-              about the page itself, not about one language's copy of it. */}
-          <PagePassword
-            siteId={siteId}
-            pageId={pageId}
-            multilingual={enabledLocales.length > 1}
-            onChange={setPageProtected}
-          />
-
-          <div className="mx-auto mt-5 grid w-full max-w-[1600px] min-w-0 gap-5 xl:grid-cols-[minmax(360px,0.78fr)_minmax(520px,1.22fr)]">
-            <div className="min-w-0 rounded-2xl border border-subtle bg-surface p-4 shadow-sm sm:p-5">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-subtle pb-4">
+          <div className="mx-auto mt-4 grid w-full max-w-[1600px] min-w-0 gap-4 xl:grid-cols-[minmax(320px,0.68fr)_minmax(560px,1.32fr)]">
+            <div className="min-w-0 self-start overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm">
+              <div className="flex min-h-16 items-center justify-between gap-3 border-b border-subtle px-4 py-3 sm:px-5">
                 <div>
                   <h2 className="font-semibold text-text-primary">
                     {strings.sitesSections}
@@ -1043,55 +1098,6 @@ export function PageEditorView() {
                   <p className="mt-1 text-sm text-text-secondary">
                     {sections.length} {strings.sitesSections.toLowerCase()}
                   </p>
-                </div>
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  {locale === null && (
-                    <>
-                      <IconButton
-                        size="sm"
-                        label={strings.sitesUndoEdit}
-                        icon={<Undo2 size={15} />}
-                        disabled={working || history.past.length === 0}
-                        onClick={() => void undoEdits()}
-                      />
-                      <IconButton
-                        size="sm"
-                        label={strings.sitesRedoEdit}
-                        icon={<Redo2 size={15} />}
-                        disabled={working || history.future.length === 0}
-                        onClick={() => void redoEdits()}
-                      />
-                    </>
-                  )}
-                  {locale === null && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      icon={<SearchCheck size={14} />}
-                      onClick={() => setSeoOpen(true)}
-                    >
-                      {strings.sitesSeoAction}
-                    </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={<Palette size={14} />}
-                    onClick={() => setThemeOpen(true)}
-                  >
-                    {strings.sitesTheme}
-                  </Button>
-                  <Button
-                    size="sm"
-                    data-add-section=""
-                    aria-expanded={picking}
-                    onClick={() =>
-                      picking ? closePalette() : setPicking(true)
-                    }
-                    disabled={working || translationBusy || translationFallback}
-                  >
-                    {strings.sitesAddSection}
-                  </Button>
                 </div>
               </div>
 
@@ -1134,15 +1140,7 @@ export function PageEditorView() {
                 {textNotice !== "" && ` ${textNotice}`}
               </p>
 
-              {empty && !loading ? (
-                <EmptyState
-                  Icon={Layers}
-                  title={strings.sitesNoSectionsTitle}
-                  body={strings.sitesNoSectionsBody}
-                  cta={strings.sitesAddFirstSection}
-                  onCta={() => setPicking(true)}
-                />
-              ) : (
+              {!empty && (
                 <ol className={styles.stack} ref={stackRef}>
                   {sections.map((section, i) => {
                     const summary = sectionSummary(section);
@@ -1312,10 +1310,10 @@ export function PageEditorView() {
             </div>
 
             <aside
-              className="min-w-0 self-start overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm xl:sticky xl:top-5"
+              className="min-w-0 self-start overflow-hidden rounded-2xl border border-subtle bg-raised/60 shadow-sm xl:sticky xl:top-4"
               aria-label={strings.sitesPreview}
             >
-              <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 border-b border-subtle px-4 py-3 sm:px-5">
+              <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 border-b border-subtle bg-surface px-4 py-3 sm:px-5">
                 <div>
                   <h2 className="font-semibold text-text-primary">
                     {strings.sitesPreview}
@@ -1327,7 +1325,7 @@ export function PageEditorView() {
                 <div className="flex flex-wrap items-center gap-2">
                   {proposedPreviewHtml !== null && (
                     <div
-                      className={styles.previewCompareToggle}
+                      className="flex items-center gap-1 rounded-xl bg-raised p-1"
                       role="group"
                       aria-label={strings.sitesAiPreviewCompare}
                     >
@@ -1335,7 +1333,7 @@ export function PageEditorView() {
                         variant="ghost"
                         className={
                           previewVersion === "before"
-                            ? styles.previewCompareButtonActive
+                            ? "!bg-surface !text-primary shadow-sm"
                             : undefined
                         }
                         aria-pressed={previewVersion === "before"}
@@ -1347,7 +1345,7 @@ export function PageEditorView() {
                         variant="ghost"
                         className={
                           previewVersion === "after"
-                            ? styles.previewCompareButtonActive
+                            ? "!bg-surface !text-primary shadow-sm"
                             : undefined
                         }
                         aria-pressed={previewVersion === "after"}
@@ -1357,7 +1355,7 @@ export function PageEditorView() {
                       </Button>
                     </div>
                   )}
-                  <div className={styles.previewToggle}>
+                  <div className="flex items-center gap-1 rounded-xl bg-raised p-1">
                     <IconButton
                       size="sm"
                       label={strings.sitesPreviewDesktop}
@@ -1375,40 +1373,87 @@ export function PageEditorView() {
                   </div>
                 </div>
               </div>
-              {locale === null && (
-                <p className={styles.previewEditHint}>
-                  {strings.sitesInlineTextHint} {strings.sitesSectionDragHint}{" "}
-                  {strings.sitesSectionResizeHint}
+              {locale === null && !empty && (
+                <p className="flex items-center gap-2 border-b border-subtle bg-surface px-4 py-2 text-xs leading-5 text-secondary sm:px-5">
+                  <Pencil
+                    size={13}
+                    className="shrink-0 text-accent"
+                    aria-hidden="true"
+                  />
+                  {strings.sitesInlineTextHint}
                 </p>
               )}
               {pageProtected && (
-                <p className={styles.previewProtectedNote}>
+                <p className="flex items-center gap-2 border-b border-subtle bg-surface px-4 py-2 text-xs text-secondary sm:px-5">
                   <Lock size={13} aria-hidden="true" />
                   {strings.sitesPagePasswordPreviewNote}
                 </p>
               )}
               {previewError !== null && <ErrorBanner message={previewError} />}
-              <div
-                className={
-                  previewMobile
-                    ? styles.previewViewportMobile
-                    : styles.previewViewport
-                }
-              >
-                {/* Sandboxed: scripts may run (the menu toggle), but the draft
-                  document never touches this origin or navigates the app. */}
-                <iframe
-                  ref={previewFrame}
-                  onLoad={postPreviewChrome}
-                  className={styles.previewFrame}
-                  title={strings.sitesPreviewTitle}
-                  sandbox="allow-scripts"
-                  srcDoc={
-                    previewVersion === "after" && proposedPreviewHtml !== null
-                      ? proposedPreviewHtml
-                      : (previewHtml ?? "")
-                  }
-                />
+              <div className="p-3 sm:p-5">
+                {empty && !loading ? (
+                  <div className="flex min-h-[32rem] flex-col overflow-hidden rounded-xl border border-default bg-surface shadow-sm">
+                    <div
+                      className="flex h-12 items-center gap-2 border-b border-subtle px-4"
+                      aria-hidden="true"
+                    >
+                      <span className="size-2 rounded-full bg-border-default" />
+                      <span className="size-2 rounded-full bg-border-default" />
+                      <span className="size-2 rounded-full bg-border-default" />
+                      <span className="ml-3 h-2 w-24 rounded-full bg-raised" />
+                    </div>
+                    <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
+                      <span
+                        className="inline-flex size-14 items-center justify-center rounded-2xl bg-accent-soft text-accent"
+                        aria-hidden="true"
+                      >
+                        <Layers size={27} />
+                      </span>
+                      <h3 className="mt-4 text-lg font-semibold text-primary">
+                        {strings.sitesNoSectionsTitle}
+                      </h3>
+                      <p className="mt-1 max-w-sm text-sm leading-6 text-secondary">
+                        {strings.sitesNoSectionsBody}
+                      </p>
+                      <Button
+                        className="mt-5"
+                        icon={<Plus size={16} />}
+                        data-add-section=""
+                        aria-expanded={picking}
+                        disabled={
+                          working || translationBusy || translationFallback
+                        }
+                        onClick={() => setPicking(true)}
+                      >
+                        {strings.sitesAddSection}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className={
+                      previewMobile
+                        ? "mx-auto max-w-[391px] rounded-xl bg-sunken p-2"
+                        : "rounded-xl bg-sunken p-2"
+                    }
+                  >
+                    {/* Sandboxed: scripts may run (the menu toggle), but the draft
+                      document never touches this origin or navigates the app. */}
+                    <iframe
+                      ref={previewFrame}
+                      onLoad={postPreviewChrome}
+                      className="block h-[min(70vh,48rem)] w-full rounded-lg border-0 bg-surface"
+                      title={strings.sitesPreviewTitle}
+                      sandbox="allow-scripts"
+                      srcDoc={
+                        previewVersion === "after" &&
+                        proposedPreviewHtml !== null
+                          ? proposedPreviewHtml
+                          : (previewHtml ?? "")
+                      }
+                    />
+                  </div>
+                )}
               </div>
             </aside>
           </div>
