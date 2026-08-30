@@ -258,6 +258,35 @@ pub enum ImageSide {
     Right,
 }
 
+/// A reusable site-theme colour role. Sections store intent, not raw colour
+/// values, so brand changes propagate consistently.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ThemeColorRole {
+    Background,
+    Text,
+    Border,
+    #[serde(rename = "accent_1")]
+    Accent1,
+    #[serde(rename = "accent_2")]
+    Accent2,
+    #[serde(rename = "accent_3")]
+    Accent3,
+    #[serde(rename = "accent_4")]
+    Accent4,
+    #[serde(rename = "accent_5")]
+    Accent5,
+}
+
+/// Theme roles used by the navigation surface and its link states.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct NavAppearance {
+    pub background: ThemeColorRole,
+    pub text: ThemeColorRole,
+    pub hover: ThemeColorRole,
+}
+
 /// Top navigation bar. The logo comes from the site's theme, not from here.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -267,6 +296,9 @@ pub struct NavSection {
     /// Optional highlighted call-to-action button.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cta: Option<Link>,
+    /// Optional scoped palette; absent keeps every colour from the site theme.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub appearance: Option<NavAppearance>,
 }
 
 /// The page's lead banner.
@@ -737,7 +769,8 @@ impl Section {
                 for link in &s.links {
                     check_link(kind, link)?;
                 }
-                check_opt_link(kind, s.cta.as_ref())
+                check_opt_link(kind, s.cta.as_ref())?;
+                Ok(())
             }
             Section::Hero(s) => {
                 check_short(kind, "heading", &s.heading)?;
@@ -1209,6 +1242,7 @@ mod tests {
             Section::Nav(NavSection {
                 links: vec![link("Home", "/"), link("Pricing", "/pricing")],
                 cta: Some(link("Order beans", "/order")),
+                appearance: None,
             }),
             Section::Hero(HeroSection {
                 heading: "Coffee roasted the morning it ships".to_owned(),
@@ -1345,6 +1379,32 @@ mod tests {
         assert_eq!(before, after);
     }
 
+    #[test]
+    fn navigation_appearance_accepts_only_named_theme_roles() {
+        let valid = SectionsEnvelope::from_value(json!({
+            "schema_version": SECTIONS_SCHEMA_VERSION,
+            "sections": [{
+                "type": "nav",
+                "links": [],
+                "appearance": {
+                    "background": "background",
+                    "text": "text",
+                    "hover": "accent_1"
+                }
+            }]
+        }));
+        assert!(valid.is_ok());
+
+        let error = SectionsEnvelope::from_value(json!({
+            "schema_version": SECTIONS_SCHEMA_VERSION,
+            "sections": [{"type": "nav", "links": [], "appearance": {
+                "background": "#ffffff", "text": "text", "hover": "accent_1"
+            }}]
+        }))
+        .unwrap_err();
+        assert!(matches!(error, SectionSchemaError::Shape(_)));
+    }
+
     /// The image-reference collector over the full corpus: exactly the four
     /// image-bearing variants (hero, text_image, gallery, team) declare
     /// their blobs; every other variant declares none. The public image
@@ -1387,6 +1447,7 @@ mod tests {
             Section::Nav(NavSection {
                 links: vec![],
                 cta: None,
+                appearance: None,
             }),
             Section::Hero(HeroSection {
                 heading: "Hello".to_owned(),

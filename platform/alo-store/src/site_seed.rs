@@ -286,6 +286,7 @@ fn seed_nav(ctx: &SeedContext) -> SectionSeed {
     SectionSeed::ready(Section::Nav(NavSection {
         links,
         cta: existing.and_then(|nav| nav.cta.clone()),
+        appearance: existing.and_then(|nav| nav.appearance.clone()),
     }))
 }
 

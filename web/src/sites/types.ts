@@ -173,6 +173,18 @@ export interface StoredTheme {
   preset?: string | undefined;
   logo?: string | undefined;
   favicon?: string | undefined;
+  colors?: BrandColors | undefined;
+}
+
+export interface BrandColors {
+  background: string;
+  text: string;
+  border: string;
+  accent_1: string;
+  accent_2: string;
+  accent_3: string;
+  accent_4: string;
+  accent_5: string;
 }
 
 /** What the theme form sends: always the full current-version envelope,
@@ -182,6 +194,7 @@ export interface ThemeEnvelope {
   preset: string;
   logo?: string | undefined;
   favicon?: string | undefined;
+  colors?: BrandColors | undefined;
 }
 
 /** One shipped theme preset as `/sites/theme-presets` answers it — the

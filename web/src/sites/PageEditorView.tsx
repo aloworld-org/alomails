@@ -1693,6 +1693,8 @@ export function PageEditorView() {
             setFormError(null);
           }}
           onSave={(section) => void save(form, section)}
+          currentPage={page ?? undefined}
+          currentSections={sections}
           copyContext={
             locale !== null || form.index === null
               ? undefined

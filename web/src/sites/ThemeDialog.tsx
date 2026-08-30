@@ -9,10 +9,11 @@ import { Palette, Trash2, Upload } from "lucide-react";
 
 import { strings } from "../i18n";
 import { useJmapClient } from "../jmap";
-import { Button, IconButton, Spinner } from "../ds";
+import { Button, ColorPicker, IconButton, Spinner } from "../ds";
 import { sitesMessage, useSitesApi } from "./api";
+import { contrastRatio } from "./accentContrast";
 import { DialogFrame, ErrorBanner } from "./parts";
-import type { ThemeEnvelope, ThemePreset } from "./types";
+import type { BrandColors, ThemeEnvelope, ThemePreset } from "./types";
 
 const styles = {
   themeSlot:
@@ -30,10 +31,45 @@ const styles = {
   presetName: "text-lg",
   presetSwatches: "mt-5 flex gap-2",
   presetSwatch: "size-7 rounded-full border border-black/10 shadow-sm",
+  colorPanel: "mt-5 overflow-hidden rounded-2xl border border-subtle bg-surface",
+  colorPanelHead: "flex flex-wrap items-start justify-between gap-3 border-b border-subtle px-5 py-4",
+  colorPanelTitle: "font-semibold text-primary",
+  colorPanelHint: "mt-1 max-w-2xl text-sm leading-5 text-secondary",
+  colorGroup: "px-5 py-4 [&+&]:border-t [&+&]:border-subtle",
+  colorGroupTitle: "mb-3 text-xs font-semibold uppercase tracking-wide text-secondary",
+  colorGrid: "grid gap-3 sm:grid-cols-2",
+  colorRow: "flex min-w-0 items-center gap-3 rounded-xl border border-subtle bg-surface-muted px-3 py-3",
+  colorLabel: "flex min-w-0 flex-1 items-center justify-between gap-2 text-sm font-semibold text-primary",
+  colorInput: "w-24 rounded-lg border border-subtle bg-surface px-2 py-1.5 font-mono text-xs uppercase text-primary",
+  colorError: "px-5 pb-4 text-sm font-medium text-danger",
 } as const;
 
 /** The version this form writes; the server refuses anything else. */
 const THEME_SCHEMA_VERSION = 1;
+
+function presetColors(preset: ThemePreset): BrandColors {
+  return {
+    background: preset.palette.background.toUpperCase(),
+    text: preset.palette.text.toUpperCase(),
+    border: preset.palette.border.toUpperCase(),
+    accent_1: preset.palette.primary.toUpperCase(),
+    accent_2: preset.palette.mutedText.toUpperCase(),
+    accent_3: preset.palette.surface.toUpperCase(),
+    accent_4: preset.palette.text.toUpperCase(),
+    accent_5: preset.palette.background.toUpperCase(),
+  };
+}
+
+const colorFields: ReadonlyArray<[keyof BrandColors, string]> = [
+  ["background", strings.sitesThemeBackgroundColor],
+  ["text", strings.sitesThemeTextColor],
+  ["border", strings.sitesThemeBorderColor],
+  ["accent_1", strings.sitesThemeAccentColor(1)],
+  ["accent_2", strings.sitesThemeAccentColor(2)],
+  ["accent_3", strings.sitesThemeAccentColor(3)],
+  ["accent_4", strings.sitesThemeAccentColor(4)],
+  ["accent_5", strings.sitesThemeAccentColor(5)],
+];
 
 /** One image slot of the theme (logo or favicon): its current blob id, an
  *  upload that replaces it, and a remove that clears it. */
@@ -119,6 +155,8 @@ export function ThemeDialog({
   const [preset, setPreset] = useState<string | null>(null);
   const [logo, setLogo] = useState<string | null>(null);
   const [favicon, setFavicon] = useState<string | null>(null);
+  const [colors, setColors] = useState<BrandColors | null>(null);
+  const [customColors, setCustomColors] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -133,6 +171,9 @@ export function ThemeDialog({
         setPreset(site.theme.preset ?? shipped[0]?.id ?? null);
         setLogo(site.theme.logo ?? null);
         setFavicon(site.theme.favicon ?? null);
+        const selected = shipped.find((item) => item.id === (site.theme.preset ?? shipped[0]?.id));
+        setColors(site.theme.colors ?? (selected === undefined ? null : presetColors(selected)));
+        setCustomColors(site.theme.colors !== undefined);
       },
       (err: unknown) => {
         if (!stale)
@@ -170,6 +211,7 @@ export function ThemeDialog({
       preset,
       logo: logo ?? undefined,
       favicon: favicon ?? undefined,
+      colors: customColors ? colors ?? undefined : undefined,
     };
     try {
       await api.setTheme(siteId, envelope);
@@ -181,6 +223,9 @@ export function ThemeDialog({
   }
 
   const loading = presets === null && loadError === null;
+  const colorsValid = colors !== null
+    && colorFields.every(([field]) => /^#[0-9A-F]{6}$/i.test(colors[field]))
+    && (contrastRatio(colors.background, colors.text) ?? 0) >= 4.5;
 
   return (
     <DialogFrame
@@ -189,7 +234,7 @@ export function ThemeDialog({
       subtitle={strings.sitesThemeSubtitle}
       error={error}
       busy={busy}
-      canSubmit={preset !== null}
+      canSubmit={preset !== null && colorsValid}
       submitLabel={strings.sitesThemeApply}
       onClose={onClose}
       onSubmit={() => void apply()}
@@ -218,7 +263,11 @@ export function ThemeDialog({
                   background: p.palette.background,
                   borderColor: p.palette.border,
                 }}
-                onClick={() => setPreset(p.id)}
+                onClick={() => {
+                  setPreset(p.id);
+                  setColors(presetColors(p));
+                  setCustomColors(false);
+                }}
               >
                 <span
                   className={styles.presetName}
@@ -246,6 +295,64 @@ export function ThemeDialog({
               </button>
             ))}
           </div>
+          {colors !== null && (
+            <section className={styles.colorPanel}>
+              <div className={styles.colorPanelHead}>
+                <div>
+                  <h3 className={styles.colorPanelTitle}>{strings.sitesThemeBrandColors}</h3>
+                  <p className={styles.colorPanelHint}>{strings.sitesThemeBrandColorsHint}</p>
+                </div>
+                {customColors && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const selected = presets.find((item) => item.id === preset);
+                      if (selected !== undefined) setColors(presetColors(selected));
+                      setCustomColors(false);
+                    }}
+                  >
+                    {strings.sitesThemeResetColors}
+                  </Button>
+                )}
+              </div>
+              {[colorFields.slice(0, 3), colorFields.slice(3)].map((fields, group) => (
+                <div key={group} className={styles.colorGroup}>
+                  <h4 className={styles.colorGroupTitle}>
+                    {group === 0 ? strings.sitesThemeBaseColors : strings.sitesThemeAccentColors}
+                  </h4>
+                  <div className={styles.colorGrid}>
+                    {fields.map(([field, label]) => (
+                      <div key={field} className={styles.colorRow}>
+                        <ColorPicker
+                          label={label}
+                          value={colors[field]}
+                          onChange={(value) => {
+                            setColors({ ...colors, [field]: value.toUpperCase() });
+                            setCustomColors(true);
+                          }}
+                        />
+                        <label className={styles.colorLabel}>
+                          {label}
+                          <input
+                            className={styles.colorInput}
+                            aria-label={strings.sitesThemeHexValue(label)}
+                            value={colors[field]}
+                            maxLength={7}
+                            onChange={(event) => {
+                              setColors({ ...colors, [field]: event.target.value.toUpperCase() });
+                              setCustomColors(true);
+                            }}
+                          />
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {!colorsValid && <p className={styles.colorError}>{strings.sitesThemeColorError}</p>}
+            </section>
+          )}
           <ImageSlot
             label={strings.sitesThemeLogo}
             hint={strings.sitesThemeLogoHint}

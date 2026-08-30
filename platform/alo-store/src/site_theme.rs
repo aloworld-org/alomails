@@ -2,12 +2,9 @@
 //!
 //! A site's `theme` column holds the envelope [`SiteTheme`] —
 //! `{ "schema_version": 1, "preset": "north", … }` — a shipped preset id plus
-//! optional logo/favicon blob refs. v1 deliberately offers **presets only**,
-//! no free-form colors: every shipped palette is contrast-checked at build
-//! time (a unit test enforces WCAG AA ratios), a guarantee arbitrary
-//! user-supplied hex values would break. The rejected alternative — letting
-//! tenants pick any colors — returns post-v1 at most as curated overrides,
-//! never as unchecked input to the stylesheet generator.
+//! optional brand-colour and image overrides. Presets remain the safe starting
+//! point; custom colours are validated at the write gate and become reusable
+//! site-wide tokens rather than one-off values stored inside sections.
 //!
 //! Presets carry their palette and typography as static tokens; the
 //! stylesheet generator (S1.07) reads them from here, so the editor UI, the
@@ -68,6 +65,25 @@ pub struct SiteTheme {
     /// The site's favicon (a tenant blob); browsers fall back to none.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub favicon: Option<BlobId>,
+    /// Optional site-wide brand palette. Sections refer to these named roles;
+    /// they never persist arbitrary colour values of their own.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub colors: Option<BrandColors>,
+}
+
+/// Tenant-editable brand tokens. Base colours define the canvas; accents are
+/// reusable roles offered by section editors as `Accent 1` … `Accent 5`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct BrandColors {
+    pub background: String,
+    pub text: String,
+    pub border: String,
+    pub accent_1: String,
+    pub accent_2: String,
+    pub accent_3: String,
+    pub accent_4: String,
+    pub accent_5: String,
 }
 
 impl SiteTheme {
@@ -79,6 +95,7 @@ impl SiteTheme {
             preset: DEFAULT_THEME_PRESET.to_owned(),
             logo: None,
             favicon: None,
+            colors: None,
         }
     }
 
@@ -149,6 +166,30 @@ impl SiteTheme {
                 "favicon is not a valid blob id".to_owned(),
             ));
         }
+        if let Some(colors) = &self.colors {
+            for (field, value) in [
+                ("background", &colors.background),
+                ("text", &colors.text),
+                ("border", &colors.border),
+                ("accent_1", &colors.accent_1),
+                ("accent_2", &colors.accent_2),
+                ("accent_3", &colors.accent_3),
+                ("accent_4", &colors.accent_4),
+                ("accent_5", &colors.accent_5),
+            ] {
+                if !is_hex_colour(value) {
+                    return Err(ThemeSchemaError::Invalid(format!(
+                        "colors.{field} must be a six-digit hex colour such as #1d4ed8"
+                    )));
+                }
+            }
+            if contrast(&colors.background, &colors.text) < 4.5 {
+                return Err(ThemeSchemaError::Invalid(
+                    "colors.text must have at least 4.5:1 contrast against colors.background"
+                        .to_owned(),
+                ));
+            }
+        }
         Ok(())
     }
 
@@ -158,6 +199,28 @@ impl SiteTheme {
         // defensive read path.
         theme_preset(&self.preset).unwrap_or(&THEME_PRESETS[0])
     }
+}
+
+fn is_hex_colour(value: &str) -> bool {
+    value.len() == 7
+        && value.starts_with('#')
+        && value.as_bytes()[1..].iter().all(u8::is_ascii_hexdigit)
+}
+
+fn contrast(first: &str, second: &str) -> f64 {
+    fn luminance(hex: &str) -> f64 {
+        let channel = |index: usize| {
+            let raw = u8::from_str_radix(&hex[index..index + 2], 16).unwrap_or(0) as f64 / 255.0;
+            if raw <= 0.03928 {
+                raw / 12.92
+            } else {
+                ((raw + 0.055) / 1.055).powf(2.4)
+            }
+        };
+        0.2126 * channel(1) + 0.7152 * channel(3) + 0.0722 * channel(5)
+    }
+    let (a, b) = (luminance(first), luminance(second));
+    (a.max(b) + 0.05) / (a.min(b) + 0.05)
 }
 
 impl Default for SiteTheme {
@@ -459,6 +522,16 @@ mod tests {
             preset: "terra".to_owned(),
             logo: Some(BlobId::new("9hK3vQ2mR8pT1xWz4bC5dg")),
             favicon: Some(BlobId::new("f4K9sL2wN7qR5tYx8vB1cA")),
+            colors: Some(BrandColors {
+                background: "#ffffff".to_owned(),
+                text: "#17212b".to_owned(),
+                border: "#dde3e9".to_owned(),
+                accent_1: "#1d4ed8".to_owned(),
+                accent_2: "#216a45".to_owned(),
+                accent_3: "#71279e".to_owned(),
+                accent_4: "#9c3d1e".to_owned(),
+                accent_5: "#4c5866".to_owned(),
+            }),
         };
         full.validate().unwrap();
         assert_eq!(
@@ -479,6 +552,35 @@ mod tests {
         assert_eq!(theme.schema_version, THEME_SCHEMA_VERSION);
         theme.validate().unwrap();
         assert_eq!(theme.resolved_preset().id, DEFAULT_THEME_PRESET);
+    }
+
+    #[test]
+    fn custom_brand_colours_are_hex_and_keep_base_text_readable() {
+        let valid = json!({
+            "schema_version": 1,
+            "preset": "north",
+            "colors": {
+                "background": "#ffffff", "text": "#17212b", "border": "#dde3e9",
+                "accent_1": "#1d4ed8", "accent_2": "#216a45", "accent_3": "#71279e",
+                "accent_4": "#9c3d1e", "accent_5": "#4c5866"
+            }
+        });
+        assert!(SiteTheme::from_value(valid).is_ok());
+        for invalid in [
+            json!({
+                "schema_version": 1, "preset": "north",
+                "colors": {"background": "white", "text": "#17212b", "border": "#dde3e9", "accent_1": "#1d4ed8", "accent_2": "#216a45", "accent_3": "#71279e", "accent_4": "#9c3d1e", "accent_5": "#4c5866"}
+            }),
+            json!({
+                "schema_version": 1, "preset": "north",
+                "colors": {"background": "#ffffff", "text": "#eeeeee", "border": "#dde3e9", "accent_1": "#1d4ed8", "accent_2": "#216a45", "accent_3": "#71279e", "accent_4": "#9c3d1e", "accent_5": "#4c5866"}
+            }),
+        ] {
+            assert!(matches!(
+                SiteTheme::from_value(invalid),
+                Err(ThemeSchemaError::Invalid(_))
+            ));
+        }
     }
 
     #[test]

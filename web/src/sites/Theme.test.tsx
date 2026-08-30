@@ -287,6 +287,25 @@ describe("the theme dialog", () => {
     });
   });
 
+  test("stores a full reusable brand palette after any theme color is changed", async () => {
+    await openThemeDialogFromSiteView({});
+    fireEvent.change(
+      screen.getByLabelText(strings.sitesThemeHexValue(strings.sitesThemeAccentColor(2))),
+      { target: { value: "#123456" } },
+    );
+    fireEvent.click(screen.getByText(strings.sitesThemeApply));
+    await waitFor(() => expect(lastWrite()).toBeTruthy());
+    expect(lastWrite()?.body).toEqual({
+      schema_version: 1,
+      preset: "north",
+      colors: {
+        background: "#FFFFFF", text: "#17212B", border: "#DDE3E9",
+        accent_1: "#1D4ED8", accent_2: "#123456", accent_3: "#F2F5F8",
+        accent_4: "#17212B", accent_5: "#FFFFFF",
+      },
+    });
+  });
+
   test("a stored logo prefills; removing it drops the key from the envelope", async () => {
     await openThemeDialogFromSiteView({
       schema_version: 1,

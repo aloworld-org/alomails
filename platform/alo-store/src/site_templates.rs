@@ -149,6 +149,7 @@ impl SiteTemplate {
             preset: self.theme_preset.clone(),
             logo: None,
             favicon: None,
+            colors: None,
         }
     }
 

@@ -15,6 +15,17 @@ export interface SectionLink {
   href: string;
 }
 
+export type ThemeColorRole =
+  | "background" | "text" | "border"
+  | "accent_1" | "accent_2" | "accent_3" | "accent_4" | "accent_5";
+
+/** Optional navigation styling references the reusable site-theme palette. */
+export interface NavAppearance {
+  background: ThemeColorRole;
+  text: ThemeColorRole;
+  hover: ThemeColorRole;
+}
+
 /** The visible rectangle of a source image, in basis points (ten-thousandths)
  *  of its width and height from the top-left corner. Absent means the whole
  *  image. */
@@ -51,6 +62,7 @@ export interface NavSection {
   type: "nav";
   links: SectionLink[];
   cta?: SectionLink | undefined;
+  appearance?: NavAppearance | undefined;
 }
 
 /** The page's lead banner. */

@@ -10,8 +10,10 @@ import {
   Blocks,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   GripVertical,
   PanelTop,
+  Palette,
   Plus,
   Sparkles,
   Trash2,
@@ -21,6 +23,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { strings } from "../i18n";
 import { Button, IconButton, Select, Spinner } from "../ds";
 import { kindDescription, kindLabel } from "./sectionInfo";
+import { contrastRatio } from "./accentContrast";
 import {
   blankFaqItem,
   blankFeature,
@@ -52,8 +55,8 @@ import type {
   ShopDraft,
   TicketsDraft,
 } from "./sectionDrafts";
-import type { Section, SectionKind, SectionLink } from "./sections";
-import type { SiteCopyAction, SiteEditEnvelope, SitePage } from "./types";
+import type { Section, SectionKind, SectionLink, ThemeColorRole } from "./sections";
+import type { BrandColors, SiteCopyAction, SiteEditEnvelope, SitePage, ThemePreset } from "./types";
 import type {
   SiteBooking,
   SiteCatalog,
@@ -355,13 +358,63 @@ function ItemsEditor<T extends object>({
 
 type Change = (draft: SectionDraft) => void;
 
-function NavFields({ draft, onChange }: { draft: NavDraft; onChange: Change }) {
-  const { siteId = "" } = useParams();
+const NAV_DEFAULT_ROLES = { background: "background", text: "text", hover: "accent_1" } as const;
+
+function themeColors(preset: ThemePreset, custom?: BrandColors): BrandColors {
+  return custom ?? {
+    background: preset.palette.background,
+    text: preset.palette.text,
+    border: preset.palette.border,
+    accent_1: preset.palette.primary,
+    accent_2: preset.palette.mutedText,
+    accent_3: preset.palette.surface,
+    accent_4: preset.palette.text,
+    accent_5: preset.palette.background,
+  };
+}
+
+function roleColor(colors: BrandColors, role: ThemeColorRole): string {
+  return colors[role];
+}
+
+function sectionTargets(page: SitePage, sections: Section[]) {
+  const occurrences = new Map<string, number>();
+  return sections.flatMap((section) => {
+    if (section.type === "nav" || section.type === "footer") return [];
+    const occurrence = (occurrences.get(section.type) ?? 0) + 1;
+    occurrences.set(section.type, occurrence);
+    const anchor = occurrence === 1 ? section.type : `${section.type}-${occurrence}`;
+    const path = page.home ? "/" : `/${page.slug}`;
+    return [{
+      href: `${path}#${anchor}`,
+      label: `${page.title} · ${kindLabel(section.type)}`,
+      defaultLabel: kindLabel(section.type),
+    }];
+  });
+}
+
+function NavFields({
+  draft,
+  onChange,
+  currentPage,
+  currentSections,
+}: {
+  draft: NavDraft;
+  onChange: Change;
+  currentPage?: SitePage | undefined;
+  currentSections: Section[];
+}) {
+  const { siteId = "", pageId = "" } = useParams();
   const api = useSitesApi();
   const [pages, setPages] = useState<SitePage[]>([]);
   const [pagesLoading, setPagesLoading] = useState(siteId !== "");
   const [pagesFailed, setPagesFailed] = useState(false);
+  const [pageSections, setPageSections] = useState<Record<string, Section[]>>(
+    currentPage === undefined ? {} : { [currentPage.id]: currentSections },
+  );
   const [dragging, setDragging] = useState<number | null>(null);
+  const [appearanceOpen, setAppearanceOpen] = useState(draft.appearance !== undefined);
+  const [brandColors, setBrandColors] = useState<BrandColors | null>(null);
 
   useEffect(() => {
     if (siteId === "") return;
@@ -371,7 +424,24 @@ function NavFields({ draft, onChange }: { draft: NavDraft; onChange: Change }) {
     void api
       .pages(siteId)
       .then((loaded) => {
-        if (current) setPages(loaded);
+        if (!current) return;
+        setPages(loaded);
+        const missing = loaded.filter((page) => page.id !== pageId);
+        void Promise.allSettled(missing.map((page) => api.page(siteId, page.id))).then(
+          (results) => {
+            if (!current) return;
+            const loadedSections: Record<string, Section[]> =
+              currentPage === undefined ? {} : { [currentPage.id]: currentSections };
+            results.forEach((result, index) => {
+              const page = missing[index];
+              if (result.status === "fulfilled" && page !== undefined) {
+                const sections: unknown = result.value.sections?.sections;
+                if (Array.isArray(sections)) loadedSections[page.id] = sections as Section[];
+              }
+            });
+            setPageSections(loadedSections);
+          },
+        );
       })
       .catch(() => {
         if (current) setPagesFailed(true);
@@ -382,11 +452,25 @@ function NavFields({ draft, onChange }: { draft: NavDraft; onChange: Change }) {
     return () => {
       current = false;
     };
+  }, [api, currentPage, currentSections, pageId, siteId]);
+
+  useEffect(() => {
+    if (siteId === "") return;
+    let current = true;
+    void Promise.all([api.site(siteId), api.themePresets()])
+      .then(([site, presets]) => {
+        if (!current) return;
+        const preset = presets.find((item) => item.id === (site.theme.preset ?? presets[0]?.id));
+        if (preset !== undefined) setBrandColors(themeColors(preset, site.theme.colors));
+      })
+      .catch(() => undefined);
+    return () => { current = false; };
   }, [api, siteId]);
 
   const pagePath = (page: SitePage) => (page.home ? "/" : `/${page.slug}`);
   const linkedTargets = new Set(draft.links.map((link) => link.href.trim()));
   const missingPages = pages.filter((page) => !linkedTargets.has(pagePath(page)));
+  const destinations = pages.flatMap((page) => sectionTargets(page, pageSections[page.id] ?? []));
   const reorder = (from: number, to: number) => {
     if (from === to || to < 0 || to >= draft.links.length) return;
     const links = [...draft.links];
@@ -442,9 +526,8 @@ function NavFields({ draft, onChange }: { draft: NavDraft; onChange: Change }) {
 
         <div className={styles.navLinkList}>
           {draft.links.map((link, index) => {
-            const selectedPage = pages.find(
-              (page) => pagePath(page) === link.href,
-            );
+            const selectedPage = pages.find((page) => pagePath(page) === link.href);
+            const selectedSection = destinations.find((target) => target.href === link.href);
             return (
               <div
                 key={index}
@@ -501,10 +584,12 @@ function NavFields({ draft, onChange }: { draft: NavDraft; onChange: Change }) {
                   </div>
                 </div>
                 {pages.length > 0 && (
-                  <Field label={strings.sitesNavChoosePage}>
+                  <Field label={strings.sitesNavDestination}>
                     <Select
                       value={
-                        selectedPage === undefined ? "custom" : pagePath(selectedPage)
+                        selectedPage === undefined && selectedSection === undefined
+                          ? "custom"
+                          : link.href
                       }
                       onChange={(event) => {
                         if (event.target.value === "custom") {
@@ -516,16 +601,17 @@ function NavFields({ draft, onChange }: { draft: NavDraft; onChange: Change }) {
                           });
                           return;
                         }
-                        const page = pages.find(
-                          (candidate) => pagePath(candidate) === event.target.value,
-                        );
-                        if (page === undefined) return;
+                        const page = pages.find((candidate) => pagePath(candidate) === event.target.value);
+                        const section = destinations.find((candidate) => candidate.href === event.target.value);
+                        if (page === undefined && section === undefined) return;
                         const links = draft.links.map((item, itemIndex) =>
                           itemIndex === index
                             ? {
                                 label:
-                                  item.label.trim() === "" ? page.title : item.label,
-                                href: pagePath(page),
+                                  item.label.trim() === ""
+                                    ? (page?.title ?? section?.defaultLabel ?? "")
+                                    : item.label,
+                                href: event.target.value,
                               }
                             : item,
                         );
@@ -533,11 +619,20 @@ function NavFields({ draft, onChange }: { draft: NavDraft; onChange: Change }) {
                       }}
                     >
                       <option value="custom">{strings.sitesNavCustomTarget}</option>
-                      {pages.map((page) => (
-                        <option key={page.id} value={pagePath(page)}>
-                          {page.title} · {pagePath(page)}
-                        </option>
-                      ))}
+                      <optgroup label={strings.sitesNavPages}>
+                        {pages.map((page) => (
+                          <option key={page.id} value={pagePath(page)}>
+                            {page.title} · {pagePath(page)}
+                          </option>
+                        ))}
+                      </optgroup>
+                      {destinations.length > 0 && (
+                        <optgroup label={strings.sitesNavSections}>
+                          {destinations.map((target) => (
+                            <option key={target.href} value={target.href}>{target.label}</option>
+                          ))}
+                        </optgroup>
+                      )}
                     </Select>
                   </Field>
                 )}
@@ -606,6 +701,83 @@ function NavFields({ draft, onChange }: { draft: NavDraft; onChange: Change }) {
           }
         />
       </fieldset>
+
+      <section className={styles.navAppearance}>
+        <button
+          type="button"
+          className={styles.navAppearanceToggle}
+          aria-label={strings.sitesNavAppearanceShow}
+          aria-expanded={appearanceOpen}
+          onClick={() => setAppearanceOpen((open) => !open)}
+        >
+          <span>
+            <strong>{strings.sitesNavAppearance}</strong>
+            <small>{draft.appearance === undefined ? strings.sitesNavUsesTheme : strings.sitesNavUsesBrandRoles}</small>
+          </span>
+          <ChevronRight className={appearanceOpen ? styles.navAppearanceChevronOpen : ""} size="var(--icon-size-inline)" />
+        </button>
+        {appearanceOpen && (
+          <div className={styles.navAppearanceBody}>
+            <div className={styles.navColorHint}>
+              <Palette size="var(--icon-size-inline)" aria-hidden="true" />
+              <span>{strings.sitesNavBrandRoleHint}</span>
+              {draft.appearance !== undefined && (
+                <Button variant="ghost" size="sm" onClick={() => onChange({ ...draft, appearance: undefined })}>
+                  {strings.sitesNavResetRoles}
+                </Button>
+              )}
+            </div>
+            <div className={styles.navColorFields}>
+              {([
+                ["background", strings.sitesNavBackground],
+                ["text", strings.sitesNavText],
+                ["hover", strings.sitesNavHover],
+              ] as const).map(([property, label]) => {
+                const selected = draft.appearance?.[property] ?? NAV_DEFAULT_ROLES[property];
+                return (
+                  <Field key={property} label={label}>
+                    <Select
+                      value={selected}
+                      onChange={(event) => onChange({
+                        ...draft,
+                        appearance: {
+                          ...(draft.appearance ?? NAV_DEFAULT_ROLES),
+                          [property]: event.target.value as ThemeColorRole,
+                        },
+                      })}
+                    >
+                      <option value="background">{strings.sitesThemeBackgroundColor}</option>
+                      <option value="text">{strings.sitesThemeTextColor}</option>
+                      <option value="border">{strings.sitesThemeBorderColor}</option>
+                      {[1, 2, 3, 4, 5].map((number) => (
+                        <option key={number} value={`accent_${number}`}>{strings.sitesThemeAccentColor(number)}</option>
+                      ))}
+                    </Select>
+                  </Field>
+                );
+              })}
+            </div>
+            {brandColors !== null && (() => {
+              const appearance = draft.appearance ?? NAV_DEFAULT_ROLES;
+              const background = roleColor(brandColors, appearance.background);
+              const text = roleColor(brandColors, appearance.text);
+              const hover = roleColor(brandColors, appearance.hover);
+              const readable = (contrastRatio(background, text) ?? 0) >= 4.5
+                && (contrastRatio(background, hover) ?? 0) >= 4.5;
+              return (
+                <>
+                  <div className={styles.navAppearancePreview} style={{ background, color: text }}>
+                    <strong>{strings.sitesNavPreviewBrand}</strong>
+                    <span>{strings.sitesNavPreviewLink}</span>
+                    <span style={{ color: hover }}>{strings.sitesNavPreviewHover}</span>
+                  </div>
+                  {!readable && <p className={styles.navContrastFail}>{strings.sitesNavContrastFail}</p>}
+                </>
+              );
+            })()}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
@@ -1468,10 +1640,27 @@ function FooterFields({ draft, onChange }: { draft: FooterDraft; onChange: Chang
   );
 }
 
-function FormFields({ draft, onChange }: { draft: SectionDraft; onChange: Change }) {
+function FormFields({
+  draft,
+  onChange,
+  currentPage,
+  currentSections,
+}: {
+  draft: SectionDraft;
+  onChange: Change;
+  currentPage?: SitePage | undefined;
+  currentSections: Section[];
+}) {
   switch (draft.type) {
     case "nav":
-      return <NavFields draft={draft} onChange={onChange} />;
+      return (
+        <NavFields
+          draft={draft}
+          onChange={onChange}
+          currentPage={currentPage}
+          currentSections={currentSections}
+        />
+      );
     case "hero":
       return <HeroFields draft={draft} onChange={onChange} />;
     case "features":
@@ -1543,6 +1732,8 @@ export function SectionFormDialog({
   onClose,
   onSave,
   copyContext,
+  currentPage,
+  currentSections = [],
 }: {
   kind: SectionKind;
   /** The stored section when editing; absent when adding. */
@@ -1554,6 +1745,10 @@ export function SectionFormDialog({
   /** Present only for a stored section. New sections have no stable page
    *  target yet, so their copy remains directly editable until first save. */
   copyContext?: CopyContextValue | undefined;
+  /** The open page and its stack let navigation destinations include content
+   *  sections without another request or a second source of truth. */
+  currentPage?: SitePage | undefined;
+  currentSections?: Section[] | undefined;
 }) {
   const [draft, setDraft] = useState<SectionDraft>(() => toDraft(kind, initial));
   const label = kindLabel(kind);
@@ -1575,7 +1770,12 @@ export function SectionFormDialog({
       onSubmit={() => onSave(toSection(draft))}
     >
       <CopyContext.Provider value={copyContext ?? null}>
-        <FormFields draft={draft} onChange={setDraft} />
+        <FormFields
+          draft={draft}
+          onChange={setDraft}
+          currentPage={currentPage}
+          currentSections={currentSections}
+        />
       </CopyContext.Provider>
     </DialogFrame>
   );

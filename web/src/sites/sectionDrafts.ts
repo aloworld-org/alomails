@@ -16,6 +16,7 @@ import type {
   SectionImage,
   SectionKind,
   SectionLink,
+  NavAppearance,
   TeamMember,
   Testimonial,
 } from "./sections";
@@ -24,6 +25,7 @@ export interface NavDraft {
   type: "nav";
   links: SectionLink[];
   cta: SectionLink;
+  appearance?: NavAppearance | undefined;
 }
 
 export interface HeroDraft {
@@ -287,7 +289,12 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
   switch (kind) {
     case "nav": {
       const s = from as Section & { type: "nav" } | undefined;
-      return { type: "nav", links: seeded(s?.links ?? [], blankLink), cta: draftLink(s?.cta) };
+      return {
+        type: "nav",
+        links: seeded(s?.links ?? [], blankLink),
+        cta: draftLink(s?.cta),
+        appearance: s?.appearance,
+      };
     }
     case "hero": {
       const s = from as Section & { type: "hero" } | undefined;
@@ -537,6 +544,7 @@ export function toSection(draft: SectionDraft): Section {
         type: "nav",
         links: pruned(draft.links, linkBlank).map(reqLink),
         cta: optLink(draft.cta),
+        appearance: draft.appearance,
       };
     case "hero":
       return {

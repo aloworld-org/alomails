@@ -719,6 +719,59 @@ describe("editing a section", () => {
     });
   });
 
+  test("navigation links can target page sections and reuse site-theme color roles", async () => {
+    replies = [
+      pageReply([NAV, HERO, FAQ]),
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/pages"),
+        status: 200,
+        body: {
+          pages: [{
+            id: "page-1", slug: "", title: "Welcome", home: true,
+            seoTitle: null, seoDescription: null,
+          }],
+        },
+      },
+    ];
+    ui();
+
+    const navigationCard = await screen.findByTestId("navigation-section-card");
+    fireEvent.click(
+      navigationCard.querySelector<HTMLElement>('[data-section-control="edit"]')!,
+    );
+
+    const destination = await screen.findByLabelText(strings.sitesNavDestination);
+    expect(destination.querySelector('option[value="/#hero"]')?.textContent).toContain(
+      strings.sitesSectionHero,
+    );
+    fireEvent.change(destination, { target: { value: "/#hero" } });
+
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesNavAppearanceShow }));
+    fireEvent.change(screen.getByLabelText(strings.sitesNavBackground), { target: { value: "accent_2" } });
+    fireEvent.change(screen.getByLabelText(strings.sitesNavText), { target: { value: "background" } });
+    fireEvent.change(screen.getByLabelText(strings.sitesNavHover), { target: { value: "accent_5" } });
+
+    replies = [{
+      match: (url, method) =>
+        method === "PUT" && url.endsWith("/sites/site-1/pages/page-1/sections/0"),
+      status: 200,
+      body: { sections: env([NAV, HERO, FAQ]) },
+    }];
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesSaveSection }));
+    await waitFor(() => expect(lastWrite()?.method).toBe("PUT"));
+    expect(lastWrite()?.body).toEqual({
+      section: {
+        type: "nav",
+        links: [{ label: "Home", href: "/#hero" }],
+        appearance: {
+          background: "accent_2",
+          text: "background",
+          hover: "accent_5",
+        },
+      },
+    });
+  });
+
   test("copy tools propose one selected field and write only after approval", async () => {
     replies = [pageReply([HERO])];
     ui();

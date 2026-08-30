@@ -781,7 +781,7 @@ pub use site_templates::{
     site_templates,
 };
 pub use site_theme::{
-    DEFAULT_THEME_PRESET, SiteTheme, THEME_PRESETS, THEME_SCHEMA_VERSION, ThemePreset,
+    BrandColors, DEFAULT_THEME_PRESET, SiteTheme, THEME_PRESETS, THEME_SCHEMA_VERSION, ThemePreset,
     ThemeSchemaError, theme_preset,
 };
 pub use site_ticket_fulfil::{ClaimedTicketFulfilment, TicketFulfilWords, TicketFulfilmentOutcome};
