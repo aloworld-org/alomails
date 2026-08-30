@@ -33,13 +33,16 @@ describe("ModuleNavigation", () => {
       "items-center",
       "gap-2.5",
       "rounded-xl",
-      "px-4",
-      "py-2.5",
+      "!px-4",
+      "!py-2.5",
+      "!text-sm",
+      "[&_svg]:!size-4",
+      "!font-semibold",
     ]) {
       expect(currentClasses.has(className)).toBe(true);
     }
     expect(screen.getByRole("link", { name: "Next" }).className).toContain(
-      "!bg-transparent font-medium !text-secondary",
+      "!bg-transparent !font-medium !text-secondary",
     );
   });
 });
