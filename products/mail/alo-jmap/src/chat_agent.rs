@@ -19,7 +19,7 @@
 
 use serde_json::{Value, json};
 
-use alo_ai::{AiConfig, InferenceError, WorkspaceSource};
+use alo_ai::{AiConfig, DecisionError, InferenceError, WorkspaceSource};
 use alo_store::{AgentRecord, ChatAgent, ChatChannelId, ChatMessageId, parse_handles};
 
 use crate::agent_turn::{Turn, TurnContext, TurnResult, take_turn as run_turn};
@@ -248,15 +248,15 @@ pub(crate) async fn take_turn(
         // proposal are already in the room under its own id — the run's one
         // approval surface — and this agent has nothing left to say.
         Ok((TurnResult::DelegateProposed(_), _)) => Some(Spoken::Proposed),
-        Err(InferenceError::Disabled | InferenceError::NotConfigured) => {
+        Err(DecisionError::Provider(InferenceError::Disabled | InferenceError::NotConfigured)) => {
             let _ = acc
                 .post_as_agent(channel, &agent.id, UNCONFIGURED, None)
                 .await;
             Some(Spoken::Excused)
         }
         Err(error) => {
-            // The room is told nothing about why — `UNREACHABLE` says so
-            // deliberately — but an operator must be able to find out. Before
+            // The room is told nothing about why — the two sentences below say
+            // so deliberately — but an operator must be able to find out. Before
             // this line the reason was discarded, and a turn that stopped here
             // looked the same whether the provider was rate-limiting, timing
             // out, or refusing the request.
@@ -264,10 +264,10 @@ pub(crate) async fn take_turn(
                 agent = %agent.handle,
                 product = %agent.product,
                 %error,
-                "an agent's turn could not reach the model"
+                "an agent's turn produced no decision"
             );
             let _ = acc
-                .post_as_agent(channel, &agent.id, UNREACHABLE, None)
+                .post_as_agent(channel, &agent.id, said_of(&error), None)
                 .await;
             Some(Spoken::Excused)
         }
@@ -299,6 +299,25 @@ pub(crate) const UNCONFIGURED: &str = "I can't answer yet — no AI provider is 
 /// about why: the reason is an operator's business, not a room's.
 pub(crate) const UNREACHABLE: &str =
     "I couldn't reach the model just now. Try me again in a moment.";
+
+/// Said when the model **was** reached and its reply was not something the turn
+/// could act on — twice, since [`alo_ai::run_agent`] already asked again (A10.1).
+///
+/// A separate sentence because the old one was a false statement of fact: on
+/// 2026-08-30 a room was told the model could not be reached about a model that
+/// had answered in 2 seconds, and the person reading it had no way to know the
+/// difference. It still says nothing about the reply itself — the reply may hold
+/// a whole answer, and an answer is somebody's records (law #1).
+pub(crate) const UNUSABLE: &str = "I reached the model, but what came back wasn't something I could act on. Try me again in a moment.";
+
+/// Which of the two an agent says in the room. Never [`UNCONFIGURED`]: that is
+/// answered before a turn is taken at all.
+pub(crate) fn said_of(error: &DecisionError) -> &'static str {
+    match error {
+        DecisionError::Unusable => UNUSABLE,
+        DecisionError::Provider(_) => UNREACHABLE,
+    }
+}
 
 /// The agents a message is addressed to, which depends on the room it was said
 /// in.

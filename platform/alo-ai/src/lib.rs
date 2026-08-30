@@ -51,9 +51,9 @@ pub mod sites;
 pub mod sites_intents;
 pub mod tasks_intents;
 pub use agent::{
-    AgentAsk, AgentDecision, AgentProduct, ProposedAction, after_read_messages, agent_messages,
-    all_tools, is_agent_tool, is_read_tool, parse_decision, run_agent, run_agent_after_read,
-    system_prompt_for,
+    AgentAsk, AgentDecision, AgentProduct, DecisionError, ProposedAction, after_read_messages,
+    agent_messages, all_tools, is_agent_tool, is_read_tool, parse_decision, run_agent,
+    run_agent_after_read, system_prompt_for,
 };
 pub use agent_memory::{MEMORY_FACTS_MAX, extract_memories, memory_messages, parse_memories};
 pub use agent_plan::{
@@ -148,8 +148,16 @@ struct Choice {
 
 #[derive(Deserialize)]
 struct RespMessage {
+    /// `Option` because OpenAI-compatible providers send an explicit
+    /// `"content": null` whenever the assistant message carries something else
+    /// instead — a refusal, a tool call, a filtered completion. `#[serde(default)]`
+    /// covers a *missing* field but not a present null, so a `String` here made
+    /// the whole body fail to deserialize and reported the turn as
+    /// [`InferenceError::Empty`] with no way to tell it from a genuinely empty
+    /// answer. It is an empty completion either way; the difference is that this
+    /// one no longer looks like a broken response body.
     #[serde(default)]
-    content: String,
+    content: Option<String>,
 }
 
 const IMPROVE_SYSTEM: &str = "You are an editor for email drafts. Improve the \
@@ -183,7 +191,7 @@ pub fn parse_completion(body: &str) -> Result<String, InferenceError> {
         .choices
         .into_iter()
         .next()
-        .map(|c| c.message.content)
+        .and_then(|c| c.message.content)
         .unwrap_or_default();
     let text = text.trim().to_owned();
     if text.is_empty() {
@@ -918,6 +926,29 @@ mod tests {
             parse_completion(no_text),
             Err(InferenceError::Empty)
         ));
+    }
+
+    /// A provider that answered with an explicit `"content": null` — a refusal,
+    /// a filtered completion, a reply that carried tool calls instead — is an
+    /// **empty completion**, not an unreadable response body. Until A10.1 the
+    /// `String` field made serde reject the whole body, so this arrived as the
+    /// same error a truncated or non-JSON response does and nothing downstream
+    /// could tell them apart.
+    #[test]
+    fn a_null_content_is_an_empty_completion_rather_than_a_broken_body() {
+        let refused = r#"{"choices":[{"message":{"role":"assistant","content":null,"refusal":"I can't help with that."}}]}"#;
+        assert!(matches!(
+            parse_completion(refused),
+            Err(InferenceError::Empty)
+        ));
+        // …and a body that really is not a completion still fails the same way.
+        assert!(matches!(
+            parse_completion(r#"{"choices":[{"message":{"role":"assistant"}}]}"#),
+            Err(InferenceError::Empty)
+        ));
+        // The ordinary case is untouched.
+        let ok = r#"{"choices":[{"message":{"role":"assistant","content":"Hi."}}]}"#;
+        assert_eq!(parse_completion(ok).unwrap(), "Hi.");
     }
 
     #[tokio::test]

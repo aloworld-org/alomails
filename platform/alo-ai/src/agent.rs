@@ -337,12 +337,55 @@ pub(crate) fn extract_json(text: &str) -> Option<&str> {
     (end > start).then(|| &text[start..=end])
 }
 
+/// Why one decision call produced no decision — and, crucially, **whether the
+/// provider was reached** (A10.1).
+///
+/// [`InferenceError`] alone could not say. Its `Empty` variant covers a body
+/// that did not parse, a completion with no text, and — through
+/// [`parse_decision`] — a reply that was not the envelope, while `Transport`
+/// and `Backend` mean the provider never answered at all. Everything upstream
+/// collapsed the lot into one sentence: *"I couldn't reach the model."* On
+/// 2026-08-30 that sentence was said in a room about a model that had been
+/// reached, had answered, and had answered in prose — and it sent the diagnosis
+/// looking at the network for an hour.
+///
+/// So the split is drawn where it can actually be observed: the HTTP call
+/// either produced text or it did not.
+#[derive(Debug, thiserror::Error)]
+pub enum DecisionError {
+    /// The provider did not answer with usable text: switched off, not
+    /// configured, unreachable, or a non-success status. Nothing was said by a
+    /// model, so nothing can be salvaged by asking it again in this turn.
+    #[error(transparent)]
+    Provider(InferenceError),
+    /// The provider answered, and what came back was not a decision this turn
+    /// could act on — prose instead of the envelope, an envelope with a kind
+    /// nobody declared, or a completion with no text in it. The model was
+    /// reached; it is its reply that is unusable, and [`run_agent`] has already
+    /// asked it once more before this reaches a caller.
+    #[error("the model's reply was not a decision this turn could use")]
+    Unusable,
+}
+
+impl From<InferenceError> for DecisionError {
+    /// [`InferenceError::Empty`] is the one that means *reached, answered,
+    /// nothing usable* — `chat` returns it for a 200 whose body held no text.
+    /// Every other variant is the provider itself.
+    fn from(error: InferenceError) -> Self {
+        match error {
+            InferenceError::Empty => Self::Unusable,
+            other => Self::Provider(other),
+        }
+    }
+}
+
 /// Parse the model's reply into an [`AgentDecision`]. Tolerant of code fences and
 /// surrounding text; strict about the envelope shape.
 ///
 /// # Errors
-/// [`InferenceError::Empty`] if no valid envelope is present.
-pub fn parse_decision(text: &str) -> Result<AgentDecision, InferenceError> {
+/// [`DecisionError::Unusable`] if no valid envelope is present — the model was
+/// reached and answered, so the caller may ask it again.
+pub fn parse_decision(text: &str) -> Result<AgentDecision, DecisionError> {
     #[derive(Deserialize)]
     struct Handoff {
         #[serde(default)]
@@ -362,20 +405,20 @@ pub fn parse_decision(text: &str) -> Result<AgentDecision, InferenceError> {
         #[serde(default)]
         delegate: Option<Handoff>,
     }
-    let json = extract_json(text).ok_or(InferenceError::Empty)?;
-    let env: Envelope = serde_json::from_str(json).map_err(|_| InferenceError::Empty)?;
+    let json = extract_json(text).ok_or(DecisionError::Unusable)?;
+    let env: Envelope = serde_json::from_str(json).map_err(|_| DecisionError::Unusable)?;
     match env.kind.as_str() {
         "answer" => {
             let answer = env.answer.unwrap_or_default().trim().to_owned();
             if answer.is_empty() {
-                return Err(InferenceError::Empty);
+                return Err(DecisionError::Unusable);
             }
             Ok(AgentDecision::Answer(answer))
         }
         "action" => {
-            let action = env.action.ok_or(InferenceError::Empty)?;
+            let action = env.action.ok_or(DecisionError::Unusable)?;
             if action.tool.trim().is_empty() {
-                return Err(InferenceError::Empty);
+                return Err(DecisionError::Unusable);
             }
             Ok(AgentDecision::Action {
                 action,
@@ -383,17 +426,17 @@ pub fn parse_decision(text: &str) -> Result<AgentDecision, InferenceError> {
             })
         }
         "delegate" => {
-            let handoff = env.delegate.ok_or(InferenceError::Empty)?;
+            let handoff = env.delegate.ok_or(DecisionError::Unusable)?;
             // Models write the handle the way people do; the roster stores it
             // bare, so the `@` is stripped rather than made a resolution miss.
             let to = handoff.to.trim().trim_start_matches('@').trim().to_owned();
             let ask = handoff.ask.trim().to_owned();
             if to.is_empty() || ask.is_empty() {
-                return Err(InferenceError::Empty);
+                return Err(DecisionError::Unusable);
             }
             Ok(AgentDecision::Delegate { to, ask })
         }
-        _ => Err(InferenceError::Empty),
+        _ => Err(DecisionError::Unusable),
     }
 }
 
@@ -428,18 +471,64 @@ pub fn after_read_messages(ask: &AgentAsk<'_>, more_allowed: bool) -> Vec<ChatMe
     messages
 }
 
+/// Said to a model whose last reply was not the envelope, when asking it again
+/// (A10.1). It quotes nothing back — the reply may hold a whole answer, and an
+/// answer is somebody's records (law #1) — it only restates the contract and
+/// says the last attempt failed it.
+const REPLY_AGAIN: &str = "\n\nYour previous reply could not be used: it was not a single JSON object of one of \
+the shapes described above. Do not apologise and do not explain — send that JSON object now, and nothing else: no \
+prose before it, no code fence around it.";
+
+/// Ask once and read what came back.
+async fn decide_once(
+    config: &AiConfig,
+    messages: &[ChatMessage],
+) -> Result<AgentDecision, DecisionError> {
+    let text = chat(config, messages, 0.2).await?;
+    parse_decision(&text)
+}
+
+/// Ask for a decision, and **ask once more if the reply was not one** (A10.1).
+///
+/// A turn is a chain of these calls — the first ask, one after each reading
+/// tool, one per delegated step of a plan — and until this retry existed a
+/// single unusable reply anywhere in the chain ended the whole run. That is why
+/// orchestration looked broken while a single question looked fine: Ask alo
+/// spends a call on the plan and a call on every step, so it met the failure
+/// several times as often, and every one of them was fatal.
+///
+/// Exactly one retry, and only for [`DecisionError::Unusable`]: a provider that
+/// is switched off or unreachable will be just as switched off a second later,
+/// and a model that ignored the contract twice in a row is not going to be
+/// talked round by a third ask. The cost is paid only on failure.
+async fn decide(
+    config: &AiConfig,
+    mut messages: Vec<ChatMessage>,
+) -> Result<AgentDecision, DecisionError> {
+    match decide_once(config, &messages).await {
+        Err(DecisionError::Unusable) => {}
+        settled => return settled,
+    }
+    // The nudge goes on the user turn, where the sources and the request are:
+    // a system prompt the provider may have cached is left exactly as it was.
+    if let Some(user) = messages.last_mut() {
+        user.content.push_str(REPLY_AGAIN);
+    }
+    decide_once(config, &messages).await
+}
+
 /// Run one agent turn: build the prompt from the request + access-scoped sources,
 /// call the model, and parse its decision. Returns a decision to PROPOSE — it
 /// never executes anything.
 ///
 /// # Errors
-/// [`InferenceError`] for disabled/unconfigured/unreachable/backend/empty.
+/// [`DecisionError`] — the provider, or a reply that was not a decision even
+/// after being asked a second time.
 pub async fn run_agent(
     config: &AiConfig,
     ask: &AgentAsk<'_>,
-) -> Result<AgentDecision, InferenceError> {
-    let text = chat(config, &agent_messages(ask), 0.2).await?;
-    parse_decision(&text)
+) -> Result<AgentDecision, DecisionError> {
+    decide(config, agent_messages(ask)).await
 }
 
 /// Ask again once a reading tool has run and its result has joined `sources`
@@ -452,14 +541,14 @@ pub async fn run_agent(
 /// rather than asking for a lookup it will not get.
 ///
 /// # Errors
-/// [`InferenceError`] for disabled/unconfigured/unreachable/backend/empty.
+/// [`DecisionError`], exactly as [`run_agent`] — including its one retry, since
+/// a reply that arrives mid-turn is no more likely to be usable than the first.
 pub async fn run_agent_after_read(
     config: &AiConfig,
     ask: &AgentAsk<'_>,
     more_allowed: bool,
-) -> Result<AgentDecision, InferenceError> {
-    let text = chat(config, &after_read_messages(ask, more_allowed), 0.2).await?;
-    parse_decision(&text)
+) -> Result<AgentDecision, DecisionError> {
+    decide(config, after_read_messages(ask, more_allowed)).await
 }
 
 #[cfg(test)]
@@ -576,6 +665,39 @@ mod tests {
         let without = agent_messages(&ask(AgentProduct::Billing, "hi", &[], &[]));
         assert!(!without[1].content.contains("HAND OFF"));
         assert!(!without[1].content.contains("\"kind\":\"delegate\""));
+    }
+
+    /// A10.1: **reached-but-unusable and never-reached are different errors.**
+    /// Everything a room, a log line and a goal record says about a failed turn
+    /// hangs off this mapping, and `chat` returns `Empty` for exactly one thing:
+    /// a provider that answered with no usable text.
+    #[test]
+    fn a_provider_failure_and_an_unusable_reply_are_told_apart() {
+        assert!(matches!(
+            DecisionError::from(InferenceError::Empty),
+            DecisionError::Unusable
+        ));
+        for reached_nobody in [
+            InferenceError::Transport,
+            InferenceError::Backend(429),
+            InferenceError::Disabled,
+            InferenceError::NotConfigured,
+        ] {
+            assert!(matches!(
+                DecisionError::from(reached_nobody),
+                DecisionError::Provider(_)
+            ));
+        }
+        // A model that answered in prose is the evaluation's own case, and it
+        // is unusable rather than unreachable.
+        assert!(matches!(
+            parse_decision("Sure — I can look that up for you."),
+            Err(DecisionError::Unusable)
+        ));
+        // The retry restates the contract and quotes nothing back: the reply it
+        // failed on may hold somebody's records (law #1).
+        assert!(REPLY_AGAIN.contains("single JSON object"));
+        assert!(REPLY_AGAIN.contains("nothing else"));
     }
 
     #[test]

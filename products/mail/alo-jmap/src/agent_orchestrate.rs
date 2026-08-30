@@ -56,14 +56,14 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use alo_ai::{AgentPlan, AiConfig, InferenceError, PlanAgent, PlanAsk, PlanStep};
+use alo_ai::{AgentPlan, AiConfig, DecisionError, InferenceError, PlanAgent, PlanAsk, PlanStep};
 use alo_store::{
     AgentGoal, AgentGoalId, AgentProduct, ChatAgent, ChatAgentId, ChatChannelId, GoalEnd, GoalStep,
     UserId,
 };
 
 use crate::agent_turn::{OUT_OF_HANDOFFS, RunEnv, TurnResult, delegate_turn};
-use crate::chat_agent::{Spoken, UNCONFIGURED, UNREACHABLE};
+use crate::chat_agent::{Spoken, UNCONFIGURED, said_of};
 use crate::push;
 use crate::state::{Account, AppState};
 
@@ -381,14 +381,16 @@ async fn run_steps(
                 }
                 return Some(Spoken::Proposed);
             }
-            Err(InferenceError::Disabled | InferenceError::NotConfigured) => {
+            Err(DecisionError::Provider(
+                InferenceError::Disabled | InferenceError::NotConfigured,
+            )) => {
                 goal_ends(voice, goal, GoalEnd::Failed, "no AI provider is configured").await;
                 voice.say(&run.alo.id, UNCONFIGURED).await;
                 return Some(Spoken::Excused);
             }
             Err(error) => {
-                // The room is told nothing about why — `UNREACHABLE` says so
-                // deliberately — but an operator must be able to find out.
+                // The room is told nothing about why — the sentence it gets says
+                // so deliberately — but an operator must be able to find out.
                 // Before this line the reason was discarded, and a run that
                 // stopped here looked the same whether the provider was
                 // rate-limiting, timing out, or refusing the request.
@@ -397,16 +399,23 @@ async fn run_steps(
                     of = total,
                     delegate = %delegate.handle,
                     %error,
-                    "an orchestrated step could not reach the model"
+                    "an orchestrated step produced no decision"
                 );
+                // **The goal's note says which failure it was** (A10.1). A step
+                // whose model answered unusably is a different thing to fix from
+                // a provider that was down, and the goal record is where the
+                // difference survives the room scrolling away.
                 goal_ends(
                     voice,
                     goal,
                     GoalEnd::Failed,
-                    "the model could not be reached",
+                    match error {
+                        DecisionError::Unusable => "the model's reply could not be used",
+                        DecisionError::Provider(_) => "the model could not be reached",
+                    },
                 )
                 .await;
-                voice.say(&run.alo.id, UNREACHABLE).await;
+                voice.say(&run.alo.id, said_of(&error)).await;
                 return Some(Spoken::Excused);
             }
         }

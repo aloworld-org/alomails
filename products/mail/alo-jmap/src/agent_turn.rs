@@ -54,7 +54,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use alo_ai::{AgentAsk, AgentDecision, AiConfig, InferenceError, PlanAgent, WorkspaceSource};
+use alo_ai::{AgentAsk, AgentDecision, AiConfig, DecisionError, PlanAgent, WorkspaceSource};
 use alo_store::{AgentProduct, ChatAgent, ChatAgentId, ChatChannelId};
 
 use crate::agent::{Approval, ToolRun, execute_tool};
@@ -261,15 +261,16 @@ pub(crate) enum TurnResult {
 /// learning (ADR 0057 §6, A6.1) is allowed to learn from.
 ///
 /// # Errors
-/// [`InferenceError`] for disabled/unconfigured/unreachable/backend/empty —
-/// the tool runs themselves never fail a turn, because a refusal or a bad
-/// argument is something the model can be told about and answer around.
+/// [`DecisionError`] — the provider, or a reply that was not a decision even
+/// after being asked a second time. The tool runs themselves never fail a
+/// turn, because a refusal or a bad argument is something the model can be
+/// told about and answer around.
 pub(crate) async fn take_turn(
     state: &AppState,
     account: &Account,
     config: &AiConfig,
     turn: &Turn<'_>,
-) -> Result<(TurnResult, Vec<WorkspaceSource>), InferenceError> {
+) -> Result<(TurnResult, Vec<WorkspaceSource>), DecisionError> {
     let env = RunEnv::new(state, account, config);
     turn_at(&env, turn, 0).await
 }
@@ -309,9 +310,7 @@ impl<'a> RunEnv<'a> {
 
 /// One turn's boxed future: what it ended as, beside everything it read.
 type TurnFuture<'a> = Pin<
-    Box<
-        dyn Future<Output = Result<(TurnResult, Vec<WorkspaceSource>), InferenceError>> + Send + 'a,
-    >,
+    Box<dyn Future<Output = Result<(TurnResult, Vec<WorkspaceSource>), DecisionError>> + Send + 'a>,
 >;
 
 /// One turn at one depth of a run, drawing on the run's one budget.
@@ -511,10 +510,27 @@ async fn run_handoff(
         // A deeper delegate already proposed: the surface exists, bubble the
         // end of the run up the chain.
         Ok(TurnResult::DelegateProposed(card)) => Handoff::Over(TurnResult::DelegateProposed(card)),
-        Err(_) => Handoff::Fold(format!(
-            "the handoff to @{} did not run: the model could not be reached",
-            delegate.handle
-        )),
+        // **Two failures, two sentences** (A10.1). A delegate whose provider is
+        // unreachable and a delegate that answered in prose are not the same
+        // event, and the asking model can only say which part it could not do
+        // if it is told which happened. Logged as well, because before A10.1
+        // nothing recorded a handoff that died.
+        Err(error) => {
+            tracing::warn!(
+                to = %delegate.handle,
+                %error,
+                "a handoff did not run"
+            );
+            Handoff::Fold(format!(
+                "the handoff to @{} did not run: {}",
+                delegate.handle,
+                match error {
+                    DecisionError::Unusable =>
+                        "it was asked, and what it sent back was not an answer",
+                    DecisionError::Provider(_) => "the model could not be reached",
+                }
+            ))
+        }
     }
 }
 
@@ -540,8 +556,9 @@ fn wanted_a_change(handle: &str, say: &str) -> String {
 /// until the depth cap.
 ///
 /// # Errors
-/// [`InferenceError`] as [`take_turn`]: the caller decides whether that is a
-/// fold-in sentence (a handoff) or a room line (a plan step).
+/// [`DecisionError`] as [`take_turn`]: the caller decides whether that is a
+/// fold-in sentence (a handoff) or a room line (a plan step), and — since
+/// A10.1 — which of the two sentences it is.
 pub(crate) async fn delegate_turn(
     env: &RunEnv<'_>,
     delegate: &ChatAgent,
@@ -550,7 +567,7 @@ pub(crate) async fn delegate_turn(
     channel: Option<&ChatChannelId>,
     roster: &[ChatAgent],
     depth: usize,
-) -> Result<TurnResult, InferenceError> {
+) -> Result<TurnResult, DecisionError> {
     let (mut ground, retrieved) = crate::chat_agent::ground(
         env.account,
         delegate.product,

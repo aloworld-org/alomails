@@ -242,14 +242,25 @@ pub async fn agent(
             "answer": Value::Null, "action": Value::Null,
             "reason": Value::Null, "sources": sources_json
         }))),
-        Err(InferenceError::Disabled | InferenceError::NotConfigured) => Ok(Json(json!({
+        Err(alo_ai::DecisionError::Provider(
+            InferenceError::Disabled | InferenceError::NotConfigured,
+        )) => Ok(Json(json!({
             "answer": Value::Null, "action": Value::Null,
             "reason": "unconfigured", "sources": sources_json
         }))),
-        Err(_) => Ok(Json(json!({
-            "answer": Value::Null, "action": Value::Null,
-            "reason": "unreachable", "sources": sources_json
-        }))),
+        // A10.1 split the two failures apart in chat, where an agent says a
+        // sentence. Here `reason` is a wire contract the palette reads
+        // (`web/src/jmap/types.ts`: `"unconfigured" | "unreachable" | null`),
+        // and a third value is a change to both ends at once — so the palette
+        // keeps the word it has and the distinction is logged instead. The
+        // room is the surface the evaluation found the lie in.
+        Err(error) => {
+            tracing::warn!(%error, "the palette's turn produced no decision");
+            Ok(Json(json!({
+                "answer": Value::Null, "action": Value::Null,
+                "reason": "unreachable", "sources": sources_json
+            })))
+        }
     }
 }
 
