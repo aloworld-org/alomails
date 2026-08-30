@@ -597,6 +597,11 @@ describe("creating a site", () => {
         body: { templates: [] },
       },
       {
+        match: (url, method) => method === "GET" && url.includes("/sites/subdomain-check"),
+        status: 200,
+        body: { subdomain: "manual-studio", available: true },
+      },
+      {
         match: (url, method) => method === "POST" && url.endsWith("/sites"),
         status: 200,
         body: { ...BETA, id: "site-manual", name: "Manual Studio", subdomain: "manual-studio" },
@@ -636,6 +641,9 @@ describe("creating a site", () => {
     });
     fireEvent.change(screen.getByLabelText(strings.sitesFieldSubdomain), {
       target: { value: "manual-studio" },
+    });
+    await waitFor(() => expect(screen.getByText(strings.sitesAddressAvailable)).toBeTruthy(), {
+      timeout: 3000,
     });
     fireEvent.click(screen.getByRole("button", { name: strings.sitesCreateSite }));
     await waitFor(() =>
@@ -737,6 +745,10 @@ describe("creating a site", () => {
     await waitFor(() => expect(screen.getByText(strings.sitesAddressTaken)).toBeTruthy(), {
       timeout: 3000,
     });
+    expect(screen.getByRole("button", { name: strings.sitesCreateSite })).toHaveProperty(
+      "disabled",
+      true,
+    );
 
     replies = [
       {
@@ -749,6 +761,54 @@ describe("creating a site", () => {
     await waitFor(() => expect(screen.getByText("subdomain is reserved")).toBeTruthy(), {
       timeout: 3000,
     });
+    expect(screen.getByRole("button", { name: strings.sitesCreateSite })).toHaveProperty(
+      "disabled",
+      true,
+    );
+  });
+
+  test("Create only enables for the address whose availability was confirmed", async () => {
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.includes("subdomain=first-address"),
+        status: 200,
+        body: { subdomain: "first-address", available: true },
+      },
+      {
+        match: (url, method) => method === "GET" && url.includes("subdomain=second-address"),
+        status: 200,
+        body: { subdomain: "second-address", available: true },
+      },
+    ];
+    ui("/sites");
+    fireEvent.click(await screen.findByRole("button", { name: strings.sitesNewSite }));
+    chooseTemplatePath();
+    fireEvent.change(screen.getByLabelText(strings.sitesFieldName), {
+      target: { value: "Confirmed Studio" },
+    });
+    const address = screen.getByLabelText(strings.sitesFieldSubdomain);
+    fireEvent.change(address, { target: { value: "first-address" } });
+
+    await waitFor(() => expect(screen.getByText(strings.sitesAddressAvailable)).toBeTruthy(), {
+      timeout: 3000,
+    });
+    expect(screen.getByRole("button", { name: strings.sitesCreateSite })).toHaveProperty(
+      "disabled",
+      false,
+    );
+
+    fireEvent.change(address, { target: { value: "second-address" } });
+    expect(screen.getByRole("button", { name: strings.sitesCreateSite })).toHaveProperty(
+      "disabled",
+      true,
+    );
+    await waitFor(() => expect(screen.getByText(strings.sitesAddressAvailable)).toBeTruthy(), {
+      timeout: 3000,
+    });
+    expect(screen.getByRole("button", { name: strings.sitesCreateSite })).toHaveProperty(
+      "disabled",
+      false,
+    );
   });
 
   test("a pasted full address is normalized before check and create", async () => {
@@ -820,6 +880,11 @@ describe("creating a site", () => {
   test("the server's refusal is shown in the dialog, which stays open", async () => {
     replies = [
       {
+        match: (url, method) => method === "GET" && url.includes("/sites/subdomain-check"),
+        status: 200,
+        body: { subdomain: "acme", available: true },
+      },
+      {
         match: (url, method) => method === "POST" && url.endsWith("/sites"),
         status: 422,
         body: { detail: "subdomain is already taken" },
@@ -833,6 +898,9 @@ describe("creating a site", () => {
     });
     fireEvent.change(screen.getByLabelText(strings.sitesFieldSubdomain), {
       target: { value: "acme" },
+    });
+    await waitFor(() => expect(screen.getByText(strings.sitesAddressAvailable)).toBeTruthy(), {
+      timeout: 3000,
     });
     fireEvent.click(screen.getByRole("button", { name: strings.sitesCreateSite }));
     expect(await screen.findByText("subdomain is already taken")).toBeTruthy();

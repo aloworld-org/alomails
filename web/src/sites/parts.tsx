@@ -114,7 +114,7 @@ export function DialogFrame({
   }
   return (
     <div
-      className="fixed inset-0 z-modal flex items-center justify-center bg-scrim p-4 sm:p-6"
+      className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-scrim p-4 sm:p-6"
       role="presentation"
       onMouseDown={onClose}
     >

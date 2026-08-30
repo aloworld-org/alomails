@@ -3509,7 +3509,11 @@ export const en = {
     "Start from a description, or choose one of the ready-made templates.",
   sitesStartingPoint: "How to start",
   sitesGenerateChoice: "Generate from a description",
+  sitesGenerateChoiceDescription:
+    "Tell alo about your business and get an editable first draft.",
   sitesTemplateChoice: "Start with a template",
+  sitesTemplateChoiceDescription:
+    "Choose a ready-made layout and customize it yourself.",
   sitesBusinessDescription: "Describe your business",
   sitesBusinessDescriptionHint:
     "Include what you offer, who it is for, and the tone you want. You can edit everything before publishing.",

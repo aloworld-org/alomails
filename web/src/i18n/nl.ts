@@ -3591,7 +3591,11 @@ export const nl: Partial<Catalog> = {
     "De zoekgegevens konden niet worden opgeslagen. Probeer het opnieuw.",
   sitesStartingPoint: "Hoe wilt u beginnen",
   sitesGenerateChoice: "Genereren vanuit een beschrijving",
+  sitesGenerateChoiceDescription:
+    "Vertel alo over uw bedrijf en ontvang een bewerkbaar eerste concept.",
   sitesTemplateChoice: "Beginnen met een sjabloon",
+  sitesTemplateChoiceDescription:
+    "Kies een kant-en-klare indeling en pas die zelf aan.",
   sitesBusinessDescription: "Beschrijf uw bedrijf",
   sitesBusinessDescriptionHint:
     "Vertel wat u aanbiedt, voor wie het is en welke uitstraling u wilt. U kunt alles bewerken voordat u publiceert.",

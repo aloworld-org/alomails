@@ -342,6 +342,9 @@ describe("the template gallery", () => {
     fireEvent.change(screen.getByLabelText(strings.sitesFieldName), {
       target: { value: "North Advice" },
     });
+    await waitFor(() => expect(screen.getByText(strings.sitesAddressAvailable)).toBeTruthy(), {
+      timeout: 3000,
+    });
     fireEvent.click(screen.getByRole("button", { name: strings.sitesCreateSite }));
 
     await waitFor(() =>
@@ -366,6 +369,11 @@ describe("the template gallery", () => {
       catalogReply(),
       previewReply("consultancy", "<html><body><h1>Advice</h1></body></html>"),
       {
+        match: (url, method) => method === "GET" && url.includes("/sites/subdomain-check"),
+        status: 200,
+        body: { subdomain: "north-advice", available: true },
+      },
+      {
         match: (url, method) =>
           method === "POST" && url.endsWith("/sites/templates/consultancy"),
         status: 422,
@@ -376,6 +384,9 @@ describe("the template gallery", () => {
     fireEvent.click(await screen.findByRole("radio", { name: /Consultancy/i }));
     fireEvent.change(screen.getByLabelText(strings.sitesFieldName), {
       target: { value: "North Advice" },
+    });
+    await waitFor(() => expect(screen.getByText(strings.sitesAddressAvailable)).toBeTruthy(), {
+      timeout: 3000,
     });
     fireEvent.click(screen.getByRole("button", { name: strings.sitesCreateSite }));
 
@@ -389,6 +400,11 @@ describe("the template gallery", () => {
         match: (url, method) => method === "GET" && url.endsWith("/sites/templates"),
         status: 500,
         body: {},
+      },
+      {
+        match: (url, method) => method === "GET" && url.includes("/sites/subdomain-check"),
+        status: 200,
+        body: { subdomain: "blank-co", available: true },
       },
       {
         match: (url, method) => method === "POST" && url.endsWith("/sites"),
@@ -434,6 +450,9 @@ describe("the template gallery", () => {
     expect(await screen.findByText(strings.sitesTemplatesLoadFailed)).toBeTruthy();
     fireEvent.change(screen.getByLabelText(strings.sitesFieldName), {
       target: { value: "Blank Co" },
+    });
+    await waitFor(() => expect(screen.getByText(strings.sitesAddressAvailable)).toBeTruthy(), {
+      timeout: 3000,
     });
     fireEvent.click(screen.getByRole("button", { name: strings.sitesCreateSite }));
     await waitFor(() =>

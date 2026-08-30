@@ -5348,7 +5348,11 @@ export const de: Partial<Catalog> = {
     "Beginnen Sie mit einer Beschreibung, oder wählen Sie eine der fertigen Vorlagen.",
   sitesStartingPoint: "Wie Sie anfangen",
   sitesGenerateChoice: "Aus einer Beschreibung erzeugen",
+  sitesGenerateChoiceDescription:
+    "Beschreiben Sie alo Ihr Geschäft und erhalten Sie einen bearbeitbaren ersten Entwurf.",
   sitesTemplateChoice: "Mit einer Vorlage beginnen",
+  sitesTemplateChoiceDescription:
+    "Wählen Sie ein fertiges Layout und passen Sie es selbst an.",
   sitesBusinessDescription: "Beschreiben Sie Ihr Geschäft",
   sitesBusinessDescriptionHint:
     "Sagen Sie, was Sie anbieten, für wen es ist und welchen Ton Sie wollen. Vor dem Veröffentlichen können Sie alles bearbeiten.",

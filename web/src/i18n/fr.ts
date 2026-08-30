@@ -3635,7 +3635,11 @@ export const fr: Partial<Catalog> = {
     "Les détails de recherche n’ont pas pu être enregistrés. Réessayez.",
   sitesStartingPoint: "Comment commencer",
   sitesGenerateChoice: "Générer à partir d’une description",
+  sitesGenerateChoiceDescription:
+    "Présentez votre activité à alo et obtenez un premier brouillon modifiable.",
   sitesTemplateChoice: "Commencer avec un modèle",
+  sitesTemplateChoiceDescription:
+    "Choisissez une mise en page prête à l’emploi et personnalisez-la.",
   sitesBusinessDescription: "Décrivez votre activité",
   sitesBusinessDescriptionHint:
     "Indiquez votre offre, votre public et le ton souhaité. Vous pourrez tout modifier avant la publication.",

@@ -18,16 +18,16 @@
 // preview for no gain.
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
-import { LayoutTemplate } from "lucide-react";
+import { Check, LayoutTemplate, Plus } from "lucide-react";
 
 import { strings } from "../i18n";
 import { Spinner } from "../ds";
 import { sitesMessage, useSitesApi } from "./api";
 import type { SiteTemplate } from "./types";
-import styles from "./SitesModule.module.css";
 
 /** What the gallery is showing: the blank start, or one shipped template. */
-export type TemplateChoice = { kind: "blank" } | { kind: "template"; template: SiteTemplate };
+export type TemplateChoice =
+  { kind: "blank" } | { kind: "template"; template: SiteTemplate };
 
 /** The blank card sits first and is selected by default, so a person who
  *  ignores the gallery entirely still gets the old, working path. */
@@ -91,10 +91,12 @@ export function TemplateGallery({
     };
   }, [api]);
 
-  const chosen = (templates ?? []).find((template) => template.id === selected) ?? null;
+  const chosen =
+    (templates ?? []).find((template) => template.id === selected) ?? null;
   const chosenId = chosen?.id ?? null;
   // The slug the preview is showing; `null` means the template's home page.
-  const shownPage = chosen?.pages.some((p) => p.slug === page) === true ? page : null;
+  const shownPage =
+    chosen?.pages.some((p) => p.slug === page) === true ? page : null;
 
   useEffect(() => {
     if (chosenId === null) {
@@ -111,7 +113,9 @@ export function TemplateGallery({
       },
       (err: unknown) => {
         if (!cancelled) {
-          setPreviewError(sitesMessage(err, strings.sitesTemplatePreviewFailed));
+          setPreviewError(
+            sitesMessage(err, strings.sitesTemplatePreviewFailed),
+          );
         }
       },
     );
@@ -122,7 +126,10 @@ export function TemplateGallery({
 
   const choices: TemplateChoice[] = [
     { kind: "blank" },
-    ...(templates ?? []).map((template) => ({ kind: "template" as const, template })),
+    ...(templates ?? []).map((template) => ({
+      kind: "template" as const,
+      template,
+    })),
   ];
 
   const choose = useCallback(
@@ -144,29 +151,41 @@ export function TemplateGallery({
   }
 
   return (
-    <section className={styles.templateGallery}>
-      <h3 className={styles.templateGalleryTitle}>{strings.sitesChooseTemplate}</h3>
+    <section className="flex min-w-0 flex-col gap-3">
+      <h3 className="m-0 text-sm font-semibold text-primary">
+        {strings.sitesChooseTemplate}
+      </h3>
       {catalogError !== null && (
-        <p className={styles.templateGalleryNotice} role="status">
+        <p
+          className="m-0 flex items-center gap-2 text-sm text-secondary"
+          role="status"
+        >
           {catalogError}
         </p>
       )}
       {templates === null ? (
-        <p className={styles.templateGalleryNotice} role="status">
+        <p
+          className="m-0 flex items-center gap-2 text-sm text-secondary"
+          role="status"
+        >
           <Spinner size={14} /> {strings.sitesTemplatesLoading}
         </p>
       ) : (
         <div
-          className={styles.templateGrid}
+          className="grid grid-cols-2 gap-2 sm:grid-cols-3"
           role="radiogroup"
           aria-label={strings.sitesChooseTemplate}
         >
           {choices.map((choice, index) => {
             const key = optionKey(choice);
             const isSelected =
-              choice.kind === "blank" ? selected === null : choice.template.id === selected;
+              choice.kind === "blank"
+                ? selected === null
+                : choice.template.id === selected;
             const name =
-              choice.kind === "blank" ? strings.sitesBlankTemplate : choice.template.name;
+              choice.kind === "blank"
+                ? strings.sitesBlankTemplate
+                : choice.template.name;
             const summary =
               choice.kind === "blank"
                 ? strings.sitesBlankTemplateSummary
@@ -182,26 +201,67 @@ export function TemplateGallery({
                   if (node === null) buttons.current.delete(key);
                   else buttons.current.set(key, node);
                 }}
-                className={
-                  isSelected
-                    ? `${styles.templateCard} ${styles.templateCardActive}`
-                    : styles.templateCard
-                }
+                className={`group relative flex min-w-0 flex-col items-stretch gap-2 rounded-xl border p-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${isSelected ? "border-accent bg-accent-soft" : "border-default bg-surface hover:border-accent/50 hover:bg-raised"}`}
                 onClick={() => choose(choice)}
                 onKeyDown={(event) => onKeyDown(event, index)}
               >
-                <span className={styles.templateCardName}>
-                  {choice.kind === "blank" && <LayoutTemplate aria-hidden="true" />}
-                  {name}
+                <span
+                  className={`relative block aspect-[16/9] overflow-hidden rounded-lg border bg-surface ${choice.kind === "blank" ? "border-dashed border-strong" : "border-subtle"}`}
+                  aria-hidden="true"
+                >
+                  {choice.kind === "blank" ? (
+                    <span className="absolute inset-0 grid place-items-center">
+                      <span className="grid size-9 place-items-center rounded-full bg-accent-soft text-accent">
+                        <Plus className="size-4" />
+                      </span>
+                    </span>
+                  ) : (
+                    <>
+                      <span className="absolute inset-x-0 top-0 flex h-4 items-center gap-1 border-b border-subtle bg-raised px-2">
+                        <span className="size-1 rounded-full bg-accent" />
+                        <span className="size-1 rounded-full bg-strong" />
+                        <span className="size-1 rounded-full bg-strong" />
+                      </span>
+                      <span className="absolute inset-x-2 top-6 h-5 rounded bg-accent-soft" />
+                      <span className="absolute left-2 right-1/3 top-13 h-1.5 rounded-full bg-strong" />
+                      <span className="absolute left-2 right-1/2 top-16 h-1.5 rounded-full bg-subtle" />
+                      <span className="absolute bottom-2 left-2 right-2 grid h-5 grid-cols-3 gap-1">
+                        <span className="rounded bg-raised" />
+                        <span className="rounded bg-raised" />
+                        <span className="rounded bg-raised" />
+                      </span>
+                    </>
+                  )}
+                  {isSelected && (
+                    <span className="absolute right-1.5 top-1.5 grid size-5 place-items-center rounded-full bg-accent text-on-accent">
+                      <Check className="size-3" />
+                    </span>
+                  )}
                 </span>
-                <span className={styles.templateCardSummary}>{summary}</span>
+                <span className="flex min-w-0 items-center gap-2 text-sm font-semibold text-primary">
+                  {choice.kind === "blank" && (
+                    <LayoutTemplate
+                      className="size-4 shrink-0 text-accent"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <span className="truncate">{name}</span>
+                </span>
+                <span className="line-clamp-2 text-xs leading-relaxed text-secondary">
+                  {summary}
+                </span>
                 {choice.kind === "template" && (
-                  <span className={styles.templateCardPages}>
-                    <span className={styles.templateCardCount}>
-                      {strings.sitesTemplatePageCount(choice.template.pages.length)}
+                  <span className="flex flex-wrap items-center gap-1">
+                    <span className="text-xs text-tertiary">
+                      {strings.sitesTemplatePageCount(
+                        choice.template.pages.length,
+                      )}
                     </span>
                     {choice.template.pages.map((templatePage) => (
-                      <span key={templatePage.path} className={styles.templateCardPage}>
+                      <span
+                        key={templatePage.path}
+                        className="rounded-full bg-raised px-2 py-0.5 text-xs text-tertiary"
+                      >
                         {templatePage.title}
                       </span>
                     ))}
@@ -214,10 +274,16 @@ export function TemplateGallery({
       )}
 
       {chosen === null ? (
-        <p className={styles.templatePreviewNote}>{strings.sitesBlankPreviewNote}</p>
+        <p className="m-0 text-xs leading-relaxed text-tertiary">
+          {strings.sitesBlankPreviewNote}
+        </p>
       ) : (
-        <div className={styles.templatePreview}>
-          <div className={styles.templatePreviewTabs} aria-label={strings.sitesTemplatePreviewPages} role="group">
+        <div className="flex flex-col gap-2">
+          <div
+            className="flex flex-wrap gap-1"
+            aria-label={strings.sitesTemplatePreviewPages}
+            role="group"
+          >
             {chosen.pages.map((templatePage) => {
               const active = (shownPage ?? "") === templatePage.slug;
               return (
@@ -225,12 +291,10 @@ export function TemplateGallery({
                   key={templatePage.path}
                   type="button"
                   aria-pressed={active}
-                  className={
-                    active
-                      ? `${styles.templatePreviewTab} ${styles.templatePreviewTabActive}`
-                      : styles.templatePreviewTab
+                  className={`rounded-lg border px-3 py-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${active ? "border-accent bg-accent-soft text-primary" : "border-default bg-surface text-secondary hover:bg-raised"}`}
+                  onClick={() =>
+                    setPage(templatePage.slug === "" ? null : templatePage.slug)
                   }
-                  onClick={() => setPage(templatePage.slug === "" ? null : templatePage.slug)}
                 >
                   {templatePage.title}
                 </button>
@@ -238,22 +302,28 @@ export function TemplateGallery({
             })}
           </div>
           {previewError !== null && (
-            <p className={styles.templateGalleryNotice} role="status">
+            <p
+              className="m-0 flex items-center gap-2 text-sm text-secondary"
+              role="status"
+            >
               {previewError}
             </p>
           )}
           {previewHtml === null && previewError === null ? (
-            <p className={styles.templateGalleryNotice} role="status">
+            <p
+              className="m-0 flex items-center gap-2 text-sm text-secondary"
+              role="status"
+            >
               <Spinner size={14} /> {strings.sitesTemplatePreviewLoading}
             </p>
           ) : (
             previewHtml !== null && (
-              <div className={styles.templatePreviewViewport}>
+              <div className="rounded-xl border border-subtle bg-raised p-2">
                 {/* Sandboxed and inert: the document may run its own menu
                     script, but it never reaches this origin and no click in it
                     can navigate anything. */}
                 <iframe
-                  className={styles.templatePreviewFrame}
+                  className="block h-[min(46vh,26rem)] w-full rounded-lg border-0 bg-white pointer-events-none"
                   title={strings.sitesTemplatePreviewTitle(chosen.name)}
                   sandbox="allow-scripts"
                   srcDoc={previewHtml}
@@ -261,7 +331,9 @@ export function TemplateGallery({
               </div>
             )
           )}
-          <p className={styles.templatePreviewNote}>{strings.sitesTemplatePreviewNote}</p>
+          <p className="m-0 text-xs leading-relaxed text-tertiary">
+            {strings.sitesTemplatePreviewNote}
+          </p>
         </div>
       )}
     </section>
