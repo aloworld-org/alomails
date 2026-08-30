@@ -41,11 +41,13 @@ describe("DriveCreateActions", () => {
   });
 
   test("keeps every alternative creation path in one labelled chooser", () => {
-    const actions = setup();
+    setup();
 
     fireEvent.click(screen.getByRole("button", { name: labels.more }));
 
-    expect(screen.getByRole("menu")).toBeTruthy();
+    const menu = screen.getByRole("menu");
+    expect(menu).toBeTruthy();
+    expect(menu.parentElement).toBe(document.body);
     for (const label of [
       labels.sheet,
       labels.word,
@@ -55,9 +57,27 @@ describe("DriveCreateActions", () => {
     ]) {
       expect(screen.getByRole("menuitem", { name: label })).toBeTruthy();
     }
+  });
 
-    fireEvent.click(screen.getByRole("menuitem", { name: labels.upload }));
-    expect(actions.onUpload).toHaveBeenCalledOnce();
+  test.each([
+    [labels.sheet, "onCreateSheet"],
+    [labels.word, "onCreateWord"],
+    [labels.slides, "onCreateSlides"],
+    [labels.folder, "onCreateFolder"],
+    [labels.upload, "onUpload"],
+  ] as const)("routes %s to only its own action", (label, actionName) => {
+    const actions = setup();
+
+    fireEvent.click(screen.getByRole("button", { name: labels.more }));
+    fireEvent.click(screen.getByRole("menuitem", { name: label }));
+
+    for (const [name, action] of Object.entries(actions)) {
+      if (name === actionName) {
+        expect(action).toHaveBeenCalledOnce();
+      } else {
+        expect(action).not.toHaveBeenCalled();
+      }
+    }
     expect(screen.queryByRole("menu")).toBeNull();
   });
 

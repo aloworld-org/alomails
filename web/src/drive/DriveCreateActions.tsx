@@ -7,9 +7,15 @@ import {
   Presentation,
   Upload,
 } from "lucide-react";
-import { Fragment, useCallback, useRef, useState } from "react";
-
-import { useDismiss } from "../ds/useDismiss";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
 
 export interface DriveCreateActionsLabels {
   createDocument: string;
@@ -45,9 +51,77 @@ export function DriveCreateActions({
   align = "end",
 }: DriveCreateActionsProps) {
   const [open, setOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{
+    left: number;
+    top: number;
+  } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const dismiss = useCallback(() => setOpen(false), []);
-  useDismiss(open, rootRef, dismiss);
+
+  const positionMenu = useCallback(() => {
+    const trigger = rootRef.current;
+    const menu = menuRef.current;
+    if (trigger === null || menu === null) return;
+
+    const viewportPadding = 12;
+    const gap = 8;
+    const triggerRect = trigger.getBoundingClientRect();
+    const menuRect = menu.getBoundingClientRect();
+    const preferredLeft =
+      align === "start" ? triggerRect.left : triggerRect.right - menuRect.width;
+    const left = Math.min(
+      Math.max(preferredLeft, viewportPadding),
+      Math.max(
+        viewportPadding,
+        window.innerWidth - menuRect.width - viewportPadding,
+      ),
+    );
+    const fitsBelow =
+      triggerRect.bottom + gap + menuRect.height <=
+      window.innerHeight - viewportPadding;
+    const top = fitsBelow
+      ? triggerRect.bottom + gap
+      : Math.max(viewportPadding, triggerRect.top - menuRect.height - gap);
+
+    setMenuPosition({ left, top });
+  }, [align]);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setMenuPosition(null);
+      return;
+    }
+    positionMenu();
+  }, [open, positionMenu]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (
+        !rootRef.current?.contains(target) &&
+        !menuRef.current?.contains(target)
+      ) {
+        dismiss();
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") dismiss();
+    };
+
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("resize", positionMenu);
+    window.addEventListener("scroll", positionMenu, true);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("resize", positionMenu);
+      window.removeEventListener("scroll", positionMenu, true);
+    };
+  }, [dismiss, open, positionMenu]);
 
   const run = (action: () => void) => {
     setOpen(false);
@@ -121,34 +195,45 @@ export function DriveCreateActions({
           className={open ? "rotate-180" : ""}
         />
       </button>
-      {open && (
-        <div
-          role="menu"
-          aria-label={labels.more}
-          className={`absolute top-[calc(100%+0.5rem)] z-50 min-w-64 rounded-2xl border border-[#E8DED2] bg-white p-2 shadow-[0_12px_30px_rgba(16,42,67,0.12)] ${align === "start" ? "left-0" : "right-0"}`}
-        >
-          {options.map((option) => {
-            const Icon = option.icon;
-            return (
-              <Fragment key={option.key}>
-                {option.separated && <div className="my-1 h-px bg-[#E8DED2]" />}
-                <button
-                  type="button"
-                  role="menuitem"
-                  disabled={option.disabled}
-                  onClick={() => run(option.action)}
-                  className="flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-medium text-[#102A43] transition-colors duration-150 hover:bg-[#E76F51]/10 hover:text-[#D96247] disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#E76F51]/15"
-                >
-                  <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[#E76F51]/10 text-[#E76F51]">
-                    <Icon size={16} aria-hidden="true" />
-                  </span>
-                  {option.label}
-                </button>
-              </Fragment>
-            );
-          })}
-        </div>
-      )}
+      {open &&
+        createPortal(
+          <div
+            ref={menuRef}
+            role="menu"
+            aria-label={labels.more}
+            onPointerDown={(event) => event.stopPropagation()}
+            style={
+              menuPosition === null
+                ? { left: 0, top: 0, visibility: "hidden" }
+                : menuPosition
+            }
+            className="fixed z-[1000] w-64 isolate overflow-y-auto rounded-2xl border border-[#E8DED2] bg-[#FFFEFC] p-2 shadow-[0_12px_30px_rgba(16,42,67,0.12)] [max-height:calc(100vh-1.5rem)]"
+          >
+            {options.map((option) => {
+              const Icon = option.icon;
+              return (
+                <Fragment key={option.key}>
+                  {option.separated && (
+                    <div className="my-1 h-px bg-[#E8DED2]" />
+                  )}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    disabled={option.disabled}
+                    onClick={() => run(option.action)}
+                    className="flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-medium text-[#102A43] transition-colors duration-150 hover:bg-[#E76F51]/10 hover:text-[#D96247] disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#E76F51]/15"
+                  >
+                    <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[#E76F51]/10 text-[#E76F51]">
+                      <Icon size={16} aria-hidden="true" />
+                    </span>
+                    {option.label}
+                  </button>
+                </Fragment>
+              );
+            })}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
