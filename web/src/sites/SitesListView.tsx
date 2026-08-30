@@ -58,28 +58,52 @@ export function SitesListView() {
   }, [load]);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-app px-5 py-6 sm:px-8 lg:px-10">
-      <header className="mx-auto flex w-full max-w-screen-xl items-center justify-between gap-6">
-        <div>
-          <h1 className="m-0 text-3xl font-semibold tracking-tight text-primary">
-            {strings.moduleSites}
-          </h1>
-          <p className="mt-1 text-sm text-secondary">{strings.sitesNoSitesBody}</p>
+    <div className="flex min-h-0 flex-1 flex-col bg-app">
+      <header className="shrink-0 border-b border-subtle bg-surface px-8 py-6 max-sm:px-4 max-sm:py-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3.5">
+            <span
+              className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-accent-soft text-accent shadow-sm ring-1 ring-inset ring-accent/10"
+              aria-hidden="true"
+            >
+              <Globe2 className="size-5" />
+            </span>
+            <div className="min-w-0">
+              <h1
+                id="sites-heading"
+                className="m-0 text-2xl font-bold tracking-tight text-primary"
+              >
+                {strings.moduleSites}
+              </h1>
+              <p className="m-0 mt-1 text-sm text-secondary">
+                {strings.sitesNoSitesBody}
+              </p>
+            </div>
+          </div>
+          {(sites.length > 0 || error !== null) && (
+            <Button
+              className="max-sm:w-full"
+              icon={<Plus />}
+              onClick={() => setCreating(true)}
+            >
+              {strings.sitesNewSite}
+            </Button>
+          )}
         </div>
-        <Button icon={<Plus />} onClick={() => setCreating(true)}>
-          {strings.sitesNewSite}
-        </Button>
       </header>
 
-      <div className="mx-auto mt-6 w-full max-w-screen-xl">
+      <section
+        className="flex min-h-0 w-full flex-1 flex-col overflow-y-auto px-8 py-6 max-sm:px-4 max-sm:py-4"
+        aria-labelledby="sites-heading"
+      >
         {error !== null && <ErrorBanner message={error} />}
 
         {loading ? (
-          <div className="flex min-h-72 items-center justify-center rounded-2xl border border-default bg-surface">
+          <div className="flex min-h-80 items-center justify-center rounded-2xl border border-default bg-surface shadow-sm">
             <Spinner />
           </div>
         ) : sites.length === 0 ? (
-          <div className="rounded-2xl border border-default bg-surface shadow-sm">
+          <section className="flex min-h-80 rounded-2xl border border-default bg-surface shadow-sm">
             <EmptyState
               Icon={Globe2}
               title={strings.sitesNoSitesTitle}
@@ -87,7 +111,7 @@ export function SitesListView() {
               cta={strings.sitesNewSite}
               onCta={() => setCreating(true)}
             />
-          </div>
+          </section>
         ) : (
           <section className="overflow-hidden rounded-2xl border border-default bg-surface shadow-sm">
             <div className="border-b border-subtle px-5 py-4 sm:px-6">
@@ -120,7 +144,7 @@ export function SitesListView() {
             </div>
           </section>
         )}
-      </div>
+      </section>
 
       {creating && (
         <NewSiteDialog

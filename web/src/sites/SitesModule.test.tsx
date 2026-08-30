@@ -204,6 +204,8 @@ describe("the site list", () => {
   test("an empty tenant sees the empty state, not a bare table", async () => {
     ui("/sites");
     expect(await screen.findByText(strings.sitesNoSitesTitle)).toBeTruthy();
+    expect(screen.getByRole("region", { name: strings.moduleSites })).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: strings.sitesNewSite })).toHaveLength(1);
   });
 
   test("a failure to load is shown, never swallowed", async () => {
