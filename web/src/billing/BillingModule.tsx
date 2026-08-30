@@ -21,6 +21,10 @@ import {
   WalletCards,
 } from "lucide-react";
 
+import {
+  ModuleNavigation,
+  moduleNavigationItemClassName,
+} from "../ds";
 import { strings } from "../i18n";
 import { CustomersView } from "./CustomersView";
 import { InvoiceEditor } from "./InvoiceEditor";
@@ -30,8 +34,8 @@ import { PriceConnectionsView } from "./PriceConnectionsView";
 import { QuoteEditor } from "./QuoteEditor";
 import { QuotesView } from "./QuotesView";
 import { SchedulesView } from "./SchedulesView";
-import { VatReportView } from "./VatReportView";
 import { SettingsView } from "./SettingsView";
+import { VatReportView } from "./VatReportView";
 
 /** The tabs: the documents that are the point of the module, then the offers
  *  that become them, then who they are made out to, then what they are made
@@ -88,27 +92,20 @@ export function BillingModule() {
             </p>
           </div>
         </div>
-        <nav
-          className="mt-5 flex min-w-0 gap-2 overflow-x-auto"
-          aria-label={strings.moduleBilling}
-        >
+        <ModuleNavigation className="mt-5" label={strings.moduleBilling}>
           {TABS.map((t) => (
             <NavLink
               key={t.path}
               to={billingPath(t.path)}
               className={({ isActive }) =>
-                `inline-flex min-h-11 shrink-0 items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm !no-underline transition-colors hover:!no-underline focus-visible:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${
-                  isActive
-                    ? "bg-[var(--accent-soft)] font-semibold !text-accent shadow-sm ring-1 ring-inset ring-accent/10"
-                    : "bg-transparent font-medium !text-secondary hover:bg-raised hover:!text-primary"
-                }`
+                moduleNavigationItemClassName(isActive)
               }
             >
               <t.Icon className="size-4" aria-hidden="true" />
               {t.label()}
             </NavLink>
           ))}
-        </nav>
+        </ModuleNavigation>
       </header>
 
       <Routes>
