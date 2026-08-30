@@ -181,7 +181,13 @@ export function QuotesView() {
         )}
       </Toolbar>
 
-      {error !== null && <ErrorBanner message={error} />}
+      {error !== null && (
+        <ErrorBanner
+          message={error}
+          presentation="popup"
+          onDismiss={() => setError(null)}
+        />
+      )}
 
       {loading ? (
         <BillingLoading />

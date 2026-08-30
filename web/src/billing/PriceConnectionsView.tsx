@@ -6,6 +6,7 @@ import { strings } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
 import { BillingPagination } from "./BillingPagination";
 import { ConnectSupplierDialog } from "./ConnectSupplierDialog";
+import { ErrorBanner } from "./ErrorBanner";
 import { PriceConnectionCard } from "./PriceConnectionCard";
 import {
   type PriceConnection,
@@ -94,7 +95,7 @@ export function PriceConnectionsView() {
       </section>
 
       {notice !== null && <div className="flex items-center gap-3 rounded-xl border border-success/20 bg-success-tint px-4 py-3 text-sm text-primary" role="status"><Check className="size-4 shrink-0 text-success" />{notice}<button type="button" className="ml-auto rounded-lg p-2 text-tertiary hover:bg-surface hover:text-primary" aria-label={strings.billingConnectionsDismiss} onClick={() => setNotice(null)}><X className="size-4" /></button></div>}
-      {error !== null && <div className="rounded-xl border border-danger/20 bg-danger-tint px-4 py-3 text-sm text-danger" role="alert">{error}</div>}
+      {error !== null && <ErrorBanner message={error} presentation="popup" onDismiss={() => setError(null)} />}
 
       <div className="grid gap-4">
         {paged.records.map((connection) => <PriceConnectionCard key={connection.id} connection={connection} onSync={() => { void api.syncPriceConnection(connection.id).then((updated) => { replace(updated); setNotice(strings.billingConnectionsUpToDate(connection.company)); setError(null); }).catch((caught: unknown) => setError(billingMessage(caught, strings.billingActionFailed))); }} onToggle={() => { void api.setPriceConnectionHealth(connection.id, connection.health === "paused" ? "connected" : "paused").then((updated) => { replace(updated); setError(null); }).catch((caught: unknown) => setError(billingMessage(caught, strings.billingActionFailed))); }} onRemove={() => { void (async () => {

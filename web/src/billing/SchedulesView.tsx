@@ -147,7 +147,13 @@ export function SchedulesView() {
       </Toolbar>
       <p className={styles.hint}>{strings.billingScheduleRunHint}</p>
 
-      {error !== null && <ErrorBanner message={error} />}
+      {error !== null && (
+        <ErrorBanner
+          message={error}
+          presentation="popup"
+          onDismiss={() => setError(null)}
+        />
+      )}
       {notice !== null && (
         <p className={styles.notice} role="status">
           {notice}

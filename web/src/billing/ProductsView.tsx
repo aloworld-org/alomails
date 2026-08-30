@@ -94,7 +94,13 @@ export function ProductsView() {
         beforeCreate={<Button variant="ghost" icon={<Upload aria-hidden="true" />} onClick={() => setImporting(true)}>{strings.billingImportPrices}</Button>}
       />
 
-      {error !== null && <ErrorBanner message={error} />}
+      {error !== null && (
+        <ErrorBanner
+          message={error}
+          presentation="popup"
+          onDismiss={() => setError(null)}
+        />
+      )}
 
       {loading ? (
         <BillingLoading />

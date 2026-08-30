@@ -198,7 +198,13 @@ export function InvoicesView() {
         )}
       </Toolbar>
 
-      {error !== null && <ErrorBanner message={error} />}
+      {error !== null && (
+        <ErrorBanner
+          message={error}
+          presentation="popup"
+          onDismiss={() => setError(null)}
+        />
+      )}
       {reminded !== null && (
         <p className={styles.notice} role="status">
           {reminded}
