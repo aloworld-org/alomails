@@ -922,7 +922,7 @@ export function PageEditorView() {
   }
 
   return (
-    <div className="min-h-full bg-bg-app px-4 py-4 text-text-primary sm:px-6 lg:px-8">
+    <div className="flex min-h-full flex-col bg-bg-app px-4 py-4 text-text-primary sm:px-6 lg:px-8">
       <header className="mx-auto flex w-full max-w-[1600px] flex-wrap items-center gap-3 pb-4">
         <Link
           to={`/sites/${siteId}`}
@@ -1184,14 +1184,22 @@ export function PageEditorView() {
             }
             className={
               previewOpen
-                ? "mx-auto mt-4 grid w-full max-w-[1600px] min-w-0 gap-4 xl:grid-cols-[minmax(320px,var(--sections-panel-width))_12px_minmax(0,1fr)] xl:gap-0"
-                : "mx-auto mt-4 grid w-full max-w-[1600px] min-w-0"
+                ? "mx-auto mt-4 grid w-full max-w-[1600px] min-w-0 flex-1 gap-4 xl:grid-cols-[minmax(320px,var(--sections-panel-width))_12px_minmax(0,1fr)] xl:gap-0"
+                : "mx-auto mt-4 grid w-full max-w-[1600px] min-w-0 flex-1"
             }
           >
-            <div className="min-w-0 self-start overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm">
+            <section
+              className={`min-w-0 overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm ${
+                empty && !loading ? "flex h-full flex-col" : "self-start"
+              }`}
+              aria-labelledby="sites-sections-title"
+            >
               <div className="flex min-h-16 items-center justify-between gap-3 border-b border-subtle px-4 py-3 sm:px-5">
                 <div>
-                  <h2 className="font-semibold text-text-primary">
+                  <h2
+                    id="sites-sections-title"
+                    className="font-semibold text-text-primary"
+                  >
                     {strings.sitesSections}
                   </h2>
                   <p className="mt-1 text-sm text-text-secondary">
@@ -1218,7 +1226,7 @@ export function PageEditorView() {
               )}
 
               {empty && !loading && (
-                <div className="flex flex-col items-center px-6 py-12 text-center">
+                <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 text-center">
                   <span
                     className="inline-flex size-12 items-center justify-center rounded-2xl bg-accent-soft text-accent"
                     aria-hidden="true"
@@ -1418,7 +1426,7 @@ export function PageEditorView() {
                   {strings.sitesPaletteDropHere}
                 </div>
               )}
-            </div>
+            </section>
 
             {previewOpen && (
               <div

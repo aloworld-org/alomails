@@ -260,6 +260,21 @@ describe("manual page translation", () => {
 });
 
 describe("the section stack", () => {
+  test("an empty outline fills the remaining editor height", async () => {
+    replies = [pageReply([])];
+    ui();
+
+    const panel = await screen.findByRole("region", {
+      name: strings.sitesSections,
+    });
+    expect(panel.className).toContain("h-full");
+    expect(panel.className).toContain("flex-col");
+    expect(panel.parentElement?.className).toContain("flex-1");
+    expect(
+      screen.getByText(strings.sitesNoSectionsTitle).parentElement?.className,
+    ).toContain("flex-1");
+  });
+
   test("renders the stored sections in order, each with its type and words", async () => {
     replies = [pageReply([HERO, CONTACT, FAQ])];
     ui();
