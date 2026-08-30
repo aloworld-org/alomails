@@ -286,6 +286,13 @@ async function stackLoaded() {
   );
 }
 
+async function openPreview() {
+  fireEvent.click(
+    await screen.findByRole("button", { name: strings.sitesShowPreview }),
+  );
+  await waitFor(() => expect(document.querySelector("iframe")).not.toBeNull());
+}
+
 function edits(): Call[] {
   return calls.filter((call) => call.method === "PUT" && call.url.endsWith("/ai-edits"));
 }
@@ -312,6 +319,7 @@ describe("the page editor applies what the preview reports", () => {
   test("a finished text edit becomes one guarded rewrite, undoable and redoable", async () => {
     ui();
     await stackLoaded();
+    await openPreview();
 
     postFromPreview("0/heading", "Bread worth the walk");
     await waitFor(() => expect(edits()).toHaveLength(1));
@@ -365,6 +373,7 @@ describe("the page editor applies what the preview reports", () => {
   test("a message from another window changes nothing", async () => {
     ui();
     await stackLoaded();
+    await openPreview();
 
     postFromPreview("0/heading", "Injected", false);
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -379,6 +388,7 @@ describe("the page editor applies what the preview reports", () => {
   test("text that did not change is not a write", async () => {
     ui();
     await stackLoaded();
+    await openPreview();
 
     postFromPreview("0/heading", "Fresh bread daily");
     await new Promise((resolve) => setTimeout(resolve, 0));

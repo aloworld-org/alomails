@@ -24,6 +24,11 @@ import {
   useRef,
   useState,
 } from "react";
+import type {
+  CSSProperties,
+  KeyboardEvent as ReactKeyboardEvent,
+  PointerEvent as ReactPointerEvent,
+} from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -31,6 +36,7 @@ import {
   ChevronDown,
   ChevronUp,
   GripVertical,
+  Eye,
   Layers,
   Lock,
   Monitor,
@@ -162,7 +168,11 @@ export function PageEditorView() {
   const [textNotice, setTextNotice] = useState("");
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [previewMobile, setPreviewMobile] = useState(false);
+  const [sectionsPanelWidth, setSectionsPanelWidth] = useState(34);
+  const [resizingWorkspace, setResizingWorkspace] = useState(false);
+  const workspaceRef = useRef<HTMLDivElement | null>(null);
   const [proposedPreviewHtml, setProposedPreviewHtml] = useState<string | null>(
     null,
   );
@@ -269,7 +279,7 @@ export function PageEditorView() {
   // so keying on it refreshes the pane after every successful save — and
   // not after a refused one.
   useEffect(() => {
-    if (page === null) return undefined;
+    if (page === null || !previewOpen) return undefined;
     let stale = false;
     api.pagePreview(siteId, pageId, locale ?? undefined).then(
       (html) => {
@@ -286,7 +296,7 @@ export function PageEditorView() {
     return () => {
       stale = true;
     };
-  }, [api, siteId, pageId, locale, page, sections, previewEpoch]);
+  }, [api, siteId, pageId, locale, page, sections, previewEpoch, previewOpen]);
 
   async function saveLocalized(
     nextSections: Section[],
@@ -863,6 +873,49 @@ export function PageEditorView() {
   const empty = sections.length === 0;
   const requestedLanguage = locale === null ? defaultLocale : locale;
 
+  function setWorkspaceWidthFromPointer(clientX: number) {
+    const bounds = workspaceRef.current?.getBoundingClientRect();
+    if (bounds === undefined || bounds.width === 0) return;
+    const next = ((clientX - bounds.left) / bounds.width) * 100;
+    setSectionsPanelWidth(Math.min(65, Math.max(25, next)));
+  }
+
+  function startWorkspaceResize(event: ReactPointerEvent<HTMLButtonElement>) {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setResizingWorkspace(true);
+    setWorkspaceWidthFromPointer(event.clientX);
+  }
+
+  function moveWorkspaceResize(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (!resizingWorkspace) return;
+    setWorkspaceWidthFromPointer(event.clientX);
+  }
+
+  function finishWorkspaceResize(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    setResizingWorkspace(false);
+  }
+
+  function resizeWorkspaceWithKeyboard(
+    event: ReactKeyboardEvent<HTMLButtonElement>,
+  ) {
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      setSectionsPanelWidth((width) => Math.max(25, width - 4));
+    } else if (event.key === "ArrowRight") {
+      event.preventDefault();
+      setSectionsPanelWidth((width) => Math.min(65, width + 4));
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      setSectionsPanelWidth(25);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      setSectionsPanelWidth(65);
+    }
+  }
+
   async function copyFallback() {
     if (page === null || locale === null) return;
     await saveLocalized(sections);
@@ -955,6 +1008,25 @@ export function PageEditorView() {
                 onClick={() => setThemeOpen(true)}
               >
                 {strings.sitesTheme}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Eye size={14} />}
+                className={
+                  previewOpen
+                    ? "!border-accent/20 !bg-accent-soft !text-accent"
+                    : undefined
+                }
+                aria-label={
+                  previewOpen
+                    ? strings.sitesHidePreview
+                    : strings.sitesShowPreview
+                }
+                aria-pressed={previewOpen}
+                onClick={() => setPreviewOpen((open) => !open)}
+              >
+                {strings.sitesPreview}
               </Button>
               <nav
                 className="ml-auto flex items-center gap-2"
@@ -1088,7 +1160,19 @@ export function PageEditorView() {
             <ErrorBanner message={translationError} />
           )}
 
-          <div className="mx-auto mt-4 grid w-full max-w-[1600px] min-w-0 gap-4 xl:grid-cols-[minmax(320px,0.68fr)_minmax(560px,1.32fr)]">
+          <div
+            ref={workspaceRef}
+            style={
+              {
+                "--sections-panel-width": `${sectionsPanelWidth}%`,
+              } as CSSProperties
+            }
+            className={
+              previewOpen
+                ? "mx-auto mt-4 grid w-full max-w-[1600px] min-w-0 gap-4 xl:grid-cols-[minmax(320px,var(--sections-panel-width))_12px_minmax(0,1fr)] xl:gap-0"
+                : "mx-auto mt-4 grid w-full max-w-[1600px] min-w-0"
+            }
+          >
             <div className="min-w-0 self-start overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm">
               <div className="flex min-h-16 items-center justify-between gap-3 border-b border-subtle px-4 py-3 sm:px-5">
                 <div>
@@ -1131,6 +1215,33 @@ export function PageEditorView() {
                     setError(null);
                   }}
                 />
+              )}
+
+              {empty && !loading && (
+                <div className="flex flex-col items-center px-6 py-12 text-center">
+                  <span
+                    className="inline-flex size-12 items-center justify-center rounded-2xl bg-accent-soft text-accent"
+                    aria-hidden="true"
+                  >
+                    <Layers size={24} />
+                  </span>
+                  <h3 className="mt-4 text-lg font-semibold text-primary">
+                    {strings.sitesNoSectionsTitle}
+                  </h3>
+                  <p className="mt-1 max-w-sm text-sm leading-6 text-secondary">
+                    {strings.sitesNoSectionsBody}
+                  </p>
+                  <Button
+                    className="mt-5"
+                    icon={<Plus size={16} />}
+                    data-add-section=""
+                    aria-expanded={picking}
+                    disabled={working || translationBusy || translationFallback}
+                    onClick={() => setPicking(true)}
+                  >
+                    {strings.sitesAddSection}
+                  </Button>
+                </div>
               )}
 
               {/* Reordering is the one edit on this screen with no visible
@@ -1309,153 +1420,173 @@ export function PageEditorView() {
               )}
             </div>
 
-            <aside
-              className="min-w-0 self-start overflow-hidden rounded-2xl border border-subtle bg-raised/60 shadow-sm xl:sticky xl:top-4"
-              aria-label={strings.sitesPreview}
-            >
-              <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 border-b border-subtle bg-surface px-4 py-3 sm:px-5">
-                <div>
-                  <h2 className="font-semibold text-text-primary">
-                    {strings.sitesPreview}
-                  </h2>
-                  <p className="mt-0.5 text-xs text-text-secondary">
-                    /{page.slug}
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {proposedPreviewHtml !== null && (
-                    <div
-                      className="flex items-center gap-1 rounded-xl bg-raised p-1"
-                      role="group"
-                      aria-label={strings.sitesAiPreviewCompare}
-                    >
-                      <Button
-                        variant="ghost"
-                        className={
-                          previewVersion === "before"
-                            ? "!bg-surface !text-primary shadow-sm"
-                            : undefined
-                        }
-                        aria-pressed={previewVersion === "before"}
-                        onClick={() => setPreviewVersion("before")}
+            {previewOpen && (
+              <div
+                className="relative z-10 hidden items-start justify-center xl:flex"
+                aria-hidden="false"
+              >
+                <button
+                  type="button"
+                  role="separator"
+                  aria-label={strings.sitesResizeWorkspace}
+                  aria-orientation="vertical"
+                  aria-valuemin={25}
+                  aria-valuemax={65}
+                  aria-valuenow={Math.round(sectionsPanelWidth)}
+                  className="group flex h-full min-h-16 w-10 shrink-0 touch-none cursor-col-resize items-start justify-center rounded-lg pt-4 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15"
+                  onPointerDown={startWorkspaceResize}
+                  onPointerMove={moveWorkspaceResize}
+                  onPointerUp={finishWorkspaceResize}
+                  onPointerCancel={finishWorkspaceResize}
+                  onKeyDown={resizeWorkspaceWithKeyboard}
+                  onDoubleClick={() => setSectionsPanelWidth(34)}
+                >
+                  <span className="sticky top-20 inline-flex h-12 w-6 items-center justify-center rounded-full border border-subtle bg-surface text-tertiary shadow-sm transition-colors group-hover:border-accent/30 group-hover:text-accent group-focus-visible:border-accent/30 group-focus-visible:text-accent">
+                    <GripVertical size={15} aria-hidden="true" />
+                  </span>
+                </button>
+              </div>
+            )}
+
+            {previewOpen && (
+              <aside
+                className="min-w-0 self-start overflow-hidden rounded-2xl border border-subtle bg-raised/60 shadow-sm xl:sticky xl:top-4"
+                aria-label={strings.sitesPreview}
+              >
+                <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 border-b border-subtle bg-surface px-4 py-3 sm:px-5">
+                  <div>
+                    <h2 className="font-semibold text-text-primary">
+                      {strings.sitesPreview}
+                    </h2>
+                    <p className="mt-0.5 text-xs text-text-secondary">
+                      /{page.slug}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {proposedPreviewHtml !== null && (
+                      <div
+                        className="flex items-center gap-1 rounded-xl bg-raised p-1"
+                        role="group"
+                        aria-label={strings.sitesAiPreviewCompare}
                       >
-                        {strings.sitesAiPreviewBefore}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className={
-                          previewVersion === "after"
-                            ? "!bg-surface !text-primary shadow-sm"
-                            : undefined
-                        }
-                        aria-pressed={previewVersion === "after"}
-                        onClick={() => setPreviewVersion("after")}
-                      >
-                        {strings.sitesAiPreviewAfter}
-                      </Button>
+                        <Button
+                          variant="ghost"
+                          className={
+                            previewVersion === "before"
+                              ? "!bg-surface !text-primary shadow-sm"
+                              : undefined
+                          }
+                          aria-pressed={previewVersion === "before"}
+                          onClick={() => setPreviewVersion("before")}
+                        >
+                          {strings.sitesAiPreviewBefore}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className={
+                            previewVersion === "after"
+                              ? "!bg-surface !text-primary shadow-sm"
+                              : undefined
+                          }
+                          aria-pressed={previewVersion === "after"}
+                          onClick={() => setPreviewVersion("after")}
+                        >
+                          {strings.sitesAiPreviewAfter}
+                        </Button>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1 rounded-xl bg-raised p-1">
+                      <IconButton
+                        size="sm"
+                        label={strings.sitesPreviewDesktop}
+                        icon={<Monitor size={15} />}
+                        active={!previewMobile}
+                        onClick={() => setPreviewMobile(false)}
+                      />
+                      <IconButton
+                        size="sm"
+                        label={strings.sitesPreviewMobile}
+                        icon={<Smartphone size={15} />}
+                        active={previewMobile}
+                        onClick={() => setPreviewMobile(true)}
+                      />
                     </div>
-                  )}
-                  <div className="flex items-center gap-1 rounded-xl bg-raised p-1">
-                    <IconButton
-                      size="sm"
-                      label={strings.sitesPreviewDesktop}
-                      icon={<Monitor size={15} />}
-                      active={!previewMobile}
-                      onClick={() => setPreviewMobile(false)}
-                    />
-                    <IconButton
-                      size="sm"
-                      label={strings.sitesPreviewMobile}
-                      icon={<Smartphone size={15} />}
-                      active={previewMobile}
-                      onClick={() => setPreviewMobile(true)}
-                    />
                   </div>
                 </div>
-              </div>
-              {locale === null && !empty && (
-                <p className="flex items-center gap-2 border-b border-subtle bg-surface px-4 py-2 text-xs leading-5 text-secondary sm:px-5">
-                  <Pencil
-                    size={13}
-                    className="shrink-0 text-accent"
-                    aria-hidden="true"
-                  />
-                  {strings.sitesInlineTextHint}
-                </p>
-              )}
-              {pageProtected && (
-                <p className="flex items-center gap-2 border-b border-subtle bg-surface px-4 py-2 text-xs text-secondary sm:px-5">
-                  <Lock size={13} aria-hidden="true" />
-                  {strings.sitesPagePasswordPreviewNote}
-                </p>
-              )}
-              {previewError !== null && <ErrorBanner message={previewError} />}
-              <div className="p-3 sm:p-5">
-                {empty && !loading ? (
-                  <div className="flex min-h-[32rem] flex-col overflow-hidden rounded-xl border border-default bg-surface shadow-sm">
-                    <div
-                      className="flex h-12 items-center gap-2 border-b border-subtle px-4"
+                {locale === null && !empty && (
+                  <p className="flex items-center gap-2 border-b border-subtle bg-surface px-4 py-2 text-xs leading-5 text-secondary sm:px-5">
+                    <Pencil
+                      size={13}
+                      className="shrink-0 text-accent"
                       aria-hidden="true"
-                    >
-                      <span className="size-2 rounded-full bg-border-default" />
-                      <span className="size-2 rounded-full bg-border-default" />
-                      <span className="size-2 rounded-full bg-border-default" />
-                      <span className="ml-3 h-2 w-24 rounded-full bg-raised" />
-                    </div>
-                    <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-                      <span
-                        className="inline-flex size-14 items-center justify-center rounded-2xl bg-accent-soft text-accent"
+                    />
+                    {strings.sitesInlineTextHint}
+                  </p>
+                )}
+                {pageProtected && (
+                  <p className="flex items-center gap-2 border-b border-subtle bg-surface px-4 py-2 text-xs text-secondary sm:px-5">
+                    <Lock size={13} aria-hidden="true" />
+                    {strings.sitesPagePasswordPreviewNote}
+                  </p>
+                )}
+                {previewError !== null && (
+                  <ErrorBanner message={previewError} />
+                )}
+                <div className="p-3 sm:p-5">
+                  {empty && !loading ? (
+                    <div className="flex min-h-[32rem] flex-col overflow-hidden rounded-xl border border-default bg-surface shadow-sm">
+                      <div
+                        className="flex h-12 items-center gap-2 border-b border-subtle px-4"
                         aria-hidden="true"
                       >
-                        <Layers size={27} />
-                      </span>
-                      <h3 className="mt-4 text-lg font-semibold text-primary">
-                        {strings.sitesNoSectionsTitle}
-                      </h3>
-                      <p className="mt-1 max-w-sm text-sm leading-6 text-secondary">
-                        {strings.sitesNoSectionsBody}
-                      </p>
-                      <Button
-                        className="mt-5"
-                        icon={<Plus size={16} />}
-                        data-add-section=""
-                        aria-expanded={picking}
-                        disabled={
-                          working || translationBusy || translationFallback
-                        }
-                        onClick={() => setPicking(true)}
-                      >
-                        {strings.sitesAddSection}
-                      </Button>
+                        <span className="size-2 rounded-full bg-border-default" />
+                        <span className="size-2 rounded-full bg-border-default" />
+                        <span className="size-2 rounded-full bg-border-default" />
+                        <span className="ml-3 h-2 w-24 rounded-full bg-raised" />
+                      </div>
+                      <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
+                        <span
+                          className="inline-flex size-14 items-center justify-center rounded-2xl bg-accent-soft text-accent"
+                          aria-hidden="true"
+                        >
+                          <Layers size={27} />
+                        </span>
+                        <h3 className="mt-4 text-lg font-semibold text-primary">
+                          {strings.sitesNoSectionsTitle}
+                        </h3>
+                        <p className="mt-1 max-w-sm text-sm leading-6 text-secondary">
+                          {strings.sitesNoSectionsBody}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <div
-                    className={
-                      previewMobile
-                        ? "mx-auto max-w-[391px] rounded-xl bg-sunken p-2"
-                        : "rounded-xl bg-sunken p-2"
-                    }
-                  >
-                    {/* Sandboxed: scripts may run (the menu toggle), but the draft
-                      document never touches this origin or navigates the app. */}
-                    <iframe
-                      ref={previewFrame}
-                      onLoad={postPreviewChrome}
-                      className="block h-[min(70vh,48rem)] w-full rounded-lg border-0 bg-surface"
-                      title={strings.sitesPreviewTitle}
-                      sandbox="allow-scripts"
-                      srcDoc={
-                        previewVersion === "after" &&
-                        proposedPreviewHtml !== null
-                          ? proposedPreviewHtml
-                          : (previewHtml ?? "")
+                  ) : (
+                    <div
+                      className={
+                        previewMobile
+                          ? "mx-auto max-w-[391px] rounded-xl bg-sunken p-2"
+                          : "rounded-xl bg-sunken p-2"
                       }
-                    />
-                  </div>
-                )}
-              </div>
-            </aside>
+                    >
+                      {/* Sandboxed: scripts may run (the menu toggle), but the draft
+                      document never touches this origin or navigates the app. */}
+                      <iframe
+                        ref={previewFrame}
+                        onLoad={postPreviewChrome}
+                        className="block h-[min(70vh,48rem)] w-full rounded-lg border-0 bg-surface"
+                        title={strings.sitesPreviewTitle}
+                        sandbox="allow-scripts"
+                        srcDoc={
+                          previewVersion === "after" &&
+                          proposedPreviewHtml !== null
+                            ? proposedPreviewHtml
+                            : (previewHtml ?? "")
+                        }
+                      />
+                    </div>
+                  )}
+                </div>
+              </aside>
+            )}
           </div>
         </>
       )}

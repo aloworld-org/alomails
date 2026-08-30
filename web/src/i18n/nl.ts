@@ -477,8 +477,7 @@ export const nl: Partial<Catalog> = {
   agendaAvailChecking: "Controleren…",
   agendaAvailAllFree: "Iedereen is dan vrij.",
   agendaAvailBusy: (names: string) => `Dan bezet: ${names}`,
-  agendaAvailOutside: (names: string) =>
-    `Dan buiten de werkuren: ${names}`,
+  agendaAvailOutside: (names: string) => `Dan buiten de werkuren: ${names}`,
   agendaRoom: "Ruimte",
   agendaRoomNone: "Geen ruimte",
   agendaRoomHint:
@@ -1629,8 +1628,10 @@ export const nl: Partial<Catalog> = {
   billingPaginationLabel: "Pagina’s van de facturatielijst",
   billingPaginationPrevious: "Vorige pagina",
   billingPaginationNext: "Volgende pagina",
-  billingPaginationRange: (first: number, last: number, total: number) => `${first}–${last} van ${total}`,
-  billingPaginationPage: (page: number, total: number) => `Pagina ${page} van ${total}`,
+  billingPaginationRange: (first: number, last: number, total: number) =>
+    `${first}–${last} van ${total}`,
+  billingPaginationPage: (page: number, total: number) =>
+    `Pagina ${page} van ${total}`,
   billingSaveFailed:
     "Opslaan is niet gelukt. Controleer uw verbinding en probeer opnieuw.",
   billingNoMatches: "Niets komt overeen met die zoekopdracht.",
@@ -3883,6 +3884,10 @@ export const nl: Partial<Catalog> = {
     `${section} toegevoegd als sectie ${position} van ${total}.`,
   sitesConfirmDelete: "Deze sectie verwijderen?",
   sitesPreview: "Voorbeeld",
+  sitesShowPreview: "Voorbeeld tonen",
+  sitesHidePreview: "Voorbeeld verbergen",
+  sitesResizeWorkspace:
+    "De panelen Secties en Voorbeeld aanpassen (sleep of gebruik de pijltoetsen links en rechts; dubbelklik om te herstellen)",
   sitesPreviewTitle: "Conceptvoorbeeld",
   sitesPreviewDesktop: "Desktopbreedte",
   sitesPreviewMobile: "Telefoonbreedte",
@@ -5898,12 +5903,10 @@ export const nl: Partial<Catalog> = {
   agentInstructionPaused:
     "Gepauzeerd — degene die erom vroeg heeft het gesprek verlaten.",
   agentInstructionCancel: "Annuleren",
-  agentInstructionCancelThis: (text: string): string =>
-    `“${text}” annuleren`,
+  agentInstructionCancelThis: (text: string): string => `“${text}” annuleren`,
   agentInstructionAgentLabel: "Agent",
   agentInstructionTextLabel: "Wat moet de agent doen?",
-  agentInstructionTextPlaceholder:
-    "bv. de facturen opsommen die te laat zijn",
+  agentInstructionTextPlaceholder: "bv. de facturen opsommen die te laat zijn",
   agentInstructionScheduleLabel: "Hoe vaak",
   agentInstructionOptionHourly: "Elk uur",
   agentInstructionOption4Hours: "Elke 4 uur",
@@ -5916,8 +5919,7 @@ export const nl: Partial<Catalog> = {
   agentInstructionCancelFailed: "Dat kon niet worden geannuleerd.",
   recordAgentTitle: "De agent van dit item",
   recordAgentOriginNone: "Dit item zegt niet waar het vandaan komt.",
-  recordAgentOriginPerson: (who: string): string =>
-    `Aangemaakt door ${who}.`,
+  recordAgentOriginPerson: (who: string): string => `Aangemaakt door ${who}.`,
   recordAgentOriginThread: (room: string): string =>
     `Vastgelegd uit het gesprek “${room}”.`,
   recordAgentOriginThreadUnnamed: "Vastgelegd uit een gesprek.",
@@ -5927,15 +5929,13 @@ export const nl: Partial<Catalog> = {
     `Ontstaan uit offerte ${quote}.`,
   recordAgentOriginFrom: (source: string): string => `Uit ${source}.`,
   recordAgentOpenSource: "Openen",
-  recordAgentCanDo: (handle: string): string =>
-    `Wat @${handle} hier kan doen`,
+  recordAgentCanDo: (handle: string): string => `Wat @${handle} hier kan doen`,
   recordAgentAskPlaceholder: (handle: string): string =>
     `Vraag @${handle} hiernaar…`,
   recordAgentAsk: "Vragen",
   recordAgentAsking: (handle: string): string =>
     `Vraag gesteld aan @${handle}…`,
-  recordAgentNoAnswerYet:
-    "Nog geen antwoord — het verschijnt in het gesprek.",
+  recordAgentNoAnswerYet: "Nog geen antwoord — het verschijnt in het gesprek.",
   recordAgentOpenConversation: "Gesprek openen",
   recordAgentAskFailed: "Die vraag kon niet worden gesteld.",
   recordAgentVerbFailed: "Dat kon niet worden gestart.",
@@ -5945,8 +5945,7 @@ export const nl: Partial<Catalog> = {
   recordAgentVerbSetTaskPriority: "Prioriteit instellen",
   recordAgentVerbCompleteTask: "Afronden",
   recordAgentVerbReassignTask: "Overdragen",
-  recordAgentDraftChaseTask: (task: string): string =>
-    `Volg “${task}” op.`,
+  recordAgentDraftChaseTask: (task: string): string => `Volg “${task}” op.`,
   recordAgentDraftSetTaskPriority: (task: string): string =>
     `Zet de prioriteit van “${task}” op `,
   recordAgentDraftCompleteTask: (task: string): string =>
@@ -6056,8 +6055,7 @@ export const nl: Partial<Catalog> = {
   recordAgentDraftSiteSeoReview: (site: string): string =>
     `Kijk “${site}” na voor zoekmachines.`,
   recordAgentVerbSitePublish: "Publiceren",
-  recordAgentDraftSitePublish: (site: string): string =>
-    `Publiceer “${site}”.`,
+  recordAgentDraftSitePublish: (site: string): string => `Publiceer “${site}”.`,
   recordAgentOriginQuoteUnnamed: "Opgemaakt uit een aanvaarde offerte.",
   recordAgentOriginSchedule: "Opgemaakt door een terugkerende afspraak.",
   recordAgentOriginCorrection: "Opgemaakt om een factuur te corrigeren.",

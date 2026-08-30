@@ -534,8 +534,7 @@ export const en = {
   agendaAvailBusy: (names: string) => `Busy then: ${names}`,
   agendaAvailNoGuests: "Add guests to check their availability.",
   agendaAvailError: "Couldn't check availability.",
-  agendaAvailOutside: (names: string) =>
-    `Outside working hours then: ${names}`,
+  agendaAvailOutside: (names: string) => `Outside working hours then: ${names}`,
   // Rooms and resources (the thing a meeting needs besides people)
   agendaRoom: "Room",
   agendaRoomNone: "No room",
@@ -552,7 +551,8 @@ export const en = {
   agendaWorkZone: "Time zone",
   agendaWorkZoneMine: "My time zone",
   agendaWorkHoursOrder: "Working hours end before they start.",
-  agendaWorkingHoursError: "Couldn't save your working hours. Please try again.",
+  agendaWorkingHoursError:
+    "Couldn't save your working hours. Please try again.",
   agendaWorkingHoursLoadError: "Couldn't load your working hours.",
   agendaClose: "Close",
   agendaReadOnly: "You have view-only access to this calendar.",
@@ -2216,8 +2216,7 @@ export const en = {
     `Ask @${handle} about this…`,
   recordAgentAsk: "Ask",
   recordAgentAsking: (handle: string): string => `Asking @${handle}…`,
-  recordAgentNoAnswerYet:
-    "No answer yet — it will land in the conversation.",
+  recordAgentNoAnswerYet: "No answer yet — it will land in the conversation.",
   recordAgentOpenConversation: "Open the conversation",
   recordAgentAskFailed: "That couldn’t be asked.",
   recordAgentVerbFailed: "That couldn’t be started.",
@@ -2270,8 +2269,7 @@ export const en = {
   recordAgentFocusRecord: (record: string): string =>
     `The agent for “${record}”`,
   recordAgentVerbRenameFile: "Rename it",
-  recordAgentDraftRenameFile: (file: string): string =>
-    `Rename “${file}” to `,
+  recordAgentDraftRenameFile: (file: string): string => `Rename “${file}” to `,
   recordAgentVerbMoveFile: "Move it",
   recordAgentDraftMoveFile: (file: string): string =>
     `Move “${file}” into the folder `,
@@ -2304,8 +2302,7 @@ export const en = {
   recordAgentDraftCatchUpRoom: (room: string): string =>
     `Catch me up on “${room}”.`,
   recordAgentVerbFindInRoom: "Find something in it",
-  recordAgentDraftFindInRoom: (room: string): string =>
-    `In “${room}”, find `,
+  recordAgentDraftFindInRoom: (room: string): string => `In “${room}”, find `,
   recordAgentVerbMeetingRecord: "What happened in it",
   recordAgentDraftMeetingRecord: (meeting: string): string =>
     `What happened in “${meeting}”?`,
@@ -2828,8 +2825,10 @@ export const en = {
   billingPaginationLabel: "Billing list pages",
   billingPaginationPrevious: "Previous page",
   billingPaginationNext: "Next page",
-  billingPaginationRange: (first: number, last: number, total: number) => `${first}–${last} of ${total}`,
-  billingPaginationPage: (page: number, total: number) => `Page ${page} of ${total}`,
+  billingPaginationRange: (first: number, last: number, total: number) =>
+    `${first}–${last} of ${total}`,
+  billingPaginationPage: (page: number, total: number) =>
+    `Page ${page} of ${total}`,
   billingSaveFailed: "Could not save. Check your connection and try again.",
   billingNoMatches: "Nothing matches that search.",
   billingNoCustomersTitle: "No customers yet",
@@ -3145,7 +3144,8 @@ export const en = {
   billingDeleteQuoteDraft: "Delete draft",
   billingDeleteQuoteDraftConfirm:
     "Delete this draft? It carries no number and was never made to anybody — and nothing can be recovered.",
-  billingQuoteSentNotice: "Finalized in alo and ready to share with the customer.",
+  billingQuoteSentNotice:
+    "Finalized in alo and ready to share with the customer.",
   billingQuoteClosedNotice:
     "This offer is closed and can no longer be changed.",
   billingSendQuote: "Finalize & prepare email",
@@ -3876,6 +3876,10 @@ export const en = {
     `${section} added as section ${position} of ${total}.`,
   sitesConfirmDelete: "Really delete?",
   sitesPreview: "Preview",
+  sitesShowPreview: "Show preview",
+  sitesHidePreview: "Hide preview",
+  sitesResizeWorkspace:
+    "Resize the sections and preview panels (drag, or use the left and right arrow keys; double-click to reset)",
   sitesPreviewTitle: "Draft preview",
   sitesPreviewDesktop: "Desktop width",
   sitesPreviewMobile: "Phone width",

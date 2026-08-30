@@ -1859,8 +1859,7 @@ export const de: Partial<Catalog> = {
   agentInstructionPaused:
     "Pausiert — die Person, die darum gebeten hat, hat den Raum verlassen.",
   agentInstructionCancel: "Beenden",
-  agentInstructionCancelThis: (text: string): string =>
-    `„${text}“ beenden`,
+  agentInstructionCancelThis: (text: string): string => `„${text}“ beenden`,
   agentInstructionAgentLabel: "Agent",
   agentInstructionTextLabel: "Was soll er tun?",
   agentInstructionTextPlaceholder:
@@ -1878,8 +1877,7 @@ export const de: Partial<Catalog> = {
   agentInstructionCancelFailed: "Das konnte nicht abgebrochen werden.",
   recordAgentTitle: "Der Agent dieses Eintrags",
   recordAgentOriginNone: "Dieser Eintrag sagt nicht, woher er stammt.",
-  recordAgentOriginPerson: (who: string): string =>
-    `Erstellt von ${who}.`,
+  recordAgentOriginPerson: (who: string): string => `Erstellt von ${who}.`,
   recordAgentOriginThread: (room: string): string =>
     `Festgehalten aus der Unterhaltung „${room}“.`,
   recordAgentOriginThreadUnnamed: "Festgehalten aus einer Unterhaltung.",
@@ -1889,8 +1887,7 @@ export const de: Partial<Catalog> = {
     `Entstanden aus Angebot ${quote}.`,
   recordAgentOriginFrom: (source: string): string => `Aus ${source}.`,
   recordAgentOpenSource: "Öffnen",
-  recordAgentCanDo: (handle: string): string =>
-    `Was @${handle} hier tun kann`,
+  recordAgentCanDo: (handle: string): string => `Was @${handle} hier tun kann`,
   recordAgentAskPlaceholder: (handle: string): string =>
     `@${handle} dazu fragen…`,
   recordAgentAsk: "Fragen",
@@ -2712,8 +2709,10 @@ export const de: Partial<Catalog> = {
   billingPaginationLabel: "Seiten der Abrechnungsliste",
   billingPaginationPrevious: "Vorherige Seite",
   billingPaginationNext: "Nächste Seite",
-  billingPaginationRange: (first: number, last: number, total: number) => `${first}–${last} von ${total}`,
-  billingPaginationPage: (page: number, total: number) => `Seite ${page} von ${total}`,
+  billingPaginationRange: (first: number, last: number, total: number) =>
+    `${first}–${last} von ${total}`,
+  billingPaginationPage: (page: number, total: number) =>
+    `Seite ${page} von ${total}`,
   billingSaveFailed:
     "Speichern nicht möglich. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
   billingNoMatches: "Nichts entspricht dieser Suche.",
@@ -5718,6 +5717,10 @@ export const de: Partial<Catalog> = {
     `${section} als Abschnitt ${position} von ${total} hinzugefügt.`,
   sitesConfirmDelete: "Wirklich löschen?",
   sitesPreview: "Vorschau",
+  sitesShowPreview: "Vorschau anzeigen",
+  sitesHidePreview: "Vorschau ausblenden",
+  sitesResizeWorkspace:
+    "Breite der Bereiche Abschnitte und Vorschau ändern (ziehen oder die Pfeiltasten links und rechts verwenden; zum Zurücksetzen doppelklicken)",
   sitesPreviewTitle: "Entwurfsvorschau",
   sitesPreviewDesktop: "Bildschirmbreite",
   sitesPreviewMobile: "Telefonbreite",

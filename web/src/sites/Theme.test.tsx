@@ -327,6 +327,9 @@ describe("the editor's preview after a theme change", () => {
     replies.push(pageReply(), siteReply({}));
     ui("/sites/site-1/pages/page-1");
     expect(await screen.findByText("Welcome")).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesShowPreview }),
+    );
     await waitFor(() => {
       expect(previewFetches()).toBe(1);
     });

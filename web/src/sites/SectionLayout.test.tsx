@@ -291,6 +291,13 @@ async function stackLoaded() {
   );
 }
 
+async function openPreview() {
+  fireEvent.click(
+    await screen.findByRole("button", { name: strings.sitesShowPreview }),
+  );
+  await waitFor(() => expect(document.querySelector("iframe")).not.toBeNull());
+}
+
 function edits(): Call[] {
   return calls.filter((call) => call.method === "PUT" && call.url.includes("/ai-edits"));
 }
@@ -390,6 +397,7 @@ describe("the page editor resizes only within the declaration", () => {
   test("a step reported by the preview moves one place along the declared list", async () => {
     ui();
     await stackLoaded();
+    await openPreview();
     await waitFor(() =>
       expect(document.querySelectorAll("[data-layout-choice]").length).toBeGreaterThan(0),
     );
@@ -410,6 +418,7 @@ describe("the page editor resizes only within the declaration", () => {
   test("a step on a section with nothing to resize writes nothing", async () => {
     ui();
     await stackLoaded();
+    await openPreview();
     stepFromPreview(2, 1);
     stepFromPreview(1, -1);
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -419,6 +428,7 @@ describe("the page editor resizes only within the declaration", () => {
   test("a step from another window changes nothing", async () => {
     ui();
     await stackLoaded();
+    await openPreview();
     stepFromPreview(0, 1, false);
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(edits()).toHaveLength(0);

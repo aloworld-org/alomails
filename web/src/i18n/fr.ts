@@ -492,7 +492,8 @@ export const fr: Partial<Catalog> = {
   agendaRoomHint:
     "La salle est invitée avec la réunion et réservée pour sa durée.",
   agendaRoomSeats: (seats: number) => `${seats} places`,
-  agendaRoomTaken: (name: string) => `${name} est déjà réservée à ce moment-là.`,
+  agendaRoomTaken: (name: string) =>
+    `${name} est déjà réservée à ce moment-là.`,
   agendaWorkingHours: "Horaires de travail",
   agendaWorkingHoursHint:
     "Quand des collègues planifient avec vous, les heures hors de ces horaires sont signalées.",
@@ -504,8 +505,7 @@ export const fr: Partial<Catalog> = {
   agendaWorkHoursOrder: "Les horaires de travail finissent avant de commencer.",
   agendaWorkingHoursError:
     "Impossible d'enregistrer vos horaires de travail. Veuillez réessayer.",
-  agendaWorkingHoursLoadError:
-    "Impossible de charger vos horaires de travail.",
+  agendaWorkingHoursLoadError: "Impossible de charger vos horaires de travail.",
   agendaAvailNoGuests: "Ajoutez des invités pour vérifier leur disponibilité.",
   agendaAvailError: "Impossible de vérifier la disponibilité.",
   agendaClose: "Fermer",
@@ -1671,8 +1671,10 @@ export const fr: Partial<Catalog> = {
   billingPaginationLabel: "Pages de la liste de facturation",
   billingPaginationPrevious: "Page précédente",
   billingPaginationNext: "Page suivante",
-  billingPaginationRange: (first: number, last: number, total: number) => `${first}–${last} sur ${total}`,
-  billingPaginationPage: (page: number, total: number) => `Page ${page} sur ${total}`,
+  billingPaginationRange: (first: number, last: number, total: number) =>
+    `${first}–${last} sur ${total}`,
+  billingPaginationPage: (page: number, total: number) =>
+    `Page ${page} sur ${total}`,
   billingSaveFailed:
     "Impossible d’enregistrer. Vérifiez votre connexion et réessayez.",
   billingNoMatches: "Aucun résultat pour cette recherche.",
@@ -1991,7 +1993,8 @@ export const fr: Partial<Catalog> = {
   billingDeleteQuoteDraft: "Supprimer le brouillon",
   billingDeleteQuoteDraftConfirm:
     "Supprimer ce brouillon ? Il ne porte aucun numéro et n’a jamais été proposé à personne — et rien ne pourra être récupéré.",
-  billingQuoteSentNotice: "Finalisé dans alo et prêt à être partagé avec le client.",
+  billingQuoteSentNotice:
+    "Finalisé dans alo et prêt à être partagé avec le client.",
   billingQuoteClosedNotice:
     "Cette offre est close et ne peut plus être modifiée.",
   billingSendQuote: "Finaliser et préparer l’e-mail",
@@ -3927,6 +3930,10 @@ export const fr: Partial<Catalog> = {
     `${section} ajouté en position ${position} sur ${total}.`,
   sitesConfirmDelete: "Supprimer cette section ?",
   sitesPreview: "Aperçu",
+  sitesShowPreview: "Afficher l’aperçu",
+  sitesHidePreview: "Masquer l’aperçu",
+  sitesResizeWorkspace:
+    "Redimensionner les panneaux Sections et Aperçu (faites glisser ou utilisez les flèches gauche et droite ; double-cliquez pour réinitialiser)",
   sitesPreviewTitle: "Aperçu du brouillon",
   sitesPreviewDesktop: "Largeur d’ordinateur",
   sitesPreviewMobile: "Largeur de téléphone",
@@ -5989,18 +5996,15 @@ export const fr: Partial<Catalog> = {
   recordAgentOriginThreadUnnamed: "Issue d’une conversation.",
   recordAgentOriginEmail: "Issue d’un e-mail.",
   recordAgentOriginEvent: "Issue d’un événement d’agenda.",
-  recordAgentOriginQuote: (quote: string): string =>
-    `Issue du devis ${quote}.`,
-  recordAgentOriginFrom: (source: string): string =>
-    `Provenance : ${source}.`,
+  recordAgentOriginQuote: (quote: string): string => `Issue du devis ${quote}.`,
+  recordAgentOriginFrom: (source: string): string => `Provenance : ${source}.`,
   recordAgentOpenSource: "Ouvrir",
   recordAgentCanDo: (handle: string): string =>
     `Ce que @${handle} peut faire ici`,
   recordAgentAskPlaceholder: (handle: string): string =>
     `Interroger @${handle} à ce sujet…`,
   recordAgentAsk: "Demander",
-  recordAgentAsking: (handle: string): string =>
-    `Question posée à @${handle}…`,
+  recordAgentAsking: (handle: string): string => `Question posée à @${handle}…`,
   recordAgentNoAnswerYet:
     "Pas encore de réponse — elle arrivera dans la conversation.",
   recordAgentOpenConversation: "Ouvrir la conversation",
@@ -6012,8 +6016,7 @@ export const fr: Partial<Catalog> = {
   recordAgentVerbSetTaskPriority: "Définir sa priorité",
   recordAgentVerbCompleteTask: "Marquer comme terminée",
   recordAgentVerbReassignTask: "Confier à quelqu’un",
-  recordAgentDraftChaseTask: (task: string): string =>
-    `Relance « ${task} ».`,
+  recordAgentDraftChaseTask: (task: string): string => `Relance « ${task} ».`,
   recordAgentDraftSetTaskPriority: (task: string): string =>
     `Passe la priorité de « ${task} » à `,
   recordAgentDraftCompleteTask: (task: string): string =>
@@ -6123,8 +6126,7 @@ export const fr: Partial<Catalog> = {
   recordAgentDraftSiteSeoReview: (site: string): string =>
     `Vérifie « ${site} » pour les moteurs de recherche.`,
   recordAgentVerbSitePublish: "Le publier",
-  recordAgentDraftSitePublish: (site: string): string =>
-    `Publie « ${site} ».`,
+  recordAgentDraftSitePublish: (site: string): string => `Publie « ${site} ».`,
   recordAgentOriginQuoteUnnamed: "Établie à partir d’un devis accepté.",
   recordAgentOriginSchedule: "Établie par une facturation récurrente.",
   recordAgentOriginCorrection: "Établie pour corriger une facture.",

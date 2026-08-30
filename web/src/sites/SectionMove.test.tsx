@@ -212,6 +212,13 @@ async function stackLoaded() {
   );
 }
 
+async function openPreview() {
+  fireEvent.click(
+    await screen.findByRole("button", { name: strings.sitesShowPreview }),
+  );
+  await waitFor(() => expect(document.querySelector("iframe")).not.toBeNull());
+}
+
 function moves(): Call[] {
   return calls.filter((call) => call.method === "POST" && call.url.includes("/move"));
 }
@@ -238,6 +245,7 @@ describe("the page editor applies what the preview reports", () => {
   test("a section dropped at the end is one move, undoable and announced", async () => {
     ui();
     await stackLoaded();
+    await openPreview();
 
     dropFromPreview(0, null);
     await waitFor(() => expect(moves()).toHaveLength(1));
@@ -276,6 +284,7 @@ describe("the page editor applies what the preview reports", () => {
   test("a message from another window changes nothing", async () => {
     ui();
     await stackLoaded();
+    await openPreview();
 
     dropFromPreview(0, null, false);
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -285,6 +294,7 @@ describe("the page editor applies what the preview reports", () => {
   test("a drop that changes no arrangement is not a write", async () => {
     ui();
     await stackLoaded();
+    await openPreview();
 
     dropFromPreview(0, 1);
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -294,6 +304,7 @@ describe("the page editor applies what the preview reports", () => {
   test("a section that is no longer there is refused, not aimed at its successor", async () => {
     ui();
     await stackLoaded();
+    await openPreview();
 
     dropFromPreview(7, null);
     await waitFor(() =>
@@ -305,6 +316,7 @@ describe("the page editor applies what the preview reports", () => {
   test("the frame is told what each section is called, in the editor's language", async () => {
     ui();
     await stackLoaded();
+    await openPreview();
 
     const frame = document.querySelector("iframe");
     const post = vi.fn();

@@ -5,7 +5,13 @@
 // subheading) survive an edit untouched, and that a refusal is shown in the
 // dialog instead of swallowed. Same harness as SitesModule.test.tsx: the
 // REAL client and views run, only the network is fake.
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -24,7 +30,6 @@ function sectionControls(control: string): HTMLElement[] {
     ),
   ];
 }
-
 
 interface Call {
   url: string;
@@ -74,14 +79,26 @@ function env(sections: Section[]): SectionsEnvelope {
   return { schema_version: SECTIONS_SCHEMA_VERSION, sections };
 }
 
-const HERO: Section = { type: "hero", heading: "Fresh bread daily", subheading: "Since 1962" };
-const CONTACT: Section = { type: "contact_form", heading: "Write to us", form_id: "f-1" };
-const FAQ: Section = { type: "faq", items: [{ question: "When?", answer: "Every day." }] };
+const HERO: Section = {
+  type: "hero",
+  heading: "Fresh bread daily",
+  subheading: "Since 1962",
+};
+const CONTACT: Section = {
+  type: "contact_form",
+  heading: "Write to us",
+  form_id: "f-1",
+};
+const FAQ: Section = {
+  type: "faq",
+  items: [{ question: "When?", answer: "Every day." }],
+};
 
 /** The page GET the editor loads first. */
 function pageReply(sections: Section[]): Reply {
   return {
-    match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/pages/page-1"),
+    match: (url, method) =>
+      method === "GET" && url.endsWith("/sites/site-1/pages/page-1"),
     status: 200,
     body: {
       id: "page-1",
@@ -153,14 +170,17 @@ describe("manual page translation", () => {
     replies = [
       languageSiteReply(),
       {
-        match: (url, method) => method === "GET" && url.endsWith("/pages/page-1/locales/fr"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/pages/page-1/locales/fr"),
         status: 200,
         body: localizedFallback,
       },
     ];
     ui("/sites/site-1/pages/page-1?locale=fr");
 
-    expect(await screen.findByText(strings.sitesTranslationMissingTitle("FR"))).toBeTruthy();
+    expect(
+      await screen.findByText(strings.sitesTranslationMissingTitle("FR")),
+    ).toBeTruthy();
     expect(sectionControls("edit")[0]!).toHaveProperty("disabled", true);
 
     const savedFrench = {
@@ -171,14 +191,17 @@ describe("manual page translation", () => {
     };
     replies = [
       {
-        match: (url, method) => method === "PUT" && url.endsWith("/pages/page-1/locales/fr"),
+        match: (url, method) =>
+          method === "PUT" && url.endsWith("/pages/page-1/locales/fr"),
         status: 200,
         body: savedFrench,
       },
     ];
-    fireEvent.click(screen.getByRole("button", {
-      name: strings.sitesCopyTranslation("EN", "FR"),
-    }));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: strings.sitesCopyTranslation("EN", "FR"),
+      }),
+    );
 
     await waitFor(() => expect(lastWrite()).toBeTruthy());
     expect(lastWrite()).toMatchObject({
@@ -191,7 +214,9 @@ describe("manual page translation", () => {
         sections: env([HERO, FAQ]),
       },
     });
-    expect(await screen.findByText(strings.sitesTranslationDetails)).toBeTruthy();
+    expect(
+      await screen.findByText(strings.sitesTranslationDetails),
+    ).toBeTruthy();
     expect(sectionControls("edit")[0]!).toHaveProperty("disabled", false);
   });
 
@@ -206,7 +231,8 @@ describe("manual page translation", () => {
     replies = [
       languageSiteReply(),
       {
-        match: (url, method) => method === "GET" && url.endsWith("/pages/page-1/locales/fr"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/pages/page-1/locales/fr"),
         status: 200,
         body: french,
       },
@@ -216,7 +242,8 @@ describe("manual page translation", () => {
 
     replies = [
       {
-        match: (url, method) => method === "PUT" && url.endsWith("/pages/page-1/locales/fr"),
+        match: (url, method) =>
+          method === "PUT" && url.endsWith("/pages/page-1/locales/fr"),
         status: 200,
         body: { ...french, sections: env([FAQ, HERO]) },
       },
@@ -248,7 +275,8 @@ describe("the section stack", () => {
   test("a foreign or stale page reads as an error with the way back", async () => {
     replies = [
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/pages/page-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/pages/page-1"),
         status: 404,
         body: { detail: "no such page" },
       },
@@ -287,28 +315,45 @@ describe("reviewed page changes", () => {
       },
     ];
     ui();
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesShowPreview }),
+    );
     const frame = (await screen.findByTitle(
       strings.sitesPreviewTitle,
     )) as HTMLIFrameElement;
-    await waitFor(() => expect(frame.getAttribute("srcdoc")).toContain("Before copy"));
+    await waitFor(() =>
+      expect(frame.getAttribute("srcdoc")).toContain("Before copy"),
+    );
     fireEvent.change(await screen.findByLabelText(strings.sitesAiInstruction), {
       target: { value: "Make the welcome clearer" },
     });
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesAiPropose }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesAiPropose }),
+    );
 
     expect(
-      await screen.findByText(strings.sitesAiCopyChange(strings.sitesSectionHero)),
+      await screen.findByText(
+        strings.sitesAiCopyChange(strings.sitesSectionHero),
+      ),
     ).toBeTruthy();
     expect(lastWrite()).toMatchObject({
       method: "POST",
       body: { instruction: "Make the welcome clearer" },
     });
-    await waitFor(() => expect(frame.getAttribute("srcdoc")).toContain("After copy"));
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesAiPreviewBefore }));
+    await waitFor(() =>
+      expect(frame.getAttribute("srcdoc")).toContain("After copy"),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesAiPreviewBefore }),
+    );
     expect(frame.getAttribute("srcdoc")).toContain("Before copy");
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesAiPreviewAfter }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesAiPreviewAfter }),
+    );
     expect(frame.getAttribute("srcdoc")).toContain("After copy");
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesAiDiscard }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesAiDiscard }),
+    );
     expect(calls.filter((call) => call.method === "PUT")).toHaveLength(0);
     expect(frame.getAttribute("srcdoc")).toContain("Before copy");
     expect(
@@ -329,10 +374,16 @@ describe("reviewed page changes", () => {
         },
       },
     ];
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesAiPropose }));
-    fireEvent.click(await screen.findByRole("button", { name: strings.sitesAiApprove }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesAiPropose }),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesAiApprove }),
+    );
 
-    await waitFor(() => expect(screen.getByText("A clearer welcome")).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText("A clearer welcome")).toBeTruthy(),
+    );
     expect(lastWrite()).toMatchObject({ method: "PUT", body: { proposal } });
   });
 });
@@ -389,10 +440,13 @@ describe("search and sharing details", () => {
     ];
     fireEvent.click(screen.getByRole("button", { name: strings.sitesSeoSave }));
 
-    expect(await screen.findByText("SEO title must be at most 200 characters")).toBeTruthy();
+    expect(
+      await screen.findByText("SEO title must be at most 200 characters"),
+    ).toBeTruthy();
     expect(screen.getByRole("dialog")).toBeTruthy();
     expect(
-      (screen.getByLabelText(strings.sitesSeoFieldTitle) as HTMLInputElement).value,
+      (screen.getByLabelText(strings.sitesSeoFieldTitle) as HTMLInputElement)
+        .value,
     ).toBe("A title the server refuses");
   });
 });
@@ -422,7 +476,8 @@ describe("adding a section", () => {
     replies = [
       {
         match: (url, method) =>
-          method === "POST" && url.endsWith("/sites/site-1/pages/page-1/sections"),
+          method === "POST" &&
+          url.endsWith("/sites/site-1/pages/page-1/sections"),
         status: 200,
         body: {
           sections: env([{ type: "hero", heading: "Big and warm" }]),
@@ -435,7 +490,9 @@ describe("adding a section", () => {
     fireEvent.change(screen.getByLabelText(strings.sitesFieldHeading), {
       target: { value: "  Big and warm " },
     });
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesSaveSection }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesSaveSection }),
+    );
 
     await waitFor(() => expect(lastWrite()).toBeTruthy());
     // Exactly the typed section: trimmed, untouched optionals ABSENT — the
@@ -463,7 +520,9 @@ describe("adding a section", () => {
     fireEvent.change(screen.getByLabelText(strings.sitesFieldAnswer), {
       target: { value: "Every day." },
     });
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesAddQuestion }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesAddQuestion }),
+    );
     fireEvent.change(screen.getAllByLabelText(strings.sitesFieldQuestion)[1]!, {
       target: { value: "Where?" },
     });
@@ -474,12 +533,15 @@ describe("adding a section", () => {
     replies = [
       {
         match: (url, method) =>
-          method === "POST" && url.endsWith("/sites/site-1/pages/page-1/sections"),
+          method === "POST" &&
+          url.endsWith("/sites/site-1/pages/page-1/sections"),
         status: 200,
         body: { sections: env([FAQ]) },
       },
     ];
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesSaveSection }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesSaveSection }),
+    );
     await waitFor(() => expect(lastWrite()).toBeTruthy());
     expect(lastWrite()!.body).toEqual({
       section: {
@@ -503,13 +565,18 @@ describe("adding a section", () => {
     replies = [
       {
         match: (url, method) =>
-          method === "POST" && url.endsWith("/sites/site-1/pages/page-1/sections"),
+          method === "POST" &&
+          url.endsWith("/sites/site-1/pages/page-1/sections"),
         status: 422,
         body: { detail: "cta section: heading must not be blank" },
       },
     ];
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesSaveSection }));
-    expect(await screen.findByText("cta section: heading must not be blank")).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesSaveSection }),
+    );
+    expect(
+      await screen.findByText("cta section: heading must not be blank"),
+    ).toBeTruthy();
     expect(screen.getByRole("dialog")).toBeTruthy();
   });
 });
@@ -524,9 +591,15 @@ describe("editing a section", () => {
     fireEvent.click(
       screen.getAllByRole("button", { name: strings.sitesAiImproveCopy })[0]!,
     );
-    expect(screen.getByRole("button", { name: strings.sitesAiRewrite })).toBeTruthy();
-    expect(screen.getByRole("button", { name: strings.sitesAiShorter })).toBeTruthy();
-    expect(screen.getByRole("button", { name: strings.sitesAiLonger })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: strings.sitesAiRewrite }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: strings.sitesAiShorter }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: strings.sitesAiLonger }),
+    ).toBeTruthy();
 
     const copyProposal = {
       schema_version: 1,
@@ -543,10 +616,15 @@ describe("editing a section", () => {
       {
         match: (url, method) => method === "POST" && url.endsWith("/ai-edits"),
         status: 200,
-        body: { proposal: copyProposal, previewHtml: "<!doctype html><p>Fresh bread</p>" },
+        body: {
+          proposal: copyProposal,
+          previewHtml: "<!doctype html><p>Fresh bread</p>",
+        },
       },
     ];
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesAiShorter }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesAiShorter }),
+    );
 
     expect(await screen.findByText(strings.sitesAiCopyBefore)).toBeTruthy();
     expect(screen.getByText(strings.sitesAiCopyAfter)).toBeTruthy();
@@ -571,11 +649,16 @@ describe("editing a section", () => {
         body: { sections: env([{ ...HERO, heading: "Fresh bread" }]) },
       },
     ];
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesAiApprove }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesAiApprove }),
+    );
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(await screen.findByText("Fresh bread")).toBeTruthy();
-    expect(lastWrite()).toMatchObject({ method: "PUT", body: { proposal: copyProposal } });
+    expect(lastWrite()).toMatchObject({
+      method: "PUT",
+      body: { proposal: copyProposal },
+    });
   });
 
   test("the form opens prefilled and PUTs to the section's index", async () => {
@@ -583,13 +666,16 @@ describe("editing a section", () => {
     ui();
     await screen.findByText(strings.sitesSectionHero);
     fireEvent.click(sectionControls("edit")[0]!);
-    const heading = screen.getByLabelText(strings.sitesFieldHeading) as HTMLInputElement;
+    const heading = screen.getByLabelText(
+      strings.sitesFieldHeading,
+    ) as HTMLInputElement;
     expect(heading.value).toBe("Fresh bread daily");
 
     replies = [
       {
         match: (url, method) =>
-          method === "PUT" && url.endsWith("/sites/site-1/pages/page-1/sections/0"),
+          method === "PUT" &&
+          url.endsWith("/sites/site-1/pages/page-1/sections/0"),
         status: 200,
         body: {
           sections: env([{ ...HERO, heading: "Warm bread daily" }, CONTACT]),
@@ -597,13 +683,19 @@ describe("editing a section", () => {
       },
     ];
     fireEvent.change(heading, { target: { value: "Warm bread daily" } });
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesSaveSection }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesSaveSection }),
+    );
 
     await waitFor(() => expect(lastWrite()).toBeTruthy());
     // The untouched subheading rode along — an edit never strips what the
     // user did not change.
     expect(lastWrite()!.body).toEqual({
-      section: { type: "hero", heading: "Warm bread daily", subheading: "Since 1962" },
+      section: {
+        type: "hero",
+        heading: "Warm bread daily",
+        subheading: "Since 1962",
+      },
     });
     expect(await screen.findByText("Warm bread daily")).toBeTruthy();
   });
@@ -617,7 +709,8 @@ describe("editing a section", () => {
     replies = [
       {
         match: (url, method) =>
-          method === "PUT" && url.endsWith("/sites/site-1/pages/page-1/sections/0"),
+          method === "PUT" &&
+          url.endsWith("/sites/site-1/pages/page-1/sections/0"),
         status: 200,
         body: { sections: env([{ ...CONTACT, heading: "Talk to us" }]) },
       },
@@ -625,7 +718,9 @@ describe("editing a section", () => {
     fireEvent.change(screen.getByLabelText(strings.sitesFieldHeading), {
       target: { value: "Talk to us" },
     });
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesSaveSection }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesSaveSection }),
+    );
 
     await waitFor(() => expect(lastWrite()).toBeTruthy());
     expect(lastWrite()!.body).toEqual({
@@ -655,7 +750,8 @@ describe("editing a section", () => {
     replies = [
       {
         match: (url, method) =>
-          method === "PUT" && url.endsWith("/sites/site-1/pages/page-1/sections/0"),
+          method === "PUT" &&
+          url.endsWith("/sites/site-1/pages/page-1/sections/0"),
         status: 200,
         body: { sections: env([{ ...framed, heading: "Warm bread daily" }]) },
       },
@@ -663,7 +759,9 @@ describe("editing a section", () => {
     fireEvent.change(screen.getByLabelText(strings.sitesFieldHeading), {
       target: { value: "Warm bread daily" },
     });
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesSaveSection }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesSaveSection }),
+    );
 
     await waitFor(() => expect(lastWrite()).toBeTruthy());
     expect(lastWrite()!.body).toEqual({
@@ -681,7 +779,8 @@ describe("reordering and deleting", () => {
     replies = [
       {
         match: (url, method) =>
-          method === "POST" && url.endsWith("/sites/site-1/pages/page-1/sections/0/move"),
+          method === "POST" &&
+          url.endsWith("/sites/site-1/pages/page-1/sections/0/move"),
         status: 200,
         body: { sections: env([FAQ, HERO]) },
       },
@@ -703,15 +802,20 @@ describe("reordering and deleting", () => {
     replies = [
       {
         match: (url, method) =>
-          method === "DELETE" && url.endsWith("/sites/site-1/pages/page-1/sections/1"),
+          method === "DELETE" &&
+          url.endsWith("/sites/site-1/pages/page-1/sections/1"),
         status: 200,
         body: { sections: env([HERO]) },
       },
     ];
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesConfirmDelete }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesConfirmDelete }),
+    );
     await waitFor(() => expect(lastWrite()).toBeTruthy());
     expect(lastWrite()!.method).toBe("DELETE");
-    await waitFor(() => expect(screen.queryByText(strings.sitesSectionFaq)).toBeNull());
+    await waitFor(() =>
+      expect(screen.queryByText(strings.sitesSectionFaq)).toBeNull(),
+    );
   });
 });
 
@@ -727,47 +831,90 @@ describe("the live preview", () => {
   }
 
   function previewCalls(): number {
-    return calls.filter((c) => c.method === "GET" && c.url.endsWith("/preview")).length;
+    return calls.filter((c) => c.method === "GET" && c.url.endsWith("/preview"))
+      .length;
   }
 
   function frame(): HTMLIFrameElement {
     return screen.getByTitle(strings.sitesPreviewTitle) as HTMLIFrameElement;
   }
 
+  async function openPreview(): Promise<void> {
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesShowPreview }),
+    );
+  }
+
+  test("the preview stays out of the building workspace until requested", async () => {
+    replies = [pageReply([HERO]), previewReply("<!doctype html><p>draft</p>")];
+    ui();
+
+    await screen.findByText(strings.sitesSectionHero);
+    expect(screen.queryByTitle(strings.sitesPreviewTitle)).toBeNull();
+    expect(previewCalls()).toBe(0);
+
+    await openPreview();
+    await waitFor(() =>
+      expect(frame().getAttribute("srcdoc")).toContain("draft"),
+    );
+    expect(previewCalls()).toBe(1);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesHidePreview }),
+    );
+    expect(screen.queryByTitle(strings.sitesPreviewTitle)).toBeNull();
+  });
+
   test("the pane shows the server-rendered draft in a sandboxed frame", async () => {
-    replies = [pageReply([HERO]), previewReply("<!doctype html>\n<p>draft one</p>")];
+    replies = [
+      pageReply([HERO]),
+      previewReply("<!doctype html>\n<p>draft one</p>"),
+    ];
     ui();
     await screen.findByText(strings.sitesSectionHero);
-    await waitFor(() => expect(frame().getAttribute("srcdoc")).toContain("draft one"));
+    await openPreview();
+    await waitFor(() =>
+      expect(frame().getAttribute("srcdoc")).toContain("draft one"),
+    );
     // The draft document may run its menu script but never touches this
     // origin or navigates the app.
     expect(frame().getAttribute("sandbox")).toBe("allow-scripts");
   });
 
   test("a successful save refreshes the preview; a refused one does not", async () => {
-    replies = [pageReply([HERO, FAQ]), previewReply("<!doctype html>\n<p>before</p>")];
+    replies = [
+      pageReply([HERO, FAQ]),
+      previewReply("<!doctype html>\n<p>before</p>"),
+    ];
     ui();
     await screen.findByText(strings.sitesSectionHero);
-    await waitFor(() => expect(frame().getAttribute("srcdoc")).toContain("before"));
+    await openPreview();
+    await waitFor(() =>
+      expect(frame().getAttribute("srcdoc")).toContain("before"),
+    );
 
     replies = [
       {
         match: (url, method) =>
-          method === "POST" && url.endsWith("/sites/site-1/pages/page-1/sections/0/move"),
+          method === "POST" &&
+          url.endsWith("/sites/site-1/pages/page-1/sections/0/move"),
         status: 200,
         body: { sections: env([FAQ, HERO]) },
       },
       previewReply("<!doctype html>\n<p>after</p>"),
     ];
     fireEvent.click(sectionControls("down")[0]!);
-    await waitFor(() => expect(frame().getAttribute("srcdoc")).toContain("after"));
+    await waitFor(() =>
+      expect(frame().getAttribute("srcdoc")).toContain("after"),
+    );
 
     // A refused gesture leaves the sections untouched — and the pane still.
     const fetched = previewCalls();
     replies = [
       {
         match: (url, method) =>
-          method === "POST" && url.endsWith("/sites/site-1/pages/page-1/sections/0/move"),
+          method === "POST" &&
+          url.endsWith("/sites/site-1/pages/page-1/sections/0/move"),
         status: 422,
         body: { detail: "no section at index 9 (the page has 2)" },
       },
@@ -781,6 +928,7 @@ describe("the live preview", () => {
     replies = [pageReply([HERO]), previewReply("<!doctype html>\n<p>ok</p>")];
     ui();
     await screen.findByText(strings.sitesSectionHero);
+    await openPreview();
 
     const desktop = screen.getByLabelText(strings.sitesPreviewDesktop);
     const phone = screen.getByLabelText(strings.sitesPreviewMobile);
@@ -789,6 +937,24 @@ describe("the live preview", () => {
     fireEvent.click(phone);
     expect(desktop.getAttribute("aria-pressed")).toBe("false");
     expect(phone.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  test("the desktop splitter adjusts both panels with the keyboard and resets", async () => {
+    replies = [pageReply([HERO]), previewReply("<!doctype html><p>ok</p>")];
+    ui();
+    await screen.findByText(strings.sitesSectionHero);
+    await openPreview();
+
+    const splitter = screen.getByRole("separator", {
+      name: strings.sitesResizeWorkspace,
+    });
+    expect(splitter.getAttribute("aria-valuenow")).toBe("34");
+    fireEvent.keyDown(splitter, { key: "ArrowRight" });
+    expect(splitter.getAttribute("aria-valuenow")).toBe("38");
+    fireEvent.keyDown(splitter, { key: "End" });
+    expect(splitter.getAttribute("aria-valuenow")).toBe("65");
+    fireEvent.doubleClick(splitter);
+    expect(splitter.getAttribute("aria-valuenow")).toBe("34");
   });
 
   test("a failed preview shows its own error while the editor keeps working", async () => {
@@ -802,6 +968,7 @@ describe("the live preview", () => {
     ];
     ui();
     await screen.findByText(strings.sitesSectionHero);
+    await openPreview();
     expect(await screen.findByText(strings.sitesPreviewFailed)).toBeTruthy();
     // The stack is intact — the preview failing never blocks editing.
     expect(screen.getByText("Fresh bread daily")).toBeTruthy();
@@ -841,6 +1008,9 @@ describe("who can open the page", () => {
     replies = [pageReply([HERO]), protectionReply({ protected: false })];
     ui();
     await screen.findByText(strings.sitesPagePasswordPublic);
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesShowPreview }),
+    );
 
     fireEvent.click(
       screen.getByRole("button", { name: strings.sitesPagePasswordProtect }),
