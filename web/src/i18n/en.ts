@@ -3830,11 +3830,17 @@ export const en = {
   sitesNoSectionsTitle: "Nothing on this page yet",
   sitesNoSectionsBody:
     "Stack sections — a hero, your features, a contact form — to build the page.",
-  // The palette (ADR 0042 §4): blocks shown with the tenant's own content,
-  // dragged onto the stack or placed with the keyboard.
+  // The palette (ADR 0042 §4): blocks shown with the tenant's own content and
+  // placed precisely with the same control for pointer and keyboard users.
   sitesPaletteTitle: "Add a section",
   sitesPaletteHint:
-    "Drag a block onto the page, or choose where it goes and press one.",
+    "Choose a block and review how it looks with your content before adding it.",
+  sitesPaletteCategories: "Section categories",
+  sitesPaletteCategoryAll: "All",
+  sitesPaletteCategoryEssentials: "Essentials",
+  sitesPaletteCategoryContent: "Content",
+  sitesPaletteCategoryBusiness: "Business",
+  sitesPaletteCategoryAdvanced: "Advanced",
   sitesPalettePosition: "Where it goes",
   sitesPaletteAtTop: "At the top",
   sitesPaletteAtEnd: "At the end",

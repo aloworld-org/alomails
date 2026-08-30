@@ -3892,7 +3892,13 @@ export const fr: Partial<Catalog> = {
   // La palette (ADR 0042 §4) : des blocs montrés avec le contenu du client.
   sitesPaletteTitle: "Ajouter une section",
   sitesPaletteHint:
-    "Faites glisser un bloc sur la page, ou choisissez sa place et appuyez dessus.",
+    "Choisissez un bloc et prévisualisez-le avec votre contenu avant de l’ajouter.",
+  sitesPaletteCategories: "Catégories de sections",
+  sitesPaletteCategoryAll: "Toutes",
+  sitesPaletteCategoryEssentials: "Essentiels",
+  sitesPaletteCategoryContent: "Contenu",
+  sitesPaletteCategoryBusiness: "Activité",
+  sitesPaletteCategoryAdvanced: "Avancé",
   sitesPalettePosition: "Emplacement",
   sitesPaletteAtTop: "Tout en haut",
   sitesPaletteAtEnd: "Tout en bas",

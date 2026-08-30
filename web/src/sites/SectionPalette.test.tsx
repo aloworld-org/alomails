@@ -194,10 +194,6 @@ function tile(kind: string): HTMLElement {
   return found;
 }
 
-function rows(): HTMLElement[] {
-  return [...document.querySelectorAll<HTMLElement>("ol > li")];
-}
-
 function adds(): Call[] {
   return calls.filter(
     (call) => call.method === "POST" && call.url.endsWith("/pages/page-1/sections"),
@@ -212,42 +208,30 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe("a block is dragged from the palette onto the page", () => {
-  test("dropping it on a section puts it before that section", async () => {
+describe("the popup section library", () => {
+  test("opens as a focused dialog with category navigation", async () => {
     ui();
     await stackLoaded();
     await openPalette();
 
-    fireEvent.dragStart(tile("contact_form"));
-    const second = rows()[1];
-    if (second === undefined) throw new Error("no second row");
-    fireEvent.dragOver(second);
-    fireEvent.drop(second);
-
-    await waitFor(() => expect(adds()).toHaveLength(1));
-    expect(adds()[0]?.body).toEqual({ section: SEEDED_CONTACT, index: 1 });
-    // What the palette showed is what the page stores: the editor sent the
-    // server's own seeded section back, untouched.
-    expect(adds()[0]?.body).toStrictEqual({
-      section: SEEDED_CONTACT,
-      index: 1,
-    });
-    await waitFor(() => expect(rows()).toHaveLength(3));
-    expect(rows()[1]?.textContent).toContain(strings.sitesSectionContactForm);
-  });
-
-  test("dropping it past the last section puts it at the end", async () => {
-    ui();
-    await stackLoaded();
-    await openPalette();
-
-    fireEvent.dragStart(tile("contact_form"));
-    const end = await screen.findByText(strings.sitesPaletteDropHere);
-    fireEvent.dragOver(end);
-    fireEvent.drop(end);
-
-    await waitFor(() => expect(adds()).toHaveLength(1));
-    expect(adds()[0]?.body).toEqual({ section: SEEDED_CONTACT, index: 2 });
+    expect(
+      screen.getByRole("dialog", { name: strings.sitesPaletteTitle }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("navigation", {
+        name: strings.sitesPaletteCategories,
+      }),
+    ).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole("tab", {
+        name: strings.sitesPaletteCategoryEssentials,
+      }),
+    );
+    expect(document.querySelector("[data-palette-tile]")).toBeNull();
+    fireEvent.click(
+      screen.getByRole("tab", { name: strings.sitesPaletteCategoryAll }),
+    );
+    expect(tile("contact_form")).toBeTruthy();
   });
 });
 
@@ -257,7 +241,8 @@ describe("the same block can be placed without a mouse", () => {
     await stackLoaded();
     await openPalette();
 
-    // The palette takes the caret when it opens, so a keyboard user is in it.
+    // The popup moves the caret inside, and the loaded palette then puts it on
+    // the first block so a keyboard user can choose immediately.
     await waitFor(() =>
       expect(document.activeElement).toBe(tile("contact_form")),
     );
@@ -290,12 +275,9 @@ describe("the same block can be placed without a mouse", () => {
     await stackLoaded();
 
     // Closed straight after opening — before the seeded tiles arrived. The
-    // palette's take-the-caret step then fires AFTER the close and unmounts
-    // the tile it focused, which without the editor's catch would drop the
-    // caret at the top of the document (the exact bug the dialog-keyboard
-    // suite exists to prevent).
+    // shared modal restores the exact button that opened it.
     fireEvent.click(screen.getByRole("button", { name: strings.sitesAddSection }));
-    fireEvent.keyDown(tile("contact_form"), { key: "Escape" });
+    fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() =>
       expect(document.querySelector("[data-palette-tile]")).toBeNull(),
     );
@@ -343,7 +325,9 @@ describe("a tile shows the tenant's own content, or says it has none", () => {
     fireEvent.click(tile("pricing"));
     // The prop form opens instead of a section being stored, and the position
     // chosen in the palette rides through it.
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await screen.findByRole("dialog", {
+      name: strings.sitesAddSectionTitle(strings.sitesSectionPricing),
+    });
     expect(dialog.textContent).toContain(strings.sitesSectionPricing);
     expect(adds()).toHaveLength(0);
   });

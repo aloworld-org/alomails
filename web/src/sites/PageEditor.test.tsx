@@ -486,6 +486,10 @@ describe("adding a section", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: strings.sitesAddSection }),
     );
+    expect(screen.queryByText(strings.sitesNoSectionsTitle)).toBeNull();
+    expect(
+      screen.getByRole("region", { name: strings.sitesPaletteTitle }),
+    ).toBeTruthy();
 
     for (const kind of SECTION_KINDS) {
       expect(paletteTile(kind)).toBeTruthy();
@@ -595,7 +599,11 @@ describe("adding a section", () => {
     expect(
       await screen.findByText("cta section: heading must not be blank"),
     ).toBeTruthy();
-    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(
+      screen.getByRole("dialog", {
+        name: strings.sitesAddSectionTitle(strings.sitesSectionCta),
+      }),
+    ).toBeTruthy();
   });
 });
 

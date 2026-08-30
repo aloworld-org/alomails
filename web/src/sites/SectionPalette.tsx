@@ -1,13 +1,9 @@
 // The section palette (ADR 0042 §4, S3.01d): the blocks a page can be built
 // from, each shown with THIS website's own content.
 //
-// It is a panel beside the stack rather than a dialog over it, because the
-// gesture the ADR asks for is dragging a block onto the page — and you cannot
-// drag out of a modal onto the thing it covers. The pointer gesture and the
-// keyboard one produce the identical request: a tile carries the section the
-// server seeded, and the position comes either from where it was dropped or
-// from the "where it goes" control, so nothing about a block depends on being
-// able to drag.
+// It is a focused popup library. A short category navigation keeps eighteen
+// block types scannable, while the insertion control makes exact placement
+// available without requiring a drag gesture through a covered page.
 //
 // What a tile shows is not an illustration. Selecting one (hover, or focus
 // while tabbing) renders it through the same renderer that publishes the site,
@@ -15,16 +11,33 @@
 // palette cannot fill from the website — a quote nobody has given, a picture
 // nobody has uploaded — says so in that space instead, and opens the prop form
 // the way it always did. Nothing is ever invented to fill a preview.
-import { useCallback, useEffect, useRef, useState } from "react";
-import { LayoutGrid, X } from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  BriefcaseBusiness,
+  FileText,
+  LayoutGrid,
+  PanelsTopLeft,
+  Settings2,
+} from "lucide-react";
 
 import { strings } from "../i18n";
-import { Button, IconButton, Spinner } from "../ds";
+import {
+  ModuleNavigation,
+  Select,
+  Spinner,
+  moduleNavigationItemClassName,
+} from "../ds";
 import { sitesMessage, useSitesApi } from "./api";
 import { kindDescription, kindLabel } from "./sectionInfo";
 import { sectionThumbnail } from "./sectionThumbnails";
 import { unseededPalette, type PaletteNeed, type PaletteTile } from "./palette";
-import type { Section } from "./sections";
+import type { Section, SectionKind } from "./sections";
 import { ErrorBanner } from "./parts";
 import styles from "./SitesModule.module.css";
 
@@ -74,9 +87,6 @@ export function SectionPalette({
   sections,
   busy,
   onChoose,
-  onDragTile,
-  onDragEnd,
-  onClose,
 }: {
   siteId: string;
   pageId: string;
@@ -90,10 +100,6 @@ export function SectionPalette({
   /** A tile was chosen: insert its seeded section at `index`, or open the prop
    *  form there when it carries none. */
   onChoose: (tile: PaletteTile, index: number) => void;
-  /** A tile is being dragged; the stack shows where it would land. */
-  onDragTile: (tile: PaletteTile) => void;
-  onDragEnd: () => void;
-  onClose: () => void;
 }) {
   const api = useSitesApi();
   const [tiles, setTiles] = useState<PaletteTile[]>(unseededPalette());
@@ -103,6 +109,7 @@ export function SectionPalette({
   const [previews, setPreviews] = useState<Record<string, string>>({});
   const [previewBusy, setPreviewBusy] = useState(false);
   const [position, setPosition] = useState(sections.length);
+  const [category, setCategory] = useState("all");
   const panel = useRef<HTMLElement | null>(null);
 
   // Opening the palette moves the caret into it: it is a disclosure opened by
@@ -169,6 +176,57 @@ export function SectionPalette({
   );
 
   const shown = tiles.find((tile) => tile.kind === selected) ?? null;
+  const categories: {
+    id: string;
+    label: string;
+    kinds: readonly SectionKind[] | null;
+    icon: ReactNode;
+  }[] = [
+    {
+      id: "all",
+      label: strings.sitesPaletteCategoryAll,
+      kinds: null,
+      icon: <LayoutGrid size="var(--icon-size-inline)" />,
+    },
+    {
+      id: "essentials",
+      label: strings.sitesPaletteCategoryEssentials,
+      kinds: ["nav", "hero", "features", "cta", "footer"],
+      icon: <PanelsTopLeft size="var(--icon-size-inline)" />,
+    },
+    {
+      id: "content",
+      label: strings.sitesPaletteCategoryContent,
+      kinds: ["text_image", "gallery", "testimonials", "team", "faq"],
+      icon: <FileText size="var(--icon-size-inline)" />,
+    },
+    {
+      id: "business",
+      label: strings.sitesPaletteCategoryBusiness,
+      kinds: [
+        "pricing",
+        "contact_form",
+        "collection",
+        "catalog",
+        "booking",
+        "tickets",
+        "shop",
+      ],
+      icon: <BriefcaseBusiness size="var(--icon-size-inline)" />,
+    },
+    {
+      id: "advanced",
+      label: strings.sitesPaletteCategoryAdvanced,
+      kinds: ["custom_code"],
+      icon: <Settings2 size="var(--icon-size-inline)" />,
+    },
+  ];
+  const activeCategory =
+    categories.find((item) => item.id === category) ?? categories[0]!;
+  const visibleTiles =
+    activeCategory.kinds === null
+      ? tiles
+      : tiles.filter((tile) => activeCategory.kinds?.includes(tile.kind));
   const positions = positionOptions(sections);
   const positionLabel =
     positions.find((option) => option.index === position)?.label ??
@@ -179,25 +237,40 @@ export function SectionPalette({
       ref={panel}
       className={styles.palette}
       aria-label={strings.sitesPaletteTitle}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") {
-          event.stopPropagation();
-          onClose();
-        }
-      }}
     >
-      <div className={styles.paletteHead}>
-        <span className={styles.paletteIcon} aria-hidden="true">
-          <LayoutGrid size={17} />
-        </span>
-        <div className={styles.paletteHeadText}>
-          <h3 className={styles.paletteTitle}>{strings.sitesPaletteTitle}</h3>
-          <p className={styles.paletteHint}>{strings.sitesPaletteHint}</p>
-        </div>
+      <p className={styles.paletteHint}>{strings.sitesPaletteHint}</p>
+      <div className={styles.paletteToolbar}>
+        <ModuleNavigation label={strings.sitesPaletteCategories}>
+          <div className="contents" role="tablist">
+            {categories.map((item) => {
+              const active = category === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  className={moduleNavigationItemClassName(active)}
+                  onClick={() => {
+                    setCategory(item.id);
+                    const first =
+                      item.kinds === null
+                        ? tiles[0]
+                        : tiles.find((tile) => item.kinds?.includes(tile.kind));
+                    if (first !== undefined) select(first);
+                  }}
+                >
+                  {item.icon}
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        </ModuleNavigation>
         <label className={styles.palettePosition}>
           <span>{strings.sitesPalettePosition}</span>
-          <select
-            className={styles.select}
+          <Select
+            size="md"
             value={position}
             disabled={busy}
             onChange={(event) => setPosition(Number(event.target.value))}
@@ -207,21 +280,15 @@ export function SectionPalette({
                 {option.label}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
-        <IconButton
-          size="sm"
-          label={strings.close}
-          icon={<X size={16} />}
-          onClick={onClose}
-        />
       </div>
 
       {error !== null && <ErrorBanner message={error} />}
 
       <div className={styles.paletteBody}>
         <div className={styles.paletteGrid}>
-          {tiles.map((tile) => (
+          {visibleTiles.map((tile) => (
             <button
               key={tile.kind}
               type="button"
@@ -231,18 +298,10 @@ export function SectionPalette({
                   ? `${styles.paletteTile} ${styles.paletteTileActive}`
                   : styles.paletteTile
               }
-              draggable={!busy}
               aria-label={strings.sitesPaletteAdd(kindLabel(tile.kind), positionLabel)}
               disabled={busy}
               onFocus={() => select(tile)}
               onMouseEnter={() => select(tile)}
-              onDragStart={(event) => {
-                // Firefox refuses to start a drag with nothing on the
-                // transfer; the kind is what is already visible on the tile.
-                event.dataTransfer?.setData("text/plain", tile.kind);
-                onDragTile(tile);
-              }}
-              onDragEnd={onDragEnd}
               onClick={() => onChoose(tile, position)}
             >
               <svg
@@ -298,11 +357,6 @@ export function SectionPalette({
         </div>
       </div>
 
-      <p className={styles.paletteFoot}>
-        <Button variant="ghost" size="sm" onClick={onClose}>
-          {strings.sitesPaletteDone}
-        </Button>
-      </p>
     </section>
   );
 }

@@ -3846,7 +3846,13 @@ export const nl: Partial<Catalog> = {
   // Het palet (ADR 0042 §4): blokken getoond met de eigen inhoud van de klant.
   sitesPaletteTitle: "Sectie toevoegen",
   sitesPaletteHint:
-    "Sleep een blok op de pagina, of kies de plek en druk op een blok.",
+    "Kies een blok en bekijk het met uw inhoud voordat u het toevoegt.",
+  sitesPaletteCategories: "Sectiecategorieën",
+  sitesPaletteCategoryAll: "Alles",
+  sitesPaletteCategoryEssentials: "Basis",
+  sitesPaletteCategoryContent: "Inhoud",
+  sitesPaletteCategoryBusiness: "Zakelijk",
+  sitesPaletteCategoryAdvanced: "Geavanceerd",
   sitesPalettePosition: "Plek",
   sitesPaletteAtTop: "Bovenaan",
   sitesPaletteAtEnd: "Onderaan",

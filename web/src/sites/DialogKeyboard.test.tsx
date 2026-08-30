@@ -8,11 +8,9 @@
 //
 // `DialogFrame` is the hand-written chrome every dialog on the surface
 // inherits — twelve of them: new site, new page, theme, SEO, publish, catalog
-// item, domain purchase, handoff, and the section prop forms. (The section
-// palette used to be a thirteenth; it became a panel beside the stack in
-// S3.01d, because a block is dragged onto the page and nothing can be dragged
-// out of a modal onto what it covers. Its own keyboard contract is asserted in
-// `SectionPalette.test.tsx`.)
+// item, domain purchase, handoff, and the section prop forms. The section
+// library now uses the shared design-system Modal directly; its focused
+// category and placement contract is asserted in `SectionPalette.test.tsx`.
 import { useState } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";

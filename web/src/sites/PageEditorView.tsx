@@ -38,6 +38,7 @@ import {
   GripVertical,
   Eye,
   Layers,
+  LayoutGrid,
   Lock,
   Monitor,
   Palette,
@@ -48,10 +49,11 @@ import {
   Smartphone,
   Trash2,
   Undo2,
+  X,
 } from "lucide-react";
 
 import { strings } from "../i18n";
-import { Button, IconButton, Spinner } from "../ds";
+import { Button, IconButton, Modal, Spinner } from "../ds";
 import { sitesMessage, useSitesApi } from "./api";
 import { kindLabel, layoutValueLabel, sectionSummary } from "./sectionInfo";
 import { SectionFormDialog } from "./SectionForm";
@@ -145,11 +147,6 @@ export function PageEditorView() {
       }
     };
   }, [picking]);
-  // The tile currently being dragged out of the palette, and the position the
-  // stack is offering it. A new block and a moved one are two different
-  // gestures over the same rows, so the stack has to know which is in flight.
-  const [paletteDrag, setPaletteDrag] = useState<PaletteTile | null>(null);
-  const [paletteOver, setPaletteOver] = useState<number | null>(null);
   const [form, setForm] = useState<FormTarget | null>(null);
   const [formBusy, setFormBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -832,8 +829,6 @@ export function PageEditorView() {
   async function addTile(tile: PaletteTile, at: number) {
     const current = sectionsRef.current;
     const index = insertionIndex(current.length, at);
-    setPaletteDrag(null);
-    setPaletteOver(null);
     if (tile.section === null) {
       openForm({ kind: tile.kind, index: null, insertAt: index });
       return;
@@ -865,8 +860,6 @@ export function PageEditorView() {
    *  — the disclosure contract every other panel on this screen keeps. */
   function closePalette() {
     setPicking(false);
-    setPaletteDrag(null);
-    setPaletteOver(null);
     document.querySelector<HTMLButtonElement>("[data-add-section]")?.focus();
   }
 
@@ -1079,6 +1072,38 @@ export function PageEditorView() {
             </div>
           </section>
 
+          {picking && (
+            <Modal
+              title={strings.sitesPaletteTitle}
+              wide="extra"
+              tall
+              icon={<LayoutGrid size="var(--icon-size-control)" />}
+              actions={
+                <IconButton
+                  label={strings.close}
+                  icon={<X size="var(--icon-size-control)" />}
+                  onClick={closePalette}
+                />
+              }
+              onClose={closePalette}
+            >
+              <SectionPalette
+                siteId={siteId}
+                pageId={pageId}
+                seeded={locale === null}
+                sections={sections}
+                busy={working || translationBusy}
+                onChoose={(tile, index) => {
+                  // A picker is a single-choice task. Return the page to the
+                  // workspace as soon as a block is chosen; an unseeded block
+                  // opens its focused details dialog next.
+                  setPicking(false);
+                  void addTile(tile, index);
+                }}
+              />
+            </Modal>
+          )}
+
           {locale !== null && translationFallback && (
             <section
               className="mx-auto mt-4 flex w-full max-w-[1600px] flex-wrap items-center justify-between gap-4 rounded-2xl border border-accent/20 bg-accent-soft px-5 py-4"
@@ -1208,24 +1233,7 @@ export function PageEditorView() {
                 </div>
               </div>
 
-              {picking && (
-                <SectionPalette
-                  siteId={siteId}
-                  pageId={pageId}
-                  seeded={locale === null}
-                  sections={sections}
-                  busy={working || translationBusy}
-                  onChoose={(tile, index) => void addTile(tile, index)}
-                  onDragTile={setPaletteDrag}
-                  onDragEnd={() => {
-                    setPaletteDrag(null);
-                    setPaletteOver(null);
-                  }}
-                  onClose={closePalette}
-                />
-              )}
-
-              {empty && !loading && (
+              {empty && !loading && !picking && (
                 <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 text-center">
                   <span
                     className="inline-flex size-12 items-center justify-center rounded-2xl bg-accent-soft text-accent"
@@ -1264,11 +1272,9 @@ export function PageEditorView() {
                   {sections.map((section, i) => {
                     const summary = sectionSummary(section);
                     const cardClass =
-                      paletteDrag !== null && paletteOver === i
-                        ? `${styles.card} ${styles.cardInsertBefore}`
-                        : dragOver === i && dragFrom !== null && dragFrom !== i
-                          ? `${styles.card} ${styles.cardDropTarget}`
-                          : styles.card;
+                      dragOver === i && dragFrom !== null && dragFrom !== i
+                        ? `${styles.card} ${styles.cardDropTarget}`
+                        : styles.card;
                     return (
                       // Sections have no identity — the position is the key.
                       <li
@@ -1278,17 +1284,10 @@ export function PageEditorView() {
                         onDragStart={() => setDragFrom(i)}
                         onDragOver={(e) => {
                           e.preventDefault();
-                          // A block from the palette lands *before* this row;
-                          // a row from the stack changes places with it.
-                          if (paletteDrag !== null) setPaletteOver(i);
-                          else setDragOver(i);
+                          setDragOver(i);
                         }}
                         onDrop={(e) => {
                           e.preventDefault();
-                          if (paletteDrag !== null) {
-                            void addTile(paletteDrag, i);
-                            return;
-                          }
                           if (dragFrom !== null) void move(dragFrom, i);
                           setDragFrom(null);
                           setDragOver(null);
@@ -1407,25 +1406,6 @@ export function PageEditorView() {
                 </ol>
               )}
 
-              {paletteDrag !== null && (
-                <div
-                  className={
-                    paletteOver === sections.length
-                      ? `${styles.paletteDropEnd} ${styles.paletteDropEndOver}`
-                      : styles.paletteDropEnd
-                  }
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setPaletteOver(sections.length);
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    void addTile(paletteDrag, sections.length);
-                  }}
-                >
-                  {strings.sitesPaletteDropHere}
-                </div>
-              )}
             </section>
 
             {previewOpen && (
