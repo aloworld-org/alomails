@@ -14,6 +14,7 @@
 //! contact QR and the table's presentation options are the studio's on-screen
 //! design and are recorded in `docs/design/billing.md` as not yet printed.
 
+use base64::Engine;
 use serde_json::Value;
 
 use crate::quote_design_lists::ListStyle;
@@ -187,6 +188,19 @@ pub struct DataImage {
 
 impl DataImage {
     fn parse(src: &str) -> Option<Self> {
+        // The development corpus stores a short path to this reusable,
+        // repository-owned illustration. Browsers can request its SVG, while
+        // a PDF must be self-contained and its writer accepts raster images
+        // only. Resolve this one closed path at render time so no network
+        // request or large base64 database field is involved.
+        if src == "/demo/billing/workspace.svg" {
+            return Some(Self {
+                mime: "image/png",
+                base64: base64::engine::general_purpose::STANDARD.encode(include_bytes!(
+                    "../../../../web/public/demo/billing/workspace.png"
+                )),
+            });
+        }
         let rest = src.strip_prefix("data:")?;
         let (mime, payload) = rest.split_once(";base64,")?;
         let mime = match mime.to_ascii_lowercase().as_str() {
@@ -614,5 +628,15 @@ mod tests {
         assert!(DataImage::parse("data:text/html;base64,PHNjcmlwdD4=").is_none());
         assert!(DataImage::parse("data:image/png;base64,<script>").is_none());
         assert!(DataImage::parse("https://example.test/a.png").is_none());
+    }
+
+    #[test]
+    fn the_repository_demo_picture_is_embedded_for_print_and_pdf() {
+        let image = DataImage::parse("/demo/billing/workspace.svg").unwrap();
+        assert_eq!(image.mime, "image/png");
+        let bytes = base64::engine::general_purpose::STANDARD
+            .decode(&image.base64)
+            .unwrap();
+        assert!(bytes.starts_with(b"\x89PNG\r\n\x1a\n"));
     }
 }
