@@ -30,7 +30,7 @@ const dateInput =
 const quickAction =
   "inline-flex h-10 items-center justify-center whitespace-nowrap rounded-lg border border-default bg-surface !px-4 text-sm font-medium !text-secondary !no-underline transition-colors hover:border-accent hover:bg-[var(--accent-soft)] hover:!text-accent hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20";
 const tableShell =
-  "overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm";
+  "shrink-0 overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm";
 const tableClass = "w-full border-collapse text-sm";
 const headCell =
   "sticky top-0 z-[1] whitespace-nowrap border-b border-default bg-sunken px-4 py-3 text-left text-xs font-semibold text-tertiary";
@@ -185,7 +185,7 @@ export function VatReportView() {
 
       {report !== null && report.currencies.length > 0 && (
         <section
-          className="mx-auto mb-8 w-full max-w-[90rem] rounded-2xl border border-subtle bg-surface p-5 shadow-sm"
+          className="mx-auto mb-8 w-full max-w-[90rem] shrink-0 rounded-2xl border border-subtle bg-surface p-5 shadow-sm"
           aria-labelledby="vat-overview-title"
         >
           <div className="mb-4 flex items-center justify-between gap-4">
