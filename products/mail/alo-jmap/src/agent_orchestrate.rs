@@ -386,7 +386,19 @@ async fn run_steps(
                 voice.say(&run.alo.id, UNCONFIGURED).await;
                 return Some(Spoken::Excused);
             }
-            Err(_) => {
+            Err(error) => {
+                // The room is told nothing about why — `UNREACHABLE` says so
+                // deliberately — but an operator must be able to find out.
+                // Before this line the reason was discarded, and a run that
+                // stopped here looked the same whether the provider was
+                // rate-limiting, timing out, or refusing the request.
+                tracing::warn!(
+                    step = done + 1,
+                    of = total,
+                    delegate = %delegate.handle,
+                    %error,
+                    "an orchestrated step could not reach the model"
+                );
                 goal_ends(
                     voice,
                     goal,

@@ -254,7 +254,18 @@ pub(crate) async fn take_turn(
                 .await;
             Some(Spoken::Excused)
         }
-        Err(_) => {
+        Err(error) => {
+            // The room is told nothing about why — `UNREACHABLE` says so
+            // deliberately — but an operator must be able to find out. Before
+            // this line the reason was discarded, and a turn that stopped here
+            // looked the same whether the provider was rate-limiting, timing
+            // out, or refusing the request.
+            tracing::warn!(
+                agent = %agent.handle,
+                product = %agent.product,
+                %error,
+                "an agent's turn could not reach the model"
+            );
             let _ = acc
                 .post_as_agent(channel, &agent.id, UNREACHABLE, None)
                 .await;
