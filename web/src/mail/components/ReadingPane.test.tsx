@@ -46,7 +46,7 @@ const prepared = {
   attachments: [],
 } as unknown as EmailFull;
 
-function props(onSendDraft: () => void) {
+function props(onEditDraft: () => void, onSendDraft: () => void) {
   const noop = vi.fn();
   return {
     thread: { status: "ready" as const, data: [prepared], error: null, reload: noop },
@@ -56,6 +56,7 @@ function props(onSendDraft: () => void) {
     onReply: noop,
     onReplyAll: noop,
     onForward: noop,
+    onEditDraft,
     onSendDraft,
     onToggleFlag: noop,
     onArchive: noop,
@@ -82,11 +83,14 @@ function props(onSendDraft: () => void) {
 }
 
 describe("ReadingPane", () => {
-  test("a prepared customer draft has one clear Send action", () => {
+  test("a prepared customer draft opens in the editor and retains quick send", () => {
+    const edit = vi.fn();
     const send = vi.fn();
-    render(<ReadingPane {...props(send)} />);
+    render(<ReadingPane {...props(edit, send)} />);
 
+    fireEvent.click(screen.getByRole("button", { name: strings.composeEdit }));
     fireEvent.click(screen.getByRole("button", { name: strings.composeSend }));
+    expect(edit).toHaveBeenCalledTimes(1);
     expect(send).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("button", { name: strings.reply })).toBeNull();
   });

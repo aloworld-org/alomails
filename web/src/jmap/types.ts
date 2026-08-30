@@ -173,6 +173,8 @@ export interface EmailHeaders {
   hasAttachment: boolean;
   /** RFC 5322 Message-ID(s), for reply threading. */
   messageId: string[] | null;
+  /** RFC 5322 In-Reply-To Message-ID(s), present when requested from JMAP. */
+  inReplyTo?: string[] | null;
   references: string[] | null;
   /**
    * alo's parsed inbound-authentication verdict (non-standard, additive).

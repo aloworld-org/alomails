@@ -18,6 +18,7 @@ import {
   MailOpen,
   MoreHorizontal,
   Paperclip,
+  Pencil,
   Printer,
   Reply,
   ReplyAll,
@@ -95,6 +96,7 @@ interface ReadingPaneProps {
   onReply: () => void;
   onReplyAll: () => void;
   onForward: () => void;
+  onEditDraft: () => void;
   /** Submit an already prepared message from Drafts through Mail's ordinary
    * audited send queue. Present only for a real `$draft` message. */
   onSendDraft: () => void;
@@ -149,6 +151,7 @@ export function ReadingPane({
   onReply,
   onReplyAll,
   onForward,
+  onEditDraft,
   onSendDraft,
   onToggleFlag,
   onArchive,
@@ -446,9 +449,14 @@ export function ReadingPane({
           />
         )}
         {isDraft ? (
-          <Button size="sm" icon={<Send />} onClick={onSendDraft}>
-            {strings.composeSend}
-          </Button>
+          <>
+            <Button size="sm" icon={<Pencil />} onClick={onEditDraft}>
+              {strings.composeEdit}
+            </Button>
+            <Button size="sm" variant="ghost" icon={<Send />} onClick={onSendDraft}>
+              {strings.composeSend}
+            </Button>
+          </>
         ) : (
           <>
             <Button size="sm" icon={<Reply />} onClick={onReply}>

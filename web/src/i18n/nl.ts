@@ -617,6 +617,8 @@ export const nl: Partial<Catalog> = {
 
   // mail — compose
   composeTitle: "Nieuw bericht",
+  composeEdit: "Concept bewerken",
+  composeEditTitle: "Bericht bewerken",
   composeReplyTitle: "Beantwoorden",
   composeForwardTitle: "Doorsturen",
   composeForwardPrefix: "Fwd: ",

@@ -25,16 +25,42 @@ import { IconButton, Select, Spinner, cx } from "../../ds";
 import { useJmapClient } from "../../jmap";
 import type { EmailAddress, EmailFull } from "../../jmap";
 import { formatBytes, formatDate, mailErrorReason, senderName } from "../format";
-import { textContent } from "../body";
+import { htmlContent, textContent } from "../body";
 import { RecipientInput } from "./RecipientInput";
 import { RichTextEditor } from "./RichTextEditor";
 import styles from "./ComposeModal.module.css";
 
-interface PendingAttachment {
+export interface PendingAttachment {
   blobId: string;
   name: string;
   type: string;
   size: number;
+  /** Message-part blobs must be copied through JMAP upload before reuse. */
+  needsUpload?: boolean;
+}
+
+interface AttachmentTransferClient {
+  downloadAttachment(blobId: string, name: string): Promise<Blob>;
+  uploadFile(file: File): Promise<{ blobId: string; type: string; size: number }>;
+}
+
+/** Make attachment blobs reusable by Email/set. Existing message parts are
+ * downloadable, but unlike freshly uploaded blobs they cannot be attached to
+ * a newly created draft directly. */
+export async function materializeAttachments(
+  client: AttachmentTransferClient,
+  attachments: PendingAttachment[],
+): Promise<PendingAttachment[]> {
+  return Promise.all(
+    attachments.map(async (attachment) => {
+      if (attachment.needsUpload !== true) return attachment;
+      const bytes = await client.downloadAttachment(attachment.blobId, attachment.name);
+      const uploaded = await client.uploadFile(
+        new File([bytes], attachment.name, { type: attachment.type }),
+      );
+      return { ...attachment, ...uploaded, needsUpload: false };
+    }),
+  );
 }
 
 /** A large file sent as an expiring share link (alo Transfer) rather than an
@@ -139,7 +165,7 @@ function escapeHtml(text: string): string {
 }
 
 export interface ComposeContext {
-  mode: "new" | "reply" | "replyAll" | "forward";
+  mode: "new" | "edit" | "reply" | "replyAll" | "forward";
   /** The source message for a reply or forward. */
   replyTo?: EmailFull;
   /** Seed the recipients (e.g. a mailto: unsubscribe address). New mode only. */
@@ -233,6 +259,7 @@ export function formatSendAt(epochSecs: number): string {
 interface Prefill {
   to: EmailAddress[];
   cc: EmailAddress[];
+  bcc: EmailAddress[];
   subject: string;
   /** The new message text (empty for a reply/forward — the user writes it). */
   body: string;
@@ -247,6 +274,7 @@ interface Prefill {
 const EMPTY: Prefill = {
   to: [],
   cc: [],
+  bcc: [],
   subject: "",
   body: "",
   quoted: "",
@@ -314,7 +342,7 @@ function stripRe(subject: string | null, prefix: RegExp): string {
   return (subject ?? "").replace(prefix, "");
 }
 
-function buildPrefill(context: ComposeContext, me: string): Prefill {
+export function buildPrefill(context: ComposeContext, me: string): Prefill {
   const src = context.replyTo;
   if (src === undefined) {
     // A fresh compose: honor any recipient/subject/body seeds (e.g. a mailto:
@@ -331,6 +359,22 @@ function buildPrefill(context: ComposeContext, me: string): Prefill {
     references: [...(src.references ?? []), ...(src.messageId ?? [])],
   };
   const firstFrom = src.from?.[0] !== undefined ? [src.from[0]] : [];
+
+  if (context.mode === "edit") {
+    const html = htmlContent(src);
+    const text = textContent(src) ?? src.preview;
+    return {
+      ...EMPTY,
+      to: src.to ?? [],
+      cc: src.cc ?? [],
+      bcc: src.bcc ?? [],
+      showCc: (src.cc?.length ?? 0) > 0,
+      subject: src.subject ?? "",
+      body: html ?? escapeHtml(text).replace(/\n/g, "<br>"),
+      inReplyTo: src.inReplyTo ?? [],
+      references: src.references ?? [],
+    };
+  }
 
   if (context.mode === "reply") {
     return {
@@ -369,6 +413,8 @@ function buildPrefill(context: ComposeContext, me: string): Prefill {
 
 function title(mode: ComposeContext["mode"]): string {
   switch (mode) {
+    case "edit":
+      return strings.composeEditTitle;
     case "reply":
       return strings.composeReplyTitle;
     case "replyAll":
@@ -395,21 +441,24 @@ export function ComposeModal({
   const client = useJmapClient();
   // The chosen From address (default: the signed-in address). A picker is
   // offered when the user holds more than one sendable address (aliases).
-  const [from, setFrom] = useState(fromEmail);
+  const [from, setFrom] = useState(
+    context.mode === "edit" ? (context.replyTo?.from?.[0]?.email ?? fromEmail) : fromEmail,
+  );
   const prefill = useMemo(() => buildPrefill(context, fromEmail), [context, fromEmail]);
   // The signature block seeds the editor beneath the cursor. Used only as the
   // initial editor content (compose is opened after settings load).
   const initialBody = useMemo(
-    () => prefill.body + signatureBlock(signature, orgFooter),
-    [prefill.body, signature, orgFooter],
+    () => prefill.body + (context.mode === "edit" ? "" : signatureBlock(signature, orgFooter)),
+    [context.mode, prefill.body, signature, orgFooter],
   );
   const isReply = context.mode === "reply" || context.mode === "replyAll";
+  const editingDraft = context.mode === "edit";
 
   const [to, setTo] = useState<EmailAddress[]>(prefill.to);
   const [cc, setCc] = useState<EmailAddress[]>(prefill.cc);
-  const [bcc, setBcc] = useState<EmailAddress[]>([]);
+  const [bcc, setBcc] = useState<EmailAddress[]>(prefill.bcc);
   const [showCc, setShowCc] = useState(prefill.showCc);
-  const [showBcc, setShowBcc] = useState(false);
+  const [showBcc, setShowBcc] = useState(prefill.bcc.length > 0);
   const [subject, setSubject] = useState(prefill.subject);
   const [body, setBody] = useState(initialBody);
   // The editor is uncontrolled; `editorSeed` is what it mounts with and
@@ -474,7 +523,14 @@ export function ComposeModal({
   // or full-screen. Docked/minimized never block the mailbox behind them.
   const [view, setView] = useState<"normal" | "min" | "full">("normal");
   const minimized = view === "min";
-  const [attachments, setAttachments] = useState<PendingAttachment[]>(context.attachments ?? []);
+  const [attachments, setAttachments] = useState<PendingAttachment[]>(
+    context.attachments?.map((attachment) => ({ ...attachment, needsUpload: true })) ??
+      (editingDraft
+        ? (context.replyTo?.attachments ?? [])
+            .filter((attachment) => attachment.cid === null)
+            .map(({ blobId, name, type, size }) => ({ blobId, name, type, size, needsUpload: true }))
+        : []),
+  );
   const [links, setLinks] = useState<LinkAttachment[]>([]);
   const [linkExpiryDays, setLinkExpiryDays] = useState(7);
   const [uploading, setUploading] = useState(0);
@@ -560,7 +616,11 @@ export function ComposeModal({
       bodyHtml = `${body}${linkHtml}${quotedHtml}`;
     }
     try {
-      const emailId = await client.createDraft({
+      const readyAttachments = await materializeAttachments(client, attachments);
+      if (readyAttachments.some((attachment, index) => attachment !== attachments[index])) {
+        setAttachments(readyAttachments);
+      }
+      const nextDraft = {
         mailboxId: draftsMailboxId,
         from: { name: fromName.length > 0 ? fromName : null, email: from },
         to,
@@ -571,8 +631,12 @@ export function ComposeModal({
         ...(bodyHtml !== undefined ? { bodyHtml } : {}),
         inReplyTo: prefill.inReplyTo,
         references: prefill.references,
-        attachments: attachments.map((a) => ({ blobId: a.blobId, type: a.type, name: a.name })),
-      });
+        attachments: readyAttachments.map((a) => ({ blobId: a.blobId, type: a.type, name: a.name })),
+      };
+      const emailId =
+        editingDraft && context.replyTo !== undefined
+          ? await client.replaceDraft(context.replyTo.id, nextDraft)
+          : await client.createDraft(nextDraft);
       // Bcc is written into the draft so the sender's own Sent copy records who
       // was blind-copied; the server strips the Bcc header from the bytes it
       // transmits, so recipients never see it. Bcc addresses still ride the
@@ -673,7 +737,7 @@ export function ComposeModal({
               value={to}
               onChange={setTo}
               suggestions={contacts}
-              autoFocus={!isReply}
+              autoFocus={!isReply && !editingDraft}
               trailing={
                 <>
                   {!showCc && (
@@ -721,7 +785,7 @@ export function ComposeModal({
             initialHtml={editorSeed}
             onChange={setBody}
             placeholder={strings.composeBodyPlaceholder}
-            autoFocus={isReply}
+            autoFocus={isReply || editingDraft}
           />
 
           {prefill.quoted.length > 0 && (

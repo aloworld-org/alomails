@@ -671,6 +671,8 @@ export const en = {
 
   // mail — compose
   composeTitle: "New message",
+  composeEdit: "Edit draft",
+  composeEditTitle: "Edit message",
   composeReplyTitle: "Reply",
   composeForwardTitle: "Forward",
   composeForwardPrefix: "Fwd: ",

@@ -754,6 +754,8 @@ export const de: Partial<Catalog> = {
 
   // mail — compose
   composeTitle: "Neue Nachricht",
+  composeEdit: "Entwurf bearbeiten",
+  composeEditTitle: "Nachricht bearbeiten",
   composeReplyTitle: "Antworten",
   composeForwardTitle: "Weiterleiten",
   composeForwardPrefix: "Fwd: ",

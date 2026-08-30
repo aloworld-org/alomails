@@ -64,7 +64,7 @@ import {
   type UserModuleAccess,
   type CalendarResource,
 } from "./types";
-import { API_BASE } from "../platform/runtime";
+import { API_BASE, CONTROL_AVAILABLE } from "../platform/runtime";
 
 export class JmapError extends Error {
   /** The HTTP status the server answered with, when the failure came from a
@@ -77,6 +77,20 @@ export class JmapError extends Error {
     this.name = "JmapError";
     this.status = status;
   }
+}
+
+interface DraftInput {
+  mailboxId: string;
+  from: EmailAddress;
+  to: EmailAddress[];
+  cc?: EmailAddress[];
+  bcc?: EmailAddress[];
+  subject: string;
+  bodyText: string;
+  bodyHtml?: string;
+  inReplyTo?: string[];
+  references?: string[];
+  attachments?: { blobId: string; type: string; name: string }[];
 }
 
 type AuthorizedFetch = (input: string, init?: RequestInit) => Promise<Response>;
@@ -97,6 +111,7 @@ const HEADER_PROPS = [
   "preview",
   "hasAttachment",
   "messageId",
+  "inReplyTo",
   "references",
   "alo:authentication",
 ];
@@ -1346,6 +1361,7 @@ export class JmapClient {
 
   /** Whether the signed-in user is a platform operator (gates the console). */
   async isOperator(): Promise<boolean> {
+    if (!CONTROL_AVAILABLE) return false;
     try {
       // Not through `#admin`, which prefixes `/api`: the control plane is a
       // *different service* (`alo-control`, ADR 0012), routed by the proxy on
@@ -2341,19 +2357,7 @@ export class JmapClient {
   }
 
   /** Create a draft message; returns the new email id. */
-  async createDraft(params: {
-    mailboxId: string;
-    from: EmailAddress;
-    to: EmailAddress[];
-    cc?: EmailAddress[];
-    bcc?: EmailAddress[];
-    subject: string;
-    bodyText: string;
-    bodyHtml?: string;
-    inReplyTo?: string[];
-    references?: string[];
-    attachments?: { blobId: string; type: string; name: string }[];
-  }): Promise<string> {
+  async createDraft(params: DraftInput): Promise<string> {
     const accountId = await this.accountId();
     const bodyValues: Record<string, { value: string }> = {
       text: { value: params.bodyText },
@@ -2399,6 +2403,18 @@ export class JmapClient {
       throw new JmapError("the draft could not be created");
     }
     return created.id;
+  }
+
+  /** Replace an immutable JMAP draft while keeping the original if replacement fails. */
+  async replaceDraft(id: string, params: DraftInput): Promise<string> {
+    const replacement = await this.createDraft(params);
+    try {
+      await this.destroy(id);
+      return replacement;
+    } catch (error) {
+      await this.destroy(replacement).catch(() => undefined);
+      throw error;
+    }
   }
 
   /** Submit a draft for delivery; the server sends it and files it to Sent. */

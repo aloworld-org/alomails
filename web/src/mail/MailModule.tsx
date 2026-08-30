@@ -373,6 +373,7 @@ export function MailModule() {
             if (inBox !== undefined) setMailboxId(inBox);
             setFlaggedView(false);
             setThreadId(email.threadId);
+            if (email.keywords.$draft === true) setCompose({ mode: "edit", replyTo: email });
           }
         } catch {
           /* a foreign or missing id just does nothing */
@@ -939,6 +940,7 @@ export function MailModule() {
         onReply={() => latest !== undefined && setCompose({ mode: "reply", replyTo: latest })}
         onReplyAll={() => latest !== undefined && setCompose({ mode: "replyAll", replyTo: latest })}
         onForward={() => latest !== undefined && setCompose({ mode: "forward", replyTo: latest })}
+        onEditDraft={() => latest !== undefined && setCompose({ mode: "edit", replyTo: latest })}
         onSendDraft={() => {
           if (latest === undefined || latest.keywords.$draft !== true) return;
           const fromEmail = latest.from?.[0]?.email;

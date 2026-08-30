@@ -25,6 +25,11 @@ export const API_BASE: string = inTauri
   ? (import.meta.env.VITE_API_BASE ?? "https://mail.alomails.com")
   : window.location.origin;
 
+/** The operator control plane is a separate production service. Local Vite
+ * only probes it when a developer explicitly configured that service. */
+export const CONTROL_AVAILABLE: boolean =
+  !import.meta.env.DEV || Boolean(import.meta.env.VITE_DEV_CONTROL_API?.trim());
+
 /** `fetch` for API requests: the native Tauri HTTP client in the desktop app
  *  (bypasses the webview's origin/CORS rules), the platform `fetch` in a
  *  browser. Signature-compatible with WHATWG `fetch`.

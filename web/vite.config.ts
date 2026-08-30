@@ -32,6 +32,7 @@ const productTitle: Record<typeof product, string> = {
 // developer's credentials to production makes a healthy local account look as
 // though its password is wrong. VITE_DEV_API can still override this target.
 const DEV_API = resolveDevApi(process.env.VITE_DEV_API);
+const DEV_CONTROL_API = process.env.VITE_DEV_CONTROL_API?.trim();
 
 // Several API prefixes (/drive, /tasks, /admin, …) are ALSO client-side route
 // paths. A browser page-load of one (refresh on /drive) sends `Accept: text/html`
@@ -65,9 +66,6 @@ const API_PATHS = [
   // the single route; only this list was too broad.
   "/jmap", "/oauth", "/auth/token", "/.well-known",
   "/dav", "/autodiscover", "/Autodiscover", "/wopi",
-  // A different service behind the same proxy (ADR 0012), so it keeps its own
-  // prefix and must not be folded under `/api`.
-  "/control",
 ];
 // Collabora paths are loaded by the editor itself (and its server), never a
 // user page navigation — proxy them straight through with no SPA bypass.
@@ -90,6 +88,15 @@ const devProxy: Record<string, ProxyOptions> = {
   ...Object.fromEntries(API_PATHS.map((p) => [p, { ...base, bypass: spaBypass }])),
   ...Object.fromEntries(COLLABORA_PATHS.map((p) => [p, { ...base }])),
 };
+if (DEV_CONTROL_API !== undefined && DEV_CONTROL_API.length > 0) {
+  devProxy["/control"] = {
+    target: DEV_CONTROL_API,
+    changeOrigin: true,
+    secure: !DEV_INSECURE_TLS,
+    ws: true,
+    bypass: spaBypass,
+  };
+}
 
 export default defineConfig(({ command }) => ({
   plugins: [
