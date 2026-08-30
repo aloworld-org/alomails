@@ -1396,6 +1396,7 @@ export const de: Partial<Catalog> = {
     "Diese Person konnte nicht hinzugefügt werden — prüfen Sie die E-Mail-Adresse und Ihre Rolle.",
   driveNewDoc: "Neues Doc",
   driveCreateDocument: "Neues Dokument",
+  driveAloDocument: "Alo-Dokument",
   driveCreateMore: "Weitere Erstelloptionen",
   driveNewDocPrompt: "Namen für das neue Doc eingeben",
   driveNewSheetPrompt: "Namen für das neue Sheet eingeben",

@@ -911,7 +911,7 @@ export function DriveModule() {
                 <DriveCreateActions
                   labels={{
                     createDocument: strings.driveCreateDocument,
-                    more: strings.driveCreateMore,
+                    aloDocument: strings.driveAloDocument,
                     sheet: strings.driveKindSheet,
                     word: strings.driveKindWord,
                     slides: strings.driveKindSlides,
@@ -970,7 +970,7 @@ export function DriveModule() {
                 <DriveCreateActions
                   labels={{
                     createDocument: strings.driveCreateDocument,
-                    more: strings.driveCreateMore,
+                    aloDocument: strings.driveAloDocument,
                     sheet: strings.driveKindSheet,
                     word: strings.driveKindWord,
                     slides: strings.driveKindSlides,

@@ -19,7 +19,7 @@ import { createPortal } from "react-dom";
 
 export interface DriveCreateActionsLabels {
   createDocument: string;
-  more: string;
+  aloDocument: string;
   sheet: string;
   word: string;
   slides: string;
@@ -130,6 +130,14 @@ export function DriveCreateActions({
 
   const options = [
     {
+      key: "alo-document",
+      icon: FileText,
+      label: labels.aloDocument,
+      action: onCreateDocument,
+      separated: false,
+      disabled: false,
+    },
+    {
       key: "sheet",
       icon: FileSpreadsheet,
       label: labels.sheet,
@@ -175,24 +183,17 @@ export function DriveCreateActions({
     <div ref={rootRef} className="relative inline-flex items-center">
       <button
         type="button"
-        onClick={onCreateDocument}
-        className="inline-flex h-10 items-center justify-center gap-2 rounded-l-xl bg-[#E76F51] px-4 text-sm font-medium text-white shadow-[0_1px_2px_rgba(16,42,67,0.06)] transition-all duration-150 ease-out hover:bg-[#D96247] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#E76F51]/15"
-      >
-        <FileText size={16} aria-hidden="true" />
-        {labels.createDocument}
-      </button>
-      <button
-        type="button"
-        aria-label={labels.more}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
-        className="inline-flex h-10 items-center justify-center rounded-r-xl border-l border-white/25 bg-[#E76F51] px-3 text-white shadow-[0_1px_2px_rgba(16,42,67,0.06)] transition-all duration-150 ease-out hover:bg-[#D96247] active:scale-[0.98] focus-visible:z-10 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#E76F51]/15"
+        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#E76F51] px-4 text-sm font-medium text-white shadow-[0_1px_2px_rgba(16,42,67,0.06)] transition-all duration-150 ease-out hover:bg-[#D96247] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#E76F51]/15"
       >
+        <FileText size={16} aria-hidden="true" />
+        {labels.createDocument}
         <ChevronDown
           size={16}
           aria-hidden="true"
-          className={open ? "rotate-180" : ""}
+          className={`transition-transform duration-150 ${open ? "rotate-180" : ""}`}
         />
       </button>
       {open &&
@@ -200,7 +201,7 @@ export function DriveCreateActions({
           <div
             ref={menuRef}
             role="menu"
-            aria-label={labels.more}
+            aria-label={labels.createDocument}
             onPointerDown={(event) => event.stopPropagation()}
             style={
               menuPosition === null

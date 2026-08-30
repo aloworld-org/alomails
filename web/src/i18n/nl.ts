@@ -5829,6 +5829,7 @@ export const nl: Partial<Catalog> = {
   driveNewBasePrompt: "Geef de nieuwe base een naam",
   driveNewDoc: "Nieuw doc",
   driveCreateDocument: "Nieuw document",
+  driveAloDocument: "Alo-document",
   driveCreateMore: "Meer aanmaakopties",
   driveNewDocPrompt: "Geef het nieuwe doc een naam",
   driveNewFolder: "Nieuwe map",

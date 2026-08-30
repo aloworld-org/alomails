@@ -7,7 +7,7 @@ afterEach(cleanup);
 
 const labels = {
   createDocument: "New document",
-  more: "More creation options",
+  aloDocument: "Alo document",
   sheet: "Sheet",
   word: "Word document",
   slides: "Presentation",
@@ -29,26 +29,32 @@ function setup() {
 }
 
 describe("DriveCreateActions", () => {
-  test("makes a document the immediate primary action", () => {
+  test("opens the creation chooser from the full primary action", () => {
     const actions = setup();
 
     fireEvent.click(
       screen.getByRole("button", { name: labels.createDocument }),
     );
 
-    expect(actions.onCreateDocument).toHaveBeenCalledOnce();
-    expect(screen.queryByRole("menu")).toBeNull();
+    expect(actions.onCreateDocument).not.toHaveBeenCalled();
+    expect(screen.getByRole("menu")).toBeTruthy();
+    expect(
+      screen.getByRole("menuitem", { name: labels.aloDocument }),
+    ).toBeTruthy();
   });
 
   test("keeps every alternative creation path in one labelled chooser", () => {
     setup();
 
-    fireEvent.click(screen.getByRole("button", { name: labels.more }));
+    fireEvent.click(
+      screen.getByRole("button", { name: labels.createDocument }),
+    );
 
     const menu = screen.getByRole("menu");
     expect(menu).toBeTruthy();
     expect(menu.parentElement).toBe(document.body);
     for (const label of [
+      labels.aloDocument,
       labels.sheet,
       labels.word,
       labels.slides,
@@ -60,6 +66,7 @@ describe("DriveCreateActions", () => {
   });
 
   test.each([
+    [labels.aloDocument, "onCreateDocument"],
     [labels.sheet, "onCreateSheet"],
     [labels.word, "onCreateWord"],
     [labels.slides, "onCreateSlides"],
@@ -68,7 +75,9 @@ describe("DriveCreateActions", () => {
   ] as const)("routes %s to only its own action", (label, actionName) => {
     const actions = setup();
 
-    fireEvent.click(screen.getByRole("button", { name: labels.more }));
+    fireEvent.click(
+      screen.getByRole("button", { name: labels.createDocument }),
+    );
     fireEvent.click(screen.getByRole("menuitem", { name: label }));
 
     for (const [name, action] of Object.entries(actions)) {
@@ -95,7 +104,9 @@ describe("DriveCreateActions", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: labels.more }));
+    fireEvent.click(
+      screen.getByRole("button", { name: labels.createDocument }),
+    );
 
     expect(
       (

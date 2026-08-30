@@ -5898,6 +5898,7 @@ export const fr: Partial<Catalog> = {
   driveNewBasePrompt: "Nommez la nouvelle base",
   driveNewDoc: "Nouveau doc",
   driveCreateDocument: "Nouveau document",
+  driveAloDocument: "Document Alo",
   driveCreateMore: "Plus d’options de création",
   driveNewDocPrompt: "Nommez le nouveau doc",
   driveNewFolder: "Nouveau dossier",

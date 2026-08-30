@@ -1615,6 +1615,7 @@ export const en = {
   driveMemberError: "Couldn’t add that person — check the email and your role.",
   driveNewDoc: "New doc",
   driveCreateDocument: "New document",
+  driveAloDocument: "Alo document",
   driveCreateMore: "More creation options",
   driveNewDocPrompt: "Name the new doc",
   driveNewSheetPrompt: "Name the new sheet",
