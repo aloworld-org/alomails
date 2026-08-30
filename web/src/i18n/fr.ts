@@ -3827,9 +3827,8 @@ export const fr: Partial<Catalog> = {
   sitesPageCount: (count: number) => `${count} page${count === 1 ? "" : "s"}`,
   sitesSiteTools: "Outils du site",
   sitesSiteToolsHint: "Contenu, commerce, analyses et paramètres",
-  sitesManageWebsite: "Gérer votre site",
-  sitesManageWebsiteHint:
-    "Publication, collaborateurs, langues et outils connectés",
+  sitesPublishing: "Publication",
+  sitesWebsiteNavigation: "Espace de travail du site",
   sitesNewPage: "Nouvelle page",
   sitesNoPagesTitle: "Aucune page pour l’instant",
   sitesNoPagesBody:

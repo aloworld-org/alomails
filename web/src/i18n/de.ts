@@ -5550,9 +5550,8 @@ export const de: Partial<Catalog> = {
     `${count} ${count === 1 ? "Seite" : "Seiten"}`,
   sitesSiteTools: "Website-Werkzeuge",
   sitesSiteToolsHint: "Inhalte, Verkauf, Zahlen und Einstellungen",
-  sitesManageWebsite: "Website verwalten",
-  sitesManageWebsiteHint:
-    "Veröffentlichung, Mitwirkende, Sprachen und verbundene Werkzeuge",
+  sitesPublishing: "Veröffentlichen",
+  sitesWebsiteNavigation: "Website-Arbeitsbereich",
   sitesNewPage: "Neue Seite",
   sitesNoPagesTitle: "Noch keine Seiten",
   sitesNoPagesBody:

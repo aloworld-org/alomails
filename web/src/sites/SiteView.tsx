@@ -4,7 +4,12 @@
 // here. A stale or foreign id reads as "not found" with the way back, never
 // a broken screen.
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import {
   ArrowLeft,
   BarChart3,
@@ -15,7 +20,6 @@ import {
   Globe2,
   ArrowRight,
   Check,
-  ChevronDown,
   Handshake,
   History,
   Inbox,
@@ -25,7 +29,6 @@ import {
   Receipt,
   ShoppingBag,
   Sparkles,
-  SlidersHorizontal,
   Rows3,
   Ticket,
   X,
@@ -39,6 +42,10 @@ import { NewPageDialog } from "./NewPageDialog";
 import { SchedulePublish } from "./SchedulePublish";
 import { SiteCollaborators } from "./SiteCollaborators";
 import { SitePagesPanel } from "./SitePagesPanel";
+import {
+  SiteSectionNavigation,
+  type SiteWorkspace,
+} from "./SiteSectionNavigation";
 import { ThemeDialog } from "./ThemeDialog";
 import { ErrorBanner } from "./parts";
 import type {
@@ -51,6 +58,7 @@ import type {
 export function SiteView() {
   const { siteId = "" } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const api = useSitesApi();
   const [site, setSite] = useState<SiteDetail | null>(null);
   const [pages, setPages] = useState<SitePage[]>([]);
@@ -143,6 +151,22 @@ export function SiteView() {
     (language) => !language.ready,
   )?.locale;
   const firstPageId = pages[0]?.id;
+  const requestedWorkspace = searchParams.get("section");
+  const workspace: SiteWorkspace =
+    requestedWorkspace === "publishing" ||
+    requestedWorkspace === "languages" ||
+    requestedWorkspace === "tools" ||
+    (requestedWorkspace === "collaborators" &&
+      site?.canManageCollaborators)
+      ? requestedWorkspace
+      : "pages";
+
+  function selectWorkspace(nextWorkspace: SiteWorkspace) {
+    const next = new URLSearchParams(searchParams);
+    if (nextWorkspace === "pages") next.delete("section");
+    else next.set("section", nextWorkspace);
+    setSearchParams(next);
+  }
 
   function languageName(locale: string): string {
     try {
@@ -296,7 +320,14 @@ export function SiteView() {
 
         {site !== null && (
           <>
-            <section className="overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm">
+            <SiteSectionNavigation
+              active={workspace}
+              showCollaborators={site.canManageCollaborators}
+              onSelect={selectWorkspace}
+            />
+
+            {workspace === "publishing" && (
+              <section className="overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm">
               <div className="flex flex-col gap-4 px-5 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex min-w-0 items-start gap-3">
                   <span
@@ -400,48 +431,39 @@ export function SiteView() {
                   </Button>
                 </div>
               </div>
-            </section>
+              </section>
+            )}
 
-            <SitePagesPanel
-              pages={pages}
-              loading={loading}
-              protectedPages={protectedPages}
-              onTheme={() => setTheming(true)}
-              onCreate={() => setCreating(true)}
-            />
-
-            <section aria-labelledby="site-management-title">
-              <div className="flex items-start gap-3 px-1 py-1">
-                <span
-                  className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent"
-                  aria-hidden="true"
-                >
-                  <SlidersHorizontal size={18} />
-                </span>
-                <div>
-                  <h2
-                    id="site-management-title"
-                    className="m-0 text-lg font-semibold text-text-primary"
-                  >
-                    {strings.sitesManageWebsite}
-                  </h2>
-                  <p className="mb-0 mt-0.5 text-sm text-text-secondary">
-                    {strings.sitesManageWebsiteHint}
-                  </p>
-                </div>
-              </div>
-            </section>
+            {workspace === "pages" && (
+              <SitePagesPanel
+                pages={pages}
+                loading={loading}
+                protectedPages={protectedPages}
+                onTheme={() => setTheming(true)}
+                onCreate={() => setCreating(true)}
+              />
+            )}
 
             {/* Publishing later belongs directly under publishing now: they are
               the same decision, one of them with a moment attached. */}
-            <SchedulePublish siteId={site.id} onPublished={() => void load()} />
+            {workspace === "publishing" && (
+              <SchedulePublish
+                siteId={site.id}
+                onPublished={() => void load()}
+              />
+            )}
 
-            {site.canManageCollaborators && (
+            {workspace === "collaborators" &&
+              site.canManageCollaborators && (
               <SiteCollaborators siteId={site.id} />
             )}
 
-            <details className="group rounded-2xl border border-subtle bg-surface shadow-sm">
-              <summary className="flex min-h-16 cursor-pointer list-none items-center gap-3 rounded-2xl px-5 py-3 marker:content-none hover:bg-surface-raised sm:px-6">
+            {workspace === "languages" && (
+              <section
+                className="overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm"
+                aria-labelledby="site-languages-title"
+              >
+              <div className="flex min-h-16 items-center gap-3 px-5 py-3 sm:px-6">
                 <span
                   className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent"
                   aria-hidden="true"
@@ -449,9 +471,12 @@ export function SiteView() {
                   <Languages size={20} />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block font-semibold text-text-primary">
+                  <h2
+                    id="site-languages-title"
+                    className="m-0 block font-semibold text-text-primary"
+                  >
                     {strings.sitesLanguages}
-                  </span>
+                  </h2>
                   <span className="block truncate text-sm text-text-secondary">
                     {strings.sitesLanguagesHint}
                   </span>
@@ -459,33 +484,11 @@ export function SiteView() {
                 <span className="text-sm font-medium text-text-secondary">
                   {site.enabledLocales.length}
                 </span>
-                <ChevronDown
-                  className="shrink-0 text-text-tertiary transition-transform group-open:rotate-180"
-                  size={18}
-                  aria-hidden="true"
-                />
-              </summary>
+              </div>
               <section
                 className="flex flex-col gap-5 border-t border-subtle px-5 py-5 sm:px-6"
-                aria-labelledby="site-languages-title"
+                aria-label={strings.sitesLanguagesHint}
               >
-                <div className="sr-only">
-                  <span aria-hidden="true">
-                    <Languages />
-                  </span>
-                  <div>
-                    <h2
-                      id="site-languages-title"
-                      className="m-0 text-base font-semibold text-text-primary"
-                    >
-                      {strings.sitesLanguages}
-                    </h2>
-                    <p className="mb-0 mt-1 text-sm text-text-secondary">
-                      {strings.sitesLanguagesHint}
-                    </p>
-                  </div>
-                </div>
-
                 <div className="overflow-hidden rounded-xl border border-subtle bg-surface">
                   {readiness?.languages.map((language) => (
                     <div
@@ -713,10 +716,13 @@ export function SiteView() {
                   </section>
                 )}
               </section>
-            </details>
+              </section>
+            )}
 
-            <details className="group rounded-2xl border border-subtle bg-surface shadow-sm">
-              <summary className="flex min-h-16 cursor-pointer list-none items-center gap-3 rounded-2xl px-5 py-3 marker:content-none hover:bg-surface-raised sm:px-6">
+            {workspace === "tools" && (
+              <>
+              <section className="overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm">
+              <div className="flex min-h-16 items-center gap-3 px-5 py-3 sm:px-6">
                 <span
                   className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent"
                   aria-hidden="true"
@@ -724,19 +730,14 @@ export function SiteView() {
                   <Rows3 size={20} />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block font-semibold text-text-primary">
+                  <h2 className="m-0 block font-semibold text-text-primary">
                     {strings.sitesSiteTools}
-                  </span>
+                  </h2>
                   <span className="block truncate text-sm font-normal text-text-secondary">
                     {strings.sitesSiteToolsHint}
                   </span>
                 </span>
-                <ChevronDown
-                  className="shrink-0 text-text-tertiary transition-transform group-open:rotate-180"
-                  size={18}
-                  aria-hidden="true"
-                />
-              </summary>
+              </div>
               <div className="grid gap-2 border-t border-subtle p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 <Button
                   variant="ghost"
@@ -833,7 +834,7 @@ export function SiteView() {
                   {strings.sitesFunnel}
                 </Button>
               </div>
-            </details>
+              </section>
 
             {/* The site agent is support for the record, not the main task on
                 this screen. Keeping it after the site's own controls preserves
@@ -845,6 +846,8 @@ export function SiteView() {
               recordLabel={site.name}
               origin={null}
             />
+              </>
+            )}
           </>
         )}
       </div>

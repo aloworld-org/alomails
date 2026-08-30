@@ -945,6 +945,9 @@ describe("publishing a site", () => {
       },
     ];
     ui("/sites/site-2");
+    fireEvent.click(
+      await screen.findByRole("tab", { name: strings.sitesPublishing }),
+    );
     // The copy names the real address the site will serve at.
     expect(await screen.findByText(strings.sitesGoesLiveAt("beta.alosites.com"))).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: strings.sitesPublish }));
@@ -972,6 +975,9 @@ describe("publishing a site", () => {
       },
     ];
     ui("/sites/site-2");
+    fireEvent.click(
+      await screen.findByRole("tab", { name: strings.sitesPublishing }),
+    );
     fireEvent.click(await screen.findByRole("button", { name: strings.sitesPublish }));
     expect(await screen.findByText("site has no home page")).toBeTruthy();
     expect(screen.getByText(strings.sitesStatusDraft)).toBeTruthy();
@@ -998,6 +1004,9 @@ describe("publishing a site", () => {
       },
     ];
     ui("/sites/site-1");
+    fireEvent.click(
+      await screen.findByRole("tab", { name: strings.sitesPublishing }),
+    );
     fireEvent.click(await screen.findByRole("button", { name: strings.sitesUnpublish }));
     // Armed, not fired: nothing was written, the button now asks to confirm.
     expect(lastWrite()).toBeUndefined();
@@ -1036,14 +1045,14 @@ describe("one site", () => {
     ];
     ui("/sites/site-1");
     expect(await screen.findByText("Alpha Bakery")).toBeTruthy();
-    expect(screen.getByText(strings.sitesStatusLive)).toBeTruthy();
+    expect(screen.queryByText(strings.sitesStatusLive)).toBeNull();
     expect(screen.getByText("Welcome")).toBeTruthy();
     expect(screen.getByText(strings.sitesHomeBadge)).toBeTruthy();
     expect(screen.getByText("About us")).toBeTruthy();
     expect(screen.getByText("/about")).toBeTruthy();
   });
 
-  test("keeps pages ahead of secondary website management", async () => {
+  test("keeps pages, publishing, and languages in separate workspaces", async () => {
     replies = [
       {
         match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
@@ -1058,17 +1067,25 @@ describe("one site", () => {
     ];
     ui("/sites/site-1");
 
-    const pagesHeading = await screen.findByRole("heading", {
-      name: strings.sitesPages,
-    });
-    const managementHeading = screen.getByRole("heading", {
-      name: strings.sitesManageWebsite,
-    });
-
     expect(
-      pagesHeading.compareDocumentPosition(managementHeading) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
+      await screen.findByRole("heading", { name: strings.sitesPages }),
     ).toBeTruthy();
+    expect(screen.queryByText(strings.sitesStatusLive)).toBeNull();
+    expect(screen.queryByLabelText(strings.sitesLanguagesHint)).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("tab", { name: strings.sitesPublishing }),
+    );
+    expect(screen.getByText(strings.sitesStatusLive)).toBeTruthy();
+    expect(
+      screen.queryByRole("heading", { name: strings.sitesPages }),
+    ).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("tab", { name: strings.sitesLanguages }),
+    );
+    expect(screen.getByLabelText(strings.sitesLanguagesHint)).toBeTruthy();
+    expect(screen.queryByText(strings.sitesStatusLive)).toBeNull();
   });
 
   test("a page behind a password is marked in the list, in one read", async () => {
@@ -1172,6 +1189,9 @@ describe("one site", () => {
     ];
     ui("/sites/site-1");
 
+    fireEvent.click(
+      await screen.findByRole("tab", { name: strings.sitesLanguages }),
+    );
     expect(await screen.findByText(strings.sitesTranslationProgress(1, 2))).toBeTruthy();
     fireEvent.change(screen.getByPlaceholderText(strings.sitesLanguagePlaceholder), {
       target: { value: "nl" },
@@ -1297,6 +1317,9 @@ describe("one site", () => {
     ];
     ui("/sites/site-1");
 
+    fireEvent.click(
+      await screen.findByRole("tab", { name: strings.sitesLanguages }),
+    );
     fireEvent.click(
       await screen.findByRole("button", { name: strings.sitesTranslateWholeSite }),
     );
