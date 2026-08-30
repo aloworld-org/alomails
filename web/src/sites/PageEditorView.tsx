@@ -1231,17 +1231,17 @@ export function PageEditorView() {
               }`}
               aria-labelledby="sites-sections-title"
             >
-              <div className="flex min-h-16 items-center justify-between gap-3 border-b border-subtle px-4 py-3 sm:px-5">
-                <div>
+              <div className="flex min-h-14 items-center justify-between gap-3 border-b border-subtle px-4 sm:px-5">
+                <div className="flex items-center gap-2">
                   <h2
                     id="sites-sections-title"
                     className="font-semibold text-text-primary"
                   >
                     {strings.sitesSections}
                   </h2>
-                  <p className="mt-1 text-sm text-text-secondary">
-                    {sections.length} {strings.sitesSections.toLowerCase()}
-                  </p>
+                  <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-raised px-2 py-0.5 text-xs font-semibold tabular-nums text-tertiary">
+                    {sections.length}
+                  </span>
                 </div>
               </div>
 
@@ -1367,6 +1367,33 @@ export function PageEditorView() {
                             />
                           )}
                         </div>
+                        {navigation && (
+                          <div
+                            className={styles.navigationPreview}
+                            data-navigation-preview=""
+                            aria-hidden="true"
+                          >
+                            <span className={styles.navigationPreviewBrand} />
+                            {section.links.slice(0, 3).map((link, linkIndex) => (
+                              <span
+                                className={styles.navigationPreviewLink}
+                                key={`${link.href}-${linkIndex}`}
+                              >
+                                {link.label}
+                              </span>
+                            ))}
+                            {section.links.length > 3 && (
+                              <span className={styles.navigationPreviewMore}>
+                                +{section.links.length - 3}
+                              </span>
+                            )}
+                            {section.cta && (
+                              <span className={styles.navigationPreviewCta}>
+                                {section.cta.label}
+                              </span>
+                            )}
+                          </div>
+                        )}
                         <div className={styles.cardActions}>
                           {!navigation && (
                             <>

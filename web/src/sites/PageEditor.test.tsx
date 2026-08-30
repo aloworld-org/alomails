@@ -654,6 +654,9 @@ describe("editing a section", () => {
     const navigationCard = await screen.findByTestId("navigation-section-card");
     expect(navigationCard.textContent).toContain(strings.sitesNavPinned);
     expect(
+      navigationCard.querySelector("[data-navigation-preview]")?.textContent,
+    ).toContain("Home");
+    expect(
       navigationCard.querySelector('[data-section-control="up"]'),
     ).toBeNull();
     expect(
