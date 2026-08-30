@@ -224,7 +224,7 @@ pub const FINANCE_INTENTS: &[IntentSpec] = &[
             Arg::optional("note", "text", "one sentence for the claimant"),
         ],
         answers: &[
-            "approve the claim from X",
+            "approve the claim from {claimant}",
             "approve that expense",
             "sign off the travel claim",
         ],

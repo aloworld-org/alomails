@@ -73,8 +73,15 @@ pub struct IntentSpec {
     pub effect: Effect,
     /// Its arguments.
     pub args: &'static [Arg],
-    /// Questions or requests this is the answer to — read by the planner and
-    /// grown into the evaluation set.
+    /// Questions or requests this is the answer to — quoted in the model's
+    /// tool line, read by the planner, and grown into the evaluation set.
+    ///
+    /// **An ask names no record.** Whatever the asker has to supply is a
+    /// `{arg}` hole naming one of this intent's own arguments — the same
+    /// convention [`preview`](Self::preview) uses, read by [`holes`]. "What
+    /// did we quote {customer}", never "what did we quote X": a literal name
+    /// is a question only its writer can put, and the 2026-08-30 evaluation
+    /// could not score 41 of its own asks for exactly that reason (A10.3).
     pub answers: &'static [&'static str],
     /// For a write: what will change, in one sentence, with `{arg}` holes the
     /// resolved arguments fill ([`render_preview`]). Shown before anyone taps.
@@ -214,6 +221,25 @@ pub fn routes_in(router_source: &str, prefix: &str) -> Vec<String> {
     routes
 }
 
+/// The `{arg}` holes of a template, in the order they appear — the arguments
+/// a [`preview`](IntentSpec::preview) fills, and the ones an
+/// [`ask`](IntentSpec::answers) makes the asker supply. An unclosed `{` ends
+/// the scan, exactly as [`render_preview`] leaves it in place.
+#[must_use]
+pub fn holes(template: &str) -> Vec<&str> {
+    let mut found = Vec::new();
+    let mut rest = template;
+    while let Some(open) = rest.find('{') {
+        let after = &rest[open + 1..];
+        let Some(close) = after.find('}') else {
+            return found;
+        };
+        found.push(&after[..close]);
+        rest = &after[close + 1..];
+    }
+    found
+}
+
 /// A preview with its `{arg}` holes filled from `args`. A hole with no value
 /// is shown as `?` rather than as the hole, so a person sees what is unknown.
 #[must_use]
@@ -340,5 +366,18 @@ mod tests {
         );
         assert_eq!(render_preview("no holes", &args), "no holes");
         assert_eq!(render_preview("broken {hole", &args), "broken {hole");
+    }
+
+    /// The holes a template names, which is what tells an ask apart from a
+    /// question a run can put as written.
+    #[test]
+    fn the_holes_of_a_template_are_its_argument_names() {
+        assert_eq!(
+            holes("Quote {quote} for {customer} will be sent."),
+            vec!["quote", "customer"]
+        );
+        assert!(holes("which quotes are open").is_empty());
+        assert!(holes("broken {hole").is_empty(), "an unclosed hole is text");
+        assert_eq!(holes("{}"), vec![""], "an empty hole is still a hole");
     }
 }

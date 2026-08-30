@@ -65,8 +65,8 @@ pub const INVENTORY_INTENTS: &[IntentSpec] = &[
             "the product, by the name, SKU or barcode the user used",
         )],
         answers: &[
-            "how many X100 do we have left",
-            "is the X100 in stock",
+            "how many {product} do we have left",
+            "is {product} in stock",
             "what is on its way for this product",
         ],
         preview: None,

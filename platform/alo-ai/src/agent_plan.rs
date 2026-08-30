@@ -257,7 +257,9 @@ mod tests {
     use super::*;
 
     /// ADR 0058: a moved product's roster line quotes the questions its verbs
-    /// answer, so "what did we quote X" is routed to Billing by the registry.
+    /// answer, so "what did we quote {customer}" is routed to Billing by the
+    /// registry — the hole is the registry's mark for the record the asker
+    /// names (A10.3), and it reaches the planner as the module wrote it.
     #[test]
     fn the_roster_says_what_a_moved_product_answers() {
         let prompt = plan_system_prompt(
@@ -290,7 +292,10 @@ mod tests {
             MAX_PLAN_STEPS,
         );
         assert!(prompt.contains("- @billing:"));
-        assert!(prompt.contains("\"what did we quote X\""), "{prompt}");
+        assert!(
+            prompt.contains("\"what did we quote {customer}\""),
+            "{prompt}"
+        );
         assert!(prompt.contains("\"which quotes are open\""));
         // Sales moved at AA.1, so its line carries its verbs' questions too.
         let crm_line = prompt

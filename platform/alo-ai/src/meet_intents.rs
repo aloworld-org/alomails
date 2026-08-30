@@ -109,7 +109,7 @@ pub const MEET_INTENTS: &[IntentSpec] = &[
         args: &[MEETING_REQ, DAY_OPT],
         answers: &[
             "when is the budget review",
-            "what are the notes on Friday's kickoff",
+            "what are the notes on {meeting}",
             "where is the board meeting",
         ],
         preview: None,

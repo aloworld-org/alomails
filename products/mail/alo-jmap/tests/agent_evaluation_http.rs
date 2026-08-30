@@ -2,8 +2,9 @@
 //!
 //! The evaluation set grows from the registry (`alo_ai::evaluation`): every
 //! moved module, every verb, asked as its own `answers` question by its own
-//! agent, in a real room against the real router and store with the scripted
-//! model. Per verb the run proves what the 2026-08-28 run found missing:
+//! agent, **each in a room of its own**, against the real router and store
+//! with the scripted model. Per verb the run proves what the 2026-08-28 run
+//! found missing:
 //!
 //! - the agent's prompt **offers** the verb its question is answered by;
 //! - a **read answers in the room and never proposes**, is never turned away
@@ -20,7 +21,6 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-use std::collections::HashSet;
 use std::time::{Duration, Instant};
 
 use axum::Router;
@@ -30,7 +30,7 @@ use serde_json::{Value, json};
 
 use alo_ai::Effect;
 use alo_ai::agent_product::intent_spec;
-use alo_ai::evaluation::{evaluation_set, placeholder_args};
+use alo_ai::evaluation::{one_per_verb, placeholder_args};
 use alo_store::AgentProduct;
 
 use crate::common::model::{Seen, says, scripted_model, use_model, wants};
@@ -106,9 +106,9 @@ async fn messages(h: &Harness, channel: &str) -> Vec<Value> {
 /// Says something in the room and waits for the agent's reply to *this*
 /// message. The feed is newest-first and a turn posts exactly one agent
 /// message, so the reply is the newest message once the count has grown past
-/// the question — the room is reused across the whole run, which is why "any
-/// agent message anywhere" (the one-question suites' shortcut) would return
-/// turn one's answer forever.
+/// the question. Counting rather than taking "any agent message anywhere"
+/// (the one-question suites' shortcut) is what makes a room with a welcome
+/// line, or a second question, read correctly.
 async fn ask_in_room(h: &Harness, channel: &str, question: &str) -> Value {
     let before = messages(h, channel).await.len();
     let (status, body) = post(
@@ -192,25 +192,23 @@ const NEVER_SHOWN: &[&str] = &[
     "waits for you to approve",
 ];
 
-/// Every verb of `product`, asked as its first `answers` question by its own
-/// agent, one turn per verb in one room. Returns the transcript.
+/// Every verb of `product`, asked by its own agent as the question the
+/// registry says a run can put to it (`one_per_verb`), each in a room of its
+/// own. Returns the transcript.
+///
+/// **A room per verb** (A10.3): in one shared room a later question can be
+/// answered from an earlier verb's result still in context, and the run then
+/// measures the room rather than the verb — 62 of 81 reads executed in the
+/// 2026-08-30 real-model run, and the rest were answered from what was
+/// already said.
 async fn run_product(tag: &str, product: AgentProduct) -> String {
     let h = harness(tag).await;
     let handle = alo_store::default_handle(product);
     let agent = agent_id(&h, handle).await;
-    let room = a_room_with(&h, "evaluation", &agent).await;
 
-    let mut asked: HashSet<&str> = HashSet::new();
     let mut transcript = String::new();
-    for case in evaluation_set()
-        .into_iter()
-        .filter(|case| case.product == product)
-    {
-        // One turn per verb: the verb's first question stands for the rest,
-        // which the owner's real-model run asks in full.
-        if !asked.insert(case.verb) {
-            continue;
-        }
+    for case in one_per_verb(product) {
+        let room = a_room_with(&h, &format!("evaluation {}", case.verb), &agent).await;
         let spec = intent_spec(case.verb).expect("a case's verb is registered");
         let args = placeholder_args(spec);
         let read = matches!(case.effect, Effect::Read);
@@ -225,14 +223,18 @@ async fn run_product(tag: &str, product: AgentProduct) -> String {
         let (model, seen) = scripted_model(script).await;
         use_model(&h, &model).await;
 
-        let question = format!("@{handle} {}", case.ask);
+        // The question as the run can put it: the registry's `{arg}` holes
+        // filled with the same placeholders the call carries, never a literal
+        // name only the asker would know.
+        let question = format!("@{handle} {}", case.asked());
+        assert!(!question.contains('{'), "{question} still holds a hole");
         let answer = ask_in_room(&h, &room, &question).await;
 
         let prompt = offered(&seen, 0);
         assert!(
             prompt.contains(&format!("- {}:", case.verb)),
             "@{handle} was asked {:?} but never offered {}",
-            case.ask,
+            case.asked(),
             case.verb
         );
         if read {

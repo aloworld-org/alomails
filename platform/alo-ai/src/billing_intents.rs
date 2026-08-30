@@ -55,7 +55,7 @@ pub const BILLING_INTENTS: &[IntentSpec] = &[
         answers: &[
             "which quotes are open",
             "what have we offered lately",
-            "what is open with X",
+            "what is open with {customer}",
             "how many drafts are waiting",
         ],
         preview: None,
@@ -68,10 +68,10 @@ pub const BILLING_INTENTS: &[IntentSpec] = &[
         effect: Effect::Read,
         args: &[QUOTE_OPT, CUSTOMER_OPT],
         answers: &[
-            "what did we quote X",
-            "show me quote QUO-2026-00031",
-            "what is in the offer for X",
-            "has the quote for X been sent",
+            "what did we quote {customer}",
+            "show me quote {quote}",
+            "what is in the offer for {customer}",
+            "has the quote for {customer} been sent",
         ],
         preview: None,
         undo: None,
@@ -83,10 +83,10 @@ pub const BILLING_INTENTS: &[IntentSpec] = &[
         effect: Effect::Read,
         args: &[CUSTOMER_REQ],
         answers: &[
-            "where are we with X",
-            "what are X's payment terms",
-            "do we have a customer called X",
-            "what does X owe us",
+            "where are we with {customer}",
+            "what are {customer}'s payment terms",
+            "do we have a customer called {customer}",
+            "what does {customer} owe us",
         ],
         preview: None,
         undo: None,
@@ -113,9 +113,9 @@ pub const BILLING_INTENTS: &[IntentSpec] = &[
         effect: Effect::Read,
         args: &[INVOICE_OPT, CUSTOMER_OPT],
         answers: &[
-            "show me invoice INV-2026-00042",
-            "what did we invoice X last",
-            "is invoice INV-2026-00042 paid",
+            "show me invoice {invoice}",
+            "what did we invoice {customer} last",
+            "is invoice {invoice} paid",
         ],
         preview: None,
         undo: None,
@@ -142,7 +142,7 @@ pub const BILLING_INTENTS: &[IntentSpec] = &[
             "how much did we invoice this year",
             "what did we bill last month",
             "how much is unpaid",
-            "what was our turnover in August",
+            "what was our turnover last month",
         ],
         preview: None,
         undo: None,
@@ -166,9 +166,9 @@ pub const BILLING_INTENTS: &[IntentSpec] = &[
             Arg::optional("note", "text", "a note printed under the lines"),
         ],
         answers: &[
-            "invoice X for …",
+            "invoice {customer} for the work we did",
             "raise an invoice",
-            "bill X for the consulting",
+            "bill {customer} for the consulting",
         ],
         preview: Some(
             "A draft invoice for {customer} will be raised — unnumbered, unsent, for the user to issue.",
@@ -187,7 +187,7 @@ pub const BILLING_INTENTS: &[IntentSpec] = &[
         )],
         answers: &[
             "make that quote an invoice",
-            "X accepted the offer",
+            "they accepted the offer",
             "convert the quote",
         ],
         preview: Some(
@@ -205,8 +205,8 @@ pub const BILLING_INTENTS: &[IntentSpec] = &[
             Arg::optional("note", "text", "one extra sentence to add to the reminder"),
         ],
         answers: &[
-            "chase invoice INV-…",
-            "remind X about their invoice",
+            "chase invoice {invoice}",
+            "remind them about their invoice",
             "chase everyone overdue",
         ],
         preview: Some(
@@ -222,7 +222,7 @@ pub const BILLING_INTENTS: &[IntentSpec] = &[
         args: &[QUOTE_OPT, CUSTOMER_OPT],
         answers: &[
             "send the quote",
-            "send X their offer",
+            "send {customer} their offer",
             "mark the quote as sent",
         ],
         preview: Some(
@@ -237,8 +237,8 @@ pub const BILLING_INTENTS: &[IntentSpec] = &[
         effect: Effect::Write,
         args: &[CUSTOMER_REQ],
         answers: &[
-            "issue the invoice for X",
-            "finalise X's invoice",
+            "issue the invoice for {customer}",
+            "finalise {customer}'s invoice",
             "number the invoice",
         ],
         preview: Some(
@@ -267,9 +267,9 @@ pub const BILLING_INTENTS: &[IntentSpec] = &[
             Arg::optional("reference", "text", "the bank reference"),
         ],
         answers: &[
-            "X paid invoice INV-…",
+            "they paid invoice {invoice}",
             "record the payment",
-            "mark INV-… as paid",
+            "mark invoice {invoice} as paid",
         ],
         preview: Some(
             "A payment of {amountCents} cents will be recorded against invoice {invoice}.",
@@ -292,7 +292,7 @@ pub const BILLING_INTENTS: &[IntentSpec] = &[
         ],
         answers: &[
             "discard the draft invoice",
-            "throw away the draft for X",
+            "throw away the draft for {customer}",
             "undo the invoice draft",
         ],
         preview: Some(
@@ -314,7 +314,7 @@ pub const BILLING_INTENTS: &[IntentSpec] = &[
             INVOICE_OPT,
         ],
         answers: &[
-            "remove the payment on INV-…",
+            "remove the payment on invoice {invoice}",
             "that payment was a mistake",
             "undo the payment",
         ],

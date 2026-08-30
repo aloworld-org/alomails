@@ -70,7 +70,7 @@ pub const PROJECTS_INTENTS: &[IntentSpec] = &[
         answers: &[
             "how is the website project going",
             "where are we with the relaunch",
-            "how much budget is left on X",
+            "how much budget is left on {project}",
         ],
         preview: None,
         undo: None,
@@ -150,7 +150,7 @@ pub const PROJECTS_INTENTS: &[IntentSpec] = &[
         ],
         answers: &[
             "log two hours on the relaunch for yesterday",
-            "put 90 minutes on X",
+            "put 90 minutes on {project}",
             "note the time I spent on the audit",
         ],
         preview: Some(

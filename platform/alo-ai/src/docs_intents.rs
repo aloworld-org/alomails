@@ -61,7 +61,7 @@ pub const DOCS_INTENTS: &[IntentSpec] = &[
             "which documents exist",
             "which documents do we have",
             "what did we write lately",
-            "what documents are in the Contracts folder",
+            "what documents are in the {folder} folder",
         ],
         preview: None,
         undo: None,
@@ -119,7 +119,7 @@ pub const DOCS_INTENTS: &[IntentSpec] = &[
             ),
         ],
         answers: &[
-            "start a document called Handover",
+            "start a document called {title}",
             "create a doc for the meeting notes",
         ],
         preview: Some("An empty document called {title} will be created in the user's own Drive."),

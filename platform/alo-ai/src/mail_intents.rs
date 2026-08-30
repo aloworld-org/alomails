@@ -63,7 +63,7 @@ pub const MAIL_INTENTS: &[IntentSpec] = &[
             Arg::optional("limit", "number", "1-15, 8 when unsaid"),
         ],
         answers: &[
-            "are we in contact with ABC Supplies",
+            "are we in contact with {who}",
             "who last replied to them",
             "what did we promise them about delivery",
         ],
@@ -133,7 +133,7 @@ pub const MAIL_INTENTS: &[IntentSpec] = &[
         answers: &[
             "who did I email last week",
             "who have I written to lately",
-            "did I email anyone at ABC Supplies this month",
+            "who have I been in touch with this month",
         ],
         preview: None,
         undo: None,
@@ -152,9 +152,9 @@ pub const MAIL_INTENTS: &[IntentSpec] = &[
             Arg::optional("limit", "number", "at most 10"),
         ],
         answers: &[
-            "what is Ben's address",
-            "who is Ilse Vermeer",
-            "what is the number for ABC Supplies",
+            "what is the address for {query}",
+            "who is {query}",
+            "what is the number for {query}",
         ],
         preview: None,
         undo: None,
@@ -249,8 +249,8 @@ pub const MAIL_INTENTS: &[IntentSpec] = &[
             Arg::required("body", "text", "the message, composed from the request"),
         ],
         answers: &[
-            "draft an email to Ilse about the delivery",
-            "write to ABC Supplies asking for the invoice",
+            "draft an email to {to} about the delivery",
+            "write to {to} asking for the invoice",
         ],
         preview: Some(
             "A draft to {to} will be saved in your Drafts — nothing is sent until you send it yourself.",
@@ -300,10 +300,7 @@ pub const MAIL_INTENTS: &[IntentSpec] = &[
                 "one of the folder names listed under \"Folders\"",
             ),
         ],
-        answers: &[
-            "file that under Receipts",
-            "move it to the Suppliers folder",
-        ],
+        answers: &["file that under {folder}", "move it to the {folder} folder"],
         preview: Some("Email [{source}] will move into {folder}."),
         undo: None,
         routes: &[],

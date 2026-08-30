@@ -65,7 +65,7 @@ pub const SHEETS_INTENTS: &[IntentSpec] = &[
         answers: &[
             "which spreadsheets exist",
             "which spreadsheets do we have",
-            "what workbooks are in the Finance folder",
+            "what workbooks are in the {folder} folder",
         ],
         preview: None,
         undo: None,
@@ -103,10 +103,7 @@ pub const SHEETS_INTENTS: &[IntentSpec] = &[
             WORKBOOK_OPT,
             Arg::optional("tab", "text", "which tab; every tab when left out"),
         ],
-        answers: &[
-            "what did we quote Delaunay",
-            "which row has the March figures",
-        ],
+        answers: &["what did we quote them", "which row has the March figures"],
         preview: None,
         undo: None,
         routes: &[],
@@ -121,8 +118,8 @@ pub const SHEETS_INTENTS: &[IntentSpec] = &[
             TAB_OPT,
         ],
         answers: &[
-            "what does the formula in D12 do",
-            "why is the total in F30 what it is",
+            "what does the formula in {cell} do",
+            "why is the total in {cell} what it is",
         ],
         preview: None,
         undo: None,

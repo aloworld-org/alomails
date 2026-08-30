@@ -69,7 +69,7 @@ pub const DRIVE_INTENTS: &[IntentSpec] = &[
         effect: Effect::Read,
         args: &[FOLDER_OPT],
         answers: &[
-            "what is in the Contracts folder",
+            "what is in the {folder} folder",
             "list my drive",
             "what folders do I have",
         ],
@@ -89,7 +89,7 @@ pub const DRIVE_INTENTS: &[IntentSpec] = &[
         answers: &[
             "what is shared with me",
             "which spaces am I in",
-            "what is in the Marketing space",
+            "what is in the {space} space",
         ],
         preview: None,
         undo: None,
@@ -107,7 +107,10 @@ pub const DRIVE_INTENTS: &[IntentSpec] = &[
             ),
             Arg::optional("limit", "integer", "at most 20"),
         ],
-        answers: &["where is the handover note", "do we have a file called X"],
+        answers: &[
+            "where is the handover note",
+            "do we have a file called {query}",
+        ],
         preview: None,
         undo: None,
         routes: &["/drive/list"],
@@ -162,10 +165,7 @@ pub const DRIVE_INTENTS: &[IntentSpec] = &[
             Arg::required("name", "text", "what the folder should be called"),
             FOLDER_OPT,
         ],
-        answers: &[
-            "make a Contracts folder",
-            "create a folder for the invoices",
-        ],
+        answers: &["make a {name} folder", "create a folder for the invoices"],
         preview: Some("A folder called {name} will be created in the user's own Drive."),
         undo: None,
         routes: &["/drive/folders"],
@@ -178,7 +178,10 @@ pub const DRIVE_INTENTS: &[IntentSpec] = &[
             FILE_REQ,
             Arg::required("name", "text", "what it should be called"),
         ],
-        answers: &["rename the draft to X", "call that file X instead"],
+        answers: &[
+            "rename the draft to {name}",
+            "call that file {name} instead",
+        ],
         preview: Some("{file} will be renamed to {name} — same folder, same contents."),
         undo: None,
         routes: &["/drive/nodes/{id}"],
@@ -188,7 +191,10 @@ pub const DRIVE_INTENTS: &[IntentSpec] = &[
         purpose: "Move a file into one of the folders of the user's OWN Drive — never into a Space or out of one, because that changes who can read it. A folder that is not there is refused, and the refusal lists the folders that are.",
         effect: Effect::Write,
         args: &[FILE_REQ, FOLDER_OPT],
-        answers: &["move the report into Contracts", "put that file in X"],
+        answers: &[
+            "move the report into {folder}",
+            "put that file back at the top of my drive",
+        ],
         preview: Some(
             "{file} will move to {folder} in the user's own Drive — same name, same readers.",
         ),

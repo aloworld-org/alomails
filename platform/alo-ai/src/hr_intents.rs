@@ -63,7 +63,7 @@ pub const HR_INTENTS: &[IntentSpec] = &[
         answers: &[
             "who is off this week",
             "is anybody away on Friday",
-            "is Amara around tomorrow",
+            "is anyone off tomorrow",
         ],
         preview: None,
         undo: None,
@@ -88,7 +88,7 @@ pub const HR_INTENTS: &[IntentSpec] = &[
         answers: &[
             "who works here",
             "who is on the workshop team",
-            "who is Amara's manager",
+            "who is {person}'s manager",
         ],
         preview: None,
         undo: None,
@@ -155,7 +155,7 @@ pub const HR_INTENTS: &[IntentSpec] = &[
             Arg::optional("note", "text", "a sentence to record with the decision"),
         ],
         answers: &[
-            "approve Amara's leave",
+            "approve {employee}'s leave",
             "yes to that holiday request",
             "sign off the leave for next week",
         ],
@@ -187,7 +187,7 @@ pub const HR_INTENTS: &[IntentSpec] = &[
             ),
         ],
         answers: &[
-            "draft an employment confirmation for Amara",
+            "draft an employment confirmation for {employee}",
             "fill in the landlord letter for me",
             "prepare a reference from our template",
         ],
