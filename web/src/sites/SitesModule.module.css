@@ -538,7 +538,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  max-width: 720px;
+  max-width: 960px;
 }
 .card {
   display: flex;
@@ -569,6 +569,12 @@
   flex-direction: column;
   gap: 1px;
 }
+.cardTitleLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
 .cardKind {
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
@@ -586,6 +592,40 @@
   align-items: center;
   gap: var(--space-1);
   flex-shrink: 0;
+}
+.navigationCard {
+  min-height: 4.5rem;
+  padding: var(--space-4);
+  border-color: color-mix(in srgb, var(--accent) 18%, var(--border-default));
+  background: linear-gradient(
+    110deg,
+    var(--bg-surface),
+    color-mix(in srgb, var(--accent-soft) 52%, var(--bg-surface))
+  );
+  box-shadow: var(--shadow-sm);
+}
+.navigationMarker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.navigationPinned {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  box-shadow: inset 0 0 0 1px var(--border-subtle);
 }
 
 /* ---- the section palette (ADR 0042 §4, S3.01d) ----
@@ -882,6 +922,156 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-tertiary);
+}
+
+/* Navigation is a header system, not a generic repeated-item form. The
+   editor mirrors that hierarchy: orientation first, primary links second,
+   and the one high-emphasis action last. */
+.navEditor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+.navEditorIntro {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+  border-radius: var(--radius-lg);
+  background: var(--accent-soft);
+}
+.navEditorIntroIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+.navEditorIntro strong,
+.navLinksHead h3 {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+.navEditorIntro p,
+.navLinksHead p,
+.navPrimaryAction > p {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+}
+.navLinksGroup,
+.navPrimaryAction {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.navLinksGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.navLinksHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.navPagesError {
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--warning-tint);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.navLinkList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.navLinkCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    opacity var(--duration-fast) var(--ease-standard);
+}
+.navLinkCard:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border-default));
+}
+.navLinkCardDragging {
+  opacity: 0.55;
+  border-color: var(--accent);
+}
+.navLinkHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.navLinkHead strong {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+}
+.navLinkDrag {
+  display: inline-flex;
+  padding: var(--space-1);
+  color: var(--text-tertiary);
+  cursor: grab;
+}
+.navLinkActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.navPrimaryAction {
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-raised);
+}
+.navPrimaryAction > legend {
+  padding: 0 var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+.navPrimaryAction > .subGroup {
+  margin-top: var(--space-3);
+  padding: 0;
+  border: 0;
+}
+@media (max-width: 640px) {
+  .navLinksHead,
+  .navEditorIntro {
+    align-items: stretch;
+  }
+  .navLinksHead {
+    flex-direction: column;
+  }
+  .navLinkCard .fieldRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .copyTools {
   display: flex;

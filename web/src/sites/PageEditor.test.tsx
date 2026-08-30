@@ -93,6 +93,10 @@ const FAQ: Section = {
   type: "faq",
   items: [{ question: "When?", answer: "Every day." }],
 };
+const NAV: Section = {
+  type: "nav",
+  links: [{ label: "Home", href: "/" }],
+};
 
 /** The page GET the editor loads first. */
 function pageReply(sections: Section[]): Reply {
@@ -608,6 +612,110 @@ describe("adding a section", () => {
 });
 
 describe("editing a section", () => {
+  test("navigation is pinned and can fill, order, and save links from site pages", async () => {
+    replies = [
+      pageReply([HERO, NAV]),
+      {
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/pages"),
+        status: 200,
+        body: {
+          pages: [
+            {
+              id: "page-1",
+              slug: "",
+              title: "Welcome",
+              home: true,
+              seoTitle: null,
+              seoDescription: null,
+            },
+            {
+              id: "page-2",
+              slug: "about",
+              title: "About us",
+              home: false,
+              seoTitle: null,
+              seoDescription: null,
+            },
+            {
+              id: "page-3",
+              slug: "contact",
+              title: "Contact",
+              home: false,
+              seoTitle: null,
+              seoDescription: null,
+            },
+          ],
+        },
+      },
+    ];
+    ui();
+
+    const navigationCard = await screen.findByTestId("navigation-section-card");
+    expect(navigationCard.textContent).toContain(strings.sitesNavPinned);
+    expect(
+      navigationCard.querySelector('[data-section-control="up"]'),
+    ).toBeNull();
+    expect(
+      navigationCard.querySelector('[data-section-control="down"]'),
+    ).toBeNull();
+
+    fireEvent.click(
+      navigationCard.querySelector<HTMLElement>(
+        '[data-section-control="edit"]',
+      )!,
+    );
+    expect(await screen.findByText(strings.sitesNavEditorIntroTitle)).toBeTruthy();
+    const addPages = await screen.findByRole("button", {
+      name: strings.sitesNavAddPages,
+    });
+    fireEvent.click(addPages);
+
+    const menu = screen.getByRole("group", { name: strings.sitesNavMenuLinks });
+    expect(menu.querySelectorAll("[data-navigation-link]")).toHaveLength(3);
+    expect(screen.getByDisplayValue("About us")).toBeTruthy();
+    expect(screen.getByDisplayValue("/contact")).toBeTruthy();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesNavMoveLinkUp(3) }),
+    );
+    replies = [
+      {
+        match: (url, method) =>
+          method === "PUT" &&
+          url.endsWith("/sites/site-1/pages/page-1/sections/1"),
+        status: 200,
+        body: {
+          sections: env([
+            HERO,
+            {
+              type: "nav",
+              links: [
+                { label: "Home", href: "/" },
+                { label: "Contact", href: "/contact" },
+                { label: "About us", href: "/about" },
+              ],
+            },
+          ]),
+        },
+      },
+    ];
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesSaveSection }),
+    );
+    await waitFor(() => expect(lastWrite()?.method).toBe("PUT"));
+    expect(lastWrite()?.body).toEqual({
+      section: {
+        type: "nav",
+        links: [
+          { label: "Home", href: "/" },
+          { label: "Contact", href: "/contact" },
+          { label: "About us", href: "/about" },
+        ],
+      },
+    });
+  });
+
   test("copy tools propose one selected field and write only after approval", async () => {
     replies = [pageReply([HERO])];
     ui();

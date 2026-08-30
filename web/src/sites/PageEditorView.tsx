@@ -41,6 +41,7 @@ import {
   LayoutGrid,
   Lock,
   Monitor,
+  PanelTop,
   Palette,
   Pencil,
   Plus,
@@ -817,7 +818,7 @@ export function PageEditorView() {
    *
    *  A seeded tile is stored exactly as the palette showed it — every word in
    *  it is already this tenant's — through the same `POST …/sections` the prop
-   *  form saves through, so a dragged block, a typed block and one the
+   *  form saves through, so a picked block, a typed block and one the
    *  assistant proposes are one kind of change with one validation behind
    *  them. A tile the palette could not fill from the website opens that form
    *  at the same position instead, which is the pre-palette behaviour and the
@@ -828,7 +829,18 @@ export function PageEditorView() {
    *  palette tile makes the next keystroke land somewhere surprising. */
   async function addTile(tile: PaletteTile, at: number) {
     const current = sectionsRef.current;
-    const index = insertionIndex(current.length, at);
+    if (
+      tile.kind === "nav" &&
+      current.some((section) => section.type === "nav")
+    ) {
+      setError(strings.sitesNavAlreadyAdded);
+      return;
+    }
+    // Navigation is rendered as the document header regardless of its stored
+    // array position. Store new navigation first so the editor, API and
+    // published document all describe the same hierarchy.
+    const index =
+      tile.kind === "nav" ? 0 : insertionIndex(current.length, at);
     if (tile.section === null) {
       openForm({ kind: tile.kind, index: null, insertAt: index });
       return;
@@ -1269,18 +1281,34 @@ export function PageEditorView() {
 
               {!empty && (
                 <ol className={styles.stack} ref={stackRef}>
-                  {sections.map((section, i) => {
+                  {sections
+                    .map((section, index) => ({ section, index }))
+                    .sort((left, right) => {
+                      const leftNavigation = left.section.type === "nav";
+                      const rightNavigation = right.section.type === "nav";
+                      if (leftNavigation !== rightNavigation) {
+                        return leftNavigation ? -1 : 1;
+                      }
+                      return left.index - right.index;
+                    })
+                    .map(({ section, index: i }) => {
                     const summary = sectionSummary(section);
+                    const navigation = section.type === "nav";
                     const cardClass =
                       dragOver === i && dragFrom !== null && dragFrom !== i
                         ? `${styles.card} ${styles.cardDropTarget}`
-                        : styles.card;
+                        : navigation
+                          ? `${styles.card} ${styles.navigationCard}`
+                          : styles.card;
                     return (
                       // Sections have no identity — the position is the key.
                       <li
                         key={`${section.type}-${i}`}
                         className={cardClass}
-                        draggable
+                        data-testid={
+                          navigation ? "navigation-section-card" : undefined
+                        }
+                        draggable={!navigation}
                         onDragStart={() => setDragFrom(i)}
                         onDragOver={(e) => {
                           e.preventDefault();
@@ -1297,13 +1325,31 @@ export function PageEditorView() {
                           setDragOver(null);
                         }}
                       >
-                        <span className={styles.dragHandle} aria-hidden="true">
-                          <GripVertical size={16} />
+                        <span
+                          className={
+                            navigation
+                              ? styles.navigationMarker
+                              : styles.dragHandle
+                          }
+                          aria-hidden="true"
+                        >
+                          {navigation ? (
+                            <PanelTop size={16} />
+                          ) : (
+                            <GripVertical size={16} />
+                          )}
                         </span>
                         <div className={styles.cardMeta}>
-                          <span className={styles.cardKind}>
-                            {kindLabel(section.type)}
-                          </span>
+                          <div className={styles.cardTitleLine}>
+                            <span className={styles.cardKind}>
+                              {kindLabel(section.type)}
+                            </span>
+                            {navigation && (
+                              <span className={styles.navigationPinned}>
+                                {strings.sitesNavPinned}
+                              </span>
+                            )}
+                          </div>
                           {summary !== "" && (
                             <span className={styles.cardSummary}>
                               {summary}
@@ -1322,38 +1368,44 @@ export function PageEditorView() {
                           )}
                         </div>
                         <div className={styles.cardActions}>
-                          <IconButton
-                            size="sm"
-                            label={strings.sitesMoveUp(kindLabel(section.type))}
-                            data-section-control="up"
-                            icon={<ChevronUp size={15} />}
-                            disabled={
-                              working ||
-                              translationBusy ||
-                              translationFallback ||
-                              i === 0
-                            }
-                            onClick={() =>
-                              void move(i, i - 1, { control: "up" })
-                            }
-                          />
-                          <IconButton
-                            size="sm"
-                            label={strings.sitesMoveDown(
-                              kindLabel(section.type),
-                            )}
-                            data-section-control="down"
-                            icon={<ChevronDown size={15} />}
-                            disabled={
-                              working ||
-                              translationBusy ||
-                              translationFallback ||
-                              i === sections.length - 1
-                            }
-                            onClick={() =>
-                              void move(i, i + 1, { control: "down" })
-                            }
-                          />
+                          {!navigation && (
+                            <>
+                              <IconButton
+                                size="sm"
+                                label={strings.sitesMoveUp(
+                                  kindLabel(section.type),
+                                )}
+                                data-section-control="up"
+                                icon={<ChevronUp size={15} />}
+                                disabled={
+                                  working ||
+                                  translationBusy ||
+                                  translationFallback ||
+                                  i === 0
+                                }
+                                onClick={() =>
+                                  void move(i, i - 1, { control: "up" })
+                                }
+                              />
+                              <IconButton
+                                size="sm"
+                                label={strings.sitesMoveDown(
+                                  kindLabel(section.type),
+                                )}
+                                data-section-control="down"
+                                icon={<ChevronDown size={15} />}
+                                disabled={
+                                  working ||
+                                  translationBusy ||
+                                  translationFallback ||
+                                  i === sections.length - 1
+                                }
+                                onClick={() =>
+                                  void move(i, i + 1, { control: "down" })
+                                }
+                              />
+                            </>
+                          )}
                           <IconButton
                             size="sm"
                             label={strings.sitesEditSection(

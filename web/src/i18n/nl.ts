@@ -3926,6 +3926,27 @@ export const nl: Partial<Catalog> = {
   sitesSectionFooterDesc: "De regel onderaan de pagina.",
   sitesCountLinks: (count: number) =>
     count === 1 ? "1 link" : `${count} links`,
+  sitesNavPinned: "Vast bovenaan",
+  sitesNavEditorIntroTitle: "Bouw een duidelijke kop",
+  sitesNavEditorIntro:
+    "Uw logo of sitenaam komt uit Thema. Houd het hoofdmenu gericht en gebruik één knop voor de belangrijkste actie.",
+  sitesNavMenuLinks: "Menulinks",
+  sitesNavMenuLinksHint:
+    "Voeg de belangrijkste pagina’s toe. De volgorde hier is de volgorde in de kop.",
+  sitesNavAddPages: "Sitepagina’s toevoegen",
+  sitesNavPagesLoading: "Pagina’s laden…",
+  sitesNavChoosePage: "Kies een sitepagina",
+  sitesNavCustomTarget: "Aangepaste link",
+  sitesNavDestinationHint:
+    "Gebruik een paginapad (/over-ons), sectie (#prijzen), webadres, e-mail of telefoonnummer.",
+  sitesNavPrimaryAction: "Primaire actie",
+  sitesNavPrimaryActionHint:
+    "Optioneel. Dit verschijnt als de opvallende knop in de kop.",
+  sitesNavPagesLoadFailed:
+    "De sitepagina’s konden niet worden geladen. U kunt nog steeds handmatig links invoeren.",
+  sitesNavMoveLinkUp: (position: number) => `Link ${position} omhoog verplaatsen`,
+  sitesNavMoveLinkDown: (position: number) => `Link ${position} omlaag verplaatsen`,
+  sitesNavAlreadyAdded: "Staat al op deze pagina",
   sitesCountImages: (count: number) =>
     count === 1 ? "1 afbeelding" : `${count} afbeeldingen`,
   sitesCountEntries: (count: number) =>

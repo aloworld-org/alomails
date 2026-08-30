@@ -227,10 +227,14 @@ export function SectionPalette({
     activeCategory.kinds === null
       ? tiles
       : tiles.filter((tile) => activeCategory.kinds?.includes(tile.kind));
+  const hasNavigation = sections.some((section) => section.type === "nav");
   const positions = positionOptions(sections);
+  const chosenPosition = shown?.kind === "nav" ? 0 : position;
   const positionLabel =
-    positions.find((option) => option.index === position)?.label ??
-    strings.sitesPaletteAtEnd;
+    shown?.kind === "nav"
+      ? strings.sitesNavPinned
+      : (positions.find((option) => option.index === position)?.label ??
+        strings.sitesPaletteAtEnd);
 
   return (
     <section
@@ -271,8 +275,8 @@ export function SectionPalette({
           <span>{strings.sitesPalettePosition}</span>
           <Select
             size="md"
-            value={position}
-            disabled={busy}
+            value={chosenPosition}
+            disabled={busy || shown?.kind === "nav"}
             onChange={(event) => setPosition(Number(event.target.value))}
           >
             {positions.map((option) => (
@@ -298,11 +302,18 @@ export function SectionPalette({
                   ? `${styles.paletteTile} ${styles.paletteTileActive}`
                   : styles.paletteTile
               }
-              aria-label={strings.sitesPaletteAdd(kindLabel(tile.kind), positionLabel)}
-              disabled={busy}
+              aria-label={
+                tile.kind === "nav" && hasNavigation
+                  ? `${kindLabel(tile.kind)} — ${strings.sitesNavAlreadyAdded}`
+                  : strings.sitesPaletteAdd(
+                      kindLabel(tile.kind),
+                      tile.kind === "nav" ? strings.sitesNavPinned : positionLabel,
+                    )
+              }
+              disabled={busy || (tile.kind === "nav" && hasNavigation)}
               onFocus={() => select(tile)}
               onMouseEnter={() => select(tile)}
-              onClick={() => onChoose(tile, position)}
+              onClick={() => onChoose(tile, tile.kind === "nav" ? 0 : position)}
             >
               <svg
                 className={styles.paletteThumb}
@@ -314,11 +325,15 @@ export function SectionPalette({
               </svg>
               <span className={styles.paletteTileName}>{kindLabel(tile.kind)}</span>
               <span className={styles.paletteTileDesc}>{kindDescription(tile.kind)}</span>
-              {tile.section === null && seeded && (
+              {tile.kind === "nav" && hasNavigation ? (
+                <span className={styles.paletteTileNeeds}>
+                  {strings.sitesNavAlreadyAdded}
+                </span>
+              ) : tile.section === null && seeded ? (
                 <span className={styles.paletteTileNeeds}>
                   {strings.sitesPaletteOpensForm}
                 </span>
-              )}
+              ) : null}
             </button>
           ))}
         </div>

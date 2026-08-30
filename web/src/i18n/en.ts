@@ -3933,6 +3933,27 @@ export const en = {
   sitesSectionFooterDesc: "The line at the bottom of the page.",
   sitesCountLinks: (count: number) =>
     count === 1 ? "1 link" : `${count} links`,
+  sitesNavPinned: "Pinned to the top",
+  sitesNavEditorIntroTitle: "Build a clear header",
+  sitesNavEditorIntro:
+    "Your logo or site name comes from Theme. Keep the main menu focused, then use one button for the most important action.",
+  sitesNavMenuLinks: "Menu links",
+  sitesNavMenuLinksHint:
+    "Add the pages visitors need most. Their order here is their order in the header.",
+  sitesNavAddPages: "Add site pages",
+  sitesNavPagesLoading: "Loading pages…",
+  sitesNavChoosePage: "Choose a site page",
+  sitesNavCustomTarget: "Custom link",
+  sitesNavDestinationHint:
+    "Use a page path (/about), section (#pricing), web address, email, or phone number.",
+  sitesNavPrimaryAction: "Primary action",
+  sitesNavPrimaryActionHint:
+    "Optional. This appears as the highlighted button in the header.",
+  sitesNavPagesLoadFailed:
+    "Could not load site pages. You can still enter links manually.",
+  sitesNavMoveLinkUp: (position: number) => `Move link ${position} up`,
+  sitesNavMoveLinkDown: (position: number) => `Move link ${position} down`,
+  sitesNavAlreadyAdded: "Already on this page",
   sitesCountImages: (count: number) =>
     count === 1 ? "1 image" : `${count} images`,
   sitesCountEntries: (count: number) =>

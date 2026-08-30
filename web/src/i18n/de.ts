@@ -5776,6 +5776,27 @@ export const de: Partial<Catalog> = {
   sitesSectionFooterDesc: "Die Zeile ganz unten auf der Seite.",
   sitesCountLinks: (count: number) =>
     count === 1 ? "1 Link" : `${count} Links`,
+  sitesNavPinned: "Oben angeheftet",
+  sitesNavEditorIntroTitle: "Eine klare Kopfzeile erstellen",
+  sitesNavEditorIntro:
+    "Ihr Logo oder Sitename kommt aus dem Design. Halten Sie das Hauptmenü übersichtlich und verwenden Sie eine Schaltfläche für die wichtigste Aktion.",
+  sitesNavMenuLinks: "Menülinks",
+  sitesNavMenuLinksHint:
+    "Fügen Sie die wichtigsten Seiten hinzu. Die Reihenfolge hier entspricht der Reihenfolge in der Kopfzeile.",
+  sitesNavAddPages: "Siteseiten hinzufügen",
+  sitesNavPagesLoading: "Seiten werden geladen…",
+  sitesNavChoosePage: "Siteseite auswählen",
+  sitesNavCustomTarget: "Eigener Link",
+  sitesNavDestinationHint:
+    "Verwenden Sie einen Seitenpfad (/ueber-uns), Abschnitt (#preise), eine Webadresse, E-Mail oder Telefonnummer.",
+  sitesNavPrimaryAction: "Hauptaktion",
+  sitesNavPrimaryActionHint:
+    "Optional. Sie erscheint als hervorgehobene Schaltfläche in der Kopfzeile.",
+  sitesNavPagesLoadFailed:
+    "Die Siteseiten konnten nicht geladen werden. Sie können Links weiterhin manuell eingeben.",
+  sitesNavMoveLinkUp: (position: number) => `Link ${position} nach oben verschieben`,
+  sitesNavMoveLinkDown: (position: number) => `Link ${position} nach unten verschieben`,
+  sitesNavAlreadyAdded: "Bereits auf dieser Seite",
   sitesCountImages: (count: number) =>
     count === 1 ? "1 Bild" : `${count} Bilder`,
   sitesCountEntries: (count: number) =>

@@ -3972,6 +3972,27 @@ export const fr: Partial<Catalog> = {
   sitesSectionFooterDesc: "La ligne au bas de la page.",
   sitesCountLinks: (count: number) =>
     count === 1 ? "1 lien" : `${count} liens`,
+  sitesNavPinned: "Épinglée en haut",
+  sitesNavEditorIntroTitle: "Créez un en-tête clair",
+  sitesNavEditorIntro:
+    "Votre logo ou le nom du site vient du Thème. Gardez le menu principal concis, puis utilisez un bouton pour l’action prioritaire.",
+  sitesNavMenuLinks: "Liens du menu",
+  sitesNavMenuLinksHint:
+    "Ajoutez les pages les plus utiles. Leur ordre ici sera celui de l’en-tête.",
+  sitesNavAddPages: "Ajouter les pages du site",
+  sitesNavPagesLoading: "Chargement des pages…",
+  sitesNavChoosePage: "Choisir une page du site",
+  sitesNavCustomTarget: "Lien personnalisé",
+  sitesNavDestinationHint:
+    "Utilisez un chemin (/a-propos), une section (#tarifs), une adresse web, un e-mail ou un numéro de téléphone.",
+  sitesNavPrimaryAction: "Action principale",
+  sitesNavPrimaryActionHint:
+    "Facultatif. Elle apparaît comme le bouton mis en avant dans l’en-tête.",
+  sitesNavPagesLoadFailed:
+    "Impossible de charger les pages du site. Vous pouvez toujours saisir les liens manuellement.",
+  sitesNavMoveLinkUp: (position: number) => `Monter le lien ${position}`,
+  sitesNavMoveLinkDown: (position: number) => `Descendre le lien ${position}`,
+  sitesNavAlreadyAdded: "Déjà présente sur cette page",
   sitesCountImages: (count: number) =>
     count === 1 ? "1 image" : `${count} images`,
   sitesCountEntries: (count: number) =>

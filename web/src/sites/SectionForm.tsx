@@ -6,11 +6,20 @@
 // every rule.
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { Blocks, Plus, Sparkles, Trash2 } from "lucide-react";
+import {
+  Blocks,
+  ChevronDown,
+  ChevronUp,
+  GripVertical,
+  PanelTop,
+  Plus,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { strings } from "../i18n";
-import { Button, IconButton, Spinner } from "../ds";
+import { Button, IconButton, Select, Spinner } from "../ds";
 import { kindDescription, kindLabel } from "./sectionInfo";
 import {
   blankFaqItem,
@@ -44,7 +53,7 @@ import type {
   TicketsDraft,
 } from "./sectionDrafts";
 import type { Section, SectionKind, SectionLink } from "./sections";
-import type { SiteCopyAction, SiteEditEnvelope } from "./types";
+import type { SiteCopyAction, SiteEditEnvelope, SitePage } from "./types";
 import type {
   SiteBooking,
   SiteCatalog,
@@ -347,21 +356,257 @@ function ItemsEditor<T extends object>({
 type Change = (draft: SectionDraft) => void;
 
 function NavFields({ draft, onChange }: { draft: NavDraft; onChange: Change }) {
+  const { siteId = "" } = useParams();
+  const api = useSitesApi();
+  const [pages, setPages] = useState<SitePage[]>([]);
+  const [pagesLoading, setPagesLoading] = useState(siteId !== "");
+  const [pagesFailed, setPagesFailed] = useState(false);
+  const [dragging, setDragging] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (siteId === "") return;
+    let current = true;
+    setPagesLoading(true);
+    setPagesFailed(false);
+    void api
+      .pages(siteId)
+      .then((loaded) => {
+        if (current) setPages(loaded);
+      })
+      .catch(() => {
+        if (current) setPagesFailed(true);
+      })
+      .finally(() => {
+        if (current) setPagesLoading(false);
+      });
+    return () => {
+      current = false;
+    };
+  }, [api, siteId]);
+
+  const pagePath = (page: SitePage) => (page.home ? "/" : `/${page.slug}`);
+  const linkedTargets = new Set(draft.links.map((link) => link.href.trim()));
+  const missingPages = pages.filter((page) => !linkedTargets.has(pagePath(page)));
+  const reorder = (from: number, to: number) => {
+    if (from === to || to < 0 || to >= draft.links.length) return;
+    const links = [...draft.links];
+    const [moved] = links.splice(from, 1);
+    if (moved === undefined) return;
+    links.splice(to, 0, moved);
+    onChange({ ...draft, links });
+  };
+  const addSitePages = () => {
+    const typed = draft.links.filter(
+      (link) => link.label.trim() !== "" || link.href.trim() !== "",
+    );
+    const existing = new Set(typed.map((link) => link.href.trim()));
+    const added = pages
+      .filter((page) => !existing.has(pagePath(page)))
+      .map((page) => ({ label: page.title, href: pagePath(page) }));
+    onChange({ ...draft, links: [...typed, ...added] });
+  };
+
   return (
-    <>
-      <ItemsEditor
-        addLabel={strings.sitesAddLink}
-        items={draft.links}
-        onChange={(links) => onChange({ ...draft, links })}
-        blank={blankLink}
-        render={(link, update) => <LinkFields value={link} onChange={update} />}
-      />
-      <LinkFields
-        legend={strings.sitesFieldButton}
-        value={draft.cta}
-        onChange={(patch) => onChange({ ...draft, cta: { ...draft.cta, ...patch } })}
-      />
-    </>
+    <div className={styles.navEditor}>
+      <div className={styles.navEditorIntro}>
+        <span className={styles.navEditorIntroIcon} aria-hidden="true">
+          <PanelTop size="var(--icon-size-control)" />
+        </span>
+        <div>
+          <strong>{strings.sitesNavEditorIntroTitle}</strong>
+          <p>{strings.sitesNavEditorIntro}</p>
+        </div>
+      </div>
+
+      <fieldset className={styles.navLinksGroup}>
+        <legend className={styles.srOnly}>{strings.sitesNavMenuLinks}</legend>
+        <div className={styles.navLinksHead}>
+          <div>
+            <h3>{strings.sitesNavMenuLinks}</h3>
+            <p>{strings.sitesNavMenuLinksHint}</p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={pagesLoading || missingPages.length === 0}
+            onClick={addSitePages}
+          >
+            {pagesLoading ? strings.sitesNavPagesLoading : strings.sitesNavAddPages}
+          </Button>
+        </div>
+        {pagesFailed && (
+          <p className={styles.navPagesError} role="status">
+            {strings.sitesNavPagesLoadFailed}
+          </p>
+        )}
+
+        <div className={styles.navLinkList}>
+          {draft.links.map((link, index) => {
+            const selectedPage = pages.find(
+              (page) => pagePath(page) === link.href,
+            );
+            return (
+              <div
+                key={index}
+                data-navigation-link=""
+                className={
+                  dragging === index
+                    ? `${styles.navLinkCard} ${styles.navLinkCardDragging}`
+                    : styles.navLinkCard
+                }
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  if (dragging !== null) reorder(dragging, index);
+                  setDragging(null);
+                }}
+              >
+                <div className={styles.navLinkHead}>
+                  <span
+                    className={styles.navLinkDrag}
+                    draggable
+                    aria-hidden="true"
+                    onDragStart={() => setDragging(index)}
+                    onDragEnd={() => setDragging(null)}
+                  >
+                    <GripVertical size="var(--icon-size-inline)" />
+                  </span>
+                  <strong>{strings.sitesItemN(index + 1)}</strong>
+                  <div className={styles.navLinkActions}>
+                    <IconButton
+                      size="sm"
+                      label={strings.sitesNavMoveLinkUp(index + 1)}
+                      icon={<ChevronUp size="var(--icon-size-inline)" />}
+                      disabled={index === 0}
+                      onClick={() => reorder(index, index - 1)}
+                    />
+                    <IconButton
+                      size="sm"
+                      label={strings.sitesNavMoveLinkDown(index + 1)}
+                      icon={<ChevronDown size="var(--icon-size-inline)" />}
+                      disabled={index === draft.links.length - 1}
+                      onClick={() => reorder(index, index + 1)}
+                    />
+                    <IconButton
+                      size="sm"
+                      label={strings.sitesRemoveItem}
+                      icon={<Trash2 size="var(--icon-size-inline)" />}
+                      onClick={() =>
+                        onChange({
+                          ...draft,
+                          links: draft.links.filter((_, item) => item !== index),
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+                {pages.length > 0 && (
+                  <Field label={strings.sitesNavChoosePage}>
+                    <Select
+                      value={
+                        selectedPage === undefined ? "custom" : pagePath(selectedPage)
+                      }
+                      onChange={(event) => {
+                        if (event.target.value === "custom") {
+                          onChange({
+                            ...draft,
+                            links: draft.links.map((item, itemIndex) =>
+                              itemIndex === index ? { ...item, href: "" } : item,
+                            ),
+                          });
+                          return;
+                        }
+                        const page = pages.find(
+                          (candidate) => pagePath(candidate) === event.target.value,
+                        );
+                        if (page === undefined) return;
+                        const links = draft.links.map((item, itemIndex) =>
+                          itemIndex === index
+                            ? {
+                                label:
+                                  item.label.trim() === "" ? page.title : item.label,
+                                href: pagePath(page),
+                              }
+                            : item,
+                        );
+                        onChange({ ...draft, links });
+                      }}
+                    >
+                      <option value="custom">{strings.sitesNavCustomTarget}</option>
+                      {pages.map((page) => (
+                        <option key={page.id} value={pagePath(page)}>
+                          {page.title} · {pagePath(page)}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                )}
+                <div className={styles.fieldRow}>
+                  <Field label={strings.sitesFieldLinkLabel}>
+                    <input
+                      className={styles.input}
+                      value={link.label}
+                      autoFocus={index === 0}
+                      onChange={(event) =>
+                        onChange({
+                          ...draft,
+                          links: draft.links.map((item, itemIndex) =>
+                            itemIndex === index
+                              ? { ...item, label: event.target.value }
+                              : item,
+                          ),
+                        })
+                      }
+                    />
+                  </Field>
+                  <Field
+                    label={strings.sitesFieldLinkHref}
+                    hint={strings.sitesNavDestinationHint}
+                  >
+                    <input
+                      className={`${styles.input} ${styles.mono}`}
+                      value={link.href}
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      onChange={(event) =>
+                        onChange({
+                          ...draft,
+                          links: draft.links.map((item, itemIndex) =>
+                            itemIndex === index
+                              ? { ...item, href: event.target.value }
+                              : item,
+                          ),
+                        })
+                      }
+                    />
+                  </Field>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={<Plus size="var(--icon-size-inline)" />}
+          onClick={() => onChange({ ...draft, links: [...draft.links, blankLink()] })}
+        >
+          {strings.sitesAddLink}
+        </Button>
+      </fieldset>
+
+      <fieldset className={styles.navPrimaryAction}>
+        <legend>{strings.sitesNavPrimaryAction}</legend>
+        <p>{strings.sitesNavPrimaryActionHint}</p>
+        <LinkFields
+          value={draft.cta}
+          onChange={(patch) =>
+            onChange({ ...draft, cta: { ...draft.cta, ...patch } })
+          }
+        />
+      </fieldset>
+    </div>
   );
 }
 
@@ -1314,7 +1559,7 @@ export function SectionFormDialog({
   const label = kindLabel(kind);
   return (
     <DialogFrame
-      Icon={Blocks}
+      Icon={kind === "nav" ? PanelTop : Blocks}
       title={
         initial === undefined
           ? strings.sitesAddSectionTitle(label)
@@ -1325,6 +1570,7 @@ export function SectionFormDialog({
       busy={busy}
       canSubmit={canSubmit(draft)}
       submitLabel={strings.sitesSaveSection}
+      wide={kind === "nav"}
       onClose={onClose}
       onSubmit={() => onSave(toSection(draft))}
     >
