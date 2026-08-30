@@ -36,10 +36,10 @@ export function SiteSectionNavigation({
 }) {
   return (
     <nav
-      className="overflow-x-auto rounded-xl border border-subtle bg-surface p-1 shadow-sm"
+      className="flex min-w-0 gap-2 overflow-x-auto"
       aria-label={strings.sitesWebsiteNavigation}
     >
-      <div className="flex min-w-max items-center gap-1" role="tablist">
+      <div className="contents" role="tablist">
         {items.map(({ id, label, Icon }) => {
           if (id === "collaborators" && !showCollaborators) return null;
           const selected = active === id;
@@ -49,14 +49,14 @@ export function SiteSectionNavigation({
               type="button"
               role="tab"
               aria-selected={selected}
-              className={`inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border-0 px-3.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 ${
+              className={`inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2.5 rounded-xl border-0 px-4 py-2.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${
                 selected
-                  ? "!bg-accent-soft font-semibold !text-accent"
-                  : "!bg-transparent font-medium !text-text-secondary hover:!bg-surface-raised hover:!text-text-primary"
+                  ? "!bg-accent-soft font-semibold !text-accent shadow-sm ring-1 ring-inset ring-accent/10"
+                  : "!bg-transparent font-medium !text-secondary hover:!bg-raised hover:!text-primary"
               }`}
               onClick={() => onSelect(id)}
             >
-              <Icon size={16} aria-hidden="true" />
+              <Icon className="size-4" aria-hidden="true" />
               {label()}
             </button>
           );

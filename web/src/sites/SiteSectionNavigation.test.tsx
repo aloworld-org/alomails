@@ -22,6 +22,14 @@ describe("SiteSectionNavigation", () => {
         .getByRole("tab", { name: strings.sitesPages })
         .getAttribute("aria-selected"),
     ).toBe("true");
+    expect(
+      screen.getByRole("navigation", {
+        name: strings.sitesWebsiteNavigation,
+      }).className,
+    ).toContain("gap-2 overflow-x-auto");
+    expect(
+      screen.getByRole("tab", { name: strings.sitesPages }).className,
+    ).toContain("min-h-11");
     fireEvent.click(
       screen.getByRole("tab", { name: strings.sitesLanguages }),
     );
