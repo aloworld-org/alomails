@@ -193,11 +193,19 @@ impl DataImage {
         // a PDF must be self-contained and its writer accepts raster images
         // only. Resolve this one closed path at render time so no network
         // request or large base64 database field is involved.
+        //
+        // The crate carries its own copy of the raster. It used to reach four
+        // levels up into `web/public/`, which built here and failed in the
+        // container: the image copies `platform`, `products`, `suite` and
+        // `migrate`, never `web`, so production could not be built at all
+        // between 2026-08-28 and this line. A crate that embeds a file owns
+        // that file; the browser's copy under `web/` stays where the browser
+        // wants it.
         if src == "/demo/billing/workspace.svg" {
             return Some(Self {
                 mime: "image/png",
                 base64: base64::engine::general_purpose::STANDARD.encode(include_bytes!(
-                    "../../../../web/public/demo/billing/workspace.png"
+                    "../assets/demo-billing-workspace.png"
                 )),
             });
         }
