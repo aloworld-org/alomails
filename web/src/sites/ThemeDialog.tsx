@@ -1,17 +1,20 @@
-// The site theme dialog: the preset picker (each shipped palette as a swatch
-// card) and the logo/favicon uploads. Applying PUTs the full envelope through
+// The site theme dialog: direct reusable brand-color controls and the
+// logo/favicon uploads. A shipped preset remains the typography foundation,
+// but the person does not have to choose between decorative preset cards.
+// Applying PUTs the full envelope through
 // the server's theme gate — the dialog re-states no rules, and a 422 shows
 // the server's own sentence. Uploads go through Drive (`driveUploadBlob`), so
 // the image lands as a referenced, user-visible Drive file whose blob id the
 // theme points at.
 import { useEffect, useRef, useState } from "react";
 import { Palette, Trash2, Upload } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { strings } from "../i18n";
 import { useJmapClient } from "../jmap";
-import { Button, ColorPicker, IconButton, Spinner } from "../ds";
+import { Button, IconButton, Spinner } from "../ds";
+import { readBrandKit } from "../branding/repository";
 import { sitesMessage, useSitesApi } from "./api";
-import { contrastRatio } from "./accentContrast";
 import { DialogFrame, ErrorBanner } from "./parts";
 import type { BrandColors, ThemeEnvelope, ThemePreset } from "./types";
 
@@ -24,24 +27,13 @@ const styles = {
   themeSlotActions: "flex flex-wrap items-center gap-2",
   themeSlotState:
     "mr-1 inline-flex min-h-8 items-center rounded-full bg-surface px-3 text-xs font-semibold text-secondary",
-  presetGrid: "grid gap-3 sm:grid-cols-2 lg:grid-cols-3",
-  presetCard:
-    "flex min-h-28 flex-col justify-between rounded-2xl border-2 p-5 text-left transition-[border-color,box-shadow] hover:border-accent hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
-  presetCardActive: "ring-2 ring-accent ring-offset-2",
-  presetName: "text-lg",
-  presetSwatches: "mt-5 flex gap-2",
-  presetSwatch: "size-7 rounded-full border border-black/10 shadow-sm",
-  colorPanel: "mt-5 overflow-hidden rounded-2xl border border-subtle bg-surface",
-  colorPanelHead: "flex flex-wrap items-start justify-between gap-3 border-b border-subtle px-5 py-4",
-  colorPanelTitle: "font-semibold text-primary",
-  colorPanelHint: "mt-1 max-w-2xl text-sm leading-5 text-secondary",
-  colorGroup: "px-5 py-4 [&+&]:border-t [&+&]:border-subtle",
-  colorGroupTitle: "mb-3 text-xs font-semibold uppercase tracking-wide text-secondary",
-  colorGrid: "grid gap-3 sm:grid-cols-2",
-  colorRow: "flex min-w-0 items-center gap-3 rounded-xl border border-subtle bg-surface-muted px-3 py-3",
-  colorLabel: "flex min-w-0 flex-1 items-center justify-between gap-2 text-sm font-semibold text-primary",
-  colorInput: "w-24 rounded-lg border border-subtle bg-surface px-2 py-1.5 font-mono text-xs uppercase text-primary",
-  colorError: "px-5 pb-4 text-sm font-medium text-danger",
+  brandSource: "flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-subtle bg-surface-muted p-4",
+  brandSourceText: "min-w-0 flex-1",
+  brandSourceTitle: "font-semibold text-primary",
+  brandSourceHint: "mt-1 text-sm leading-5 text-secondary",
+  brandSwatches: "flex items-center -space-x-1.5",
+  brandSwatch: "size-8 rounded-full border-2 border-surface shadow-sm",
+  assets: "mt-6 grid gap-3 border-t border-subtle pt-2 sm:grid-cols-2",
 } as const;
 
 /** The version this form writes; the server refuses anything else. */
@@ -59,17 +51,6 @@ function presetColors(preset: ThemePreset): BrandColors {
     accent_5: preset.palette.background.toUpperCase(),
   };
 }
-
-const colorFields: ReadonlyArray<[keyof BrandColors, string]> = [
-  ["background", strings.sitesThemeBackgroundColor],
-  ["text", strings.sitesThemeTextColor],
-  ["border", strings.sitesThemeBorderColor],
-  ["accent_1", strings.sitesThemeAccentColor(1)],
-  ["accent_2", strings.sitesThemeAccentColor(2)],
-  ["accent_3", strings.sitesThemeAccentColor(3)],
-  ["accent_4", strings.sitesThemeAccentColor(4)],
-  ["accent_5", strings.sitesThemeAccentColor(5)],
-];
 
 /** One image slot of the theme (logo or favicon): its current blob id, an
  *  upload that replaces it, and a remove that clears it. */
@@ -151,12 +132,12 @@ export function ThemeDialog({
 }) {
   const api = useSitesApi();
   const jmap = useJmapClient();
+  const navigate = useNavigate();
   const [presets, setPresets] = useState<ThemePreset[] | null>(null);
   const [preset, setPreset] = useState<string | null>(null);
   const [logo, setLogo] = useState<string | null>(null);
   const [favicon, setFavicon] = useState<string | null>(null);
   const [colors, setColors] = useState<BrandColors | null>(null);
-  const [customColors, setCustomColors] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -172,8 +153,18 @@ export function ThemeDialog({
         setLogo(site.theme.logo ?? null);
         setFavicon(site.theme.favicon ?? null);
         const selected = shipped.find((item) => item.id === (site.theme.preset ?? shipped[0]?.id));
-        setColors(site.theme.colors ?? (selected === undefined ? null : presetColors(selected)));
-        setCustomColors(site.theme.colors !== undefined);
+        const base = site.theme.colors ?? (selected === undefined ? null : presetColors(selected));
+        if (base !== null) {
+          const brand = readBrandKit();
+          setColors({
+            ...base,
+            accent_1: brand.primary.value,
+            accent_2: brand.secondary?.value ?? base.accent_2,
+            accent_3: brand.supporting[0]?.value ?? base.accent_3,
+            accent_4: brand.supporting[1]?.value ?? base.accent_4,
+            accent_5: brand.supporting[2]?.value ?? base.accent_5,
+          });
+        }
       },
       (err: unknown) => {
         if (!stale)
@@ -211,7 +202,7 @@ export function ThemeDialog({
       preset,
       logo: logo ?? undefined,
       favicon: favicon ?? undefined,
-      colors: customColors ? colors ?? undefined : undefined,
+      colors: colors ?? undefined,
     };
     try {
       await api.setTheme(siteId, envelope);
@@ -224,8 +215,7 @@ export function ThemeDialog({
 
   const loading = presets === null && loadError === null;
   const colorsValid = colors !== null
-    && colorFields.every(([field]) => /^#[0-9A-F]{6}$/i.test(colors[field]))
-    && (contrastRatio(colors.background, colors.text) ?? 0) >= 4.5;
+    && Object.values(colors).every((value) => /^#[0-9A-F]{6}$/i.test(value));
 
   return (
     <DialogFrame
@@ -236,6 +226,7 @@ export function ThemeDialog({
       busy={busy}
       canSubmit={preset !== null && colorsValid}
       submitLabel={strings.sitesThemeApply}
+      wide
       onClose={onClose}
       onSubmit={() => void apply()}
     >
@@ -243,132 +234,48 @@ export function ThemeDialog({
       {loadError !== null && <ErrorBanner message={loadError} />}
       {presets !== null && (
         <>
-          <div
-            className={styles.presetGrid}
-            role="radiogroup"
-            aria-label={strings.sitesThemePresets}
-          >
-            {presets.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                role="radio"
-                aria-checked={p.id === preset}
-                className={
-                  p.id === preset
-                    ? `${styles.presetCard} ${styles.presetCardActive}`
-                    : styles.presetCard
-                }
-                style={{
-                  background: p.palette.background,
-                  borderColor: p.palette.border,
-                }}
+          {colors !== null && (
+            <section className={styles.brandSource}>
+              <div className={styles.brandSourceText}>
+                <h3 className={styles.brandSourceTitle}>{strings.brandingAccentsTitle}</h3>
+                <p className={styles.brandSourceHint}>{strings.sitesThemeBrandManaged}</p>
+              </div>
+              <div className={styles.brandSwatches} aria-hidden="true">
+                {[colors.accent_1, colors.accent_2, colors.accent_3, colors.accent_4, colors.accent_5]
+                  .map((value, index) => (
+                    <span key={index} className={styles.brandSwatch} style={{ background: value }} />
+                  ))}
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
-                  setPreset(p.id);
-                  setColors(presetColors(p));
-                  setCustomColors(false);
+                  onClose();
+                  navigate("/branding");
                 }}
               >
-                <span
-                  className={styles.presetName}
-                  style={{
-                    color: p.palette.text,
-                    fontFamily: p.typography.headingFamily,
-                    fontWeight: p.typography.headingWeight,
-                  }}
-                >
-                  {p.name}
-                </span>
-                <span className={styles.presetSwatches} aria-hidden="true">
-                  {[
-                    p.palette.primary,
-                    p.palette.surface,
-                    p.palette.mutedText,
-                  ].map((color, i) => (
-                    <span
-                      key={i}
-                      className={styles.presetSwatch}
-                      style={{ background: color }}
-                    />
-                  ))}
-                </span>
-              </button>
-            ))}
-          </div>
-          {colors !== null && (
-            <section className={styles.colorPanel}>
-              <div className={styles.colorPanelHead}>
-                <div>
-                  <h3 className={styles.colorPanelTitle}>{strings.sitesThemeBrandColors}</h3>
-                  <p className={styles.colorPanelHint}>{strings.sitesThemeBrandColorsHint}</p>
-                </div>
-                {customColors && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      const selected = presets.find((item) => item.id === preset);
-                      if (selected !== undefined) setColors(presetColors(selected));
-                      setCustomColors(false);
-                    }}
-                  >
-                    {strings.sitesThemeResetColors}
-                  </Button>
-                )}
-              </div>
-              {[colorFields.slice(0, 3), colorFields.slice(3)].map((fields, group) => (
-                <div key={group} className={styles.colorGroup}>
-                  <h4 className={styles.colorGroupTitle}>
-                    {group === 0 ? strings.sitesThemeBaseColors : strings.sitesThemeAccentColors}
-                  </h4>
-                  <div className={styles.colorGrid}>
-                    {fields.map(([field, label]) => (
-                      <div key={field} className={styles.colorRow}>
-                        <ColorPicker
-                          label={label}
-                          value={colors[field]}
-                          onChange={(value) => {
-                            setColors({ ...colors, [field]: value.toUpperCase() });
-                            setCustomColors(true);
-                          }}
-                        />
-                        <label className={styles.colorLabel}>
-                          {label}
-                          <input
-                            className={styles.colorInput}
-                            aria-label={strings.sitesThemeHexValue(label)}
-                            value={colors[field]}
-                            maxLength={7}
-                            onChange={(event) => {
-                              setColors({ ...colors, [field]: event.target.value.toUpperCase() });
-                              setCustomColors(true);
-                            }}
-                          />
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-              {!colorsValid && <p className={styles.colorError}>{strings.sitesThemeColorError}</p>}
+                {strings.moduleBranding}
+              </Button>
             </section>
           )}
-          <ImageSlot
-            label={strings.sitesThemeLogo}
-            hint={strings.sitesThemeLogoHint}
-            blobId={logo}
-            busy={busy}
-            onUpload={upload(setLogo)}
-            onRemove={() => setLogo(null)}
-          />
-          <ImageSlot
-            label={strings.sitesThemeFavicon}
-            hint={strings.sitesThemeFaviconHint}
-            blobId={favicon}
-            busy={busy}
-            onUpload={upload(setFavicon)}
-            onRemove={() => setFavicon(null)}
-          />
+          <div className={styles.assets}>
+            <ImageSlot
+              label={strings.sitesThemeLogo}
+              hint={strings.sitesThemeLogoHint}
+              blobId={logo}
+              busy={busy}
+              onUpload={upload(setLogo)}
+              onRemove={() => setLogo(null)}
+            />
+            <ImageSlot
+              label={strings.sitesThemeFavicon}
+              hint={strings.sitesThemeFaviconHint}
+              blobId={favicon}
+              busy={busy}
+              onUpload={upload(setFavicon)}
+              onRemove={() => setFavicon(null)}
+            />
+          </div>
         </>
       )}
     </DialogFrame>

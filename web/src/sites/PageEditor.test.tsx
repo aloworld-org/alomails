@@ -654,8 +654,8 @@ describe("editing a section", () => {
     const navigationCard = await screen.findByTestId("navigation-section-card");
     expect(navigationCard.textContent).toContain(strings.sitesNavPinned);
     expect(
-      navigationCard.querySelector("[data-navigation-preview]")?.textContent,
-    ).toContain("Home");
+      navigationCard.querySelector("[data-navigation-preview]"),
+    ).toBeNull();
     expect(
       navigationCard.querySelector('[data-section-control="up"]'),
     ).toBeNull();
@@ -749,7 +749,7 @@ describe("editing a section", () => {
     fireEvent.click(screen.getByRole("button", { name: strings.sitesNavAppearanceShow }));
     fireEvent.change(screen.getByLabelText(strings.sitesNavBackground), { target: { value: "accent_2" } });
     fireEvent.change(screen.getByLabelText(strings.sitesNavText), { target: { value: "background" } });
-    fireEvent.change(screen.getByLabelText(strings.sitesNavHover), { target: { value: "accent_5" } });
+    fireEvent.change(screen.getByLabelText(strings.sitesNavHover), { target: { value: "accent_2" } });
 
     replies = [{
       match: (url, method) =>
@@ -766,7 +766,7 @@ describe("editing a section", () => {
         appearance: {
           background: "accent_2",
           text: "background",
-          hover: "accent_5",
+          hover: "accent_2",
         },
       },
     });

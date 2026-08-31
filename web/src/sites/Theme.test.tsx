@@ -228,7 +228,7 @@ async function openThemeDialogFromSiteView(theme: Record<string, unknown>) {
   replies.push(siteReply(theme));
   ui("/sites/site-1");
   fireEvent.click(await screen.findByText(strings.sitesTheme));
-  expect(await screen.findByText("Terra")).toBeTruthy();
+  expect(await screen.findByText(strings.brandingAccentsTitle)).toBeTruthy();
 }
 
 beforeEach(() => {
@@ -245,14 +245,32 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
+const northWithWorkspaceBrand = {
+  background: "#FFFFFF", text: "#17212B", border: "#DDE3E9",
+  accent_1: "#E76F51", accent_2: "#102A43", accent_3: "#F2F5F8",
+  accent_4: "#17212B", accent_5: "#FFFFFF",
+};
+
+const terraWithWorkspaceBrand = {
+  background: "#FAF6EF", text: "#38291D", border: "#E4D8C6",
+  accent_1: "#E76F51", accent_2: "#102A43", accent_3: "#F2EADD",
+  accent_4: "#38291D", accent_5: "#FAF6EF",
+};
+
 describe("the theme dialog", () => {
-  test("renders the shipped presets and PUTs exactly the picked one", async () => {
+  test("opens directly on brand colors without showing preset cards", async () => {
     await openThemeDialogFromSiteView({});
-    // The stored `{}` reads as the default: the first preset is selected.
+    expect(screen.queryByRole("radio", { name: "North" })).toBeNull();
+    expect(screen.queryByRole("radio", { name: "Terra" })).toBeNull();
     expect(
-      screen.getByRole("radio", { name: "North" }).getAttribute("aria-checked"),
-    ).toBe("true");
-    fireEvent.click(screen.getByRole("radio", { name: "Terra" }));
+      screen.queryByLabelText(strings.sitesThemeHexValue(strings.sitesThemeBackgroundColor)),
+    ).toBeNull();
+    expect(
+      screen.queryByLabelText(strings.sitesThemeHexValue(strings.sitesThemeTextColor)),
+    ).toBeNull();
+    expect(
+      screen.queryByLabelText(strings.sitesThemeHexValue(strings.sitesThemeBorderColor)),
+    ).toBeNull();
     fireEvent.click(screen.getByText(strings.sitesThemeApply));
     await waitFor(() => {
       expect(lastWrite()).toBeTruthy();
@@ -261,7 +279,11 @@ describe("the theme dialog", () => {
     expect(write?.method).toBe("PUT");
     expect(write?.url.endsWith("/sites/site-1/theme")).toBe(true);
     // The exact envelope: absent logo/favicon are ABSENT keys, not nulls.
-    expect(write?.body).toEqual({ schema_version: 1, preset: "terra" });
+    expect(write?.body).toEqual({
+      schema_version: 1,
+      preset: "north",
+      colors: northWithWorkspaceBrand,
+    });
   });
 
   test("an uploaded logo goes through Drive and lands in the envelope", async () => {
@@ -284,15 +306,12 @@ describe("the theme dialog", () => {
       schema_version: 1,
       preset: "north",
       logo: "blob-9",
+      colors: northWithWorkspaceBrand,
     });
   });
 
-  test("stores a full reusable brand palette after any theme color is changed", async () => {
+  test("imports the full reusable workspace brand palette", async () => {
     await openThemeDialogFromSiteView({});
-    fireEvent.change(
-      screen.getByLabelText(strings.sitesThemeHexValue(strings.sitesThemeAccentColor(2))),
-      { target: { value: "#123456" } },
-    );
     fireEvent.click(screen.getByText(strings.sitesThemeApply));
     await waitFor(() => expect(lastWrite()).toBeTruthy());
     expect(lastWrite()?.body).toEqual({
@@ -300,7 +319,7 @@ describe("the theme dialog", () => {
       preset: "north",
       colors: {
         background: "#FFFFFF", text: "#17212B", border: "#DDE3E9",
-        accent_1: "#1D4ED8", accent_2: "#123456", accent_3: "#F2F5F8",
+        accent_1: "#E76F51", accent_2: "#102A43", accent_3: "#F2F5F8",
         accent_4: "#17212B", accent_5: "#FFFFFF",
       },
     });
@@ -313,15 +332,17 @@ describe("the theme dialog", () => {
       logo: "blob-old",
     });
     expect(screen.getByText(strings.sitesThemeSet)).toBeTruthy();
-    expect(
-      screen.getByRole("radio", { name: "Terra" }).getAttribute("aria-checked"),
-    ).toBe("true");
+    expect(screen.queryByRole("radio", { name: "Terra" })).toBeNull();
     fireEvent.click(screen.getByLabelText(strings.sitesThemeRemove));
     fireEvent.click(screen.getByText(strings.sitesThemeApply));
     await waitFor(() => {
       expect(lastWrite()).toBeTruthy();
     });
-    expect(lastWrite()?.body).toEqual({ schema_version: 1, preset: "terra" });
+    expect(lastWrite()?.body).toEqual({
+      schema_version: 1,
+      preset: "terra",
+      colors: terraWithWorkspaceBrand,
+    });
   });
 
   test("a refusal shows the server's sentence and the dialog stays open", async () => {
@@ -336,8 +357,8 @@ describe("the theme dialog", () => {
     expect(
       await screen.findByText("theme: preset is not a shipped theme preset"),
     ).toBeTruthy();
-    // Still open: the presets are still on screen.
-    expect(screen.getByText("Terra")).toBeTruthy();
+    // Still open: the brand-color controls remain on screen.
+    expect(screen.getByText(strings.brandingAccentsTitle)).toBeTruthy();
   });
 });
 
@@ -353,8 +374,7 @@ describe("the editor's preview after a theme change", () => {
       expect(previewFetches()).toBe(1);
     });
     fireEvent.click(screen.getByText(strings.sitesTheme));
-    expect(await screen.findByText("Terra")).toBeTruthy();
-    fireEvent.click(screen.getByRole("radio", { name: "Terra" }));
+    expect(await screen.findByText(strings.brandingAccentsTitle)).toBeTruthy();
     fireEvent.click(screen.getByText(strings.sitesThemeApply));
     // The accepted envelope closes the dialog and the preview refetches.
     await waitFor(() => {

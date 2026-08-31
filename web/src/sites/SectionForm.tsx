@@ -22,6 +22,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { strings } from "../i18n";
 import { Button, IconButton, Select, Spinner } from "../ds";
+import { readBrandKit } from "../branding/repository";
 import { kindDescription, kindLabel } from "./sectionInfo";
 import { contrastRatio } from "./accentContrast";
 import {
@@ -406,6 +407,7 @@ function NavFields({
 }) {
   const { siteId = "", pageId = "" } = useParams();
   const api = useSitesApi();
+  const workspaceBrand = readBrandKit();
   const [pages, setPages] = useState<SitePage[]>([]);
   const [pagesLoading, setPagesLoading] = useState(siteId !== "");
   const [pagesFailed, setPagesFailed] = useState(false);
@@ -749,8 +751,12 @@ function NavFields({
                       <option value="background">{strings.sitesThemeBackgroundColor}</option>
                       <option value="text">{strings.sitesThemeTextColor}</option>
                       <option value="border">{strings.sitesThemeBorderColor}</option>
-                      {[1, 2, 3, 4, 5].map((number) => (
-                        <option key={number} value={`accent_${number}`}>{strings.sitesThemeAccentColor(number)}</option>
+                      <option value="accent_1">{strings.sitesThemeAccentColor(1)}</option>
+                      {workspaceBrand.secondary !== null && (
+                        <option value="accent_2">{strings.sitesThemeAccentColor(2)}</option>
+                      )}
+                      {workspaceBrand.supporting.map((color, index) => (
+                        <option key={color.id} value={`accent_${index + 3}`}>{color.name}</option>
                       ))}
                     </Select>
                   </Field>

@@ -1367,33 +1367,6 @@ export function PageEditorView() {
                             />
                           )}
                         </div>
-                        {navigation && (
-                          <div
-                            className={styles.navigationPreview}
-                            data-navigation-preview=""
-                            aria-hidden="true"
-                          >
-                            <span className={styles.navigationPreviewBrand} />
-                            {section.links.slice(0, 3).map((link, linkIndex) => (
-                              <span
-                                className={styles.navigationPreviewLink}
-                                key={`${link.href}-${linkIndex}`}
-                              >
-                                {link.label}
-                              </span>
-                            ))}
-                            {section.links.length > 3 && (
-                              <span className={styles.navigationPreviewMore}>
-                                +{section.links.length - 3}
-                              </span>
-                            )}
-                            {section.cta && (
-                              <span className={styles.navigationPreviewCta}>
-                                {section.cta.label}
-                              </span>
-                            )}
-                          </div>
-                        )}
                         <div className={styles.cardActions}>
                           {!navigation && (
                             <>
