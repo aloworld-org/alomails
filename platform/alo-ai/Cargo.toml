@@ -15,6 +15,9 @@ reqwest = { workspace = true }
 # DNS resolution for the restricted egress policy (SSRF guard): resolve + pin
 # the backend host before connecting.
 tokio = { workspace = true }
+# Why a model call produced nothing usable is an operator's question, and
+# only this crate still holds the reply when the answer is known.
+tracing = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true }

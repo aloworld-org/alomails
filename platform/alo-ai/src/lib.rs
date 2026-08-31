@@ -52,8 +52,8 @@ pub mod sites_intents;
 pub mod tasks_intents;
 pub use agent::{
     AgentAsk, AgentDecision, AgentProduct, DecisionError, ProposedAction, after_read_messages,
-    agent_messages, all_tools, is_agent_tool, is_read_tool, parse_decision, run_agent,
-    run_agent_after_read, system_prompt_for,
+    agent_messages, all_tools, declared_kind, is_agent_tool, is_read_tool, parse_decision,
+    run_agent, run_agent_after_read, system_prompt_for, unusable_reason,
 };
 pub use agent_memory::{MEMORY_FACTS_MAX, extract_memories, memory_messages, parse_memories};
 pub use agent_plan::{

@@ -379,6 +379,61 @@ impl From<InferenceError> for DecisionError {
     }
 }
 
+/// Why a reply could not be used, in **shape only** — never a word of what the
+/// model said.
+///
+/// "The reply was not a decision" is true and useless: it is the same sentence
+/// whether the model wrote prose, invented a kind, or sent an action with no
+/// tool in it, and those want different fixes. The reply itself cannot go in a
+/// log (law #1 — it may carry a customer's records), so this describes its
+/// structure and nothing else. Cheap enough to call on the failure path.
+#[must_use]
+pub fn unusable_reason(text: &str) -> &'static str {
+    let Some(json) = extract_json(text) else {
+        return if text.trim().is_empty() {
+            "the reply had no text"
+        } else {
+            "the reply held no JSON object"
+        };
+    };
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(json) else {
+        return "the JSON object did not parse";
+    };
+    let Some(object) = value.as_object() else {
+        return "the JSON was not an object";
+    };
+    match object.get("kind").and_then(serde_json::Value::as_str) {
+        None if object.contains_key("tool") => "no kind, but a bare tool call",
+        None => "the object declared no kind",
+        Some("answer") => "kind=answer with an empty answer",
+        Some("action") => match object.get("action").and_then(serde_json::Value::as_object) {
+            None => "kind=action with no action object",
+            Some(action) if !action.contains_key("tool") => "kind=action with no tool named",
+            Some(action) if !action.contains_key("args") => "kind=action with no args field",
+            Some(_) => "kind=action whose action did not parse",
+        },
+        Some("delegate") => "kind=delegate without a handle and an ask",
+        Some(_) => "a kind nobody declared",
+    }
+}
+
+/// The `kind` a reply declared, when it is a plain token — so a log can name
+/// the shape the model invented instead of only saying it invented one.
+///
+/// Safe-listed on purpose: a `kind` is a schema word, and this returns it only
+/// when it looks like one (short, lower-case, `a-z` and `_`). Anything else is
+/// text the model wrote, which does not go in a log.
+#[must_use]
+pub fn declared_kind(text: &str) -> Option<String> {
+    let json = extract_json(text)?;
+    let value: serde_json::Value = serde_json::from_str(json).ok()?;
+    let kind = value.get("kind")?.as_str()?;
+    let token = !kind.is_empty()
+        && kind.len() <= 24
+        && kind.bytes().all(|b| b.is_ascii_lowercase() || b == b'_');
+    token.then(|| kind.to_owned())
+}
+
 /// Parse the model's reply into an [`AgentDecision`]. Tolerant of code fences and
 /// surrounding text; strict about the envelope shape.
 ///
@@ -436,8 +491,54 @@ pub fn parse_decision(text: &str) -> Result<AgentDecision, DecisionError> {
             }
             Ok(AgentDecision::Delegate { to, ask })
         }
+        // A `kind` that names a tool instead of a shape (2026-08-31). Asked
+        // "what did we quote Northstar Foods?", gpt-4o-mini replies
+        // `{"kind":"quote_lookup", …}`: it has chosen the right tool and put
+        // its name in the envelope's slot for the *shape*. The intent is not
+        // ambiguous, and refusing it cost the room an answer it could have had
+        // — so this is read as the action it plainly is, which is the same
+        // "tolerant in what we accept" the wire protocols get.
+        //
+        // It widens nothing. `offers` still decides whether this product may
+        // use the tool, the read/write split still decides whether it runs or
+        // waits for approval, and the arguments are still validated at the
+        // execution boundary. The one thing not tolerated is a **change**
+        // arriving without a sentence describing it: what the user approves is
+        // that sentence, so an unusable reply (and the retry that follows it)
+        // is better than a proposal that says nothing.
+        // `all_tools()` here answers only "is this a tool name at all". Which
+        // product may use it stays `agent_product::offers`' question, asked at
+        // the execution boundary — this arm cannot hand anybody a tool that
+        // boundary would refuse.
+        other if find_tool(&all_tools(), other).is_some() => {
+            let effect = find_tool(&all_tools(), other).map(|tool| tool.effect);
+            let say = env.say.unwrap_or_default().trim().to_owned();
+            if effect == Some(crate::agent_tool::Effect::Write) && say.is_empty() {
+                return Err(DecisionError::Unusable);
+            }
+            let args = env
+                .action
+                .map(|action| action.args)
+                .or_else(|| value_of(json, "args"))
+                .unwrap_or_else(|| serde_json::json!({}));
+            Ok(AgentDecision::Action {
+                action: ProposedAction {
+                    tool: other.to_owned(),
+                    args,
+                },
+                say,
+            })
+        }
         _ => Err(DecisionError::Unusable),
     }
+}
+
+/// One field of an already-parsed JSON object, by name.
+fn value_of(json: &str, field: &str) -> Option<serde_json::Value> {
+    serde_json::from_str::<serde_json::Value>(json)
+        .ok()?
+        .get(field)
+        .cloned()
 }
 
 /// Told to the model on the second and later calls of a read turn, when there
@@ -485,7 +586,18 @@ async fn decide_once(
     messages: &[ChatMessage],
 ) -> Result<AgentDecision, DecisionError> {
     let text = chat(config, messages, 0.2).await?;
-    parse_decision(&text)
+    let decision = parse_decision(&text);
+    if decision.is_err() {
+        // The shape of what came back, never a word of it: "not a decision" is
+        // the same sentence whether the model wrote prose, invented a kind, or
+        // sent an action with no tool, and those want different fixes.
+        tracing::warn!(
+            reason = unusable_reason(&text),
+            kind = declared_kind(&text).unwrap_or_else(|| "-".to_owned()),
+            "an unusable reply from the model"
+        );
+    }
+    decision
 }
 
 /// Ask for a decision, and **ask once more if the reply was not one** (A10.1).
@@ -632,6 +744,82 @@ mod tests {
         assert!(
             parse_decision(r#"{"kind":"delegate","delegate":{"to":"crm","ask":"  "}}"#).is_err()
         );
+    }
+
+    /// A `kind` that names a tool is read as the action it plainly is
+    /// (2026-08-31). Asked "what did we quote Northstar Foods?", gpt-4o-mini
+    /// replied `{"kind":"quote_lookup", ...}` — the right tool, in the slot
+    /// meant for the shape — and the whole turn was thrown away as unusable.
+    #[test]
+    fn a_kind_that_names_a_tool_is_read_as_that_action() {
+        // Args under their own key, the shape the model actually sent.
+        let named = r#"{"kind":"quote_lookup","args":{"customer":"Northstar Foods"}}"#;
+        match parse_decision(named).unwrap() {
+            AgentDecision::Action { action, say } => {
+                assert_eq!(action.tool, "quote_lookup");
+                assert_eq!(action.args["customer"], "Northstar Foods");
+                assert!(say.is_empty(), "a read needs no sentence");
+            }
+            other => panic!("expected an action, got {other:?}"),
+        }
+
+        // Args nested in an action object beside the tool-named kind.
+        let nested = r#"{"kind":"open_quotes","action":{"tool":"open_quotes","args":{"limit":3}}}"#;
+        match parse_decision(nested).unwrap() {
+            AgentDecision::Action { action, .. } => assert_eq!(action.args["limit"], 3),
+            other => panic!("expected an action, got {other:?}"),
+        }
+
+        // No args at all is a call with none, not a broken reply.
+        match parse_decision(r#"{"kind":"open_quotes"}"#).unwrap() {
+            AgentDecision::Action { action, .. } => {
+                assert_eq!(action.tool, "open_quotes");
+                assert!(action.args.is_object());
+            }
+            other => panic!("expected an action, got {other:?}"),
+        }
+
+        // A change still has to describe itself: what the user approves is the
+        // sentence, so a write without one stays unusable and is asked again.
+        assert!(parse_decision(r#"{"kind":"send_quote","args":{"number":"Q-1"}}"#).is_err());
+        assert!(matches!(
+            parse_decision(r#"{"kind":"send_quote","say":"I will send Q-1.","args":{"number":"Q-1"}}"#)
+                .unwrap(),
+            AgentDecision::Action { action, .. } if action.tool == "send_quote"
+        ));
+
+        // A kind that is not a shape and not a tool is still refused.
+        assert!(parse_decision(r#"{"kind":"lookup","args":{}}"#).is_err());
+    }
+
+    /// What a log may say about a reply it could not use: its shape, and the
+    /// `kind` token when the model wrote one — never a word the model said.
+    #[test]
+    fn the_reason_describes_the_shape_and_never_the_reply() {
+        assert_eq!(unusable_reason(""), "the reply had no text");
+        assert_eq!(
+            unusable_reason("Sure! Let me look."),
+            "the reply held no JSON object"
+        );
+        assert_eq!(unusable_reason("{oops}"), "the JSON object did not parse");
+        assert_eq!(
+            unusable_reason(r#"{"answer":"x"}"#),
+            "the object declared no kind"
+        );
+        assert_eq!(
+            unusable_reason(r#"{"tool":"open_quotes"}"#),
+            "no kind, but a bare tool call"
+        );
+        assert_eq!(
+            unusable_reason(r#"{"kind":"lookup"}"#),
+            "a kind nobody declared"
+        );
+        assert_eq!(
+            declared_kind(r#"{"kind":"quote_lookup"}"#).as_deref(),
+            Some("quote_lookup")
+        );
+        // Not a schema token: it is text the model wrote, so it stays out.
+        assert_eq!(declared_kind(r#"{"kind":"Dear Mr Vos, about your"}"#), None);
     }
 
     /// The handoff offer is a fact about the run: it names exactly the roster
