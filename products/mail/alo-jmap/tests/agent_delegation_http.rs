@@ -327,6 +327,58 @@ async fn a_handle_the_asker_cannot_see_is_dropped_without_a_room_line() {
     assert!(!user_of(&seen, 0).contains("@inventory"));
 }
 
+/// **Never the same question twice.** A run that has already put something to
+/// an agent does not put it again — the same run asked Sales one question
+/// three times, which is a loop spending somebody's inference budget, not
+/// deliberation.
+#[tokio::test]
+async fn the_same_question_is_not_put_to_the_same_agent_twice() {
+    let h = harness("delegtwice").await;
+    let (channel, _billing) = a_room_with(&h, "billing", AgentProduct::Billing).await;
+    an_agent(&h, "finance", AgentProduct::Finance).await;
+
+    let (base, seen) = scripted_model(vec![
+        // A read first, so the "own records first" bound is satisfied and this
+        // test is about repetition and nothing else.
+        wants(
+            "unpaid_invoices",
+            json!({}),
+            "I will look up the unpaid invoices.",
+        ),
+        delegates("finance", "What are Northstar's payment terms?"),
+        // The delegate answers; the asker then asks the very same thing again,
+        // differing only in case and spacing.
+        says("Thirty days from issue."),
+        delegates("finance", "  what are northstar's payment terms?  "),
+        says("Thirty days from issue, and 3,472.70 EUR is outstanding [1]."),
+    ])
+    .await;
+    use_model(&h, &base).await;
+
+    let all = ask_and_wait(
+        &h,
+        &channel,
+        "@billing where are we with Northstar?",
+        |all| {
+            all.iter().any(|m| {
+                m["body"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .contains("outstanding")
+            })
+        },
+    )
+    .await;
+
+    // One handoff line, not two: the repeat never reached Finance.
+    assert_eq!(handoff_lines(&all).len(), 1, "{}", json!(all));
+    assert!(
+        user_of(&seen, 4).contains("already put that to @finance"),
+        "{}",
+        user_of(&seen, 4)
+    );
+}
+
 /// **At most four handoffs per run, refusals included.** The fifth is refused
 /// without a model call for it, and the run ends saying so — bounded in code,
 /// not in the prompt.

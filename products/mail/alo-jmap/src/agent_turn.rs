@@ -42,6 +42,19 @@
 //! - **A handoff reaches only agents the asker can see.** The roster is the
 //!   asker's own module-gated agent list; a handle outside it is dropped with
 //!   a line the model can answer around, never resolved more widely.
+//! - **Never the same question twice.** A run that has already asked `@x`
+//!   something does not ask `@x` that again. The same run repeated one
+//!   question to Sales three times, which is not deliberation, it is a loop
+//!   spending somebody's inference budget.
+//!
+//! A bound tried and withdrawn, because it is worth knowing why: an agent was
+//! briefly forbidden to hand off before running one of its own reading tools,
+//! to stop Billing handing a Billing question to Finance. It broke seven
+//! delegation tests and they were right to break — "@billing can we fulfil the
+//! quote?" *should* reach Inventory on the first move, and a forced billing
+//! lookup first buys a wasted model call and a worse answer. Which questions an
+//! agent's own tools cover is a judgement; judgement belongs in the prompt, and
+//! only the countable things belong here.
 //!
 //! Everything runs through the **asker's** account door, exactly as the
 //! retrieval that grounds the turn already did. A read's blast radius under
@@ -120,6 +133,10 @@ struct RunBudget {
     reads: AtomicUsize,
     /// Handoffs taken (refused ones included), capped at [`MAX_HANDOFFS`].
     handoffs: AtomicUsize,
+    /// Every `@handle: question` this run has already put to somebody, so the
+    /// same one is not put again. A `Mutex` rather than an atomic because it
+    /// holds words; it is never held across an `await`.
+    asked: std::sync::Mutex<Vec<String>>,
 }
 
 impl RunBudget {
@@ -127,6 +144,7 @@ impl RunBudget {
         Self {
             reads: AtomicUsize::new(0),
             handoffs: AtomicUsize::new(0),
+            asked: std::sync::Mutex::new(Vec::new()),
         }
     }
 
@@ -144,6 +162,29 @@ impl RunBudget {
     /// Take one handoff from the run, saying whether there was one to take.
     fn take_handoff(&self) -> bool {
         take(&self.handoffs, MAX_HANDOFFS)
+    }
+
+    /// Record a question put to an agent, saying whether it is a new one.
+    ///
+    /// Compared on the words, folded and trimmed: a model asked to repeat
+    /// itself rarely repeats itself byte for byte, and "What did we quote
+    /// Northstar Foods?" twice is once however it is capitalised.
+    fn first_time_asking(&self, to: &str, ask: &str) -> bool {
+        let key = format!(
+            "{}: {}",
+            to.trim().to_lowercase(),
+            ask.trim().to_lowercase()
+        );
+        let Ok(mut asked) = self.asked.lock() else {
+            // A poisoned lock must not stop a turn; the worst case is one
+            // repeated question, which the handoff budget still bounds.
+            return true;
+        };
+        if asked.contains(&key) {
+            return false;
+        }
+        asked.push(key);
+        true
     }
 }
 
@@ -360,15 +401,21 @@ fn turn_at<'a>(env: &'a RunEnv<'a>, turn: &'a Turn<'a>, depth: usize) -> TurnFut
                     (RESULT_KIND, action.tool.clone(), detail)
                 }
                 Step::Handoff { to, ask } => {
-                    if !env.budget.take_handoff() {
+                    // Refused before it is spent: the model is sent back to
+                    // its own records rather than charged for asking.
+                    if let Some(refusal) = handoff_refused(env, &to, &ask) {
+                        (DELEGATED_KIND, format!("@{to}"), refusal)
+                    } else if !env.budget.take_handoff() {
                         return Ok((finish(Step::Handoff { to, ask }), sources));
-                    }
-                    match run_handoff(env, turn, depth, &to, &ask).await {
-                        Handoff::Fold(detail) => (DELEGATED_KIND, format!("@{to}"), detail),
-                        // The delegate proposed, in the room, under its own id:
-                        // the run is over, whatever depth this is — one pending
-                        // proposal is the whole approval surface (A5.2).
-                        Handoff::Over(result) => return Ok((result, sources)),
+                    } else {
+                        match run_handoff(env, turn, depth, &to, &ask).await {
+                            Handoff::Fold(detail) => (DELEGATED_KIND, format!("@{to}"), detail),
+                            // The delegate proposed, in the room, under its own
+                            // id: the run is over, whatever depth this is — one
+                            // pending proposal is the whole approval surface
+                            // (A5.2).
+                            Handoff::Over(result) => return Ok((result, sources)),
+                        }
                     }
                 }
             };
@@ -418,6 +465,21 @@ fn handoff_offers<'a>(turn: &'a Turn<'_>, depth: usize) -> Vec<PlanAgent<'a>> {
 }
 
 /// What one handoff came to, for the loop above.
+/// Why this handoff is refused before it is taken, as a line for the asking
+/// model — or `None` when it may go ahead.
+///
+/// Neither refusal spends a handoff: the point is to send the model back to
+/// its own tools, and charging it for the attempt would leave a turn that
+/// looked first with fewer asks than one that did not.
+fn handoff_refused(env: &RunEnv<'_>, to: &str, ask: &str) -> Option<String> {
+    if !env.budget.first_time_asking(to, ask) {
+        return Some(format!(
+            "nobody was asked: you have already put that to @{to} in this run, and the answer is above. Use it, ask something different, or say which part you could not do"
+        ));
+    }
+    None
+}
+
 enum Handoff {
     /// A line for the asking model's sources: the delegate's answer, or the
     /// sentence saying why there is none.

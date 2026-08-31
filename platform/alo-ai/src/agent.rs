@@ -287,8 +287,12 @@ fn delegates_block(delegates: &[PlanAgent<'_>]) -> String {
         "\n\nYou may also HAND OFF one sub-question that belongs to another agent's product: \
 {{\"kind\":\"delegate\",\"delegate\":{{\"to\":\"<handle>\",\"ask\":\"<the sub-question, in words that stand on their own>\"}}}}. \
 The handoff runs immediately, as the person asking, and that agent's answer comes back to you as a \
-further numbered source to cite in your own answer. Never hand off what your own tools cover, and \
-hand off one thing at a time. You can hand off to: {roster}."
+further numbered source to cite in your own answer. You can hand off to: {roster}.\n\
+BEFORE you hand anything off, read your own tool list above. If any tool of yours could answer the \
+request — even partly — USE THAT TOOL INSTEAD. Handing on a question your own tools cover is always \
+wrong: nobody else can see your product's records, so the question comes back unanswered and the \
+person waits for nothing. Hand off ONLY the part that is plainly another product's, one thing at a \
+time, and only after your own tools have given you what they can."
     )
 }
 
@@ -844,7 +848,11 @@ mod tests {
         assert!(user.contains("\"kind\":\"delegate\""));
         assert!(user.contains("@crm (the crm agent)"));
         assert!(user.contains("@stock (the inventory agent)"));
-        assert!(user.contains("Never hand off what your own tools cover"));
+        // The offer's whole point since 2026-08-31: a handoff is the last
+        // resort, said where the model cannot miss it. A real model read the
+        // old one-clause version and handed Billing questions to Finance.
+        assert!(user.contains("BEFORE you hand anything off, read your own tool list"));
+        assert!(user.contains("USE THAT TOOL INSTEAD"));
         // …and the offer survives into the after-read call, where the folded
         // answer is what it is being asked to cite.
         let after = after_read_messages(&asked, true);

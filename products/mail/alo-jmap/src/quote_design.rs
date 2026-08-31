@@ -204,9 +204,8 @@ impl DataImage {
         if src == "/demo/billing/workspace.svg" {
             return Some(Self {
                 mime: "image/png",
-                base64: base64::engine::general_purpose::STANDARD.encode(include_bytes!(
-                    "../assets/demo-billing-workspace.png"
-                )),
+                base64: base64::engine::general_purpose::STANDARD
+                    .encode(include_bytes!("../assets/demo-billing-workspace.png")),
             });
         }
         let rest = src.strip_prefix("data:")?;
