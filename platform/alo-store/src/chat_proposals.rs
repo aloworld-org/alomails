@@ -19,7 +19,7 @@ use time::OffsetDateTime;
 
 use crate::account::AccountStore;
 use crate::chat_agents::{ChatProposal, ProposalState};
-use crate::chat_messages::ChatMessage;
+use crate::chat_messages::{ChatMessage, MessageSource};
 use crate::error::{Result, StoreError};
 use crate::id::{ChatAgentId, ChatChannelId, ChatMessageId, ChatProposalId, UserId};
 
@@ -81,6 +81,26 @@ impl AccountStore {
         body: &str,
         thread_root_seq: Option<i64>,
     ) -> Result<ChatMessage> {
+        self.post_as_agent_cited(channel, agent, body, thread_root_seq, &[])
+            .await
+    }
+
+    /// The same, for an answer that cites what it was grounded in.
+    ///
+    /// Separate rather than a sixth parameter on every call site: most of what
+    /// an agent says — a plan, a refusal, a sentence describing a proposal —
+    /// cites nothing, and only the answer path has the list to hand.
+    ///
+    /// # Errors
+    /// As [`Self::post_as_agent`].
+    pub async fn post_as_agent_cited(
+        &self,
+        channel: &ChatChannelId,
+        agent: &ChatAgentId,
+        body: &str,
+        thread_root_seq: Option<i64>,
+        sources: &[MessageSource],
+    ) -> Result<ChatMessage> {
         // An agent speaks only in rooms it has been put in: being defined in
         // the tenant is not permission to appear anywhere in it.
         let present = self
@@ -94,11 +114,14 @@ impl AccountStore {
         let asker = self.user.as_str().to_owned();
         self.insert_message(
             channel,
-            agent.as_str(),
-            "agent",
-            Some(&asker),
-            body,
-            thread_root_seq,
+            crate::chat_messages::NewMessage {
+                author: agent.as_str(),
+                author_kind: "agent",
+                on_behalf_of: Some(&asker),
+                body,
+                thread_root_seq,
+                sources,
+            },
         )
         .await
     }

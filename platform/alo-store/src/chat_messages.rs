@@ -58,6 +58,42 @@ impl MessageKind {
     }
 }
 
+/// One source an agent's answer was grounded in, as the room shows it.
+///
+/// The agent is handed a numbered list and told to cite what it uses (`[2]`).
+/// Keeping the list beside the answer is what makes that citation checkable by
+/// the person reading it, rather than only by a test.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct MessageSource {
+    /// The number the answer cites — 1-based, in the order the model saw them.
+    pub n: i64,
+    /// What kind of thing it is: `message`, `task`, `chat`, `event`, `memory`,
+    /// a tool result's own name, and so on. Said plainly, not as an id.
+    pub kind: String,
+    /// Its title, subject or — for a remembered fact — the fact itself.
+    pub title: String,
+}
+
+/// A message about to be written, for a person or an agent alike.
+///
+/// A struct rather than six parameters: `insert_message` is the one place a
+/// message is written, and a row of bare strings at a call site is where
+/// `author` and `author_kind` get swapped without the compiler noticing.
+pub(crate) struct NewMessage<'a> {
+    /// A person's user id, or an agent's id.
+    pub author: &'a str,
+    /// `user` or `agent` — what tells a reader which namespace `author` is in.
+    pub author_kind: &'a str,
+    /// On an agent's message, the person whose reach produced it.
+    pub on_behalf_of: Option<&'a str>,
+    /// The words.
+    pub body: &'a str,
+    /// The seq this replies to; `None` in the main feed.
+    pub thread_root_seq: Option<i64>,
+    /// What an answer was grounded in; empty for everything else.
+    pub sources: &'a [MessageSource],
+}
+
 /// One message as a reader sees it.
 #[derive(Debug, Clone)]
 pub struct ChatMessage {
@@ -90,6 +126,10 @@ pub struct ChatMessage {
     /// When it was withdrawn, if it was — the row survives so the sequence
     /// never gains a hole, but the body is gone.
     pub deleted_at: Option<OffsetDateTime>,
+    /// What an agent's answer was grounded in, in citation order. Empty for a
+    /// person's message, and for any agent message written before the room
+    /// started keeping them.
+    pub sources: Vec<MessageSource>,
 }
 
 /// A room with the two numbers a sidebar needs: how much is unread, and when
@@ -139,7 +179,7 @@ pub struct ChatFeedMessage {
 }
 
 const MESSAGE_COLUMNS: &str = "id, channel_id, seq, author_id, author_kind, on_behalf_of, body, kind, \
-     thread_root_seq, created_at, edited_at, deleted_at";
+     thread_root_seq, created_at, edited_at, deleted_at, sources";
 
 type MessageRow = (
     String,
@@ -154,6 +194,7 @@ type MessageRow = (
     OffsetDateTime,
     Option<OffsetDateTime>,
     Option<OffsetDateTime>,
+    Option<serde_json::Value>,
 );
 
 fn row_to_message(row: MessageRow) -> Result<ChatMessage> {
@@ -170,6 +211,12 @@ fn row_to_message(row: MessageRow) -> Result<ChatMessage> {
         created_at: row.9,
         edited_at: row.10,
         deleted_at: row.11,
+        // A list that no longer parses is a list we do not have: an answer is
+        // never withheld because the footnotes behind it went bad.
+        sources: row
+            .12
+            .and_then(|value| serde_json::from_value(value).ok())
+            .unwrap_or_default(),
     })
 }
 
@@ -203,8 +250,18 @@ impl AccountStore {
     ) -> Result<ChatMessage> {
         // A person posts as themselves, on nobody's behalf.
         let author = self.user.as_str().to_owned();
-        self.insert_message(channel, &author, "user", None, body, thread_root_seq)
-            .await
+        self.insert_message(
+            channel,
+            NewMessage {
+                author: &author,
+                author_kind: "user",
+                on_behalf_of: None,
+                body,
+                thread_root_seq,
+                sources: &[],
+            },
+        )
+        .await
     }
 
     /// The one place a message is written, for a person or an agent alike.
@@ -221,12 +278,16 @@ impl AccountStore {
     pub(crate) async fn insert_message(
         &self,
         channel: &ChatChannelId,
-        author: &str,
-        author_kind: &str,
-        on_behalf_of: Option<&str>,
-        body: &str,
-        thread_root_seq: Option<i64>,
+        new: NewMessage<'_>,
     ) -> Result<ChatMessage> {
+        let NewMessage {
+            author,
+            author_kind,
+            on_behalf_of,
+            body,
+            thread_root_seq,
+            sources,
+        } = new;
         validate_body(body)?;
         let room = self.channel(channel).await?;
         if self.channel_role(channel).await?.is_none() {
@@ -276,8 +337,8 @@ impl AccountStore {
         let row: MessageRow = sqlx::query_as(&format!(
             "INSERT INTO chat_messages \
                  (tenant_id, channel_id, id, seq, author_id, author_kind, \
-                  on_behalf_of, body, thread_root_seq) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING {MESSAGE_COLUMNS}"
+                  on_behalf_of, body, thread_root_seq, sources) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING {MESSAGE_COLUMNS}"
         ))
         .bind(self.tenant.as_str())
         .bind(channel.as_str())
@@ -288,6 +349,9 @@ impl AccountStore {
         .bind(on_behalf_of)
         .bind(body.trim())
         .bind(thread_root_seq)
+        // NULL rather than `[]` when there are none, so "this message has no
+        // sources" and "this message predates the column" read the same.
+        .bind((!sources.is_empty()).then(|| serde_json::json!(sources)))
         .fetch_one(&mut *tx)
         .await
         .map_err(StoreError::Db)?;
@@ -341,6 +405,7 @@ impl AccountStore {
             OffsetDateTime,
             Option<OffsetDateTime>,
             Option<OffsetDateTime>,
+            Option<serde_json::Value>,
             i64,
             Option<OffsetDateTime>,
             i64,
@@ -376,13 +441,14 @@ impl AccountStore {
         .map_err(StoreError::Db)?;
         rows.into_iter()
             .map(|r| {
-                let message: MessageRow =
-                    (r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7, r.8, r.9, r.10, r.11);
+                let message: MessageRow = (
+                    r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7, r.8, r.9, r.10, r.11, r.12,
+                );
                 Ok(ChatFeedMessage {
                     message: row_to_message(message)?,
-                    reply_count: r.12,
-                    last_reply_at: r.13,
-                    read_by: r.14,
+                    reply_count: r.13,
+                    last_reply_at: r.14,
+                    read_by: r.15,
                 })
             })
             .collect()

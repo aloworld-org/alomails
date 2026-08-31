@@ -421,6 +421,7 @@ pub use chat_attachments::{ATTACHMENTS_MAX, ChatAttachment};
 pub use chat_mentions::parse_handles;
 pub use chat_messages::{
     ChatChannelSummary, ChatFeedMessage, ChatMessage, MESSAGE_PAGE_DEFAULT, MessageKind,
+    MessageSource,
 };
 pub use chat_reactions::{REACTIONS, ReactionTally};
 pub use contacts::AddressHeaders;

@@ -292,6 +292,15 @@ pub(crate) fn message_json(m: &ChatMessage, emails: &HashMap<String, String>) ->
         "reactions": [],
         "mentions": [],
         "attachments": [],
+        // What an agent's answer was grounded in, in citation order, so the
+        // `[2]` in its text is something the reader can resolve. Always an
+        // array — empty for a person's message and for an agent's plan or
+        // refusal, which cite nothing.
+        "sources": m.sources.iter().map(|source| json!({
+            "n": source.n,
+            "kind": source.kind,
+            "title": source.title,
+        })).collect::<Vec<_>>(),
         "proposal": Value::Null,
         "createdAt": iso(m.created_at),
         "editedAt": m.edited_at.map(iso),

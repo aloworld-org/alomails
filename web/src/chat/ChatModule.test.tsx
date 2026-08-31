@@ -110,6 +110,7 @@ function message(over: Partial<FeedMessage>): FeedMessage {
     authorKind: "user",
     authorEmail: "anna@alo.test",
     onBehalfOf: null,
+    sources: [],
     body: "hello",
     kind: "text",
     threadRootSeq: null,

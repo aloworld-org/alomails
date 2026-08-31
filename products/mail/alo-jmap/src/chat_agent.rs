@@ -203,7 +203,10 @@ pub(crate) async fn take_turn(
     }
     match decided {
         Ok((TurnResult::Answer(answer), read)) => {
-            acc.post_as_agent(channel, &agent.id, &answer, None)
+            // The answer cites its sources by number, so the room is given the
+            // numbers' meaning with it: a `[2]` a reader cannot resolve invites
+            // trust without allowing the check the citation exists for.
+            acc.post_as_agent_cited(channel, &agent.id, &answer, None, &cited(&read))
                 .await
                 .ok()?;
             // The answer is already said; whether the exchange taught the room
@@ -289,6 +292,24 @@ pub(crate) async fn today_for(acc: &alo_store::AccountStore) -> String {
             "{date}. The person's timezone is unknown, so any datetime you produce is                  read as UTC — say which hour you assumed in your `say` line."
         ),
     }
+}
+
+/// The numbered sources a turn ended with, as the room stores them.
+///
+/// The turn hands back the whole list it showed the model — the grounding it
+/// started from, then each reading tool's result appended in the order it ran
+/// — already numbered the way the answer cites it. Only the number, the kind
+/// and the title travel: `detail` is the body text a source was summarised
+/// from, and the room is showing a footnote, not republishing the record.
+fn cited(sources: &[alo_ai::WorkspaceSource]) -> Vec<alo_store::MessageSource> {
+    sources
+        .iter()
+        .map(|source| alo_store::MessageSource {
+            n: i64::try_from(source.index).unwrap_or(0),
+            kind: source.kind.clone(),
+            title: source.title.clone(),
+        })
+        .collect()
 }
 
 /// Said in the room when no model is configured. Plain, and not an apology:

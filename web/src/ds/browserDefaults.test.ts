@@ -5,12 +5,24 @@ import { describe, expect, test } from "vitest";
 
 const SRC = join(import.meta.dirname, "..");
 
-function sourceFiles(dir: string): string[] {
+function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {
     const full = join(dir, entry);
-    if (statSync(full).isDirectory()) return sourceFiles(full);
+    if (statSync(full).isDirectory()) return walk(full);
     return full.endsWith(".tsx") && !/\.(?:test|spec)\.tsx$/.test(full) ? [full] : [];
   });
+}
+
+/** Every feature file, walked once.
+ *
+ *  Each test below reads the whole tree, and the walk is synchronous: four
+ *  full traversals of `src` sat close enough to vitest's five-second budget
+ *  that adding two files to the tree tipped it over. The tree does not change
+ *  while the file runs, so it is walked once and the tests share the list. */
+let walked: string[] | null = null;
+function sourceFiles(dir: string): string[] {
+  walked ??= walk(dir);
+  return walked;
 }
 
 function withoutComments(source: string): string {

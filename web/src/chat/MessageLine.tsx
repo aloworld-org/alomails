@@ -8,6 +8,7 @@ import { strings } from "../i18n";
 import { AgentActionCard } from "../shell/AgentActionCard";
 import { personName, shortTime, standingOf, timeOf } from "./presentation";
 import type { Attachment, Message, Proposal } from "./types";
+import { MessageSources } from "./MessageSources";
 
 const messageClass = "group relative mt-8 flex w-fit max-w-4xl flex-col items-start pl-12 pr-3";
 const mineClass = "group relative mt-3 flex w-fit max-w-3xl flex-col items-end self-end pl-3 pr-5";
@@ -283,6 +284,9 @@ export function MessageLine({
           {message.deletedAt === null ? <MessageBody body={message.body} /> : strings.chatWithdrawn}
         </p>
       )}
+
+      {/* The footnotes behind the answer, under it — see MessageSources. */}
+      {message.deletedAt === null && <MessageSources sources={message.sources} />}
 
       {message.proposal !== null && (
         <div className="mt-2 max-w-xl">

@@ -1,0 +1,13 @@
+-- What an agent's answer was grounded in, kept beside the answer.
+--
+-- An agent must answer only from a numbered list of sources and cite each
+-- claim by its number ("Ben owns the rollout [2]"). Until now that list lived
+-- only inside the turn: the room was shown the citation and never the source,
+-- so a reader met a footnote marker with no footnote — worse than no citation,
+-- because it invites trust without allowing a check.
+--
+-- Additive and nullable: every message written before this, and every message
+-- a person writes, has no sources and reads as NULL. One JSONB rather than a
+-- side table because the list is small, is written once with the message, and
+-- is never queried except as part of it.
+ALTER TABLE chat_messages ADD COLUMN sources JSONB;

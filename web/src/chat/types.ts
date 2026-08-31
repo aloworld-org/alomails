@@ -185,6 +185,22 @@ export interface Proposal {
 }
 
 /** One thing said in a room. */
+/** One source an agent's answer was grounded in.
+ *
+ *  The agent is handed a numbered list and told to cite what it uses (`[2]`).
+ *  These are that list, so the number in the text is something the reader can
+ *  resolve — a citation nobody can follow invites trust without allowing the
+ *  check it exists for. */
+export interface MessageSource {
+  /** The number the answer cites, 1-based. */
+  n: number;
+  /** What kind of thing it is: `message`, `task`, `chat`, `event`,
+   *  `remembered`, or a reading tool's own name. */
+  kind: string;
+  /** Its title or subject — for a remembered fact, the fact itself. */
+  title: string;
+}
+
 export interface Message {
   id: string;
   channel: string;
@@ -212,6 +228,10 @@ export interface Message {
   mentions: string[];
   /** Files shared with it; empty when none. */
   attachments: Attachment[];
+  /** What an agent's answer was grounded in, in citation order. Empty for a
+   *  person's message, and for an agent's plan or refusal, which cite
+   *  nothing. */
+  sources: MessageSource[];
   /** An action proposed on this message, if there is one. */
   proposal: Proposal | null;
   createdAt: string;
