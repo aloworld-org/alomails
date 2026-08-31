@@ -18,6 +18,7 @@ use alo_store::{
     AccountStore, BillingCustomerId, BillingQuoteId, InvoiceStatus, NewCustomer, NewLine, NewQuote,
     QuoteStatus, Store, StoreError, TenantId,
 };
+use serde_json::json;
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 use time::OffsetDateTime;
@@ -128,6 +129,13 @@ async fn sent_quote(account: &AccountStore, customer: &BillingCustomerId) -> Bil
         .set_billing_quote_lines(&id, &offered_quote_lines())
         .await
         .unwrap();
+    account
+        .set_billing_quote_design(
+            &id,
+            &json!({ "colors": { "accent": "#e76f51" }, "blocks": [] }),
+        )
+        .await
+        .unwrap();
     account.send_billing_quote(&id).await.unwrap();
     id
 }
@@ -157,6 +165,15 @@ async fn an_accepted_offer_becomes_an_editable_draft_worth_exactly_the_same() {
         .await
         .unwrap()
         .expect("acceptance raised the invoice");
+    assert_eq!(
+        a.billing_invoice_design(&invoice.invoice.id)
+            .await
+            .unwrap()
+            .unwrap()
+            .design,
+        json!({ "colors": { "accent": "#e76f51" }, "blocks": [] }),
+        "the customer-facing design is copied in the acceptance transaction"
+    );
 
     // ---- the done-when: an editable draft worth the same -------------------
     assert_eq!(invoice.invoice.status, InvoiceStatus::Draft);

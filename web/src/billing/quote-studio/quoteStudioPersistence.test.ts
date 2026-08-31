@@ -87,4 +87,22 @@ describe("quote studio persistence", () => {
       saveQuoteStudioDesign(api, "q4", { blocks: [] } as never),
     ).rejects.toThrow("409");
   });
+
+  it("uses the invoice design contract without reading legacy quote storage", async () => {
+    noBrowserStorage(
+      new Map([["alo:quote-design:invoice-1", JSON.stringify({ headerStyle: "minimal" })]]),
+    );
+    const api = {
+      invoiceDesign: vi.fn(async () => ({
+        design: { blocks: [], headerStyle: "classic" },
+        updatedAt: null,
+      })),
+      saveInvoiceDesign: vi.fn(async () => undefined),
+    } as unknown as BillingApi;
+
+    const design = await loadQuoteStudioDesign(api, "invoice-1", "invoice");
+    expect(design.headerStyle).toBe("classic");
+    await saveQuoteStudioDesign(api, "invoice-1", design, "invoice");
+    expect(api.saveInvoiceDesign).toHaveBeenCalledWith("invoice-1", design);
+  });
 });

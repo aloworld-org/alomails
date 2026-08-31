@@ -1,4 +1,4 @@
-import { FileText, Languages, Rocket, Rows3, Users } from "lucide-react";
+import { FileText, Gauge, Languages, Rocket, Settings, Users } from "lucide-react";
 
 import {
   ModuleNavigation,
@@ -7,6 +7,7 @@ import {
 import { strings } from "../i18n";
 
 export type SiteWorkspace =
+  | "overview"
   | "pages"
   | "publishing"
   | "languages"
@@ -14,6 +15,7 @@ export type SiteWorkspace =
   | "tools";
 
 const items = [
+  { id: "overview", label: () => strings.sitesOverview, Icon: Gauge },
   { id: "pages", label: () => strings.sitesPages, Icon: FileText },
   { id: "publishing", label: () => strings.sitesPublishing, Icon: Rocket },
   { id: "languages", label: () => strings.sitesLanguages, Icon: Languages },
@@ -22,7 +24,7 @@ const items = [
     label: () => strings.sitesCollaborators,
     Icon: Users,
   },
-  { id: "tools", label: () => strings.sitesSiteTools, Icon: Rows3 },
+  { id: "tools", label: () => strings.sitesSiteSettings, Icon: Settings },
 ] satisfies Array<{
   id: SiteWorkspace;
   label: () => string;

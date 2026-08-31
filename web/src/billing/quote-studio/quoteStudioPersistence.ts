@@ -18,6 +18,8 @@ import {
   type QuoteTemplatePreset,
 } from "./quoteStudioTemplates";
 
+export type BillingDocumentDesignKind = "quote" | "invoice";
+
 const LEGACY_STORE = "quote-designs";
 const LEGACY_DATABASE = "alo-quote-assets";
 
@@ -114,18 +116,23 @@ async function legacyDesign(quoteId: string): Promise<QuoteStudioDesign | null> 
 export async function loadQuoteStudioDesign(
   api: BillingApi,
   quoteId: string,
+  kind: BillingDocumentDesignKind = "quote",
 ): Promise<QuoteStudioDesign> {
   let stored: unknown = null;
   let reachable = true;
   try {
-    stored = (await api.quoteDesign(quoteId)).design;
+    stored = (
+      await (kind === "invoice"
+        ? api.invoiceDesign(quoteId)
+        : api.quoteDesign(quoteId))
+    ).design;
   } catch {
     reachable = false;
   }
   if (stored !== null && typeof stored === "object") {
     return normalizeSavedQuoteDesign(stored as Partial<QuoteStudioDesign>);
   }
-  const legacy = await legacyDesign(quoteId);
+  const legacy = kind === "quote" ? await legacyDesign(quoteId) : null;
   if (legacy === null) return EMPTY_QUOTE_STUDIO_DESIGN;
   if (reachable) {
     try {
@@ -145,8 +152,11 @@ export function saveQuoteStudioDesign(
   api: BillingApi,
   quoteId: string,
   design: QuoteStudioDesign,
+  kind: BillingDocumentDesignKind = "quote",
 ): Promise<void> {
-  return api.saveQuoteDesign(quoteId, design);
+  return kind === "invoice"
+    ? api.saveInvoiceDesign(quoteId, design)
+    : api.saveQuoteDesign(quoteId, design);
 }
 
 /** Starts a fresh quote from one of the studio's templates. */

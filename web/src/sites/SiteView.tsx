@@ -5,17 +5,14 @@
 // a broken screen.
 import { useCallback, useEffect, useState } from "react";
 import {
-  Link,
   useNavigate,
   useParams,
   useSearchParams,
 } from "react-router-dom";
 import {
-  ArrowLeft,
   BarChart3,
   Bot,
   CalendarClock,
-  Eye,
   FileText,
   Globe2,
   ArrowRight,
@@ -36,16 +33,18 @@ import {
 
 import { RecordAgentPanel } from "../agents";
 import { strings } from "../i18n";
-import { Button, Spinner } from "../ds";
+import { Button, Spinner, useDialogs } from "../ds";
 import { sitesMessage, useSitesApi } from "./api";
 import { NewPageDialog } from "./NewPageDialog";
 import { SchedulePublish } from "./SchedulePublish";
 import { SiteCollaborators } from "./SiteCollaborators";
+import { SiteOverviewPanel } from "./SiteOverviewPanel";
 import { SitePagesPanel } from "./SitePagesPanel";
 import {
   SiteSectionNavigation,
   type SiteWorkspace,
 } from "./SiteSectionNavigation";
+import { SiteWorkspaceHeader } from "./SiteWorkspaceHeader";
 import { ThemeDialog } from "./ThemeDialog";
 import { ErrorBanner } from "./parts";
 import type {
@@ -60,6 +59,7 @@ export function SiteView() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const api = useSitesApi();
+  const dialogs = useDialogs();
   const [site, setSite] = useState<SiteDetail | null>(null);
   const [pages, setPages] = useState<SitePage[]>([]);
   // The pages a visitor has to know a password to open (S2.06b), read in one
@@ -153,17 +153,19 @@ export function SiteView() {
   const firstPageId = pages[0]?.id;
   const requestedWorkspace = searchParams.get("section");
   const workspace: SiteWorkspace =
+    requestedWorkspace === "overview" ||
+    requestedWorkspace === "pages" ||
     requestedWorkspace === "publishing" ||
     requestedWorkspace === "languages" ||
     requestedWorkspace === "tools" ||
     (requestedWorkspace === "collaborators" &&
       site?.canManageCollaborators)
       ? requestedWorkspace
-      : "pages";
+      : "overview";
 
   function selectWorkspace(nextWorkspace: SiteWorkspace) {
     const next = new URLSearchParams(searchParams);
-    if (nextWorkspace === "pages") next.delete("section");
+    if (nextWorkspace === "overview") next.delete("section");
     else next.set("section", nextWorkspace);
     setSearchParams(next);
   }
@@ -283,34 +285,89 @@ export function SiteView() {
     }
   }
 
+  async function renamePage(page: SitePage) {
+    const title = await dialogs.prompt({
+      title: strings.sitesRenamePage,
+      message: strings.sitesRenamePagePrompt,
+      defaultValue: page.title,
+      confirmLabel: strings.save,
+    });
+    const nextTitle = title?.trim();
+    if (nextTitle === undefined || nextTitle === "" || nextTitle === page.title) return;
+    try {
+      await api.setPageIdentity(siteId, page.id, nextTitle, page.slug);
+      await load();
+    } catch (err) {
+      await dialogs.alert({
+        message: sitesMessage(err, strings.sitesPageActionFailed),
+      });
+    }
+  }
+
+  async function duplicatePage(page: SitePage) {
+    try {
+      await api.duplicatePage(siteId, page.id);
+      await load();
+    } catch (err) {
+      await dialogs.alert({
+        message: sitesMessage(err, strings.sitesPageActionFailed),
+      });
+    }
+  }
+
+  async function setHomePage(page: SitePage) {
+    if (
+      !(await dialogs.confirm({
+        title: strings.sitesSetHomepage,
+        message: strings.sitesSetHomepageConfirm(page.title),
+        confirmLabel: strings.sitesSetHomepage,
+      }))
+    ) {
+      return;
+    }
+    try {
+      await api.setHomePage(siteId, page.id);
+      await load();
+    } catch (err) {
+      await dialogs.alert({
+        message: sitesMessage(err, strings.sitesPageActionFailed),
+      });
+    }
+  }
+
+  async function deletePage(page: SitePage) {
+    if (
+      !(await dialogs.confirm({
+        title: strings.sitesDeletePage,
+        message: strings.sitesDeletePageConfirm(page.title),
+        confirmLabel: strings.sitesDeletePage,
+        danger: true,
+      }))
+    ) {
+      return;
+    }
+    try {
+      await api.deletePage(siteId, page.id);
+      await load();
+    } catch (err) {
+      await dialogs.alert({
+        message: sitesMessage(err, strings.sitesPageActionFailed),
+      });
+    }
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-[80rem] flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
-      <header className="flex min-h-14 items-start justify-between gap-4">
-        <div className="flex min-w-0 flex-col gap-2">
-          <Link
-            to=".."
-            relative="path"
-            className="-ml-2 inline-flex min-h-9 w-fit items-center gap-2 rounded-lg px-2 text-sm font-semibold text-accent no-underline transition-colors hover:bg-accent-soft"
-          >
-            <ArrowLeft size={16} aria-hidden="true" />
-            {strings.sitesBack}
-          </Link>
-          {site !== null && (
-            <div className="flex min-w-0 flex-col gap-1">
-              <h1 className="m-0 truncate text-2xl font-bold tracking-tight text-text-primary sm:text-3xl">
-                {site.name}
-              </h1>
-              <span className="inline-flex min-w-0 items-center gap-1.5 text-sm text-text-secondary">
-                <Globe2 className="shrink-0" size={14} aria-hidden="true" />
-                <span className="truncate font-mono">
-                  {host ?? site.subdomain}
-                </span>
-              </span>
-            </div>
-          )}
-        </div>
-        {loading && <Spinner size={16} />}
-      </header>
+      <SiteWorkspaceHeader
+        site={site}
+        host={host}
+        loading={loading}
+        publishBusy={publishBusy}
+        confirmingOffline={confirmingOffline}
+        onTheme={() => setTheming(true)}
+        onPublish={() => void publish()}
+        onUnpublish={() => void unpublish()}
+      />
 
       {/* Everything below the header scrolls as one document: this screen is
           a stack of panels, not a viewport column, and on a phone the pages
@@ -325,6 +382,16 @@ export function SiteView() {
               showCollaborators={site.canManageCollaborators}
               onSelect={selectWorkspace}
             />
+
+            {workspace === "overview" && (
+              <SiteOverviewPanel
+                site={site}
+                pages={pages}
+                host={host}
+                readiness={readiness}
+                onNavigate={(target) => navigate(target)}
+              />
+            )}
 
             {workspace === "publishing" && (
               <section className="overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm">
@@ -382,16 +449,6 @@ export function SiteView() {
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                  {firstPageId !== undefined && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      icon={<Eye size="var(--icon-size-inline)" />}
-                      onClick={() => navigate(`pages/${firstPageId}`)}
-                    >
-                      {strings.sitesPreview}
-                    </Button>
-                  )}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -410,25 +467,6 @@ export function SiteView() {
                     title={strings.sitesHistory}
                     onClick={() => navigate("history")}
                   />
-                  {live && (
-                    <Button
-                      variant={confirmingOffline ? "danger" : "ghost"}
-                      size="sm"
-                      disabled={publishBusy}
-                      onClick={() => void unpublish()}
-                    >
-                      {confirmingOffline
-                        ? strings.sitesConfirmUnpublish
-                        : strings.sitesUnpublish}
-                    </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    disabled={publishBusy}
-                    onClick={() => void publish()}
-                  >
-                    {live ? strings.sitesPublishChanges : strings.sitesPublish}
-                  </Button>
                 </div>
               </div>
               </section>
@@ -439,8 +477,14 @@ export function SiteView() {
                 pages={pages}
                 loading={loading}
                 protectedPages={protectedPages}
+                siteStatus={site.status}
+                enabledLocales={site.enabledLocales}
                 onTheme={() => setTheming(true)}
                 onCreate={() => setCreating(true)}
+                onRename={(page) => void renamePage(page)}
+                onDuplicate={(page) => void duplicatePage(page)}
+                onSetHome={(page) => void setHomePage(page)}
+                onDelete={(page) => void deletePage(page)}
               />
             )}
 

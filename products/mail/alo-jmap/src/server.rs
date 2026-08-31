@@ -17,11 +17,11 @@ use crate::state::{AppState, Limits};
 use crate::{
     admin, agent, agent_actions, agent_directory, agent_instructions, ai, api, app_passwords,
     audit, audit_record, autoconfig, base, billing_bills, billing_customers, billing_fx,
-    billing_invoices, billing_payments, billing_price_connections, billing_products,
-    billing_quote_designs, billing_quotes, billing_reminder, billing_reports, billing_schedules,
-    billing_send, billing_sepa, billing_settings, blob, calendar, calendar_hours,
-    calendar_resources, campaign_audience, campaign_consent, campaign_preview, campaign_record,
-    campaign_segments, campaign_suppression, campaign_unsubscribe, carddav, chat,
+    billing_invoice_designs, billing_invoices, billing_payments, billing_price_connections,
+    billing_products, billing_quote_designs, billing_quotes, billing_reminder, billing_reports,
+    billing_schedules, billing_send, billing_sepa, billing_settings, blob, calendar,
+    calendar_hours, calendar_resources, campaign_audience, campaign_consent, campaign_preview,
+    campaign_record, campaign_segments, campaign_suppression, campaign_unsubscribe, carddav, chat,
     chat_agent_memory, chat_agent_routes, chat_goals, contacts, crm_activities, crm_deals,
     crm_handoff, crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads,
     delegates, docs, drive, filters, finance_approvals, finance_bank, finance_bank_match,
@@ -746,6 +746,10 @@ pub fn app_with_site_boundaries(
         )
         .route("/sites/{id}/pages/order", put(sites::reorder_pages))
         .route(
+            "/sites/{id}/pages/{pid}/duplicate",
+            post(sites::duplicate_page),
+        )
+        .route(
             "/sites/{id}/pages/{pid}/locales/{locale}",
             get(sites::get_localized_page).put(sites::put_localized_page),
         )
@@ -1439,6 +1443,14 @@ pub fn app_with_site_boundaries(
             get(billing_quotes::print_quote),
         )
         .route("/billing/quotes/{id}/pdf", get(billing_quotes::pdf_quote))
+        .route(
+            "/billing/invoices/{id}/design",
+            get(billing_invoice_designs::get_design)
+                .put(billing_invoice_designs::put_design)
+                .layer(DefaultBodyLimit::max(
+                    billing_invoice_designs::DESIGN_BODY_LIMIT,
+                )),
+        )
         // The studio's design of the offer — the content blocks, colours and
         // column choices the page and the PDF render around the price table.
         // Its own body limit: pictures travel inside the design.

@@ -262,6 +262,11 @@ async fn every_route_family_requires_a_bearer_token() {
         ),
         ("GET", "/sites/some-id/images/blob".to_owned(), None),
         ("GET", "/sites/some-id/pages/p/preview".to_owned(), None),
+        (
+            "POST",
+            "/sites/some-id/pages/p/duplicate".to_owned(),
+            Some(json!({})),
+        ),
         ("GET", "/sites/some-id/pages/p/locales/fr".to_owned(), None),
     ];
     for (method, uri, body) in attempts {
@@ -976,6 +981,99 @@ async fn page_lifecycle_slug_seo_home_and_order() {
     assert_eq!(status, StatusCode::OK);
     let (status, _) = get(&h.app, &h.token, &format!("{base}/{home}")).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn duplicating_a_page_copies_content_and_allocates_unique_paths() {
+    let h = harness("sites-page-duplicate").await;
+    let site = created_id(
+        "site",
+        post(
+            &h.app,
+            &h.token,
+            "/sites",
+            json!({
+                "name": "Duplicate",
+                "subdomain": sub("duplicate", &h),
+                "defaultLocale": "en",
+                "enabledLocales": ["en", "fr"]
+            }),
+        )
+        .await,
+    );
+    let base = format!("/sites/{site}/pages");
+    let page = created_id(
+        "page",
+        post(
+            &h.app,
+            &h.token,
+            &base,
+            json!({ "title": "About", "slug": "about" }),
+        )
+        .await,
+    );
+    let sections = json!({
+        "schema_version": 1,
+        "sections": [hero()]
+    });
+    let (status, body) = put(
+        &h.app,
+        &h.token,
+        &format!("{base}/{page}/sections"),
+        sections.clone(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let (status, body) = put(
+        &h.app,
+        &h.token,
+        &format!("{base}/{page}/locales/fr"),
+        json!({
+            "title": "A propos",
+            "slug": "a-propos",
+            "sections": sections,
+            "seoTitle": "A propos",
+            "seoDescription": "Notre equipe."
+        }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+
+    let (status, copy) = post(
+        &h.app,
+        &h.token,
+        &format!("{base}/{page}/duplicate"),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{copy}");
+    let copy_id = copy["id"].as_str().expect("copy id");
+    assert_ne!(copy_id, page);
+    assert_eq!(copy["title"], json!("About copy"));
+    assert_eq!(copy["slug"], json!("about-copy"));
+    assert_eq!(copy["home"], json!(false));
+    assert_eq!(
+        copy["sections"]["sections"][0]["heading"],
+        json!("Coffee roasted the morning it ships")
+    );
+
+    let (status, french_copy) =
+        get(&h.app, &h.token, &format!("{base}/{copy_id}/locales/fr")).await;
+    assert_eq!(status, StatusCode::OK, "{french_copy}");
+    assert_eq!(french_copy["title"], json!("A propos copy"));
+    assert_eq!(french_copy["slug"], json!("a-propos-copy"));
+    assert_eq!(french_copy["seoTitle"], json!("A propos"));
+    assert_eq!(french_copy["fallback"], json!(false));
+
+    let (status, second) = post(
+        &h.app,
+        &h.token,
+        &format!("{base}/{page}/duplicate"),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{second}");
+    assert_eq!(second["slug"], json!("about-copy-2"));
 }
 
 #[tokio::test]

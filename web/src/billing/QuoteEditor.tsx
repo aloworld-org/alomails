@@ -6,10 +6,12 @@ import { useDialogs } from "../ds";
 import { strings, useLocale } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
 import { BillingRecordAgent } from "./BillingRecordAgent";
+import { BillingDocumentRelationLink } from "./BillingDocumentRelationLink";
 import { formatDocumentDate } from "./dates";
 import { saveFile } from "./saveFile";
 import type { DocumentAction } from "./DocumentActions";
 import { DocumentEditor } from "./DocumentEditor";
+import { quotationAcceptanceQr } from "./documentActionQr";
 import type { DocumentHeader, DocumentPatch } from "./documentDraft";
 import { useDocumentDraft } from "./documentDraft";
 import { Field } from "./parts";
@@ -276,6 +278,15 @@ export function QuoteEditor() {
 
   const invoiceId = draft.aside;
   const creationTemplates = quoteCreationTemplates(pickers.products);
+  const acceptanceQr =
+    quote?.status === "sent" && quote.number !== null
+      ? quotationAcceptanceQr(
+          issuer,
+          quote.number,
+          strings.billingQuoteQrSubject(quote.number),
+          strings.billingQuoteQrBody(quote.number),
+        )
+      : null;
 
   return (
     <DocumentEditor
@@ -312,6 +323,11 @@ export function QuoteEditor() {
                 onColumnsChange={setQuoteColumns}
                 issuer={issuer}
                 quote={quote}
+                documentActionQr={
+                  acceptanceQr === null
+                    ? null
+                    : { value: acceptanceQr, label: strings.billingQuoteQrLabel }
+                }
                 customer={
                   pickers.customers.find(
                     (customer) => customer.id === quote?.customerId,
@@ -327,21 +343,29 @@ export function QuoteEditor() {
       }
       editorActions={
         quote === null ? null : (
-          <QuoteEditorToolbar
-            creatingRevision={creatingRevision}
-            draft={quote.status === "draft"}
-            preview={preview}
-            downloading={downloadingPdf}
-            onDownloadPdf={id === undefined ? undefined : () => void downloadPdf()}
-            onCustomize={customizeQuote}
-            onEdit={editDraft}
-            onTogglePreview={() => {
-              const next = new URLSearchParams(searchParams);
-              if (preview) next.delete("preview");
-              else next.set("preview", "1");
-              setSearchParams(next, { replace: true });
-            }}
-          />
+          <div className="flex items-center gap-2">
+            {invoiceId !== null && (
+              <BillingDocumentRelationLink
+                label={strings.billingQuoteInvoice}
+                onOpen={() => void openInvoice(invoiceId)}
+              />
+            )}
+            <QuoteEditorToolbar
+              creatingRevision={creatingRevision}
+              draft={quote.status === "draft"}
+              preview={preview}
+              downloading={downloadingPdf}
+              onDownloadPdf={id === undefined ? undefined : () => void downloadPdf()}
+              onCustomize={customizeQuote}
+              onEdit={editDraft}
+              onTogglePreview={() => {
+                const next = new URLSearchParams(searchParams);
+                if (preview) next.delete("preview");
+                else next.set("preview", "1");
+                setSearchParams(next, { replace: true });
+              }}
+            />
+          </div>
         )
       }
       presentationReadOnly={preview}
@@ -377,17 +401,6 @@ export function QuoteEditor() {
       footer={
         quote === null ? null : (
           <>
-            {invoiceId !== null && (
-              <p className={styles.relation}>
-                <button
-                  type="button"
-                  className={styles.linkAction}
-                  onClick={() => void openInvoice(invoiceId)}
-                >
-                  {strings.billingQuoteInvoice}
-                </button>
-              </p>
-            )}
             {/* The offer's own agent (A8.4/AW.7). A quote carries no
                 provenance — nothing in `/billing/quotes/{id}` says what it
                 grew out of — so the panel says it does not know rather than

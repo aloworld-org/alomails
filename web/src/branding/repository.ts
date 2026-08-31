@@ -7,7 +7,7 @@ export function readBrandKit(): BrandKit {
   if (typeof window === "undefined") return DEFAULT_BRAND_KIT;
   try {
     const stored: unknown = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "null");
-    if (!isBrandKit(stored)) return DEFAULT_BRAND_KIT;
+    if (!hasBrandColors(stored)) return DEFAULT_BRAND_KIT;
     return normalizeBrandKit(stored);
   } catch {
     return DEFAULT_BRAND_KIT;
@@ -21,7 +21,7 @@ export function saveBrandKit(kit: BrandKit): BrandKit {
   return normalized;
 }
 
-function isBrandKit(value: unknown): value is BrandKit {
+function hasBrandColors(value: unknown): value is Partial<BrandKit> {
   if (typeof value !== "object" || value === null) return false;
   const candidate = value as Partial<BrandKit>;
   return isColor(candidate.primary)

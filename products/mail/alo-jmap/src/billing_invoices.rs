@@ -721,6 +721,8 @@ pub(crate) struct Printable {
     issuer: BillingSettings,
     /// The number of the invoice this one credits, when it credits one.
     credited: Option<String>,
+    /// The appearance frozen with this invoice, when one was designed.
+    design: Option<crate::quote_design::QuoteDesign>,
 }
 
 /// Loads one of the tenant's invoices and both parties to it, or fails with
@@ -741,11 +743,17 @@ pub(crate) async fn printable(
             .and_then(|d| d.invoice.number),
         None => None,
     };
+    let design = acc
+        .billing_invoice_design(id)
+        .await
+        .map_err(map_store_err)?
+        .map(|record| crate::quote_design::QuoteDesign::parse(&record.design));
     Ok(Printable {
         document,
         customer,
         issuer,
         credited,
+        design,
     })
 }
 
@@ -836,7 +844,7 @@ impl Printable {
                     rate_date: fx.rate_date,
                 }),
             issuer: &self.issuer,
-            content: None,
+            content: self.design.as_ref(),
         }
     }
 }

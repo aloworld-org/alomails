@@ -21,7 +21,7 @@ export function BrandColorField({
   onRemove?: () => void;
 }) {
   return (
-    <article className="min-w-0 rounded-xl border border-subtle bg-surface p-4 transition-[border-color,box-shadow] hover:border-default hover:shadow-sm">
+    <article className="relative min-w-0 rounded-xl border border-subtle bg-surface p-4 transition-[border-color,box-shadow] hover:border-default hover:shadow-sm">
       <div className="mb-3 flex min-h-7 items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-1">
@@ -30,12 +30,14 @@ export function BrandColorField({
           </div>
         </div>
         {onRemove !== undefined && (
+          <span className="absolute right-3 top-3">
           <IconButton
             size="sm"
             label={strings.brandingRemoveColor(color.name || title)}
             icon={<Trash2 size={16} />}
             onClick={onRemove}
           />
+          </span>
         )}
       </div>
       <div className="grid grid-cols-[auto_minmax(8rem,1fr)] items-center gap-3">

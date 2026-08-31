@@ -225,6 +225,9 @@ export interface SitePage {
   slug: string;
   title: string;
   home: boolean;
+  navOrder?: number | undefined;
+  createdAt?: string | undefined;
+  updatedAt?: string | undefined;
   /** Optional search/share overrides. `null` means use the page/site default. */
   seoTitle: string | null;
   seoDescription: string | null;

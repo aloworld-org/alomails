@@ -3,6 +3,9 @@ import type React from "react";
 import { Building2, Check, ContactRound, FileText, Globe2, Link, Mail, Palette, Phone, QrCode, RotateCcw, Table2, Upload, X } from "lucide-react";
 import { Button, Modal, cx } from "../../ds";
 import { strings } from "../../i18n";
+import { readBrandKit } from "../../branding/repository";
+import { importBrandQuoteColors } from "./brandQuoteColors";
+import { importBrandQuoteTypography, themeQuoteTypography } from "./quoteTypography";
 import { ColorField } from "./ColorField";
 import { HeaderField } from "./HeaderField";
 import { HeaderStylePreview, type HeaderStyle } from "./HeaderStylePreview";
@@ -834,19 +837,34 @@ export function CustomizeQuote({
                       {strings.quoteStudioDocumentPaletteHelp}
                     </p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={<RotateCcw aria-hidden="true" />}
-                    onClick={() =>
-                      onChange((current) => ({
-                        ...current,
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={<Palette aria-hidden="true" />}
+                      onClick={() =>
+                        onChange((current) => ({
+                          ...current,
+                          colors: importBrandQuoteColors(readBrandKit(), current.colors),
+                        }))
+                      }
+                    >
+                      {strings.quoteStudioImportBrandColors}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon={<RotateCcw aria-hidden="true" />}
+                      onClick={() =>
+                        onChange((current) => ({
+                          ...current,
                             colors: DEFAULT_QUOTE_COLORS,
-                      }))
-                    }
-                  >
-                    {strings.quoteStudioResetDefaults}
-                  </Button>
+                        }))
+                      }
+                    >
+                      {strings.quoteStudioResetDefaults}
+                    </Button>
+                  </div>
                 </div>
                 <div className="mt-8 grid gap-8 xl:grid-cols-2 xl:gap-0">
                   <div>
@@ -942,13 +960,22 @@ export function CustomizeQuote({
                 </div>
               </section>
               <section className="border-t border-subtle pt-7">
-                <div>
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
                   <h3 className="text-base font-semibold text-primary">
                     {strings.quoteStudioTypography}
                   </h3>
                   <p className="mt-1 text-sm text-secondary">
                     {strings.quoteStudioTypographyHelp}
                   </p>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => onChange((current) => ({ ...current, ...importBrandQuoteTypography(readBrandKit()) }))}
+                  >
+                    {strings.quoteStudioImportBrandTypography}
+                  </Button>
                 </div>
                 <div className="mt-5 grid gap-4 sm:grid-cols-3">
                   {themeChoices.map((theme) => (
@@ -963,7 +990,7 @@ export function CustomizeQuote({
                           : "border-default bg-surface",
                       )}
                       onClick={() =>
-                        onChange((current) => ({ ...current, theme: theme.id }))
+                        onChange((current) => ({ ...current, theme: theme.id, ...themeQuoteTypography(theme.id) }))
                       }
                     >
                       <span

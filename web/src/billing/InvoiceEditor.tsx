@@ -13,24 +13,37 @@
 // None of the three is decided here. Each is a `POST` the store rules on under
 // the document's row lock, and what comes back — the frozen document, or the
 // new draft — is what the screen then shows.
-import { useCallback, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { RecordHistory } from "../audit";
+import { useDialogs } from "../ds";
 import { strings, useLocale } from "../i18n";
-import { useBillingApi } from "./api";
+import { billingMessage, useBillingApi } from "./api";
+import { BillingDocumentRelationLink } from "./BillingDocumentRelationLink";
 import { BillingRecordAgent, documentOrigin } from "./BillingRecordAgent";
 import { formatDocumentDate } from "./dates";
 import type { DocumentAction } from "./DocumentActions";
 import { DocumentEditor } from "./DocumentEditor";
+import { invoicePaymentQr } from "./documentActionQr";
+import { InvoiceEditorToolbar } from "./InvoiceEditorToolbar";
+import {
+  QuoteContentStudio,
+  type QuoteContentStudioHandle,
+} from "./QuoteContentStudio";
 import type { DocumentHeader, DocumentPatch } from "./documentDraft";
 import { useDocumentDraft } from "./documentDraft";
 import { Field } from "./parts";
 import { PaymentsPanel } from "./PaymentsPanel";
 import { usePickers } from "./pickers";
+import { saveFile } from "./saveFile";
 import { ScheduleDialog } from "./ScheduleDialog";
 import { DocumentChips } from "./status";
-import type { BillingInvoice, BillingInvoiceSummary } from "./types";
+import type {
+  BillingInvoice,
+  BillingInvoiceSummary,
+  BillingSettings,
+} from "./types";
 import styles from "./billingStyles";
 
 export function InvoiceEditor() {
@@ -39,7 +52,11 @@ export function InvoiceEditor() {
   const locale = useLocale();
   const location = useLocation();
   const navigate = useNavigate();
+  const { alert } = useDialogs();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const preview = searchParams.get("preview") === "1";
   const pickers = usePickers();
+  const studio = useRef<QuoteContentStudioHandle>(null);
   const locationState = location.state as {
     fromProject?: { id?: unknown; name?: unknown };
   } | null;
@@ -80,6 +97,21 @@ export function InvoiceEditor() {
   // why the entry point lives on the document rather than on the recurring
   // list — there is no second line editor to keep in step.
   const [repeating, setRepeating] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [issuer, setIssuer] = useState<BillingSettings | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void api
+      .settings()
+      .then((settings) => {
+        if (active) setIssuer(settings);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [api]);
 
   const draft = useDocumentDraft<BillingInvoice, BillingInvoiceSummary[]>({
     id,
@@ -89,6 +121,51 @@ export function InvoiceEditor() {
     editable,
   });
   const invoice = draft.document;
+  const paymentQr =
+    invoice !== null &&
+    !invoice.creditNote &&
+    (invoice.status === "issued" || invoice.status === "paid") &&
+    invoice.number !== null
+      ? invoicePaymentQr(
+          issuer,
+          invoice.currency,
+          invoice.settlement.outstandingCents,
+          invoice.number,
+        )
+      : null;
+
+  const downloadPdf = useCallback(async () => {
+    if (id === undefined) return;
+    setDownloadingPdf(true);
+    try {
+      const { blob, fileName } = await api.invoicePdf(id);
+      saveFile(blob, fileName);
+    } catch (error) {
+      await alert({
+        message: billingMessage(error, strings.billingDownloadPdfFailed),
+      });
+    } finally {
+      setDownloadingPdf(false);
+    }
+  }, [alert, api, id]);
+
+  const leavePreview = useCallback((nextAction?: "edit" | "customize") => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("preview");
+    if (nextAction !== undefined) next.set("action", nextAction);
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (invoice?.status !== "draft" || preview) return;
+    const action = searchParams.get("action");
+    if (action !== "edit" && action !== "customize") return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("action");
+    setSearchParams(next, { replace: true });
+    if (action === "customize") studio.current?.customize();
+    else studio.current?.edit();
+  }, [invoice, preview, searchParams, setSearchParams]);
 
   const actions: DocumentAction[] = [];
   if (invoice !== null && id !== undefined) {
@@ -189,20 +266,77 @@ export function InvoiceEditor() {
         )
       }
       actions={actions}
+      documentBody={
+        id === undefined || (invoice?.status !== "draft" && !preview)
+          ? null
+          : (pricingTable, _totals, lineKeys, tableSubtotal) => (
+              <QuoteContentStudio
+                ref={studio}
+                quoteId={id}
+                designKind="invoice"
+                readOnly={draft.readOnly || preview}
+                preview={preview}
+                pricingTable={pricingTable}
+                tableSubtotal={tableSubtotal}
+                lineKeys={lineKeys}
+                documentNumber={invoice?.number ?? null}
+                primaryDate={invoice?.issueDate ?? null}
+                secondaryDate={invoice?.dueDate ?? null}
+                issuer={issuer}
+                documentActionQr={
+                  paymentQr === null
+                    ? null
+                    : { value: paymentQr, label: strings.billingInvoiceQrLabel }
+                }
+                customer={
+                  pickers.customers.find(
+                    (customer) => customer.id === invoice?.customerId,
+                  ) ?? null
+                }
+                customerName={
+                  pickers.customers.find(
+                    (customer) => customer.id === invoice?.customerId,
+                  )?.name ?? ""
+                }
+              />
+            )
+      }
+      editorActions={
+        invoice === null ? null : (
+          <div className="flex items-center gap-2">
+            {invoice.quoteId !== null && (
+              <BillingDocumentRelationLink
+                label={strings.billingFromQuote}
+                onOpen={() => void navigate(`../../quotes/${invoice.quoteId ?? ""}`)}
+              />
+            )}
+            <InvoiceEditorToolbar
+              draft={invoice.status === "draft"}
+              preview={preview}
+              downloading={downloadingPdf}
+              onEdit={() => {
+                if (preview) leavePreview("edit");
+                else studio.current?.edit();
+              }}
+              onCustomize={() => {
+                if (preview) leavePreview("customize");
+                else studio.current?.customize();
+              }}
+              onTogglePreview={() => {
+                const next = new URLSearchParams(searchParams);
+                if (preview) next.delete("preview");
+                else next.set("preview", "1");
+                setSearchParams(next, { replace: true });
+              }}
+              onDownloadPdf={() => void downloadPdf()}
+            />
+          </div>
+        )
+      }
+      presentationReadOnly={preview}
       footer={
         invoice === null ? null : (
           <>
-            {invoice.quoteId !== null && (
-              <p className={styles.relation}>
-                <button
-                  type="button"
-                  className={styles.linkAction}
-                  onClick={() => void navigate(`../../quotes/${invoice.quoteId ?? ""}`)}
-                >
-                  {strings.billingFromQuote}
-                </button>
-              </p>
-            )}
             {/* Offered on a document that says something and is settled in
                 what it is: a draft with no lines has nothing to repeat, and a
                 credit note is a correction, not an arrangement. The document a

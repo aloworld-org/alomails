@@ -175,6 +175,25 @@ pub(crate) fn map_page_constraints(error: sqlx::Error) -> StoreError {
     error.into()
 }
 
+fn copied_page_title(title: &str) -> String {
+    let suffix = " copy";
+    let max_root = PAGE_TITLE_MAX_CHARS.saturating_sub(suffix.chars().count());
+    let root: String = title.trim().chars().take(max_root).collect();
+    format!("{root}{suffix}")
+}
+
+fn copied_page_slug(slug: &str, ordinal: usize) -> String {
+    let root = if slug.is_empty() { "home" } else { slug };
+    let suffix = if ordinal == 1 {
+        "-copy".to_owned()
+    } else {
+        format!("-copy-{ordinal}")
+    };
+    let max_root = PAGE_SLUG_MAX_LEN.saturating_sub(suffix.len());
+    let root = root.chars().take(max_root).collect::<String>();
+    format!("{root}{suffix}")
+}
+
 impl AccountStore {
     /// Creates a page on `site` at the end of the nav order, with an empty
     /// sections envelope. `home` marks it as the site's home page — only then
@@ -276,6 +295,163 @@ impl AccountStore {
         .await
         .map_err(StoreError::Db)?;
         Ok(row.map(SitePageRow::into_page))
+    }
+
+    /// Duplicates a page at the end of navigation, including its localized
+    /// drafts. The copy is never home; it receives a unique `-copy` slug owned
+    /// by the store so callers cannot race each other into duplicate URLs.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the site or source page isn't the tenant's;
+    /// [`StoreError::Conflict`] when the site is full; [`StoreError::Db`].
+    pub async fn duplicate_site_page(
+        &self,
+        site: &SiteId,
+        page: &SitePageId,
+    ) -> Result<SitePageId> {
+        let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
+        let page_count: Option<i64> = sqlx::query_scalar(
+            "SELECT count(*) FROM site_pages WHERE tenant_id = $1 AND site_id = $2",
+        )
+        .bind(self.tenant.as_str())
+        .bind(site.as_str())
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(StoreError::Db)?;
+        let Some(page_count) = page_count else {
+            return Err(StoreError::NotFound);
+        };
+        let site_exists: bool = sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM sites WHERE tenant_id = $1 AND id = $2)",
+        )
+        .bind(self.tenant.as_str())
+        .bind(site.as_str())
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(StoreError::Db)?;
+        if !site_exists {
+            return Err(StoreError::NotFound);
+        }
+        if page_count >= MAX_PAGES_PER_SITE {
+            return Err(StoreError::Conflict(format!(
+                "a site may have at most {MAX_PAGES_PER_SITE} pages"
+            )));
+        }
+
+        let source = sqlx::query_as::<_, SitePageRow>(
+            "SELECT id, slug, title, sections, seo_title, seo_description, content_locale, \
+                    nav_order, is_home, created_at, updated_at \
+             FROM site_pages WHERE tenant_id = $1 AND site_id = $2 AND id = $3 FOR UPDATE",
+        )
+        .bind(self.tenant.as_str())
+        .bind(site.as_str())
+        .bind(page.as_str())
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(StoreError::Db)?
+        .ok_or(StoreError::NotFound)?;
+
+        let taken_slugs: std::collections::HashSet<String> = sqlx::query_scalar(
+            "SELECT slug FROM site_pages WHERE tenant_id = $1 AND site_id = $2 FOR UPDATE",
+        )
+        .bind(self.tenant.as_str())
+        .bind(site.as_str())
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(StoreError::Db)?
+        .into_iter()
+        .collect();
+        let slug = (1..=(usize::try_from(MAX_PAGES_PER_SITE).unwrap_or(200) + 1))
+            .map(|ordinal| copied_page_slug(&source.slug, ordinal))
+            .find(|candidate| !taken_slugs.contains(candidate))
+            .ok_or_else(|| StoreError::Conflict("could not allocate a copy slug".to_owned()))?;
+        validate_page_slug(&slug)?;
+        let title = copied_page_title(&source.title);
+        validate_page_title(&title)?;
+
+        let localized_rows: Vec<SitePageLocaleRow> = sqlx::query_as(
+            "SELECT locale, slug, title, sections, seo_title, seo_description, updated_at \
+             FROM site_page_locales \
+             WHERE tenant_id = $1 AND site_id = $2 AND page_id = $3 FOR UPDATE",
+        )
+        .bind(self.tenant.as_str())
+        .bind(site.as_str())
+        .bind(page.as_str())
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(StoreError::Db)?;
+        let localized_slugs: Vec<(String, String)> = sqlx::query_as(
+            "SELECT locale, slug FROM site_page_locales \
+             WHERE tenant_id = $1 AND site_id = $2 FOR UPDATE",
+        )
+        .bind(self.tenant.as_str())
+        .bind(site.as_str())
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(StoreError::Db)?;
+        let mut localized_taken: std::collections::HashMap<
+            String,
+            std::collections::HashSet<String>,
+        > = std::collections::HashMap::new();
+        for (locale, slug) in localized_slugs {
+            localized_taken.entry(locale).or_default().insert(slug);
+        }
+
+        let id = SitePageId::generate();
+        sqlx::query(
+            "INSERT INTO site_pages \
+                (tenant_id, site_id, id, slug, title, sections, seo_title, seo_description, \
+                 content_locale, nav_order, is_home) \
+             SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, \
+                    COALESCE((SELECT max(nav_order) + 1 FROM site_pages \
+                              WHERE tenant_id = $1 AND site_id = $2), 0), \
+                    false",
+        )
+        .bind(self.tenant.as_str())
+        .bind(site.as_str())
+        .bind(id.as_str())
+        .bind(slug)
+        .bind(title)
+        .bind(source.sections)
+        .bind(source.seo_title)
+        .bind(source.seo_description)
+        .bind(source.content_locale)
+        .execute(&mut *tx)
+        .await
+        .map_err(map_page_constraints)?;
+        for localized in localized_rows {
+            let taken = localized_taken.entry(localized.locale.clone()).or_default();
+            let localized_slug = (1..=(usize::try_from(MAX_PAGES_PER_SITE).unwrap_or(200) + 1))
+                .map(|ordinal| copied_page_slug(&localized.slug, ordinal))
+                .find(|candidate| !taken.contains(candidate))
+                .ok_or_else(|| {
+                    StoreError::Conflict("could not allocate a localized copy slug".to_owned())
+                })?;
+            validate_page_slug(&localized_slug)?;
+            taken.insert(localized_slug.clone());
+            let localized_title = copied_page_title(&localized.title);
+            validate_page_title(&localized_title)?;
+            sqlx::query(
+                "INSERT INTO site_page_locales \
+                    (tenant_id, site_id, page_id, locale, slug, title, sections, \
+                     seo_title, seo_description) \
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+            )
+            .bind(self.tenant.as_str())
+            .bind(site.as_str())
+            .bind(id.as_str())
+            .bind(localized.locale)
+            .bind(localized_slug)
+            .bind(localized_title)
+            .bind(localized.sections)
+            .bind(localized.seo_title)
+            .bind(localized.seo_description)
+            .execute(&mut *tx)
+            .await
+            .map_err(map_page_locale_constraints)?;
+        }
+        tx.commit().await.map_err(StoreError::Db)?;
+        Ok(id)
     }
 
     /// Counts exact page drafts per enabled language in two bounded queries,

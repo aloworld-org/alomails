@@ -38,6 +38,8 @@ export const EMPTY_QUOTE_STUDIO_DESIGN: QuoteStudioDesign = {
   contactQrSize: "medium",
   contactQrColor: "#102a43",
   theme: "modern",
+  headingFont: "inter",
+  bodyFont: "inter",
   colors: DEFAULT_QUOTE_COLORS,
   columns: DEFAULT_QUOTE_COLUMNS,
   tableLayout: "compact",

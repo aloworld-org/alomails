@@ -6,6 +6,7 @@ import type {
   QuoteTotalsStyle,
 } from "../quoteTableOptions";
 import type { HeaderStyle } from "./HeaderStylePreview";
+import type { BrandFont } from "../../branding/model";
 import type { QuoteStudioBlock } from "./QuoteStudioBlock";
 
 export type QuoteStudioTheme = "modern" | "editorial" | "minimal";
@@ -86,6 +87,8 @@ export interface QuoteStudioDesign {
   contactQrSize: ContactQrSize;
   contactQrColor: string;
   theme: QuoteStudioTheme;
+  headingFont: BrandFont;
+  bodyFont: BrandFont;
   colors: QuoteStudioColors;
   columns: QuoteColumns;
   tableLayout: QuoteTableLayout;

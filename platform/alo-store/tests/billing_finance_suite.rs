@@ -20,6 +20,7 @@ mod billing_credit_notes;
 mod billing_customers_tenancy;
 mod billing_demo;
 mod billing_fx;
+mod billing_invoice_designs_tenancy;
 mod billing_invoice_issue;
 mod billing_invoice_lifecycle;
 mod billing_invoices_tenancy;

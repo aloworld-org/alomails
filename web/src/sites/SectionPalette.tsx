@@ -86,6 +86,7 @@ export function SectionPalette({
   seeded,
   sections,
   busy,
+  initialPosition,
   onChoose,
 }: {
   siteId: string;
@@ -97,6 +98,7 @@ export function SectionPalette({
   /** The stack as it is now — what the position control names. */
   sections: Section[];
   busy: boolean;
+  initialPosition?: number;
   /** A tile was chosen: insert its seeded section at `index`, or open the prop
    *  form there when it carries none. */
   onChoose: (tile: PaletteTile, index: number) => void;
@@ -108,7 +110,7 @@ export function SectionPalette({
   const [selected, setSelected] = useState<string | null>(null);
   const [previews, setPreviews] = useState<Record<string, string>>({});
   const [previewBusy, setPreviewBusy] = useState(false);
-  const [position, setPosition] = useState(sections.length);
+  const [position, setPosition] = useState(initialPosition ?? sections.length);
   const [category, setCategory] = useState("all");
   const panel = useRef<HTMLElement | null>(null);
 
@@ -121,13 +123,17 @@ export function SectionPalette({
   useEffect(() => {
     if (loading || focused.current) return;
     focused.current = true;
-    panel.current?.querySelector<HTMLButtonElement>("[data-palette-tile]")?.focus();
+    panel.current
+      ?.querySelector<HTMLButtonElement>("[data-palette-tile]")
+      ?.focus();
   }, [loading]);
 
   // The position control names sections that can change under it (an undo, an
   // AI edit, another tile dropped). "At the end" stays the end.
   useEffect(() => {
-    setPosition((current) => (current >= sections.length ? sections.length : current));
+    setPosition((current) =>
+      current >= sections.length ? sections.length : current,
+    );
   }, [sections.length]);
 
   useEffect(() => {
@@ -307,7 +313,9 @@ export function SectionPalette({
                   ? `${kindLabel(tile.kind)} — ${strings.sitesNavAlreadyAdded}`
                   : strings.sitesPaletteAdd(
                       kindLabel(tile.kind),
-                      tile.kind === "nav" ? strings.sitesNavPinned : positionLabel,
+                      tile.kind === "nav"
+                        ? strings.sitesNavPinned
+                        : positionLabel,
                     )
               }
               disabled={busy || (tile.kind === "nav" && hasNavigation)}
@@ -323,8 +331,12 @@ export function SectionPalette({
               >
                 {sectionThumbnail(tile.kind)}
               </svg>
-              <span className={styles.paletteTileName}>{kindLabel(tile.kind)}</span>
-              <span className={styles.paletteTileDesc}>{kindDescription(tile.kind)}</span>
+              <span className={styles.paletteTileName}>
+                {kindLabel(tile.kind)}
+              </span>
+              <span className={styles.paletteTileDesc}>
+                {kindDescription(tile.kind)}
+              </span>
               {tile.kind === "nav" && hasNavigation ? (
                 <span className={styles.paletteTileNeeds}>
                   {strings.sitesNavAlreadyAdded}
@@ -353,12 +365,16 @@ export function SectionPalette({
                     picture of a block should follow a link. */}
                 <iframe
                   className={styles.palettePreviewFrame}
-                  title={strings.sitesPalettePreviewTitle(kindLabel(shown.kind))}
+                  title={strings.sitesPalettePreviewTitle(
+                    kindLabel(shown.kind),
+                  )}
                   sandbox="allow-scripts"
                   srcDoc={previews[shown.kind]}
                 />
               </div>
-              <p className={styles.paletteNote}>{strings.sitesPaletteOwnContent}</p>
+              <p className={styles.paletteNote}>
+                {strings.sitesPaletteOwnContent}
+              </p>
             </>
           ) : previewBusy ? (
             <p className={styles.paletteNote}>
@@ -366,12 +382,13 @@ export function SectionPalette({
             </p>
           ) : (
             <p className={styles.paletteNote}>
-              {seeded ? needMessage(shown.needs) : strings.sitesPaletteOpensForm}
+              {seeded
+                ? needMessage(shown.needs)
+                : strings.sitesPaletteOpensForm}
             </p>
           )}
         </div>
       </div>
-
     </section>
   );
 }

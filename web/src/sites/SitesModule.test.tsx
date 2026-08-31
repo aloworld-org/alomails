@@ -9,6 +9,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { DialogProvider } from "../ds";
 import { strings } from "../i18n";
 import { saveTextFile } from "../platform/download";
 import { SitesModule } from "./SitesModule";
@@ -142,13 +143,15 @@ function LocationProbe() {
 function ui(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <LocationProbe />
-      <Routes>
-        <Route path="/sites/*" element={<SitesModule />} />
-        {/* The real shell owns Drive; this sink lets navigation assertions
-            observe the hand-off without a test-only unmatched-route warning. */}
-        <Route path="/drive" element={null} />
-      </Routes>
+      <DialogProvider>
+        <LocationProbe />
+        <Routes>
+          <Route path="/sites/*" element={<SitesModule />} />
+          {/* The real shell owns Drive; this sink lets navigation assertions
+              observe the hand-off without a test-only unmatched-route warning. */}
+          <Route path="/drive" element={null} />
+        </Routes>
+      </DialogProvider>
     </MemoryRouter>,
   );
 }
@@ -955,7 +958,9 @@ describe("publishing a site", () => {
     expect(lastWrite()?.method).toBe("POST");
     expect(lastWrite()?.url.endsWith("/sites/site-2/publish")).toBe(true);
     // The reload shows the live state, the address now a real link.
-    expect(await screen.findByText(strings.sitesStatusLive)).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getAllByText(strings.sitesStatusLive).length).toBeGreaterThan(0),
+    );
     const link = screen.getByRole("link", { name: "beta.alosites.com" }) as HTMLAnchorElement;
     expect(link.href).toBe("https://beta.alosites.com/");
   });
@@ -980,7 +985,7 @@ describe("publishing a site", () => {
     );
     fireEvent.click(await screen.findByRole("button", { name: strings.sitesPublish }));
     expect(await screen.findByText("site has no home page")).toBeTruthy();
-    expect(screen.getByText(strings.sitesStatusDraft)).toBeTruthy();
+    expect(screen.getAllByText(strings.sitesStatusDraft).length).toBeGreaterThan(0);
   });
 
   test("taking a live site offline needs the second click", async () => {
@@ -1013,7 +1018,9 @@ describe("publishing a site", () => {
     fireEvent.click(screen.getByRole("button", { name: strings.sitesConfirmUnpublish }));
     await waitFor(() => expect(lastWrite()).toBeTruthy());
     expect(lastWrite()?.url.endsWith("/sites/site-1/unpublish")).toBe(true);
-    expect(await screen.findByText(strings.sitesStatusDraft)).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getAllByText(strings.sitesStatusDraft).length).toBeGreaterThan(0),
+    );
   });
 
   test("the create form previews the full address once the domain is known", async () => {
@@ -1043,9 +1050,9 @@ describe("one site", () => {
         body: { pages: [HOME, ABOUT] },
       },
     ];
-    ui("/sites/site-1");
+    ui("/sites/site-1?section=pages");
     expect(await screen.findByText("Alpha Bakery")).toBeTruthy();
-    expect(screen.queryByText(strings.sitesStatusLive)).toBeNull();
+    expect(screen.getAllByText(strings.sitesStatusLive).length).toBeGreaterThan(0);
     expect(screen.getByText("Welcome")).toBeTruthy();
     expect(screen.getByText(strings.sitesHomeBadge)).toBeTruthy();
     expect(screen.getByText("About us")).toBeTruthy();
@@ -1065,18 +1072,18 @@ describe("one site", () => {
         body: { pages: [HOME] },
       },
     ];
-    ui("/sites/site-1");
+    ui("/sites/site-1?section=pages");
 
     expect(
       await screen.findByRole("heading", { name: strings.sitesPages }),
     ).toBeTruthy();
-    expect(screen.queryByText(strings.sitesStatusLive)).toBeNull();
+    expect(screen.getAllByText(strings.sitesStatusLive).length).toBeGreaterThan(0);
     expect(screen.queryByLabelText(strings.sitesLanguagesHint)).toBeNull();
 
     fireEvent.click(
       screen.getByRole("tab", { name: strings.sitesPublishing }),
     );
-    expect(screen.getByText(strings.sitesStatusLive)).toBeTruthy();
+    expect(screen.getAllByText(strings.sitesStatusLive).length).toBeGreaterThan(0);
     expect(
       screen.queryByRole("heading", { name: strings.sitesPages }),
     ).toBeNull();
@@ -1085,7 +1092,7 @@ describe("one site", () => {
       screen.getByRole("tab", { name: strings.sitesLanguages }),
     );
     expect(screen.getByLabelText(strings.sitesLanguagesHint)).toBeTruthy();
-    expect(screen.queryByText(strings.sitesStatusLive)).toBeNull();
+    expect(screen.getAllByText(strings.sitesStatusLive).length).toBeGreaterThan(0);
   });
 
   test("a page behind a password is marked in the list, in one read", async () => {
@@ -1115,7 +1122,7 @@ describe("one site", () => {
         },
       },
     ];
-    ui("/sites/site-1");
+    ui("/sites/site-1?section=pages");
 
     const marked = await screen.findByText(strings.sitesPagePasswordBadge);
     // The badge belongs to the protected page's row and to no other.
@@ -1126,6 +1133,60 @@ describe("one site", () => {
     expect(
       calls.filter((call) => call.url.endsWith("/sites/site-1/passwords")),
     ).toHaveLength(1);
+  });
+
+  test("duplicating a page uses the server page-copy API", async () => {
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: { ...ALPHA, publish: { id: "pub-1", publishedAt: "2026-08-07T10:00:00Z" } },
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/pages"),
+        status: 200,
+        body: { pages: [HOME, ABOUT] },
+      },
+      {
+        match: (url, method) =>
+          method === "POST" && url.endsWith("/sites/site-1/pages/page-2/duplicate"),
+        status: 200,
+        body: {
+          ...ABOUT,
+          id: "page-copy",
+          slug: "about-copy",
+          title: "About us copy",
+          sections: { schema_version: 1, sections: [] },
+        },
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: { ...ALPHA, publish: { id: "pub-1", publishedAt: "2026-08-07T10:00:00Z" } },
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/pages"),
+        status: 200,
+        body: {
+          pages: [
+            HOME,
+            ABOUT,
+            { ...ABOUT, id: "page-copy", slug: "about-copy", title: "About us copy" },
+          ],
+        },
+      },
+    ];
+    ui("/sites/site-1?section=pages");
+
+    const pageName = await screen.findByText("About us");
+    const row = pageName.closest("tr") as HTMLElement;
+    fireEvent.click(within(row).getByLabelText(strings.sitesPageActions));
+    fireEvent.click(within(row).getByRole("button", { name: strings.sitesDuplicatePage }));
+
+    await waitFor(() =>
+      expect(lastWrite()?.url.endsWith("/sites/site-1/pages/page-2/duplicate")).toBe(true),
+    );
+    expect(await screen.findByText("About us copy")).toBeTruthy();
   });
 
   test("shows translation readiness and adds a visitor language on the surface", async () => {
@@ -1394,7 +1455,7 @@ describe("one site", () => {
         body: { pages: [{ id: "page-9", slug: "", title: "Welcome", home: true }] },
       },
     ];
-    ui("/sites/site-2");
+    ui("/sites/site-2?section=pages");
     // The site has no pages, so the empty state's CTA opens the dialog and the
     // home flag defaults to on — the first page IS the home page.
     fireEvent.click((await screen.findAllByRole("button", { name: strings.sitesNewPage }))[0]!);

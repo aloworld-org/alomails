@@ -10,28 +10,9 @@ import { strings } from "../i18n";
 import { Button, Spinner } from "../ds";
 import { sitesMessage, useSitesApi } from "./api";
 import { NewSiteDialog } from "./NewSiteDialog";
+import { SiteStatusChip } from "./SiteStatusChip";
 import { EmptyState, ErrorBanner } from "./parts";
 import type { Site, SitePage } from "./types";
-
-/** The live/draft state chip of a site row. */
-function StatusChip({ status }: { status: Site["status"] }) {
-  const live = status === "live";
-  return (
-    <span
-      className={
-        live
-          ? "inline-flex items-center gap-1.5 rounded-full bg-success-tint px-2.5 py-1 text-xs font-medium text-success"
-          : "inline-flex items-center gap-1.5 rounded-full bg-raised px-2.5 py-1 text-xs font-medium text-secondary"
-      }
-    >
-      <span
-        className={live ? "size-1.5 rounded-full bg-success" : "size-1.5 rounded-full bg-tertiary"}
-        aria-hidden="true"
-      />
-      {live ? strings.sitesStatusLive : strings.sitesStatusDraft}
-    </span>
-  );
-}
 
 export function SitesListView() {
   const api = useSitesApi();
@@ -118,30 +99,36 @@ export function SitesListView() {
         ) : (
           <section className="overflow-hidden rounded-2xl border border-default bg-surface shadow-sm">
             <div className="border-b border-subtle px-5 py-4 sm:px-6">
-              <h2 className="text-base font-semibold text-primary">{strings.moduleSites}</h2>
+              <h2 className="text-base font-semibold text-primary">
+                {strings.moduleSites}
+              </h2>
             </div>
             <div className="divide-y divide-subtle">
               {sites.map((site) => (
                 <button
                   key={site.id}
                   type="button"
-                  className="group flex min-h-20 w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent sm:px-6"
+                  className="group flex min-h-20 w-full items-center gap-4 px-6 py-5 text-left transition-colors hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent sm:px-7"
                   onClick={() => void navigate(site.id)}
                 >
-                  <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">
-                    <Globe2 size={21} aria-hidden="true" />
+                  <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent ring-1 ring-inset ring-accent/10">
+                    <Globe2 className="size-5" aria-hidden="true" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-semibold text-primary">{site.name}</span>
+                    <span className="block truncate font-semibold text-primary">
+                      {site.name}
+                    </span>
                     <span className="mt-1 block truncate font-mono text-sm text-secondary">
                       {site.subdomain}
                     </span>
                   </span>
-                  <StatusChip status={site.status} />
-                  <ArrowRight
-                    className="size-5 shrink-0 text-tertiary transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
-                    aria-hidden="true"
-                  />
+                  <SiteStatusChip status={site.status} />
+                  <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-tertiary transition-colors group-hover:bg-surface group-hover:text-primary">
+                    <ArrowRight
+                      className="size-4 transition-transform group-hover:translate-x-0.5"
+                      aria-hidden="true"
+                    />
+                  </span>
                 </button>
               ))}
             </div>

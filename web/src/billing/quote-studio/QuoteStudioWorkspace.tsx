@@ -65,6 +65,7 @@ import {
   type QuoteColumns,
   type QuoteStudioDesign as Design,
 } from "./QuoteStudioDesign";
+import { brandFontStack } from "../../branding/brandTypography";
 import { EMPTY_QUOTE_STUDIO_DESIGN } from "./quoteStudioNormalization";
 import {
   createContactVCard,
@@ -79,6 +80,7 @@ import {
   saveQuoteStudioDesign,
 } from "./quoteStudioPersistence";
 import { readQuoteImage } from "./quoteImageData";
+import { DocumentActionQr } from "./DocumentActionQr";
 export interface QuoteContentStudioHandle {
   customize: () => void;
   edit: () => void;
@@ -89,6 +91,7 @@ export const QuoteStudioWorkspace = forwardRef<
   QuoteContentStudioHandle,
   {
     quoteId: string;
+    designKind?: "quote" | "invoice";
     readOnly: boolean;
     preview?: boolean;
     pricingTable: (options: {
@@ -111,12 +114,17 @@ export const QuoteStudioWorkspace = forwardRef<
     onColumnsChange?: (columns: QuoteColumns) => void;
     issuer?: BillingSettings | null;
     quote?: BillingQuote | null;
+    documentNumber?: string | null;
+    primaryDate?: string | null;
+    secondaryDate?: string | null;
     customer?: BillingCustomer | null;
     customerName?: string;
+    documentActionQr?: { value: string; label: string } | null;
   }
 >(function QuoteContentStudio(
   {
     quoteId,
+    designKind = "quote",
     readOnly,
     preview = false,
     pricingTable,
@@ -125,8 +133,12 @@ export const QuoteStudioWorkspace = forwardRef<
     onColumnsChange,
     issuer,
     quote,
+    documentNumber,
+    primaryDate,
+    secondaryDate,
     customer,
     customerName = "",
+    documentActionQr,
   },
   ref,
 ) {
@@ -171,15 +183,15 @@ export const QuoteStudioWorkspace = forwardRef<
         target?.focus({ preventScroll: true });
       },
       copyTo: (nextQuoteId) =>
-        saveQuoteStudioDesign(api, nextQuoteId, design),
+        saveQuoteStudioDesign(api, nextQuoteId, design, designKind),
     }),
-    [api, design],
+    [api, design, designKind],
   );
 
   useEffect(() => {
     let current = true;
     setReady(false);
-    void loadQuoteStudioDesign(api, quoteId).then((saved) => {
+    void loadQuoteStudioDesign(api, quoteId, designKind).then((saved) => {
       if (!current) return;
       persisted.current = JSON.stringify(saved);
       setDesign(saved);
@@ -188,14 +200,14 @@ export const QuoteStudioWorkspace = forwardRef<
     return () => {
       current = false;
     };
-  }, [api, quoteId]);
+  }, [api, designKind, quoteId]);
   useEffect(() => {
     if (!ready || readOnly) return;
     const serialized = JSON.stringify(design);
     if (serialized === persisted.current) return;
     let current = true;
     const timeout = window.setTimeout(() => {
-      void saveQuoteStudioDesign(api, quoteId, design)
+      void saveQuoteStudioDesign(api, quoteId, design, designKind)
         .then(() => {
           persisted.current = serialized;
           if (current) setSaveError("");
@@ -208,7 +220,7 @@ export const QuoteStudioWorkspace = forwardRef<
       current = false;
       window.clearTimeout(timeout);
     };
-  }, [api, design, quoteId, ready, readOnly]);
+  }, [api, design, designKind, quoteId, ready, readOnly]);
   useEffect(() => {
     const document = root.current?.closest("article");
     if (!(document instanceof HTMLElement)) return;
@@ -222,11 +234,13 @@ export const QuoteStudioWorkspace = forwardRef<
       "--quote-table-row": design.colors.tableRows,
       "--quote-bullet-marker": design.colors.bulletMarker,
       "--quote-number-marker": design.colors.numberMarker,
+      "--quote-heading-font": brandFontStack(design.headingFont),
+      "--quote-body-font": brandFontStack(design.bodyFont),
     };
     Object.entries(values).forEach(([name, value]) =>
       document.style.setProperty(name, value),
     );
-  }, [design.colors]);
+  }, [design.bodyFont, design.colors, design.headingFont]);
   useEffect(
     () => onColumnsChange?.(design.columns),
     [design.columns, onColumnsChange],
@@ -437,7 +451,7 @@ export const QuoteStudioWorkspace = forwardRef<
       <section
         ref={root}
         className={cx(
-          "overflow-hidden bg-[var(--quote-background)]",
+          "overflow-hidden bg-[var(--quote-background)] font-[var(--quote-body-font)] [&_h1]:font-[var(--quote-heading-font)] [&_h2]:font-[var(--quote-heading-font)] [&_h3]:font-[var(--quote-heading-font)] [&_h4]:font-[var(--quote-heading-font)]",
           preview
             ? "rounded-none"
             : "rounded-2xl shadow-sm",
@@ -616,7 +630,9 @@ export const QuoteStudioWorkspace = forwardRef<
               >
                 <div className="max-w-lg">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--quote-accent)]">
-                    {strings.quoteStudioQuotation}
+                    {designKind === "invoice"
+                      ? strings.billingInvoiceLabel
+                      : strings.quoteStudioQuotation}
                   </p>
                   <p
                     className={cx(
@@ -626,7 +642,11 @@ export const QuoteStudioWorkspace = forwardRef<
                         : "text-2xl",
                     )}
                   >
-                    {quote?.number ?? strings.quoteStudioDraftQuotation}
+                    {documentNumber ??
+                      quote?.number ??
+                      (designKind === "invoice"
+                        ? strings.billingInvoiceLabel
+                        : strings.quoteStudioDraftQuotation)}
                   </p>
                   {Object.values(customerDetails).some(Boolean) && (
                     <div className="mt-5 text-[var(--quote-text)]">
@@ -693,24 +713,30 @@ export const QuoteStudioWorkspace = forwardRef<
                 <dl className="mt-auto grid max-w-lg grid-cols-2 gap-x-10 gap-y-3 border-t border-[var(--quote-table-header)] pt-4 text-xs text-[var(--quote-text)]">
                   <div>
                     <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-55">
-                      {strings.quoteStudioIssued}
+                      {designKind === "invoice"
+                        ? strings.billingFieldIssueDate
+                        : strings.quoteStudioIssued}
                     </dt>
                     <dd className="mt-1.5 font-semibold">
-                      {formatQuoteDocumentDate(quote?.sentDate, locale) ??
+                      {formatQuoteDocumentDate(primaryDate ?? quote?.sentDate, locale) ??
                         strings.quoteStudioOnFinalization}
                     </dd>
                   </div>
                   <div>
                     <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-55">
-                      {strings.quoteStudioValidUntil}
+                      {designKind === "invoice"
+                        ? strings.billingFieldDueDate
+                        : strings.quoteStudioValidUntil}
                     </dt>
                     <dd className="mt-1.5 font-semibold">
-                      {formatQuoteDocumentDate(quote?.validUntil, locale) ??
-                        strings.quoteStudioDaysAfterIssue(
-                          new Intl.NumberFormat(locale).format(
-                            quote?.validDays ?? 30,
-                          ),
-                        )}
+                      {formatQuoteDocumentDate(secondaryDate ?? quote?.validUntil, locale) ??
+                        (designKind === "invoice"
+                          ? strings.billingNoDate
+                          : strings.quoteStudioDaysAfterIssue(
+                              new Intl.NumberFormat(locale).format(
+                                quote?.validDays ?? 30,
+                              ),
+                            ))}
                     </dd>
                   </div>
                 </dl>
@@ -900,8 +926,22 @@ export const QuoteStudioWorkspace = forwardRef<
                                 : { rowKeys: block.rowKeys }),
                               title:
                                 block.title ?? strings.quoteStudioPricingTable,
-                              onRowKeysChange: (rowKeys) =>
-                                update(block.id, { rowKeys }),
+                              onRowKeysChange: (rowKeys) => {
+                                // A single invoice table always follows the
+                                // invoice's live line set. Persist row
+                                // assignments only once the user has split
+                                // the document across multiple pricing
+                                // tables; otherwise every line edit would
+                                // create an unrelated design write.
+                                if (
+                                  designKind === "invoice" &&
+                                  design.blocks.filter(
+                                    (candidate) => candidate.kind === "pricing",
+                                  ).length === 1
+                                )
+                                  return;
+                                update(block.id, { rowKeys });
+                              },
                             })}
                             {block.showSubtotal !== false &&
                               tableSubtotal(block.rowKeys, {
@@ -1114,6 +1154,9 @@ export const QuoteStudioWorkspace = forwardRef<
               onAdd={addSimpleBlock}
               onImage={chooseImage}
             />
+          )}
+          {documentActionQr && (
+            <DocumentActionQr value={documentActionQr.value} label={documentActionQr.label} />
           )}
           {issuer?.footerNote.trim() && (
             <footer className="mt-10 px-1 text-xs leading-relaxed text-[var(--quote-text)] opacity-70">

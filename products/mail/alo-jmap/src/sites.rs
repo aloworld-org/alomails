@@ -2126,6 +2126,29 @@ pub async fn get_page(
     Ok(Json(page_json(&page, true)))
 }
 
+/// `POST /sites/:id/pages/:pid/duplicate` duplicates a page server-side,
+/// including its localized drafts, and returns the new page with sections.
+pub async fn duplicate_page(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, pid)): Path<(String, String)>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let sid = SiteId::new(id);
+    let new_id = account
+        .acc
+        .duplicate_site_page(&sid, &SitePageId::new(pid))
+        .await
+        .map_err(map_store_err)?;
+    let page = account
+        .acc
+        .site_page(&sid, &new_id)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(Problem::server_error)?;
+    Ok(Json(page_json(&page, true)))
+}
+
 #[derive(Deserialize)]
 pub struct LocalizedPageBody {
     title: String,

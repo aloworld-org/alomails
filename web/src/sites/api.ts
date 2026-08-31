@@ -1211,6 +1211,30 @@ export class SitesApi {
     });
   }
 
+  async deletePage(siteId: string, pageId: string): Promise<void> {
+    await this.#write<{ status?: string }>("DELETE", this.#pagePath(siteId, pageId), {});
+  }
+
+  async setHomePage(siteId: string, pageId: string): Promise<void> {
+    await this.#write<{ status?: string }>("POST", `${this.#pagePath(siteId, pageId)}/home`, {});
+  }
+
+  async reorderPages(siteId: string, order: string[]): Promise<void> {
+    await this.#write<{ status?: string }>(
+      "PUT",
+      `/sites/${encodeURIComponent(siteId)}/pages/order`,
+      { order },
+    );
+  }
+
+  async duplicatePage(siteId: string, pageId: string): Promise<SitePageDetail> {
+    return this.#write<SitePageDetail>(
+      "POST",
+      `${this.#pagePath(siteId, pageId)}/duplicate`,
+      {},
+    );
+  }
+
   /** Sets or clears one page's search and sharing copy. Blank strings clear
    *  the overrides through the server's existing normalization gate. */
   async setPageSeo(

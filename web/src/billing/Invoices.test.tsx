@@ -177,6 +177,31 @@ function fallback(url: string, method: string): Reply {
   const body =
     method !== "GET"
       ? {}
+      : url.includes("/billing/settings")
+        ? {
+            settings: {
+              stated: true,
+              legalName: "alo Studio GmbH",
+              addressLine1: "Friedrichstrasse 88",
+              addressLine2: "",
+              postalCode: "10117",
+              city: "Berlin",
+              country: "DE",
+              vatId: "DE123456789",
+              registrationNo: "HRB 248610 B",
+              email: "billing@alo.example",
+              phone: "+49 30 555 0182",
+              website: "alo.example",
+              iban: null,
+              bic: null,
+              bankName: "",
+              accountHolder: "",
+              footerNote: "Thank you for your business.",
+              baseCurrency: "EUR",
+              updatedBy: null,
+              updatedAt: null,
+            },
+          }
       : url.includes("/payments")
         ? { payments: [], settlement: DRAFT.settlement }
         : url.includes("/billing/customers")
@@ -288,6 +313,15 @@ describe("raising a draft", () => {
 });
 
 describe("the draft editor", () => {
+  test("shows the issuer company header beside the customer header", async () => {
+    reply("/billing/invoices/inv-1", "GET", { invoice: DRAFT, creditNotes: [] });
+    ui("/billing/invoices/inv-1");
+
+    expect(await screen.findByText("alo Studio GmbH")).toBeTruthy();
+    expect(screen.getAllByText("Acme GmbH").length).toBeGreaterThan(0);
+    expect(calls.some((call) => call.url.includes("/billing/settings"))).toBe(true);
+  });
+
   test("returns a project-created draft to its originating project", async () => {
     reply("/billing/invoices/inv-1", "GET", { invoice: DRAFT, creditNotes: [] });
     ui("/billing/invoices/inv-1", {

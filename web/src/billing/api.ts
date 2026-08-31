@@ -428,6 +428,34 @@ export class BillingApi {
     ).then(() => undefined);
   }
 
+  /** The presentation snapshot used by the invoice editor, print and PDF. */
+  invoiceDesign(id: string): Promise<{ design: unknown; updatedAt: string | null }> {
+    return this.#read<{ design?: unknown; updatedAt?: string | null }>(
+      `/billing/invoices/${encodeURIComponent(id)}/design`,
+    ).then((r) => ({ design: r.design ?? null, updatedAt: r.updatedAt ?? null }));
+  }
+
+  /** Replaces a draft invoice's presentation. Issued invoices are frozen. */
+  saveInvoiceDesign(id: string, design: unknown): Promise<void> {
+    return this.#write<{ design: unknown }>(
+      "PUT",
+      `/billing/invoices/${encodeURIComponent(id)}/design`,
+      design,
+    ).then(() => undefined);
+  }
+
+  /** The invoice as the same PDF the customer receives. */
+  async invoicePdf(id: string): Promise<{ blob: Blob; fileName: string }> {
+    const res = await this.#send(
+      `/billing/invoices/${encodeURIComponent(id)}/pdf${langQuery()}`,
+      { method: "GET" },
+    );
+    if (!res.ok) throw new BillingError(res.status, await problemDetail(res));
+    const disposition = res.headers.get("content-disposition") ?? "";
+    const named = /filename="([^"]+)"/.exec(disposition);
+    return { blob: await res.blob(), fileName: named?.[1] ?? "invoice.pdf" };
+  }
+
   /** The offer as the PDF file the customer receives, with the name the
    *  server gave it. Fetched rather than linked, like `documentHtml`. */
   async quotePdf(id: string): Promise<{ blob: Blob; fileName: string }> {

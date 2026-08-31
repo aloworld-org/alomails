@@ -999,6 +999,22 @@ impl AccountStore {
                     )
                     .await?;
             }
+            // The accepted offer and the invoice draft begin as the same
+            // customer-facing document. Copy its appearance in this same
+            // transaction so acceptance cannot produce a half-converted pair.
+            sqlx::query(
+                "INSERT INTO billing_invoice_designs \
+                 (tenant_id, invoice_id, design, updated_by) \
+                 SELECT tenant_id, $3, design, $4 FROM billing_quote_designs \
+                 WHERE tenant_id = $1 AND quote_id = $2",
+            )
+            .bind(self.tenant.as_str())
+            .bind(id.as_str())
+            .bind(invoice_id.as_str())
+            .bind(self.user.as_str())
+            .execute(&mut *tx)
+            .await
+            .map_err(StoreError::Db)?;
             AcceptedAs::InvoiceDraft(invoice_id)
         };
 
