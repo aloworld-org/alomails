@@ -139,6 +139,7 @@ pub mod finance_report_balance;
 pub mod finance_report_pl;
 pub mod finance_report_vat;
 pub mod finance_reports;
+pub mod finance_spend;
 pub mod flagdue;
 pub mod hr_checklists;
 pub mod hr_documents;

@@ -76,6 +76,22 @@ export interface PendingExpense extends Expense {
   userId: string;
   userEmail: string;
   categoryName: string | null;
+  approvalCount: number;
+  approvalRequired: number;
+}
+
+export interface SpendPolicy {
+  receiptRequiredAboveCents: number | null;
+  projectRequiredAboveCents: number | null;
+  secondApprovalAboveCents: number | null;
+  currency: string;
+  updatedBy: string | null;
+  updatedAt: string | null;
+}
+
+export interface ExpenseApprovalOutcome {
+  expense: Expense;
+  approval: { count: number; required: number; complete: boolean };
 }
 
 /** What the claim form sends. Absent fields keep the stored value on a `PATCH`,

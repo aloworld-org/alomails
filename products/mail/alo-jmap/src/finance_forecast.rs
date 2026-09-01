@@ -2,11 +2,11 @@
 //! Finance aged reports. The browser supplies dates and scenario delays, never
 //! totals: every amount and projected balance is folded here.
 
+use axum::Json;
 use axum::extract::{Query, State};
 use axum::http::{HeaderMap, StatusCode};
-use axum::Json;
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use time::{Date, Duration};
 
 use alo_store::{AgedReport, AgedSide};
@@ -40,31 +40,72 @@ struct Point {
 fn delay(value: Option<i64>, name: &str) -> Result<i64, Problem> {
     let value = value.unwrap_or(0);
     if !(-30..=90).contains(&value) {
-        return Err(Problem::with(StatusCode::UNPROCESSABLE_ENTITY, format!(
-            "{name} must be between -30 and 90 days"
-        )));
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            format!("{name} must be between -30 and 90 days"),
+        ));
     }
     Ok(value)
 }
 
-fn add(report: &AgedReport, on: Date, horizon: i64, shift: i64, incoming: bool, points: &mut [Point]) {
+fn add(
+    report: &AgedReport,
+    on: Date,
+    horizon: i64,
+    shift: i64,
+    incoming: bool,
+    points: &mut [Point],
+) {
     for document in report.parties.iter().flat_map(|party| &party.documents) {
-        let Some(amount) = document.base_open_cents else { continue };
+        let Some(amount) = document.base_open_cents else {
+            continue;
+        };
         let expected = (document.due_date + Duration::days(shift)).max(on);
         let days = (expected - on).whole_days();
-        if days > horizon { continue; }
-        let index = usize::try_from(days / 7).unwrap_or(0).min(points.len().saturating_sub(1));
-        if incoming { points[index].incoming_cents += amount; } else { points[index].outgoing_cents += amount; }
+        if days > horizon {
+            continue;
+        }
+        let index = usize::try_from(days / 7)
+            .unwrap_or(0)
+            .min(points.len().saturating_sub(1));
+        if incoming {
+            points[index].incoming_cents += amount;
+        } else {
+            points[index].outgoing_cents += amount;
+        }
     }
 }
 
-fn project(receivables: &AgedReport, payables: &AgedReport, on: Date, horizon: i64, receivable_delay: i64, payable_delay: i64, opening: Option<i64>) -> Vec<Point> {
+fn project(
+    receivables: &AgedReport,
+    payables: &AgedReport,
+    on: Date,
+    horizon: i64,
+    receivable_delay: i64,
+    payable_delay: i64,
+    opening: Option<i64>,
+) -> Vec<Point> {
     let count = usize::try_from((horizon + 6) / 7).unwrap_or(1);
-    let mut points = (0..count).map(|index| {
-        let start = on + Duration::days(i64::try_from(index).unwrap_or(0) * 7);
-        Point { from: start, to: (start + Duration::days(6)).min(on + Duration::days(horizon)), incoming_cents: 0, outgoing_cents: 0, projected_cents: None }
-    }).collect::<Vec<_>>();
-    add(receivables, on, horizon, receivable_delay, true, &mut points);
+    let mut points = (0..count)
+        .map(|index| {
+            let start = on + Duration::days(i64::try_from(index).unwrap_or(0) * 7);
+            Point {
+                from: start,
+                to: (start + Duration::days(6)).min(on + Duration::days(horizon)),
+                incoming_cents: 0,
+                outgoing_cents: 0,
+                projected_cents: None,
+            }
+        })
+        .collect::<Vec<_>>();
+    add(
+        receivables,
+        on,
+        horizon,
+        receivable_delay,
+        true,
+        &mut points,
+    );
     add(payables, on, horizon, payable_delay, false, &mut points);
     let mut balance = opening;
     for point in &mut points {
@@ -76,12 +117,19 @@ fn project(receivables: &AgedReport, payables: &AgedReport, on: Date, horizon: i
 
 /// `GET /finance/forecast?on&horizon&receivableDelay&payableDelay` returns the
 /// weekly cash movement expected from open customer and supplier documents.
-pub async fn cash_forecast(State(state): State<AppState>, headers: HeaderMap, Query(query): Query<ForecastQuery>) -> Result<Json<Value>, Problem> {
+pub async fn cash_forecast(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<ForecastQuery>,
+) -> Result<Json<Value>, Problem> {
     let account = reader(&state, &headers).await?;
     let on = day("on", query.on.as_deref())?;
     let horizon = query.horizon.unwrap_or(30);
     if !matches!(horizon, 30 | 60 | 90) {
-        return Err(Problem::with(StatusCode::UNPROCESSABLE_ENTITY, "horizon must be 30, 60 or 90 days".to_owned()));
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "horizon must be 30, 60 or 90 days".to_owned(),
+        ));
     }
     let receivable_delay = delay(query.receivable_delay, "receivableDelay")?;
     let payable_delay = delay(query.payable_delay, "payableDelay")?;
@@ -89,9 +137,22 @@ pub async fn cash_forecast(State(state): State<AppState>, headers: HeaderMap, Qu
         account.acc.fin_aged(on, AgedSide::Receivable),
         account.acc.fin_aged(on, AgedSide::Payable),
         account.acc.bank_statements(),
-    ).map_err(map_store_err)?;
-    let opening = statements.first().and_then(|statement| (statement.currency == receivables.currency).then_some(statement.closing_balance_cents).flatten());
-    let points = project(&receivables, &payables, on, horizon, receivable_delay, payable_delay, opening);
+    )
+    .map_err(map_store_err)?;
+    let opening = statements.first().and_then(|statement| {
+        (statement.currency == receivables.currency)
+            .then_some(statement.closing_balance_cents)
+            .flatten()
+    });
+    let points = project(
+        &receivables,
+        &payables,
+        on,
+        horizon,
+        receivable_delay,
+        payable_delay,
+        opening,
+    );
     Ok(Json(json!({
         "forecast": {
             "on": iso_date(on), "through": iso_date(on + Duration::days(horizon)),
@@ -117,23 +178,36 @@ mod tests {
     use time::Month;
 
     fn date(day: u8) -> Date {
-        Date::from_calendar_date(2026, Month::September, day).unwrap_or_else(|error| panic!("{error}"))
+        Date::from_calendar_date(2026, Month::September, day)
+            .unwrap_or_else(|error| panic!("{error}"))
     }
 
     fn report(side: AgedSide, due: u8, cents: i64) -> AgedReport {
         AgedReport {
-            on: date(1), side, currency: "EUR".to_owned(),
+            on: date(1),
+            side,
+            currency: "EUR".to_owned(),
             parties: vec![AgedParty {
-                party_id: "party-1".to_owned(), name: "Party".to_owned(),
-                buckets: AgedBuckets::default(), unconverted_count: 0,
+                party_id: "party-1".to_owned(),
+                name: "Party".to_owned(),
+                buckets: AgedBuckets::default(),
+                unconverted_count: 0,
                 documents: vec![AgedDocument {
-                    document_id: "doc-1".to_owned(), number: "1".to_owned(),
-                    issue_date: date(1), due_date: date(due), days_overdue: 0,
-                    bucket: AgedBucket::Current, currency: "EUR".to_owned(),
-                    open_cents: cents, base_open_cents: Some(cents), is_credit_note: false,
+                    document_id: "doc-1".to_owned(),
+                    number: "1".to_owned(),
+                    issue_date: date(1),
+                    due_date: date(due),
+                    days_overdue: 0,
+                    bucket: AgedBucket::Current,
+                    currency: "EUR".to_owned(),
+                    open_cents: cents,
+                    base_open_cents: Some(cents),
+                    is_credit_note: false,
                 }],
             }],
-            buckets: AgedBuckets::default(), unconverted_count: 0, document_count: 1,
+            buckets: AgedBuckets::default(),
+            unconverted_count: 0,
+            document_count: 1,
         }
     }
 

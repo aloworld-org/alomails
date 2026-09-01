@@ -41,7 +41,7 @@ use axum::Json;
 use serde_json::{Value, json};
 use time::{Date, Duration, OffsetDateTime};
 
-use alo_store::{CategoryProposal, Expense, ExpenseDecision, PendingExpense, SkippedClaim};
+use alo_store::{CategoryProposal, Expense, PendingExpense, SkippedClaim};
 
 use crate::agent_args::{string_arg, unprocessable};
 use crate::billing::{iso_date, map_store_err, parse_iso_date};
@@ -219,16 +219,13 @@ pub async fn execute_approve_expense(
         }
     };
     let note = string_arg(args, "note").unwrap_or_default();
-    let claim = tenant
-        .decide_expense(
-            &one.expense.id,
-            ExpenseDecision::Approve,
-            &account.user,
-            &note,
-        )
+    let outcome = tenant
+        .approve_expense_step(&one.expense.id, &account.user, &note)
         .await
         .map_err(map_store_err)?;
-    ok(json!({ "kind": "expense", "expense": expense_json(&claim) }))
+    ok(
+        json!({ "kind": "expense", "expense": expense_json(&outcome.expense), "approval": { "count": outcome.approvals, "required": outcome.required, "complete": outcome.approvals >= outcome.required } }),
+    )
 }
 
 /// One suggestion, as the claim a person recognises plus the word being

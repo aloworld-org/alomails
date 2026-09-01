@@ -45,8 +45,10 @@ import type {
   Expense,
   ExpenseDraft,
   ExpenseStatus,
+  ExpenseApprovalOutcome,
   PendingExpense,
   PlReport,
+  SpendPolicy,
   VatReturn,
 } from "./types";
 
@@ -215,8 +217,8 @@ export class FinanceApi {
   }
 
   /** **Admin or accountant:** the cost is the company's. */
-  approveExpense(id: string, note?: string): Promise<Expense> {
-    return this.#act(id, "approve", note === undefined || note === "" ? {} : { note });
+  approveExpense(id: string, note?: string): Promise<ExpenseApprovalOutcome> {
+    return this.#write<ExpenseApprovalOutcome>("POST", `/finance/expenses/${encodeURIComponent(id)}/approve`, note === undefined || note === "" ? {} : { note });
   }
 
   /** **Admin or accountant:** the claim goes back to its claimant, editable, so
@@ -231,6 +233,14 @@ export class FinanceApi {
    *  wrong period. */
   reimburseExpense(id: string, reimbursedOn: string): Promise<Expense> {
     return this.#act(id, "reimburse", { reimbursedOn });
+  }
+
+  spendPolicy(): Promise<SpendPolicy> {
+    return this.#read<{ policy: SpendPolicy }>("/finance/spend-policy").then((response) => response.policy);
+  }
+
+  saveSpendPolicy(policy: Pick<SpendPolicy, "receiptRequiredAboveCents" | "projectRequiredAboveCents" | "secondApprovalAboveCents">): Promise<SpendPolicy> {
+    return this.#write<{ policy: SpendPolicy }>("PUT", "/finance/spend-policy", policy).then((response) => response.policy);
   }
 
   // ---- the bank, and the pile it leaves ----------------------------------

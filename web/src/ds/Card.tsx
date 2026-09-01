@@ -55,7 +55,7 @@ export interface CardProps extends HTMLAttributes<HTMLElement> {
    *  Pair it with `interactive`, which is the affordance the press deserves.
    *
    *  Added for `auth/TwoFactorScreen` (D2.05) and `home/StatCard` (D2.07b). */
-  as?: "div" | "section" | "form" | "li" | "button" | undefined;
+  as?: "div" | "section" | "article" | "form" | "li" | "button" | undefined;
   /** `sm` for dense lists, `lg` for a card that is the whole screen.
    *
    *  `none` is the card that lays out its own regions — a head, a body and a

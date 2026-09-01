@@ -23,7 +23,7 @@ use crate::common;
 
 use alo_store::{
     AccountStore, Expense, ExpenseDecision, ExpenseMethod, ExpenseStatus, FinExpenseId, NewExpense,
-    Store, StoreError, TenantId, TenantStore, UserId,
+    SpendPolicy, Store, StoreError, TenantId, TenantStore, UserId,
 };
 use time::{Date, Month};
 
@@ -103,6 +103,58 @@ async fn reread(door: &AccountStore, id: &FinExpenseId) -> Expense {
         .await
         .unwrap()
         .expect("the claim is theirs")
+}
+
+#[tokio::test]
+async fn high_value_claims_need_two_different_approvers_when_policy_says_so() {
+    let store = common::test_store().await;
+    let office = office(&store, "two-approvers").await;
+    let second = office
+        .tenant
+        .create_user("second@expenses.test")
+        .await
+        .unwrap();
+    office
+        .tenant
+        .set_spend_policy(
+            &SpendPolicy {
+                second_approval_above_cents: Some(10_000),
+                ..SpendPolicy::default()
+            },
+            &office.approver,
+        )
+        .await
+        .unwrap();
+    let id = office.claimant.log_expense(&ticket()).await.unwrap().id;
+    office.claimant.submit_expense(&id).await.unwrap();
+
+    let first = office
+        .tenant
+        .approve_expense_step(&id, &office.approver, "checked")
+        .await
+        .unwrap();
+    assert_eq!((first.approvals, first.required), (1, 2));
+    assert_eq!(first.expense.status, ExpenseStatus::Submitted);
+    let pending = office.tenant.pending_expenses().await.unwrap();
+    assert_eq!(
+        (pending[0].approval_count, pending[0].approval_required),
+        (1, 2)
+    );
+    assert_conflict(
+        office
+            .tenant
+            .approve_expense_step(&id, &office.approver, "again")
+            .await,
+        "different approver",
+    );
+
+    let final_step = office
+        .tenant
+        .approve_expense_step(&id, &second, "second check")
+        .await
+        .unwrap();
+    assert_eq!((final_step.approvals, final_step.required), (2, 2));
+    assert_eq!(final_step.expense.status, ExpenseStatus::Approved);
 }
 
 #[tokio::test]

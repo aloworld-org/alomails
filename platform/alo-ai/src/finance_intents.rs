@@ -361,6 +361,10 @@ pub const FINANCE_EXCLUDED: &[Excluded] = &[
         why: "An interactive scenario with timing assumptions chosen and compared by a person in the app.",
     },
     Excluded {
+        route: "/finance/spend-policy",
+        why: "Spend policy is tenant configuration chosen by a finance administrator in the app.",
+    },
+    Excluded {
         route: "/finance/reports/pl",
         why: "The full statement is a screen in the app; a later intent set.",
     },

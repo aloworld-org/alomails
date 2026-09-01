@@ -41,6 +41,8 @@ const CLAIM: PendingExpense = {
   userId: "u-2",
   userEmail: "bas@example.test",
   categoryName: "Travel",
+  approvalCount: 0,
+  approvalRequired: 1,
   spentOn: "2026-07-30",
   categoryId: "cat-1",
   merchant: "Bahn",

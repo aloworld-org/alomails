@@ -54,6 +54,11 @@ pub(crate) fn pending_json(pending: &PendingExpense) -> Value {
         object.insert("userId".to_owned(), json!(pending.expense.user_id.as_str()));
         object.insert("userEmail".to_owned(), json!(pending.user_email));
         object.insert("categoryName".to_owned(), json!(pending.category_name));
+        object.insert("approvalCount".to_owned(), json!(pending.approval_count));
+        object.insert(
+            "approvalRequired".to_owned(),
+            json!(pending.approval_required),
+        );
     }
     value
 }
@@ -152,7 +157,23 @@ pub async fn approve_expense(
     Path(id): Path<String>,
     body: axum::body::Bytes,
 ) -> Result<Json<Value>, Problem> {
-    decide(state, headers, id, ExpenseDecision::Approve, &body).await
+    let account = authenticate(&state, &headers).await?;
+    account.require_finance()?;
+    let note = decision_note(&body)?;
+    let outcome = state
+        .store
+        .for_tenant(account.tenant.clone())
+        .approve_expense_step(&FinExpenseId::new(id), &account.user, &note)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({
+        "expense": expense_json(&outcome.expense),
+        "approval": {
+            "count": outcome.approvals,
+            "required": outcome.required,
+            "complete": outcome.approvals >= outcome.required,
+        }
+    })))
 }
 
 /// `POST /finance/expenses/{id}/reject` `{note?}` → `{"expense": {…}}` —
@@ -294,10 +315,14 @@ mod tests {
             expense: claim,
             user_email: "traveller@example.test".to_owned(),
             category_name: Some("Reisekosten".to_owned()),
+            approval_count: 1,
+            approval_required: 2,
         });
         assert_eq!(value["userEmail"], json!("traveller@example.test"));
         assert_eq!(value["userId"], json!("usr-1"));
         assert_eq!(value["categoryName"], json!("Reisekosten"));
+        assert_eq!(value["approvalCount"], json!(1));
+        assert_eq!(value["approvalRequired"], json!(2));
         // The claim itself is rendered by exactly the same function the
         // claimant's own routes use, so the two can never drift apart.
         assert_eq!(value["netCents"], json!(10_000));

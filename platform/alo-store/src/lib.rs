@@ -475,8 +475,9 @@ pub use fin_categorise::{
     SKIP_NO_HISTORY, SKIP_NO_MERCHANT, SkippedClaim, merchant_key, plan_categorisation,
 };
 pub use fin_expenses::{
-    EXPENSE_DECISION_NOTE_MAX, EXPENSE_DESCRIPTION_MAX, Expense, ExpenseDecision, ExpenseMethod,
-    ExpenseStatus, GROSS_MIN_CENTS, MERCHANT_MAX, NewExpense, PendingExpense,
+    EXPENSE_DECISION_NOTE_MAX, EXPENSE_DESCRIPTION_MAX, Expense, ExpenseApprovalOutcome,
+    ExpenseDecision, ExpenseMethod, ExpenseStatus, GROSS_MIN_CENTS, MERCHANT_MAX, NewExpense,
+    PendingExpense, SpendPolicy,
 };
 pub use fin_journal::{
     DIMENSION_MAX_CHARS, ENTRY_POSTINGS_MAX, Entry, EntryKind, EntrySource, JOURNAL_PAGE_MAX,

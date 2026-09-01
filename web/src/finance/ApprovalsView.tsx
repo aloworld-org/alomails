@@ -42,6 +42,7 @@ export function ApprovalsView({ onDecided }: { onDecided: () => void }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
 
   const reload = useCallback(() => setRevision((r) => r + 1), []);
@@ -82,7 +83,8 @@ export function ApprovalsView({ onDecided }: { onDecided: () => void }) {
     setBusy(claim.id);
     setError(null);
     try {
-      await api.approveExpense(claim.id);
+      const outcome = await api.approveExpense(claim.id);
+      setNotice(outcome.approval.complete ? null : strings.financeApprovalRecorded(outcome.approval.count, outcome.approval.required));
       reload();
       onDecided();
     } catch (err) {
@@ -125,6 +127,7 @@ export function ApprovalsView({ onDecided }: { onDecided: () => void }) {
   return (
     <div className={styles.page}>
       {error !== null && <ErrorBanner message={error} />}
+      {notice !== null && <p className={styles.notice}>{notice}</p>}
 
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>{strings.financeWaitingTitle}</h2>
@@ -197,6 +200,7 @@ export function ApprovalsView({ onDecided }: { onDecided: () => void }) {
                     {claim.submittedAt === null
                       ? ""
                       : momentLabel(claim.submittedAt)}
+                    {claim.approvalRequired > 1 && <span className={styles.subtle}>{strings.financeApprovalProgress(claim.approvalCount, claim.approvalRequired)}</span>}
                   </Td>
                   <Td>
                     <div className={styles.rowActions}>

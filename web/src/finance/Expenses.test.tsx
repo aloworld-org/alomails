@@ -84,6 +84,8 @@ const WAITING: PendingExpense = {
   userId: "u-2",
   userEmail: "traveller@acme.test",
   categoryName: "Travel",
+  approvalCount: 0,
+  approvalRequired: 1,
 };
 
 /** A claim the company approved and still owes the person for. */
@@ -117,7 +119,7 @@ const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
 });
 
 function answer(url: string, method: string): unknown {
-  if (method !== "GET") return { expense: DRAFT };
+  if (method !== "GET") return url.includes("/approve") ? { expense: DRAFT, approval: { count: 1, required: 1, complete: true } } : { expense: DRAFT };
   if (url.includes("/finance/expenses/pending")) return { expenses: waiting };
   if (url.includes("/finance/expenses/reimbursable")) return { expenses: owed };
   if (url.includes("/finance/expenses")) return { expenses: claims };

@@ -36,6 +36,7 @@ import {
   ListChecks,
   ReceiptText,
   Scale,
+  ShieldCheck,
   WalletCards,
   TrendingUp,
 } from "lucide-react";
@@ -51,6 +52,7 @@ import { CashFlowView } from "./CashFlowView";
 import { ExpensesView } from "./ExpensesView";
 import { FinanceOverviewView } from "./FinanceOverviewView";
 import { ProjectProfitabilityView } from "./ProjectProfitabilityView";
+import { SpendControlsView } from "./SpendControlsView";
 import { ReconcileView } from "./ReconcileView";
 import { ReportsView } from "./ReportsView";
 import type { ProjectChoice } from "./ExpenseDialog";
@@ -81,6 +83,7 @@ const TABS = [
   { path: "reconcile", label: () => strings.financeTabReconcile, Icon: Scale, bookkeeper: true },
   { path: "cash-flow", label: () => strings.financeTabCashFlow, Icon: TrendingUp, bookkeeper: true },
   { path: "profitability", label: () => strings.financeTabProfitability, Icon: BriefcaseBusiness, bookkeeper: true },
+  { path: "controls", label: () => strings.financeTabControls, Icon: ShieldCheck, bookkeeper: true },
   { path: "accounts", label: () => strings.financeTabAccounts, Icon: BadgeEuro, bookkeeper: true },
   { path: "reports", label: () => strings.financeTabReports, Icon: ChartNoAxesCombined, bookkeeper: true },
 ];
@@ -162,6 +165,7 @@ export function FinanceModule() {
         <Route path="reconcile" element={<ReconcileView revision={revision} />} />
         <Route path="cash-flow" element={<CashFlowView />} />
         <Route path="profitability" element={<ProjectProfitabilityView />} />
+        <Route path="controls" element={<SpendControlsView />} />
         {/* The chart and the four reports (B4.13c). Reports is a wildcard mount:
             it owns a second row of tabs of its own; the chart's editor is a
             dialog rather than a route. */}

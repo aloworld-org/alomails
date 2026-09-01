@@ -101,6 +101,34 @@ pub const EXPENSE_DESCRIPTION_MAX: usize = 500;
 /// because the column is this table's.
 pub const EXPENSE_DECISION_NOTE_MAX: usize = 500;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SpendPolicy {
+    pub receipt_required_above_cents: Option<i64>,
+    pub project_required_above_cents: Option<i64>,
+    pub second_approval_above_cents: Option<i64>,
+    pub updated_by: Option<UserId>,
+    pub updated_at: Option<OffsetDateTime>,
+}
+
+impl Default for SpendPolicy {
+    fn default() -> Self {
+        Self {
+            receipt_required_above_cents: None,
+            project_required_above_cents: None,
+            second_approval_above_cents: None,
+            updated_by: None,
+            updated_at: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ExpenseApprovalOutcome {
+    pub expense: Expense,
+    pub approvals: i64,
+    pub required: i64,
+}
+
 /// Most claims one read of the approvals inbox returns. A queue longer than
 /// this is a paging question, and answering it in full would be a page nobody
 /// works through anyway.
@@ -434,6 +462,8 @@ pub struct PendingExpense {
     /// The category's name, when the claim carries one. `None` is a claim
     /// nobody has classified, which books to the chart's `expense_default`.
     pub category_name: Option<String>,
+    pub approval_count: i64,
+    pub approval_required: i64,
 }
 
 /// A validated, normalised claim ready to be bound into a statement.
@@ -863,6 +893,117 @@ fn handed_in(verb: &str) -> StoreError {
 }
 
 impl TenantStore {
+    pub async fn spend_policy(&self) -> Result<SpendPolicy> {
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            receipt_required_above_cents: Option<i64>,
+            project_required_above_cents: Option<i64>,
+            second_approval_above_cents: Option<i64>,
+            updated_by: String,
+            updated_at: OffsetDateTime,
+        }
+        let row = sqlx::query_as::<_, Row>("SELECT receipt_required_above_cents, project_required_above_cents, second_approval_above_cents, updated_by, updated_at FROM fin_spend_policies WHERE tenant_id = $1")
+            .bind(self.tenant().as_str()).fetch_optional(self.pool()).await.map_err(StoreError::Db)?;
+        Ok(row.map_or_else(SpendPolicy::default, |row| SpendPolicy {
+            receipt_required_above_cents: row.receipt_required_above_cents,
+            project_required_above_cents: row.project_required_above_cents,
+            second_approval_above_cents: row.second_approval_above_cents,
+            updated_by: Some(UserId::new(row.updated_by)),
+            updated_at: Some(row.updated_at),
+        }))
+    }
+
+    pub async fn set_spend_policy(
+        &self,
+        policy: &SpendPolicy,
+        actor: &UserId,
+    ) -> Result<SpendPolicy> {
+        for (name, value) in [
+            ("receipt threshold", policy.receipt_required_above_cents),
+            ("project threshold", policy.project_required_above_cents),
+            (
+                "second approval threshold",
+                policy.second_approval_above_cents,
+            ),
+        ] {
+            if value.is_some_and(|cents| !(0..=UNIT_PRICE_MAX_CENTS).contains(&cents)) {
+                return Err(StoreError::Validation(format!(
+                    "{name} must be between 0 and {UNIT_PRICE_MAX_CENTS} cents"
+                )));
+            }
+        }
+        sqlx::query("INSERT INTO fin_spend_policies (tenant_id, receipt_required_above_cents, project_required_above_cents, second_approval_above_cents, updated_by) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (tenant_id) DO UPDATE SET receipt_required_above_cents=EXCLUDED.receipt_required_above_cents, project_required_above_cents=EXCLUDED.project_required_above_cents, second_approval_above_cents=EXCLUDED.second_approval_above_cents, updated_by=EXCLUDED.updated_by, updated_at=now()")
+            .bind(self.tenant().as_str()).bind(policy.receipt_required_above_cents).bind(policy.project_required_above_cents).bind(policy.second_approval_above_cents).bind(actor.as_str()).execute(self.pool()).await.map_err(StoreError::Db)?;
+        self.spend_policy().await
+    }
+
+    pub async fn expense_approval_progress(&self, id: &FinExpenseId) -> Result<(i64, i64)> {
+        let claim = self.expense_by_id(id).await?.ok_or(StoreError::NotFound)?;
+        let policy = self.spend_policy().await?;
+        let required = i64::from(
+            policy
+                .second_approval_above_cents
+                .is_some_and(|threshold| claim.gross_cents >= threshold),
+        ) + 1;
+        let approvals = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM fin_expense_approvals WHERE tenant_id=$1 AND expense_id=$2 AND approved_at >= COALESCE($3, '-infinity'::timestamptz)")
+            .bind(self.tenant().as_str()).bind(id.as_str()).bind(claim.submitted_at).fetch_one(self.pool()).await.map_err(StoreError::Db)?;
+        Ok((approvals, required))
+    }
+
+    pub async fn approve_expense_step(
+        &self,
+        id: &FinExpenseId,
+        approver: &UserId,
+        note: &str,
+    ) -> Result<ExpenseApprovalOutcome> {
+        let claim = self.expense_by_id(id).await?.ok_or(StoreError::NotFound)?;
+        if claim.status != ExpenseStatus::Submitted {
+            return Err(StoreError::Conflict(format!(
+                "this claim is {} and cannot be approved",
+                claim.status.as_str()
+            )));
+        }
+        let policy = self.spend_policy().await?;
+        if policy
+            .receipt_required_above_cents
+            .is_some_and(|threshold| claim.gross_cents >= threshold)
+            && claim.receipt_node_id.is_none()
+        {
+            return Err(StoreError::Conflict(
+                "this claim needs a receipt before it can be approved".to_owned(),
+            ));
+        }
+        if policy
+            .project_required_above_cents
+            .is_some_and(|threshold| claim.gross_cents >= threshold)
+            && claim.project_id.is_none()
+        {
+            return Err(StoreError::Conflict(
+                "this claim needs a project before it can be approved".to_owned(),
+            ));
+        }
+        let note = bounded("decision note", note, EXPENSE_DECISION_NOTE_MAX)?;
+        let inserted = sqlx::query("INSERT INTO fin_expense_approvals (tenant_id, expense_id, approver_id, note) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING")
+            .bind(self.tenant().as_str()).bind(id.as_str()).bind(approver.as_str()).bind(&note).execute(self.pool()).await.map_err(StoreError::Db)?.rows_affected();
+        let (approvals, required) = self.expense_approval_progress(id).await?;
+        if inserted == 0 && approvals < required {
+            return Err(StoreError::Conflict(
+                "this claim needs a different approver for its next approval".to_owned(),
+            ));
+        }
+        let expense = if approvals >= required {
+            self.decide_expense(id, ExpenseDecision::Approve, approver, &note)
+                .await?
+        } else {
+            claim
+        };
+        Ok(ExpenseApprovalOutcome {
+            expense,
+            approvals,
+            required,
+        })
+    }
+
     /// Every claim of this tenant awaiting a decision, oldest purchase first —
     /// the approvals inbox. **Admin only**, gated at the edge by
     /// `Account::require_admin`.
@@ -924,10 +1065,13 @@ impl TenantStore {
     /// tenant is bound, as every statement in the crate binds it.
     async fn expense_queue(&self, predicate: &str, order: &str) -> Result<Vec<PendingExpense>> {
         let rows = sqlx::query_as::<_, PendingRow>(&format!(
-            "SELECT {expense}, COALESCE(u.email, '') AS user_email, c.name AS category_name \
+            "SELECT {expense}, COALESCE(u.email, '') AS user_email, c.name AS category_name, \
+                    COALESCE((SELECT COUNT(*) FROM fin_expense_approvals a WHERE a.tenant_id=e.tenant_id AND a.expense_id=e.id AND a.approved_at >= e.submitted_at), 0) AS approval_count, \
+                    CASE WHEN p.second_approval_above_cents IS NOT NULL AND e.gross_cents >= p.second_approval_above_cents THEN 2::bigint ELSE 1::bigint END AS approval_required \
              FROM fin_expenses e \
              LEFT JOIN users u ON u.tenant_id = e.tenant_id AND u.id = e.user_id \
              LEFT JOIN fin_categories c ON c.tenant_id = e.tenant_id AND c.id = e.category_id \
+             LEFT JOIN fin_spend_policies p ON p.tenant_id = e.tenant_id \
              WHERE e.tenant_id = $1 AND {predicate} \
              ORDER BY {order} LIMIT $2",
             expense = expense_cols_prefixed("e"),
@@ -1165,6 +1309,8 @@ struct PendingRow {
     expense: ExpenseRow,
     user_email: String,
     category_name: Option<String>,
+    approval_count: i64,
+    approval_required: i64,
 }
 
 impl PendingRow {
@@ -1173,6 +1319,8 @@ impl PendingRow {
             expense: self.expense.into_expense()?,
             user_email: self.user_email,
             category_name: self.category_name,
+            approval_count: self.approval_count,
+            approval_required: self.approval_required,
         })
     }
 }
