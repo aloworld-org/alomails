@@ -2264,6 +2264,11 @@ export const nl: Partial<Catalog> = {
   crmProjectCreateFailed: "Het project kon niet worden gemaakt.",
   crmDocumentDraft: (kind: string): string =>
     kind === "invoice" ? "conceptfactuur" : "conceptofferte",
+  crmDocumentQuote: "Conceptofferte",
+  crmDocumentInvoice: "Conceptfactuur",
+  crmRelatedBilling: "Gekoppelde facturatie",
+  crmRelatedBillingEmpty: "Vanuit deze verkoopkans zijn nog geen facturatiedocumenten gemaakt.",
+  crmRelatedBillingLoadFailed: "Gekoppelde facturatiedocumenten konden niet worden geladen.",
   crmRaiseTitle: (document: string) => `Een ${document} aanmaken`,
   crmRaiseSubtitle:
     "Hij komt als concept in Facturatie te staan, om te controleren en aan te vullen. Er wordt niets uitgegeven en niets verstuurd.",

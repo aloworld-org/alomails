@@ -135,6 +135,7 @@ async fn a_won_deal_raises_a_draft_invoice_and_the_customer_it_needs() {
     assert_eq!(body["invoice"]["totals"]["netCents"], 250_000);
     assert_eq!(body["invoice"]["totals"]["vatCents"], 47_500);
     assert_eq!(body["invoice"]["totals"]["grossCents"], 297_500);
+    let invoice = body["invoice"]["id"].as_str().unwrap().to_owned();
     // And the deal, because raising the document changed it.
     let customer = body["deal"]["customerId"].as_str().unwrap().to_owned();
     assert_eq!(body["invoice"]["customerId"], customer.as_str());
@@ -161,8 +162,18 @@ async fn a_won_deal_raises_a_draft_invoice_and_the_customer_it_needs() {
     assert_eq!(body["quote"]["status"], "draft");
     assert_eq!(body["quote"]["customerId"], customer.as_str());
     assert_eq!(body["quote"]["totals"]["grossCents"], 297_500);
+    let quote = body["quote"]["id"].as_str().unwrap().to_owned();
     let (_, listed) = get(&h.app, &h.token, "/billing/customers").await;
     assert_eq!(listed["customers"].as_array().map(Vec::len), Some(1));
+
+    // Sales reads only the two documents explicitly raised from this deal.
+    let (status, related) = get(&h.app, &h.token, &format!("/crm/deals/{deal}/documents")).await;
+    assert_eq!(status, StatusCode::OK, "{related}");
+    assert_eq!(related["documents"].as_array().map(Vec::len), Some(2));
+    assert_eq!(related["documents"][0]["kind"], "quote");
+    assert_eq!(related["documents"][0]["documentId"], quote);
+    assert_eq!(related["documents"][1]["kind"], "invoice");
+    assert_eq!(related["documents"][1]["documentId"], invoice);
 }
 
 #[tokio::test]
@@ -448,6 +459,7 @@ async fn every_closing_route_needs_a_token() {
     for (method, uri) in [
         ("POST", "/crm/deals/dea_1/quote"),
         ("POST", "/crm/deals/dea_1/invoice"),
+        ("GET", "/crm/deals/dea_1/documents"),
         (
             "GET",
             "/crm/reports/pipeline?pipelineId=p&from=2026-01-01&to=2026-12-31",
@@ -485,6 +497,8 @@ async fn a_neighbours_deal_and_board_answer_as_ids_that_never_existed() {
         .await;
         assert_eq!(status, StatusCode::NOT_FOUND, "{uri}: {body}");
     }
+    let (status, body) = get(&b.app, &b.token, &format!("/crm/deals/{deal}/documents")).await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
     let (status, body) = get(
         &b.app,
         &b.token,

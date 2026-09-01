@@ -25,7 +25,7 @@ use serde_json::{Value, json};
 use alo_store::DealHandoff;
 use alo_store::{AccountStore, CrmDealId};
 
-use crate::billing::{map_store_err, parse_body};
+use crate::billing::{iso, map_store_err, parse_body};
 use crate::billing_document::today;
 use crate::billing_invoices::document_json as invoice_json;
 use crate::billing_quotes::document_json as quote_json;
@@ -77,6 +77,33 @@ async fn stored_deal(acc: &AccountStore, id: &CrmDealId) -> Result<Value, Proble
         .map_err(map_store_err)?
         .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such deal"))?;
     Ok(deal_json(&deal))
+}
+
+/// `GET /crm/deals/{id}/documents` returns only Billing documents explicitly
+/// raised from this opportunity; sharing a customer is not provenance.
+pub async fn deal_documents(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let documents = account
+        .acc
+        .crm_deal_billing_documents(&CrmDealId::new(id))
+        .await
+        .map_err(map_store_err)?
+        .into_iter()
+        .map(|document| {
+            json!({
+                "kind": document.kind,
+                "documentId": document.document_id,
+                "status": document.status,
+                "number": document.number,
+                "createdAt": iso(document.created_at),
+            })
+        })
+        .collect::<Vec<_>>();
+    Ok(Json(json!({ "documents": documents })))
 }
 
 /// `POST /crm/deals/{id}/quote` `{vatRateBp?, country?}` →

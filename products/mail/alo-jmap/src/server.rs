@@ -1680,6 +1680,10 @@ pub fn app_with_site_boundaries(
         .route("/crm/deals/{id}/quote", post(crm_handoff::deal_quote))
         .route("/crm/deals/{id}/invoice", post(crm_handoff::deal_invoice))
         .route(
+            "/crm/deals/{id}/documents",
+            get(crm_handoff::deal_documents),
+        )
+        .route(
             "/crm/deals/{id}/project",
             get(crm_projects::deal_project).post(crm_projects::create_deal_project),
         )

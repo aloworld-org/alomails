@@ -173,6 +173,15 @@ export interface DealProject {
 /** Which billing document a deal is being turned into. */
 export type DocumentKind = "quote" | "invoice";
 
+/** A Billing document explicitly raised from this opportunity. */
+export interface DealBillingDocument {
+  kind: DocumentKind;
+  documentId: string;
+  status: string;
+  number: string | null;
+  createdAt: string;
+}
+
 /** The document a handoff raised, as much of it as CRM reads.
  *
  *  Deliberately narrow: the whole billing document comes back on the wire, and

@@ -170,6 +170,12 @@ async fn a_won_lead_becomes_one_customer_and_a_draft_that_mirrors_the_deal() {
         1,
         "one company, one customer row"
     );
+    let related = a.crm_deal_billing_documents(&deal).await.unwrap();
+    assert_eq!(related.len(), 2);
+    assert_eq!(related[0].kind, "quote");
+    assert_eq!(related[0].document_id, quote.as_str());
+    assert_eq!(related[1].kind, "invoice");
+    assert_eq!(related[1].document_id, invoice.as_str());
 }
 
 #[tokio::test]
@@ -384,6 +390,7 @@ async fn a_neighbours_deal_raises_nothing_at_all() {
         a.crm_deal_quote(&CrmDealId::new("dea_nope"), &german(2100))
             .await,
     );
+    assert_not_found(a.crm_deal_billing_documents(&theirs).await);
 
     // Nothing was written on either side of the wall.
     assert!(a.billing_customers(true).await.unwrap().is_empty());

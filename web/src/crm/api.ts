@@ -25,6 +25,7 @@ import type {
   CrmPipeline,
   CrmStage,
   DealActivity,
+  DealBillingDocument,
   DealDraft,
   DealFilter,
   DealHandoff,
@@ -283,6 +284,13 @@ export class CrmApi {
     handoff: DealHandoff,
   ): Promise<{ invoice: RaisedDocument; deal: CrmDeal }> {
     return this.#write(`POST`, `/crm/deals/${encodeURIComponent(dealId)}/invoice`, handoff);
+  }
+
+  /** Billing documents explicitly raised from this opportunity. */
+  billingDocuments(dealId: string): Promise<DealBillingDocument[]> {
+    return this.#read<{ documents?: DealBillingDocument[] }>(
+      `/crm/deals/${encodeURIComponent(dealId)}/documents`,
+    ).then((result) => result.documents ?? []);
   }
 
   /** The delivery project created from this deal, or `null` before handoff. */

@@ -3468,6 +3468,11 @@ export const en = {
   // no translation could ever satisfy (B2.14).
   crmDocumentDraft: (kind: string): string =>
     kind === "invoice" ? "draft invoice" : "draft quote",
+  crmDocumentQuote: "Draft quote",
+  crmDocumentInvoice: "Draft invoice",
+  crmRelatedBilling: "Related Billing",
+  crmRelatedBillingEmpty: "No Billing documents have been raised from this opportunity yet.",
+  crmRelatedBillingLoadFailed: "Related Billing documents could not be loaded.",
   crmRaiseTitle: (document: string) => `Raise a ${document}`,
   crmRaiseSubtitle:
     "It lands in Billing as a draft for you to check and complete. Nothing is issued and nothing is sent.",

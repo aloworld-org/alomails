@@ -2309,6 +2309,11 @@ export const fr: Partial<Catalog> = {
   crmProjectCreateFailed: "Le projet n’a pas pu être créé.",
   crmDocumentDraft: (kind: string): string =>
     kind === "invoice" ? "brouillon de facture" : "brouillon de devis",
+  crmDocumentQuote: "Devis brouillon",
+  crmDocumentInvoice: "Facture brouillon",
+  crmRelatedBilling: "Facturation associée",
+  crmRelatedBillingEmpty: "Aucun document de facturation n’a encore été créé depuis cette opportunité.",
+  crmRelatedBillingLoadFailed: "Les documents de facturation associés n’ont pas pu être chargés.",
   crmRaiseTitle: (document: string) => `Créer un ${document}`,
   crmRaiseSubtitle:
     "Il arrive dans Facturation en brouillon, à vérifier et à compléter. Rien n’est émis et rien n’est envoyé.",

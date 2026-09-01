@@ -81,6 +81,10 @@ impl AccountStore {
                 ..NewQuote::for_customer(customer_id)
             })
             .await?;
+        // Provenance is attached before line replacement. If line validation
+        // or storage later fails, the existing handoff contract leaves an
+        // empty recoverable draft; it must still remain visible from Sales.
+        self.link_crm_deal_quote(id, &quote).await?;
         // Written as a second call because the lines are validated as a set;
         // a refusal here leaves an empty draft rather than a wrong one, and an
         // empty draft is a document a human can finish or delete.
@@ -121,6 +125,7 @@ impl AccountStore {
                 ..NewInvoice::for_customer(customer_id)
             })
             .await?;
+        self.link_crm_deal_invoice(id, &invoice).await?;
         self.set_billing_invoice_lines(&invoice, &lines).await?;
         Ok(invoice)
     }

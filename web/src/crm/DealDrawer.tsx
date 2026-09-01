@@ -32,6 +32,7 @@ import { moveDeal } from "./moveDeal";
 import { NextSteps } from "./NextSteps";
 import { ErrorBanner, StateChip } from "./parts";
 import { RaiseDocumentDialog } from "./RaiseDocumentDialog";
+import { RelatedBillingDocuments } from "./RelatedBillingDocuments";
 import type { CrmDeal, CrmStage, DealProject, DocumentKind } from "./types";
 import { WonDealProjectDialog } from "./WonDealProjectDialog";
 import styles from "./CrmModule.module.css";
@@ -71,6 +72,7 @@ export function DealDrawer({ dealId, stages, onClose, onChanged }: Props) {
   const [raising, setRaising] = useState<DocumentKind | null>(null);
   const [project, setProject] = useState<DealProject | null>(null);
   const [creatingProject, setCreatingProject] = useState(false);
+  const [documentRevision, setDocumentRevision] = useState(0);
 
   const load = useCallback(async () => {
     try {
@@ -270,6 +272,7 @@ export function DealDrawer({ dealId, stages, onClose, onChanged }: Props) {
               </div>
             </section>
           )}
+          <RelatedBillingDocuments dealId={deal.id} revision={documentRevision} />
           <ActivityLog dealId={deal.id} />
           <NextSteps dealId={deal.id} />
           <LinkedThreads dealId={deal.id} />
@@ -310,6 +313,7 @@ export function DealDrawer({ dealId, stages, onClose, onChanged }: Props) {
             // Raising a document can give a lead a customer, so the drawer
             // redraws from the server's answer rather than from what it held.
             setDeal(raised);
+            setDocumentRevision((current) => current + 1);
             onChanged();
           }}
         />

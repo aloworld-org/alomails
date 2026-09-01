@@ -3305,6 +3305,11 @@ export const de: Partial<Catalog> = {
   crmProjectCreateFailed: "Das Projekt konnte nicht erstellt werden.",
   crmDocumentDraft: (kind: string): string =>
     kind === "invoice" ? "Rechnungsentwurf" : "Angebotsentwurf",
+  crmDocumentQuote: "Angebotsentwurf",
+  crmDocumentInvoice: "Rechnungsentwurf",
+  crmRelatedBilling: "Zugehörige Abrechnung",
+  crmRelatedBillingEmpty: "Aus dieser Verkaufschance wurden noch keine Abrechnungsdokumente erstellt.",
+  crmRelatedBillingLoadFailed: "Zugehörige Abrechnungsdokumente konnten nicht geladen werden.",
   crmRaiseTitle: (document: string) => `${document} erstellen`,
   crmRaiseSubtitle:
     "Er landet als Entwurf unter Rechnungen, damit Sie ihn prüfen und vervollständigen. Nichts wird ausgestellt, nichts wird gesendet.",
