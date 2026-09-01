@@ -93,6 +93,29 @@ export interface ProjectSalesOrigin {
   createdAt: string;
 }
 
+/** Optional cross-app resources created after an explicit project setup review. */
+export interface ProjectSetup {
+  projectId: string;
+  spaceId: string | null;
+  chatChannelId: string | null;
+  kickoffEventId: string | null;
+  starterTaskIds: string[];
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectSetupDraft {
+  createFilesSpace: boolean;
+  createChatRoom: boolean;
+  kickoff?: {
+    startsAt: string;
+    endsAt: string;
+    timezone?: string;
+  };
+  starterTasks: string[];
+}
+
 export type ProjectUpdateState = "on_track" | "at_risk" | "off_track" | "complete";
 
 export interface ProjectUpdate {

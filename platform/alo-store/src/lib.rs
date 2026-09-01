@@ -198,6 +198,7 @@ pub mod money_text;
 pub mod project_clients;
 pub mod project_hours;
 pub mod project_milestones;
+pub mod project_setup;
 pub mod project_templates;
 pub mod project_updates;
 pub mod push_subscriptions;
@@ -608,6 +609,7 @@ pub use project_milestones::{
     MILESTONES_MAX, Milestone, MilestoneEdit, NAME_MAX as MILESTONE_NAME_MAX, NewMilestone,
     TaskPlacement,
 };
+pub use project_setup::{KickoffPlan, ProjectSetup, ProjectSetupPlan};
 pub use project_templates::{
     PROJECT_NAME_MAX, ProjectTemplate, TEMPLATE_TASKS_MAX, TemplateCopy, TemplateInstance,
 };

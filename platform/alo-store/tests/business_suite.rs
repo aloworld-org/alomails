@@ -58,6 +58,7 @@ mod inv_suppliers_tenancy;
 mod project_clients_tenancy;
 mod project_hours_tenancy;
 mod project_milestones_tenancy;
+mod project_setup_tenancy;
 mod project_templates_tenancy;
 mod time_entries_tenancy;
 mod time_invoice_tenancy;

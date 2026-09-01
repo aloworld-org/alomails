@@ -309,6 +309,7 @@ POST /crm/deals -> crm.deal.create
 POST /crm/deals/{id}/activities -> crm.deal.activity.create
 POST /crm/deals/{id}/invoice -> crm.deal.invoice
 POST /crm/deals/{id}/next-steps -> crm.deal.next_step.create
+POST /crm/deals/{id}/project -> crm.deal.project
 POST /crm/deals/{id}/quote -> crm.deal.quote
 POST /crm/deals/{id}/stage -> crm.deal.stage
 POST /crm/deals/{id}/threads -> crm.deal.thread.create
@@ -391,7 +392,9 @@ POST /projects/timer/stop -> projects.timer.stop
 POST /projects/updates -> projects.update.create
 POST /projects/weeks/{monday}/submit -> projects.week.submit
 POST /projects/weeks/{monday}/withdraw -> projects.week.withdraw
+POST /projects/{id}/setup -> projects.project.setup
 PUT /billing/fx/rates -> billing.fx.rates.update
+PUT /billing/invoices/{id}/design -> billing.invoice.design.update
 PUT /billing/quotes/{id}/design -> billing.quote.design.update
 PUT /finance/mileage/rates -> finance.mileage.rates.update
 PUT /hr/holiday-calendars -> hr.holiday_calendar.update

@@ -40,6 +40,7 @@ import { ErrorBanner } from "./parts";
 import { PlanView } from "./PlanView";
 import { ProjectsView } from "./ProjectsView";
 import { ProjectSalesOrigin } from "./ProjectSalesOrigin";
+import { ProjectResources } from "./ProjectResources";
 import { ReportView } from "./ReportView";
 import {
   projectContextId,
@@ -95,6 +96,7 @@ function ProjectWorkspaceRoute({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <ProjectSalesOrigin projectId={projectId} />
+      <ProjectResources projectId={projectId} projectName={projects.find((project) => project.id === projectId)?.name ?? ""} />
       <div className="min-h-0 flex-1">
         {workspaceView === undefined ? (
           <TasksModule projectId={projectId} />

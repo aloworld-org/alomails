@@ -34,14 +34,14 @@ use crate::{
     inventory_po_print, inventory_po_receipts, inventory_po_send, inventory_reorder,
     inventory_scan, inventory_so, inventory_so_deliveries, inventory_so_invoice, inventory_stock,
     inventory_supplier_prices, inventory_suppliers, invite_route, meet_routes, module_access,
-    projects_clients, projects_invoices, projects_plan, projects_reports, projects_templates,
-    projects_time, projects_updates, projects_weeks, push, push_subscriptions, readiness,
-    reset_route, schedule, scoped_roles, security, session, settings, share, signup_route,
-    site_protection, site_schedule, site_version_preview, site_versions, sites, sites_attribution,
-    sites_bookings, sites_catalogs, sites_chat, sites_conversions, sites_domain_purchases,
-    sites_heatmap, sites_knowledge, sites_orders, sites_palette, sites_shop_config,
-    sites_shop_items, sites_shop_settings, sites_templates, sites_tickets, snooze, spaces, tasks,
-    unsubscribe, wopi, workspace_search,
+    projects_clients, projects_invoices, projects_plan, projects_reports, projects_setup,
+    projects_templates, projects_time, projects_updates, projects_weeks, push, push_subscriptions,
+    readiness, reset_route, schedule, scoped_roles, security, session, settings, share,
+    signup_route, site_protection, site_schedule, site_version_preview, site_versions, sites,
+    sites_attribution, sites_bookings, sites_catalogs, sites_chat, sites_conversions,
+    sites_domain_purchases, sites_heatmap, sites_knowledge, sites_orders, sites_palette,
+    sites_shop_config, sites_shop_items, sites_shop_settings, sites_templates, sites_tickets,
+    snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -1830,6 +1830,10 @@ pub fn app_with_site_boundaries(
                 .delete(projects_clients::clear_project_client),
         )
         .route("/projects/{id}/deal", get(crm_projects::project_deal))
+        .route(
+            "/projects/{id}/setup",
+            get(projects_setup::get_setup).post(projects_setup::create_setup),
+        )
         // `timer` and `time` are distinct literal segments, registered before
         // `/projects/time/{id}` so a record id can never shadow one.
         .route("/projects/timer", get(projects_time::get_timer))

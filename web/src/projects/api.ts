@@ -31,6 +31,8 @@ import type {
   ProfitabilityReport,
   Project,
   ProjectSalesOrigin,
+  ProjectSetup,
+  ProjectSetupDraft,
   ProjectDraft,
   ProjectClient,
   ProjectClientDraft,
@@ -125,6 +127,20 @@ export class ProjectsApi {
     return this.#read<{ deal?: ProjectSalesOrigin | null }>(
       `/projects/${encodeURIComponent(id)}/deal`,
     ).then((result) => result.deal ?? null);
+  }
+
+  projectSetup(id: string): Promise<ProjectSetup | null> {
+    return this.#read<{ setup?: ProjectSetup | null }>(
+      `/projects/${encodeURIComponent(id)}/setup`,
+    ).then((result) => result.setup ?? null);
+  }
+
+  setupProject(id: string, draft: ProjectSetupDraft): Promise<ProjectSetup> {
+    return this.#write<{ setup: ProjectSetup }>(
+      "POST",
+      `/projects/${encodeURIComponent(id)}/setup`,
+      draft,
+    ).then((result) => result.setup);
   }
 
   /** Replaces the lifecycle facts shown by every project view. */

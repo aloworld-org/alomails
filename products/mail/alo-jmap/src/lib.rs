@@ -200,6 +200,7 @@ pub mod projects_intents;
 pub mod projects_invoices;
 pub mod projects_plan;
 pub mod projects_reports;
+pub mod projects_setup;
 pub mod projects_templates;
 pub mod projects_time;
 pub mod projects_updates;

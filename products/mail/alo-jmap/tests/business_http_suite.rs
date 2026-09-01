@@ -23,3 +23,4 @@ mod insights_http;
 mod inventory_order_book_http;
 mod inventory_suppliers_http;
 mod orders_walkthrough_http;
+mod projects_setup_http;
