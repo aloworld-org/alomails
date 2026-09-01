@@ -26,6 +26,7 @@ struct CreateProjectBody {
 fn relationship_json(link: &DealProject) -> Value {
     json!({
         "dealId": link.deal_id.as_str(),
+        "dealTitle": link.deal_title,
         "projectId": link.project_id.as_str(),
         "projectName": link.project_name,
         "createdBy": link.created_by,

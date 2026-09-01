@@ -83,6 +83,16 @@ export interface ProjectDraft {
   targetOn: string | null;
 }
 
+/** The won Sales opportunity that originated a delivery project. */
+export interface ProjectSalesOrigin {
+  dealId: string;
+  dealTitle: string;
+  projectId: string;
+  projectName: string;
+  createdBy: string;
+  createdAt: string;
+}
+
 export type ProjectUpdateState = "on_track" | "at_risk" | "off_track" | "complete";
 
 export interface ProjectUpdate {

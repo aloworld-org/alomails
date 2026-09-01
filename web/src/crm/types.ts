@@ -163,6 +163,7 @@ export interface DealHandoff {
 /** Durable provenance between one won opportunity and one delivery project. */
 export interface DealProject {
   dealId: string;
+  dealTitle: string;
   projectId: string;
   projectName: string;
   createdBy: string;

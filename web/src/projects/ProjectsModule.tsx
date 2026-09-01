@@ -39,6 +39,7 @@ import { projectsMessage, useProjectsApi } from "./api";
 import { ErrorBanner } from "./parts";
 import { PlanView } from "./PlanView";
 import { ProjectsView } from "./ProjectsView";
+import { ProjectSalesOrigin } from "./ProjectSalesOrigin";
 import { ReportView } from "./ReportView";
 import {
   projectContextId,
@@ -91,9 +92,18 @@ function ProjectWorkspaceRoute({
   }
   if (status === "missing") return <Navigate to="/projects/list" replace />;
   if (status === "unavailable") return null;
-  return workspaceView === undefined
-    ? <TasksModule projectId={projectId} />
-    : <TasksModule projectId={projectId} workspaceView={workspaceView} />;
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <ProjectSalesOrigin projectId={projectId} />
+      <div className="min-h-0 flex-1">
+        {workspaceView === undefined ? (
+          <TasksModule projectId={projectId} />
+        ) : (
+          <TasksModule projectId={projectId} workspaceView={workspaceView} />
+        )}
+      </div>
+    </div>
+  );
 }
 
 const projectTabClass = ({ isActive }: { isActive: boolean }) =>

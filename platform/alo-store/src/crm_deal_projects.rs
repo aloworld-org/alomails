@@ -15,6 +15,8 @@ use crate::project_templates::PROJECT_NAME_MAX;
 pub struct DealProject {
     /// The won opportunity that originated the work.
     pub deal_id: CrmDealId,
+    /// Current opportunity title, returned for useful reverse-link cards.
+    pub deal_title: String,
     /// The project created for delivery.
     pub project_id: ProjectId,
     /// Current project name, returned for useful relationship cards.
@@ -135,8 +137,10 @@ async fn deal_project_row(
     project: Option<&str>,
 ) -> Result<Option<DealProject>> {
     let row = sqlx::query_as::<_, DealProjectRow>(
-        "SELECT l.deal_id, l.project_id, p.name AS project_name, l.created_by, l.created_at \
-         FROM crm_deal_projects l JOIN task_projects p \
+        "SELECT l.deal_id, d.title AS deal_title, l.project_id, p.name AS project_name, l.created_by, l.created_at \
+         FROM crm_deal_projects l JOIN crm_deals d \
+           ON d.tenant_id = l.tenant_id AND d.id = l.deal_id \
+         JOIN task_projects p \
            ON p.tenant_id = l.tenant_id AND p.id = l.project_id \
          WHERE l.tenant_id = $1 AND (($2 <> '' AND l.deal_id = $2) OR ($3::text IS NOT NULL AND l.project_id = $3))",
     )
@@ -155,8 +159,10 @@ async fn deal_project_row_in(
     deal: &CrmDealId,
 ) -> Result<Option<DealProject>> {
     let row = sqlx::query_as::<_, DealProjectRow>(
-        "SELECT l.deal_id, l.project_id, p.name AS project_name, l.created_by, l.created_at \
-         FROM crm_deal_projects l JOIN task_projects p \
+        "SELECT l.deal_id, d.title AS deal_title, l.project_id, p.name AS project_name, l.created_by, l.created_at \
+         FROM crm_deal_projects l JOIN crm_deals d \
+           ON d.tenant_id = l.tenant_id AND d.id = l.deal_id \
+         JOIN task_projects p \
            ON p.tenant_id = l.tenant_id AND p.id = l.project_id \
          WHERE l.tenant_id = $1 AND l.deal_id = $2",
     )
@@ -171,6 +177,7 @@ async fn deal_project_row_in(
 #[derive(sqlx::FromRow)]
 struct DealProjectRow {
     deal_id: String,
+    deal_title: String,
     project_id: String,
     project_name: String,
     created_by: String,
@@ -181,6 +188,7 @@ impl DealProjectRow {
     fn into_relationship(self) -> DealProject {
         DealProject {
             deal_id: CrmDealId::new(self.deal_id),
+            deal_title: self.deal_title,
             project_id: ProjectId::new(self.project_id),
             project_name: self.project_name,
             created_by: self.created_by,

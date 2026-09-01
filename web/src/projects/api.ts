@@ -30,6 +30,7 @@ import type {
   PendingWeek,
   ProfitabilityReport,
   Project,
+  ProjectSalesOrigin,
   ProjectDraft,
   ProjectClient,
   ProjectClientDraft,
@@ -117,6 +118,13 @@ export class ProjectsApi {
     return this.#read<{ project: Project }>(`/projects/${encodeURIComponent(id)}`).then(
       (r) => r.project,
     );
+  }
+
+  /** The won Sales opportunity this project was confirmed from, when any. */
+  salesOrigin(id: string): Promise<ProjectSalesOrigin | null> {
+    return this.#read<{ deal?: ProjectSalesOrigin | null }>(
+      `/projects/${encodeURIComponent(id)}/deal`,
+    ).then((result) => result.deal ?? null);
   }
 
   /** Replaces the lifecycle facts shown by every project view. */

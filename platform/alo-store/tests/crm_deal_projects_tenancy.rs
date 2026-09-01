@@ -86,6 +86,7 @@ async fn a_won_deal_creates_one_bidirectionally_linked_project_even_on_retry() {
         .unwrap();
     assert!(created);
     assert_eq!(first.project_name, "Premium rollout");
+    assert_eq!(first.deal_title, "Premium rollout");
     assert_eq!(
         account.crm_deal_project(&deal).await.unwrap(),
         Some(first.clone())
