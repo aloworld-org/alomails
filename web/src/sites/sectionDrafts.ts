@@ -37,6 +37,7 @@ export interface HeroDraft {
   heading: string;
   subheading: string;
   image: SectionImage;
+  video_url: string;
   primary_cta: SectionLink;
   secondary_cta: SectionLink;
   layout: HeroLayout;
@@ -315,6 +316,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         heading: s?.heading ?? "",
         subheading: s?.subheading ?? "",
         image: draftImage(s?.image),
+        video_url: s?.video_url ?? "",
         primary_cta: draftLink(s?.primary_cta),
         secondary_cta: draftLink(s?.secondary_cta),
         layout: s?.layout ?? "centered",
@@ -586,6 +588,7 @@ export function toSection(draft: SectionDraft): Section {
         heading: req(draft.heading),
         subheading: opt(draft.subheading),
         image: optImage(draft.image),
+        video_url: opt(draft.video_url),
         primary_cta: optLink(draft.primary_cta),
         secondary_cta: optLink(draft.secondary_cta),
         layout: draft.layout,

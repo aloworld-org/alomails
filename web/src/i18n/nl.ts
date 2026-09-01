@@ -2140,10 +2140,12 @@ export const nl: Partial<Catalog> = {
   // alo CRM (B2). Een „deal” heet in het Nederlandse zakenleven ook zo; hij
   // schuift per „fase” over een „bord” en sluit gewonnen of verloren.
   moduleCrm: "Verkoop",
-  crmWorkspaceSubtitle: "Breng kansen van het eerste gesprek naar een overtuigende afsluiting.",
+  crmWorkspaceSubtitle:
+    "Breng kansen van het eerste gesprek naar een overtuigende afsluiting.",
   crmFocusEyebrow: "Dagelijkse focus",
   crmFocusTitle: "Pijplijn in één oogopslag",
-  crmFocusHint: "Begin met de kansen die een beslissing of opvolging nodig hebben.",
+  crmFocusHint:
+    "Begin met de kansen die een beslissing of opvolging nodig hebben.",
   crmFocusOpen: "Open deals",
   crmFocusClosingSoon: "Sluit binnen 14 dagen",
   crmFocusOverdue: "Verwachte sluitdatum voorbij",
@@ -2247,7 +2249,8 @@ export const nl: Partial<Catalog> = {
   crmMailOpportunitySubtitle:
     "Controleer de verkoopgegevens. Het volledige gesprek blijft aan de verkoopkans gekoppeld.",
   crmMailOpportunityConfirm: "Verkoopkans maken",
-  crmMailOpportunityLoadFailed: "De verkooppijplijnen konden niet worden geladen.",
+  crmMailOpportunityLoadFailed:
+    "De verkooppijplijnen konden niet worden geladen.",
   crmMailOpportunityCreateFailed: "De verkoopkans kon niet worden gemaakt.",
   crmMailConversation: "Brongesprek",
   crmMailSource: "E-mail",
@@ -2259,7 +2262,8 @@ export const nl: Partial<Catalog> = {
   crmProjectCreateTitle: "Uitvoeringsproject starten",
   crmProjectCreateSubtitle:
     "Controleer het project voordat u het maakt. De gewonnen kans en uitvoering blijven in beide apps gekoppeld.",
-  crmProjectCreateSummary: (deal: string) => `Uitvoering maken vanuit ‘${deal}’.`,
+  crmProjectCreateSummary: (deal: string) =>
+    `Uitvoering maken vanuit ‘${deal}’.`,
   crmProjectName: "Projectnaam",
   crmProjectCreateConfirm: "Project maken",
   crmProjectCreateFailed: "Het project kon niet worden gemaakt.",
@@ -2268,8 +2272,10 @@ export const nl: Partial<Catalog> = {
   crmDocumentQuote: "Conceptofferte",
   crmDocumentInvoice: "Conceptfactuur",
   crmRelatedBilling: "Gekoppelde facturatie",
-  crmRelatedBillingEmpty: "Vanuit deze verkoopkans zijn nog geen facturatiedocumenten gemaakt.",
-  crmRelatedBillingLoadFailed: "Gekoppelde facturatiedocumenten konden niet worden geladen.",
+  crmRelatedBillingEmpty:
+    "Vanuit deze verkoopkans zijn nog geen facturatiedocumenten gemaakt.",
+  crmRelatedBillingLoadFailed:
+    "Gekoppelde facturatiedocumenten konden niet worden geladen.",
   crmRaiseTitle: (document: string) => `Een ${document} aanmaken`,
   crmRaiseSubtitle:
     "Hij komt als concept in Facturatie te staan, om te controleren en aan te vullen. Er wordt niets uitgegeven en niets verstuurd.",
@@ -2647,28 +2653,37 @@ export const nl: Partial<Catalog> = {
   projectsLoadFailed: "Uw projecten zijn niet geladen.",
   projectsSalesOrigin: "Gewonnen in Verkoop",
   projectsOpenSalesOrigin: "Verkoopkans openen in Verkoop",
-  projectsSalesOriginLoadFailed: "De oorspronkelijke verkoopkans kon niet worden geladen.",
+  projectsSalesOriginLoadFailed:
+    "De oorspronkelijke verkoopkans kon niet worden geladen.",
   projectsResources: "Projectwerkruimte",
-  projectsResourcesSubtitle: "Bestanden, gesprek, kick-off en startwerk die bij dit project horen.",
+  projectsResourcesSubtitle:
+    "Bestanden, gesprek, kick-off en startwerk die bij dit project horen.",
   projectsSetupAction: "Werkruimte instellen",
   projectsSetupAddAction: "Middelen toevoegen",
   projectsSetupTitle: "Projectwerkruimte instellen",
-  projectsSetupSubtitle: (project: string) => `Controleer wat Alo voor ‘${project}’ moet maken.`,
+  projectsSetupSubtitle: (project: string) =>
+    `Controleer wat Alo voor ‘${project}’ moet maken.`,
   projectsSetupConfirm: "Geselecteerde middelen maken",
   projectsSetupFiles: "Gedeelde projectbestanden",
-  projectsSetupFilesDetail: "Maak een Drive-ruimte voor projectdocumenten en materialen.",
+  projectsSetupFilesDetail:
+    "Maak een Drive-ruimte voor projectdocumenten en materialen.",
   projectsSetupChat: "Projectgesprek",
-  projectsSetupChatDetail: "Maak een organisatiebrede Chatruimte voor de uitvoering.",
+  projectsSetupChatDetail:
+    "Maak een organisatiebrede Chatruimte voor de uitvoering.",
   projectsSetupTasks: "Starttaken",
-  projectsSetupTasksDetail: "Voeg taken toe voor scope, kick-off en leveringsplan.",
+  projectsSetupTasksDetail:
+    "Voeg taken toe voor scope, kick-off en leveringsplan.",
   projectsSetupKickoff: "Kick-offvergadering",
-  projectsSetupKickoffDetail: "Voeg een kick-off van één uur met herinnering toe aan uw agenda.",
+  projectsSetupKickoffDetail:
+    "Voeg een kick-off van één uur met herinnering toe aan uw agenda.",
   projectsSetupKickoffTime: "Kick-off begint",
-  projectsSetupReviewNote: "Er wordt niets gemaakt voordat u bevestigt. Opnieuw proberen voegt alleen ontbrekende middelen toe.",
+  projectsSetupReviewNote:
+    "Er wordt niets gemaakt voordat u bevestigt. Opnieuw proberen voegt alleen ontbrekende middelen toe.",
   projectsSetupTaskScope: "Leveringsscope bevestigen",
   projectsSetupTaskKickoff: "Projectkick-off voorbereiden",
   projectsSetupTaskPlan: "Leveringsplan publiceren",
-  projectsSetupFailed: "De geselecteerde projectmiddelen konden niet worden gemaakt.",
+  projectsSetupFailed:
+    "De geselecteerde projectmiddelen konden niet worden gemaakt.",
   projectsSetupLoadFailed: "Projectmiddelen konden niet worden geladen.",
   projectsFiles: "Projectbestanden",
   projectsChatRoom: "Projectchat",
@@ -4165,6 +4180,7 @@ export const nl: Partial<Catalog> = {
   sitesHeroLayoutSplitRight: "Afbeelding rechts",
   sitesHeroLayoutSplitLeft: "Afbeelding links",
   sitesHeroLayoutBackground: "Achtergrondafbeelding",
+  sitesHeroLayoutVideoBackground: "Achtergrondvideo",
   sitesHeroLayoutEditorial: "Redactioneel",
   sitesHeroDesign: "Ontwerp",
   sitesHeroHeight: "Hoogte",
@@ -4180,7 +4196,12 @@ export const nl: Partial<Catalog> = {
   sitesHeroContentWidthBalanced: "Evenwichtig",
   sitesHeroContentWidthWide: "Breed",
   sitesHeroContent: "Inhoud",
-  sitesHeroMedia: "Afbeelding",
+  sitesHeroMedia: "Media",
+  sitesHeroVideoUrl: "Video-URL",
+  sitesHeroVideoUrlHint:
+    "Plak een directe HTTPS-link naar een MP4- of WebM-video. De video speelt gedempt en herhaalt automatisch.",
+  sitesHeroVideoFallbackHint:
+    "De afbeelding hieronder is de poster en vervangt de video bij minder beweging of wanneer de video niet kan laden.",
   sitesHeroActions: "Knoppen",
   sitesFieldHeading: "Kop",
   sitesFieldSubheading: "Subkop",
@@ -4521,13 +4542,17 @@ export const nl: Partial<Catalog> = {
   // de status van een factuur, zoals in het facturatiescherm (B1.27), zodat
   // dezelfde factuur in twee modules niet twee namen draagt.
   moduleFinance: "Financiën",
-  financeWorkspacePurpose: "Liquiditeit, uitgaven en rekeningen in één financiële werkruimte.",
+  financeWorkspacePurpose:
+    "Liquiditeit, uitgaven en rekeningen in één financiële werkruimte.",
   financeTabOverview: "Overzicht",
   financeOverviewEyebrow: "Financiële controle",
   financeOverviewTitle: "Uw financiële werkruimte",
-  financeOverviewSubtitle: "Zie wat aandacht vraagt voordat het een probleem wordt.",
-  financeOverviewLoadFailed: "Het financiële overzicht kon niet worden geladen.",
-  financeAttentionCount: (count: number) => `${count} ${count === 1 ? "item vraagt" : "items vragen"} aandacht`,
+  financeOverviewSubtitle:
+    "Zie wat aandacht vraagt voordat het een probleem wordt.",
+  financeOverviewLoadFailed:
+    "Het financiële overzicht kon niet worden geladen.",
+  financeAttentionCount: (count: number) =>
+    `${count} ${count === 1 ? "item vraagt" : "items vragen"} aandacht`,
   financePendingApprovals: "Openstaande goedkeuringen",
   financeNeedsDecision: "Declaraties die op een beslissing wachten",
   financeToReimburse: "Terug te betalen",
@@ -4535,19 +4560,23 @@ export const nl: Partial<Catalog> = {
   financeUnreconciled: "Niet afgeletterd",
   financeBankItems: "Banktransacties die nog moeten worden beoordeeld",
   financeReceivables: "Vorderingen",
-  financeOpenDocuments: (count: number) => `${count} openstaande ${count === 1 ? "post" : "posten"}`,
+  financeOpenDocuments: (count: number) =>
+    `${count} openstaande ${count === 1 ? "post" : "posten"}`,
   financeNeedsAttention: "Aandacht nodig",
-  financeNeedsAttentionHint: "Eén wachtrij voor werk dat een schone boekhouding en gezonde cashflow kan blokkeren.",
+  financeNeedsAttentionHint:
+    "Eén wachtrij voor werk dat een schone boekhouding en gezonde cashflow kan blokkeren.",
   financeBanking: "Bank",
   financeLatestStatement: "Laatste afschrift",
   financeNoStatements: "Er is nog geen bankafschrift geïmporteerd.",
-  financeStatementLines: (count: number) => `${count} ${count === 1 ? "transactie" : "transacties"}`,
+  financeStatementLines: (count: number) =>
+    `${count} ${count === 1 ? "transactie" : "transacties"}`,
   financeClosingBalance: "Eindsaldo van het afschrift",
   financeOpenBanking: "Bank openen",
   financeTabCashFlow: "Cashflow",
   financeForecastEyebrow: "Vooruitblik",
   financeForecastTitle: "Cashflowprognose",
-  financeForecastSubtitle: "Test wanneer geld binnenkomt en vertrekt op basis van open documenten.",
+  financeForecastSubtitle:
+    "Test wanneer geld binnenkomt en vertrekt op basis van open documenten.",
   financeForecastLoadFailed: "De cashflowprognose kon niet worden geladen.",
   financeForecastExpected: "Verwacht",
   financeForecastConservative: "Voorzichtig",
@@ -4558,14 +4587,21 @@ export const nl: Partial<Catalog> = {
   financeForecast90Days: "Volgende 90 dagen",
   financeForecastCustomerDelay: "Klantbetalingen",
   financeForecastSupplierDelay: "Leveranciersbetalingen",
-  financeForecastDays: (days: number) => days === 0 ? "Op de vervaldag" : days < 0 ? `${Math.abs(days)} dagen eerder` : `${days} dagen later`,
-  financeForecastUnconverted: (count: number) => `${count} openstaande ${count === 1 ? "post is" : "posten zijn"} uitgesloten omdat geen waarde in boekhoudvaluta beschikbaar is.`,
+  financeForecastDays: (days: number) =>
+    days === 0
+      ? "Op de vervaldag"
+      : days < 0
+        ? `${Math.abs(days)} dagen eerder`
+        : `${days} dagen later`,
+  financeForecastUnconverted: (count: number) =>
+    `${count} openstaande ${count === 1 ? "post is" : "posten zijn"} uitgesloten omdat geen waarde in boekhoudvaluta beschikbaar is.`,
   financeForecastPeriod: "Prognoseperiode",
   financeForecastOpening: "Beginsaldo",
   financeForecastProjected: "Verwacht saldo",
   financeForecastUnavailable: "Importeer een banksaldo",
   financeForecastWeekly: "Wekelijkse beweging",
-  financeForecastWeeklyHint: "Verwachte bewegingen en het door de server berekende lopende saldo.",
+  financeForecastWeeklyHint:
+    "Verwachte bewegingen en het door de server berekende lopende saldo.",
   financeForecastWeek: "Week",
   financeForecastIncoming: "Geld in",
   financeForecastOutgoing: "Geld uit",
@@ -4574,8 +4610,10 @@ export const nl: Partial<Catalog> = {
   financeTabProfitability: "Rendement",
   financeProfitabilityEyebrow: "Projecten en financiën",
   financeProfitabilityTitle: "Projectrendement",
-  financeProfitabilitySubtitle: "Bekijk verdiende en niet-gefactureerde waarde en budgetrisico vanuit Financiën.",
-  financeProfitabilityLoadFailed: "Het projectrendement kon niet worden geladen.",
+  financeProfitabilitySubtitle:
+    "Bekijk verdiende en niet-gefactureerde waarde en budgetrisico vanuit Financiën.",
+  financeProfitabilityLoadFailed:
+    "Het projectrendement kon niet worden geladen.",
   financeOpenProjects: "Projectrapport openen",
   financeThisQuarter: "Dit kwartaal",
   financeLastQuarter: "Vorig kwartaal",
@@ -4583,14 +4621,17 @@ export const nl: Partial<Catalog> = {
   financeProfitabilityExceptions: "Aandacht nodig",
   financeUnbilledValue: "Niet-gefactureerde waarde",
   financeProfitabilityEmpty: "Geen projectwaarde in deze periode",
-  financeProfitabilityEmptyHint: "Goedgekeurde projecttijd verschijnt hier zodra die binnen deze periode valt.",
-  financeProfitabilityBasis: (from: string, to: string) => `Goedgekeurde tijd van ${from} tot ${to}; budgetverbruik is gemeten tot de einddatum.`,
+  financeProfitabilityEmptyHint:
+    "Goedgekeurde projecttijd verschijnt hier zodra die binnen deze periode valt.",
+  financeProfitabilityBasis: (from: string, to: string) =>
+    `Goedgekeurde tijd van ${from} tot ${to}; budgetverbruik is gemeten tot de einddatum.`,
   financeProjectPeriodValue: "Goedgekeurd werk in deze periode",
   financeOverBudget: "Over budget",
   financeEarnedValue: "Verdiende waarde",
   financeBudgetUsed: "Geldbudget gebruikt",
   financeBudgetRemaining: (amount: string) => `${amount} resterend`,
-  financeUnratedMinutes: (minutes: number) => `${minutes} factureerbare minuten zonder tarief`,
+  financeUnratedMinutes: (minutes: number) =>
+    `${minutes} factureerbare minuten zonder tarief`,
   financeNoMoneyBudget: "Geen geldbudget",
   financeTabControls: "Beheersing",
   financePolicyEyebrow: "Uitgavenbeheer",
@@ -4821,7 +4862,8 @@ export const nl: Partial<Catalog> = {
   financeBankNoSuggestion: "Geen voorstel",
   financeBankSelectSuggested: "Alle voorgestelde matches selecteren",
   financeBankSelectLine: (name: string) => `Transactie van ${name} selecteren`,
-  financeBankConfirmSelected: (count: number) => `${count} geselecteerde bevestigen`,
+  financeBankConfirmSelected: (count: number) =>
+    `${count} geselecteerde bevestigen`,
   financeBankToMatchTitle: (count: number) =>
     count === 1
       ? "1 transactie af te letteren"

@@ -829,6 +829,58 @@ describe("editing a section", () => {
     });
   });
 
+  test("a background-video hero saves a direct source and keeps its poster image", async () => {
+    const heroWithPoster: Section = {
+      ...HERO,
+      image: { blob_id: "poster-1", alt: "" },
+    };
+    replies = [pageReply([heroWithPoster])];
+    ui();
+    await screen.findByText(strings.sitesSectionHero);
+    fireEvent.click(sectionControls("edit")[0]!);
+    fireEvent.click(
+      screen.getByRole("radio", {
+        name: strings.sitesHeroLayoutVideoBackground,
+      }),
+    );
+    fireEvent.change(screen.getByLabelText(strings.sitesHeroVideoUrl), {
+      target: { value: "https://media.example/hero.webm" },
+    });
+
+    replies = [
+      {
+        match: (url, method) =>
+          method === "PUT" &&
+          url.endsWith("/sites/site-1/pages/page-1/sections/0"),
+        status: 200,
+        body: {
+          sections: env([
+            {
+              ...heroWithPoster,
+              video_url: "https://media.example/hero.webm",
+              layout: "video_background",
+            },
+          ]),
+        },
+      },
+    ];
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesSaveSection }),
+    );
+
+    await waitFor(() => expect(lastWrite()).toBeTruthy());
+    expect(lastWrite()!.body).toEqual({
+      section: {
+        ...heroWithPoster,
+        video_url: "https://media.example/hero.webm",
+        layout: "video_background",
+        height: "standard",
+        alignment: "center",
+        content_width: "balanced",
+      },
+    });
+  });
+
   test("props the form does not offer (form_id) survive an edit untouched", async () => {
     replies = [pageReply([CONTACT])];
     ui();

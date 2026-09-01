@@ -73,6 +73,7 @@ fn fixture_site() -> SeedContext {
                 heading: "Coffee roasted the morning it ships".to_owned(),
                 subheading: Some("Small-batch roastery on the harbour".to_owned()),
                 image: Some(image("9hK3vQ2mR8pT1xWz4bC5dg", "Roasting drum mid-batch")),
+                video_url: None,
                 primary_cta: Some(link("Visit us", "/visit")),
                 secondary_cta: None,
                 layout: None,

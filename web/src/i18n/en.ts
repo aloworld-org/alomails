@@ -3341,10 +3341,12 @@ export const en = {
   // opportunities, what each is worth, what was said about it, what happens
   // next, and the conversation it came from.
   moduleCrm: "Sales",
-  crmWorkspaceSubtitle: "Move opportunities from first conversation to a confident close.",
+  crmWorkspaceSubtitle:
+    "Move opportunities from first conversation to a confident close.",
   crmFocusEyebrow: "Daily focus",
   crmFocusTitle: "Pipeline pulse",
-  crmFocusHint: "Start with the opportunities that need a decision or a follow-up.",
+  crmFocusHint:
+    "Start with the opportunities that need a decision or a follow-up.",
   crmFocusOpen: "Open deals",
   crmFocusClosingSoon: "Closing in 14 days",
   crmFocusOverdue: "Past expected close",
@@ -3460,7 +3462,8 @@ export const en = {
   crmProjectCreateTitle: "Start delivery project",
   crmProjectCreateSubtitle:
     "Review the project before creating it. The won opportunity and delivery work stay linked in both apps.",
-  crmProjectCreateSummary: (deal: string) => `Creating delivery work from “${deal}”.`,
+  crmProjectCreateSummary: (deal: string) =>
+    `Creating delivery work from “${deal}”.`,
   crmProjectName: "Project name",
   crmProjectCreateConfirm: "Create project",
   crmProjectCreateFailed: "The project could not be created.",
@@ -3472,7 +3475,8 @@ export const en = {
   crmDocumentQuote: "Draft quote",
   crmDocumentInvoice: "Draft invoice",
   crmRelatedBilling: "Related Billing",
-  crmRelatedBillingEmpty: "No Billing documents have been raised from this opportunity yet.",
+  crmRelatedBillingEmpty:
+    "No Billing documents have been raised from this opportunity yet.",
   crmRelatedBillingLoadFailed: "Related Billing documents could not be loaded.",
   crmRaiseTitle: (document: string) => `Raise a ${document}`,
   crmRaiseSubtitle:
@@ -4146,6 +4150,7 @@ export const en = {
   sitesHeroLayoutSplitRight: "Image right",
   sitesHeroLayoutSplitLeft: "Image left",
   sitesHeroLayoutBackground: "Background image",
+  sitesHeroLayoutVideoBackground: "Background video",
   sitesHeroLayoutEditorial: "Editorial",
   sitesHeroDesign: "Design",
   sitesHeroHeight: "Height",
@@ -4161,7 +4166,12 @@ export const en = {
   sitesHeroContentWidthBalanced: "Balanced",
   sitesHeroContentWidthWide: "Wide",
   sitesHeroContent: "Content",
-  sitesHeroMedia: "Image",
+  sitesHeroMedia: "Media",
+  sitesHeroVideoUrl: "Video URL",
+  sitesHeroVideoUrlHint:
+    "Paste a direct HTTPS link to an MP4 or WebM video. It plays muted and loops automatically.",
+  sitesHeroVideoFallbackHint:
+    "The image below is the poster and replaces the video when motion is reduced or the video cannot load.",
   sitesHeroActions: "Buttons",
   sitesFieldHeading: "Heading",
   sitesFieldSubheading: "Subheading",
@@ -5174,24 +5184,32 @@ export const en = {
   projectsLoadFailed: "Your projects could not be loaded.",
   projectsSalesOrigin: "Won in Sales",
   projectsOpenSalesOrigin: "Open opportunity in Sales",
-  projectsSalesOriginLoadFailed: "The originating Sales opportunity could not be loaded.",
+  projectsSalesOriginLoadFailed:
+    "The originating Sales opportunity could not be loaded.",
   projectsResources: "Project workspace",
-  projectsResourcesSubtitle: "Files, conversation, kickoff, and starter work connected to this project.",
+  projectsResourcesSubtitle:
+    "Files, conversation, kickoff, and starter work connected to this project.",
   projectsSetupAction: "Set up workspace",
   projectsSetupAddAction: "Add resources",
   projectsSetupTitle: "Set up project workspace",
-  projectsSetupSubtitle: (project: string) => `Review what Alo should create for “${project}”.`,
+  projectsSetupSubtitle: (project: string) =>
+    `Review what Alo should create for “${project}”.`,
   projectsSetupConfirm: "Create selected resources",
   projectsSetupFiles: "Shared project files",
-  projectsSetupFilesDetail: "Create a Drive Space for project documents and assets.",
+  projectsSetupFilesDetail:
+    "Create a Drive Space for project documents and assets.",
   projectsSetupChat: "Project conversation",
-  projectsSetupChatDetail: "Create a tenant-visible Chat room for delivery coordination.",
+  projectsSetupChatDetail:
+    "Create a tenant-visible Chat room for delivery coordination.",
   projectsSetupTasks: "Starter tasks",
-  projectsSetupTasksDetail: "Add scope, kickoff, and delivery-plan tasks to this project.",
+  projectsSetupTasksDetail:
+    "Add scope, kickoff, and delivery-plan tasks to this project.",
   projectsSetupKickoff: "Kickoff meeting",
-  projectsSetupKickoffDetail: "Add a one-hour kickoff to your Agenda with a reminder.",
+  projectsSetupKickoffDetail:
+    "Add a one-hour kickoff to your Agenda with a reminder.",
   projectsSetupKickoffTime: "Kickoff starts",
-  projectsSetupReviewNote: "Nothing is created until you confirm. Retrying adds only resources that are still missing.",
+  projectsSetupReviewNote:
+    "Nothing is created until you confirm. Retrying adds only resources that are still missing.",
   projectsSetupTaskScope: "Confirm delivery scope",
   projectsSetupTaskKickoff: "Prepare project kickoff",
   projectsSetupTaskPlan: "Publish delivery plan",
@@ -5574,13 +5592,15 @@ export const en = {
   // "reimbursement processed" — because the person filling this in is an
   // employee with a receipt, not a bookkeeper.
   moduleFinance: "Finance",
-  financeWorkspacePurpose: "Cash, spending and accounts in one financial workspace.",
+  financeWorkspacePurpose:
+    "Cash, spending and accounts in one financial workspace.",
   financeTabOverview: "Overview",
   financeOverviewEyebrow: "Financial control",
   financeOverviewTitle: "Your finance workspace",
   financeOverviewSubtitle: "See what needs action before it becomes a problem.",
   financeOverviewLoadFailed: "The finance overview could not be loaded.",
-  financeAttentionCount: (count: number) => `${count} ${count === 1 ? "item needs" : "items need"} attention`,
+  financeAttentionCount: (count: number) =>
+    `${count} ${count === 1 ? "item needs" : "items need"} attention`,
   financePendingApprovals: "Pending approvals",
   financeNeedsDecision: "Expense claims awaiting a decision",
   financeToReimburse: "To reimburse",
@@ -5588,19 +5608,23 @@ export const en = {
   financeUnreconciled: "Unreconciled",
   financeBankItems: "Bank transactions still to review",
   financeReceivables: "Receivables",
-  financeOpenDocuments: (count: number) => `${count} open ${count === 1 ? "document" : "documents"}`,
+  financeOpenDocuments: (count: number) =>
+    `${count} open ${count === 1 ? "document" : "documents"}`,
   financeNeedsAttention: "Needs attention",
-  financeNeedsAttentionHint: "One queue for the work that can block clean books and healthy cash flow.",
+  financeNeedsAttentionHint:
+    "One queue for the work that can block clean books and healthy cash flow.",
   financeBanking: "Banking",
   financeLatestStatement: "Latest statement",
   financeNoStatements: "No bank statement has been imported yet.",
-  financeStatementLines: (count: number) => `${count} ${count === 1 ? "transaction" : "transactions"}`,
+  financeStatementLines: (count: number) =>
+    `${count} ${count === 1 ? "transaction" : "transactions"}`,
   financeClosingBalance: "Statement closing balance",
   financeOpenBanking: "Open banking",
   financeTabCashFlow: "Cash flow",
   financeForecastEyebrow: "Forward view",
   financeForecastTitle: "Cash-flow forecast",
-  financeForecastSubtitle: "Test when money may arrive and leave, using open Billing documents.",
+  financeForecastSubtitle:
+    "Test when money may arrive and leave, using open Billing documents.",
   financeForecastLoadFailed: "The cash-flow forecast could not be loaded.",
   financeForecastExpected: "Expected",
   financeForecastConservative: "Conservative",
@@ -5611,14 +5635,21 @@ export const en = {
   financeForecast90Days: "Next 90 days",
   financeForecastCustomerDelay: "Customer payments",
   financeForecastSupplierDelay: "Supplier payments",
-  financeForecastDays: (days: number) => days === 0 ? "On due date" : days < 0 ? `${Math.abs(days)} days early` : `${days} days late`,
-  financeForecastUnconverted: (count: number) => `${count} open ${count === 1 ? "document is" : "documents are"} excluded because no accounting-currency value is available.`,
+  financeForecastDays: (days: number) =>
+    days === 0
+      ? "On due date"
+      : days < 0
+        ? `${Math.abs(days)} days early`
+        : `${days} days late`,
+  financeForecastUnconverted: (count: number) =>
+    `${count} open ${count === 1 ? "document is" : "documents are"} excluded because no accounting-currency value is available.`,
   financeForecastPeriod: "Forecast period",
   financeForecastOpening: "Opening cash",
   financeForecastProjected: "Projected cash",
   financeForecastUnavailable: "Import a bank balance",
   financeForecastWeekly: "Weekly movement",
-  financeForecastWeeklyHint: "Expected movement and the server-calculated running balance.",
+  financeForecastWeeklyHint:
+    "Expected movement and the server-calculated running balance.",
   financeForecastWeek: "Week",
   financeForecastIncoming: "Money in",
   financeForecastOutgoing: "Money out",
@@ -5627,7 +5658,8 @@ export const en = {
   financeTabProfitability: "Profitability",
   financeProfitabilityEyebrow: "Projects and finance",
   financeProfitabilityTitle: "Project profitability",
-  financeProfitabilitySubtitle: "See earned, unbilled and budget risk without leaving Finance.",
+  financeProfitabilitySubtitle:
+    "See earned, unbilled and budget risk without leaving Finance.",
   financeProfitabilityLoadFailed: "Project profitability could not be loaded.",
   financeOpenProjects: "Open Projects report",
   financeThisQuarter: "This quarter",
@@ -5636,14 +5668,17 @@ export const en = {
   financeProfitabilityExceptions: "Need attention",
   financeUnbilledValue: "Unbilled value",
   financeProfitabilityEmpty: "No project value in this period",
-  financeProfitabilityEmptyHint: "Approved project time will appear here once it falls inside this period.",
-  financeProfitabilityBasis: (from: string, to: string) => `Approved time from ${from} to ${to}; budget consumption is measured through the end date.`,
+  financeProfitabilityEmptyHint:
+    "Approved project time will appear here once it falls inside this period.",
+  financeProfitabilityBasis: (from: string, to: string) =>
+    `Approved time from ${from} to ${to}; budget consumption is measured through the end date.`,
   financeProjectPeriodValue: "Approved work in this period",
   financeOverBudget: "Over budget",
   financeEarnedValue: "Earned value",
   financeBudgetUsed: "Money budget used",
   financeBudgetRemaining: (amount: string) => `${amount} remaining`,
-  financeUnratedMinutes: (minutes: number) => `${minutes} billable minutes have no rate`,
+  financeUnratedMinutes: (minutes: number) =>
+    `${minutes} billable minutes have no rate`,
   financeNoMoneyBudget: "No money budget",
   financeTabControls: "Controls",
   financePolicyEyebrow: "Spend governance",

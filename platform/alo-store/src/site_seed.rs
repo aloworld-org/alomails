@@ -304,6 +304,7 @@ fn seed_hero(ctx: &SeedContext) -> SectionSeed {
         heading,
         subheading: ctx.own_line().and_then(|line| short(&line)),
         image: ctx.images().into_iter().next(),
+        video_url: existing.and_then(|hero| hero.video_url.clone()),
         primary_cta: existing
             .and_then(|hero| hero.primary_cta.clone())
             .or_else(|| ctx.away_link()),
@@ -560,8 +561,8 @@ mod tests {
     use super::*;
     use crate::id::BlobId;
     use crate::site_model::{
-        FaqItem, FaqSection, PricingSection, PricingTier, SECTION_KINDS, SectionsEnvelope,
-        TeamMember, TeamSection, Testimonial, TestimonialsSection,
+        FaqItem, FaqSection, HeroLayout, PricingSection, PricingTier, SECTION_KINDS,
+        SectionsEnvelope, TeamMember, TeamSection, Testimonial, TestimonialsSection,
     };
 
     /// Keys whose values are the schema's own closed vocabulary rather than
@@ -629,9 +630,10 @@ mod tests {
                     heading: "Coffee roasted the morning it ships".to_owned(),
                     subheading: Some("Small-batch roastery on the harbour".to_owned()),
                     image: Some(image("9hK3vQ2mR8pT1xWz4bC5dg", "Roasting drum mid-batch")),
+                    video_url: Some("https://media.example/roastery.webm".to_owned()),
                     primary_cta: Some(link("Visit us", "/visit")),
                     secondary_cta: None,
-                    layout: None,
+                    layout: Some(HeroLayout::VideoBackground),
                     height: None,
                     alignment: None,
                     content_width: None,
@@ -873,6 +875,11 @@ mod tests {
             Some("9hK3vQ2mR8pT1xWz4bC5dg".to_owned())
         );
         assert_eq!(hero.primary_cta, Some(link("Visit us", "/visit")));
+        assert_eq!(
+            hero.video_url.as_deref(),
+            Some("https://media.example/roastery.webm")
+        );
+        assert_eq!(hero.layout, Some(HeroLayout::VideoBackground));
     }
 
     /// Pictures come from the site, each blob once, in the order it uses them

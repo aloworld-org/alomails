@@ -73,7 +73,12 @@ export interface NavSection {
 
 /** The page's lead banner. */
 export type HeroLayout =
-  "centered" | "split_right" | "split_left" | "background" | "editorial";
+  | "centered"
+  | "split_right"
+  | "split_left"
+  | "background"
+  | "video_background"
+  | "editorial";
 export type HeroHeight = "compact" | "standard" | "tall";
 export type HeroAlignment = "left" | "center" | "right";
 export type HeroContentWidth = "narrow" | "balanced" | "wide";
@@ -83,6 +88,8 @@ export interface HeroSection {
   heading: string;
   subheading?: string | undefined;
   image?: SectionImage | undefined;
+  /** Direct HTTPS MP4/WebM source for the background-video composition. */
+  video_url?: string | undefined;
   primary_cta?: SectionLink | undefined;
   secondary_cta?: SectionLink | undefined;
   layout?: HeroLayout | undefined;

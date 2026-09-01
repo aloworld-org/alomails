@@ -2183,10 +2183,12 @@ export const fr: Partial<Catalog> = {
   // (deal) avance par « étapes » (stages) sur un « tableau » (board), et se
   // clôt gagnée ou perdue. « Pipeline » est passé dans l’usage : il reste.
   moduleCrm: "Ventes",
-  crmWorkspaceSubtitle: "Faites progresser chaque opportunité du premier échange à la signature.",
+  crmWorkspaceSubtitle:
+    "Faites progresser chaque opportunité du premier échange à la signature.",
   crmFocusEyebrow: "Priorités du jour",
   crmFocusTitle: "État du pipeline",
-  crmFocusHint: "Commencez par les opportunités qui exigent une décision ou une relance.",
+  crmFocusHint:
+    "Commencez par les opportunités qui exigent une décision ou une relance.",
   crmFocusOpen: "Affaires ouvertes",
   crmFocusClosingSoon: "Clôture sous 14 jours",
   crmFocusOverdue: "Date de clôture dépassée",
@@ -2292,7 +2294,8 @@ export const fr: Partial<Catalog> = {
   crmMailOpportunitySubtitle:
     "Vérifiez les informations commerciales. La conversation complète reste liée à l’opportunité.",
   crmMailOpportunityConfirm: "Créer l’opportunité",
-  crmMailOpportunityLoadFailed: "Les pipelines commerciaux n’ont pas pu être chargés.",
+  crmMailOpportunityLoadFailed:
+    "Les pipelines commerciaux n’ont pas pu être chargés.",
   crmMailOpportunityCreateFailed: "L’opportunité n’a pas pu être créée.",
   crmMailConversation: "Conversation source",
   crmMailSource: "E-mail",
@@ -2304,7 +2307,8 @@ export const fr: Partial<Catalog> = {
   crmProjectCreateTitle: "Démarrer le projet de réalisation",
   crmProjectCreateSubtitle:
     "Vérifiez le projet avant sa création. L’opportunité gagnée et la réalisation restent liées dans les deux applications.",
-  crmProjectCreateSummary: (deal: string) => `Création de la réalisation depuis « ${deal} » .`,
+  crmProjectCreateSummary: (deal: string) =>
+    `Création de la réalisation depuis « ${deal} » .`,
   crmProjectName: "Nom du projet",
   crmProjectCreateConfirm: "Créer le projet",
   crmProjectCreateFailed: "Le projet n’a pas pu être créé.",
@@ -2313,8 +2317,10 @@ export const fr: Partial<Catalog> = {
   crmDocumentQuote: "Devis brouillon",
   crmDocumentInvoice: "Facture brouillon",
   crmRelatedBilling: "Facturation associée",
-  crmRelatedBillingEmpty: "Aucun document de facturation n’a encore été créé depuis cette opportunité.",
-  crmRelatedBillingLoadFailed: "Les documents de facturation associés n’ont pas pu être chargés.",
+  crmRelatedBillingEmpty:
+    "Aucun document de facturation n’a encore été créé depuis cette opportunité.",
+  crmRelatedBillingLoadFailed:
+    "Les documents de facturation associés n’ont pas pu être chargés.",
   crmRaiseTitle: (document: string) => `Créer un ${document}`,
   crmRaiseSubtitle:
     "Il arrive dans Facturation en brouillon, à vérifier et à compléter. Rien n’est émis et rien n’est envoyé.",
@@ -2693,29 +2699,38 @@ export const fr: Partial<Catalog> = {
   projectsLoadFailed: "Vos projets n’ont pas pu être chargés.",
   projectsSalesOrigin: "Gagné dans Ventes",
   projectsOpenSalesOrigin: "Ouvrir l’opportunité dans Ventes",
-  projectsSalesOriginLoadFailed: "L’opportunité commerciale d’origine n’a pas pu être chargée.",
+  projectsSalesOriginLoadFailed:
+    "L’opportunité commerciale d’origine n’a pas pu être chargée.",
   projectsResources: "Espace de travail du projet",
-  projectsResourcesSubtitle: "Fichiers, conversation, lancement et tâches initiales liés à ce projet.",
+  projectsResourcesSubtitle:
+    "Fichiers, conversation, lancement et tâches initiales liés à ce projet.",
   projectsSetupAction: "Configurer l’espace",
   projectsSetupAddAction: "Ajouter des ressources",
   projectsSetupTitle: "Configurer l’espace du projet",
-  projectsSetupSubtitle: (project: string) => `Vérifiez ce qu’Alo doit créer pour « ${project} » .`,
+  projectsSetupSubtitle: (project: string) =>
+    `Vérifiez ce qu’Alo doit créer pour « ${project} » .`,
   projectsSetupConfirm: "Créer les ressources sélectionnées",
   projectsSetupFiles: "Fichiers de projet partagés",
-  projectsSetupFilesDetail: "Créer un espace Drive pour les documents et ressources du projet.",
+  projectsSetupFilesDetail:
+    "Créer un espace Drive pour les documents et ressources du projet.",
   projectsSetupChat: "Conversation du projet",
-  projectsSetupChatDetail: "Créer un salon Chat visible par l’organisation pour la coordination.",
+  projectsSetupChatDetail:
+    "Créer un salon Chat visible par l’organisation pour la coordination.",
   projectsSetupTasks: "Tâches initiales",
-  projectsSetupTasksDetail: "Ajouter les tâches de cadrage, lancement et planification.",
+  projectsSetupTasksDetail:
+    "Ajouter les tâches de cadrage, lancement et planification.",
   projectsSetupKickoff: "Réunion de lancement",
-  projectsSetupKickoffDetail: "Ajouter un lancement d’une heure à votre agenda avec un rappel.",
+  projectsSetupKickoffDetail:
+    "Ajouter un lancement d’une heure à votre agenda avec un rappel.",
   projectsSetupKickoffTime: "Début du lancement",
-  projectsSetupReviewNote: "Rien n’est créé avant confirmation. Une nouvelle tentative n’ajoute que les ressources manquantes.",
+  projectsSetupReviewNote:
+    "Rien n’est créé avant confirmation. Une nouvelle tentative n’ajoute que les ressources manquantes.",
   projectsSetupTaskScope: "Confirmer le périmètre de livraison",
   projectsSetupTaskKickoff: "Préparer le lancement du projet",
   projectsSetupTaskPlan: "Publier le plan de livraison",
   projectsSetupFailed: "Les ressources sélectionnées n’ont pas pu être créées.",
-  projectsSetupLoadFailed: "Les ressources du projet n’ont pas pu être chargées.",
+  projectsSetupLoadFailed:
+    "Les ressources du projet n’ont pas pu être chargées.",
   projectsFiles: "Fichiers du projet",
   projectsChatRoom: "Chat du projet",
   projectsKickoffMeeting: "Réunion de lancement",
@@ -4208,6 +4223,7 @@ export const fr: Partial<Catalog> = {
   sitesHeroLayoutSplitRight: "Image à droite",
   sitesHeroLayoutSplitLeft: "Image à gauche",
   sitesHeroLayoutBackground: "Image de fond",
+  sitesHeroLayoutVideoBackground: "Vidéo de fond",
   sitesHeroLayoutEditorial: "Éditoriale",
   sitesHeroDesign: "Design",
   sitesHeroHeight: "Hauteur",
@@ -4223,7 +4239,12 @@ export const fr: Partial<Catalog> = {
   sitesHeroContentWidthBalanced: "Équilibrée",
   sitesHeroContentWidthWide: "Large",
   sitesHeroContent: "Contenu",
-  sitesHeroMedia: "Image",
+  sitesHeroMedia: "Média",
+  sitesHeroVideoUrl: "URL de la vidéo",
+  sitesHeroVideoUrlHint:
+    "Collez un lien HTTPS direct vers une vidéo MP4 ou WebM. Elle est lue en boucle et sans son.",
+  sitesHeroVideoFallbackHint:
+    "L’image ci-dessous sert d’affiche et remplace la vidéo lorsque les animations sont réduites ou que la vidéo ne charge pas.",
   sitesHeroActions: "Boutons",
   sitesFieldHeading: "Titre",
   sitesFieldSubheading: "Sous-titre",
@@ -4567,13 +4588,17 @@ export const fr: Partial<Catalog> = {
   // ce montant (« 1,00 € restent dus » serait faux), d’où les tournures
   // invariables « restant à payer », « un écart de … », « nous avons reçu … ».
   moduleFinance: "Finance",
-  financeWorkspacePurpose: "Trésorerie, dépenses et comptes dans un seul espace financier.",
+  financeWorkspacePurpose:
+    "Trésorerie, dépenses et comptes dans un seul espace financier.",
   financeTabOverview: "Vue d’ensemble",
   financeOverviewEyebrow: "Contrôle financier",
   financeOverviewTitle: "Votre espace financier",
-  financeOverviewSubtitle: "Voyez ce qui exige une action avant que cela ne devienne un problème.",
-  financeOverviewLoadFailed: "La vue d’ensemble financière n’a pas pu être chargée.",
-  financeAttentionCount: (count: number) => `${count} ${count === 1 ? "élément exige" : "éléments exigent"} votre attention`,
+  financeOverviewSubtitle:
+    "Voyez ce qui exige une action avant que cela ne devienne un problème.",
+  financeOverviewLoadFailed:
+    "La vue d’ensemble financière n’a pas pu être chargée.",
+  financeAttentionCount: (count: number) =>
+    `${count} ${count === 1 ? "élément exige" : "éléments exigent"} votre attention`,
   financePendingApprovals: "Approbations en attente",
   financeNeedsDecision: "Notes de frais en attente de décision",
   financeToReimburse: "À rembourser",
@@ -4581,20 +4606,25 @@ export const fr: Partial<Catalog> = {
   financeUnreconciled: "Non rapproché",
   financeBankItems: "Transactions bancaires restant à vérifier",
   financeReceivables: "Créances",
-  financeOpenDocuments: (count: number) => `${count} ${count === 1 ? "document ouvert" : "documents ouverts"}`,
+  financeOpenDocuments: (count: number) =>
+    `${count} ${count === 1 ? "document ouvert" : "documents ouverts"}`,
   financeNeedsAttention: "À traiter",
-  financeNeedsAttentionHint: "Une seule file pour ce qui peut bloquer une comptabilité propre et une trésorerie saine.",
+  financeNeedsAttentionHint:
+    "Une seule file pour ce qui peut bloquer une comptabilité propre et une trésorerie saine.",
   financeBanking: "Banque",
   financeLatestStatement: "Dernier relevé",
   financeNoStatements: "Aucun relevé bancaire n’a encore été importé.",
-  financeStatementLines: (count: number) => `${count} ${count === 1 ? "transaction" : "transactions"}`,
+  financeStatementLines: (count: number) =>
+    `${count} ${count === 1 ? "transaction" : "transactions"}`,
   financeClosingBalance: "Solde de clôture du relevé",
   financeOpenBanking: "Ouvrir la banque",
   financeTabCashFlow: "Trésorerie",
   financeForecastEyebrow: "Projection",
   financeForecastTitle: "Prévision de trésorerie",
-  financeForecastSubtitle: "Testez les dates d’encaissement et de décaissement à partir des documents ouverts.",
-  financeForecastLoadFailed: "La prévision de trésorerie n’a pas pu être chargée.",
+  financeForecastSubtitle:
+    "Testez les dates d’encaissement et de décaissement à partir des documents ouverts.",
+  financeForecastLoadFailed:
+    "La prévision de trésorerie n’a pas pu être chargée.",
   financeForecastExpected: "Prévu",
   financeForecastConservative: "Prudent",
   financeForecastOptimistic: "Optimiste",
@@ -4604,14 +4634,21 @@ export const fr: Partial<Catalog> = {
   financeForecast90Days: "90 prochains jours",
   financeForecastCustomerDelay: "Paiements clients",
   financeForecastSupplierDelay: "Paiements fournisseurs",
-  financeForecastDays: (days: number) => days === 0 ? "À l’échéance" : days < 0 ? `${Math.abs(days)} jours plus tôt` : `${days} jours plus tard`,
-  financeForecastUnconverted: (count: number) => `${count} ${count === 1 ? "document ouvert est exclu" : "documents ouverts sont exclus"}, faute de valeur en devise comptable.`,
+  financeForecastDays: (days: number) =>
+    days === 0
+      ? "À l’échéance"
+      : days < 0
+        ? `${Math.abs(days)} jours plus tôt`
+        : `${days} jours plus tard`,
+  financeForecastUnconverted: (count: number) =>
+    `${count} ${count === 1 ? "document ouvert est exclu" : "documents ouverts sont exclus"}, faute de valeur en devise comptable.`,
   financeForecastPeriod: "Période prévue",
   financeForecastOpening: "Trésorerie initiale",
   financeForecastProjected: "Trésorerie projetée",
   financeForecastUnavailable: "Importer un solde bancaire",
   financeForecastWeekly: "Mouvements hebdomadaires",
-  financeForecastWeeklyHint: "Mouvements attendus et solde courant calculé par le serveur.",
+  financeForecastWeeklyHint:
+    "Mouvements attendus et solde courant calculé par le serveur.",
   financeForecastWeek: "Semaine",
   financeForecastIncoming: "Entrées",
   financeForecastOutgoing: "Sorties",
@@ -4620,8 +4657,10 @@ export const fr: Partial<Catalog> = {
   financeTabProfitability: "Rentabilité",
   financeProfitabilityEyebrow: "Projets et finance",
   financeProfitabilityTitle: "Rentabilité des projets",
-  financeProfitabilitySubtitle: "Suivez la valeur acquise, non facturée et les risques budgétaires depuis Finance.",
-  financeProfitabilityLoadFailed: "La rentabilité des projets n’a pas pu être chargée.",
+  financeProfitabilitySubtitle:
+    "Suivez la valeur acquise, non facturée et les risques budgétaires depuis Finance.",
+  financeProfitabilityLoadFailed:
+    "La rentabilité des projets n’a pas pu être chargée.",
   financeOpenProjects: "Ouvrir le rapport Projets",
   financeThisQuarter: "Ce trimestre",
   financeLastQuarter: "Trimestre précédent",
@@ -4629,14 +4668,17 @@ export const fr: Partial<Catalog> = {
   financeProfitabilityExceptions: "À traiter",
   financeUnbilledValue: "Valeur non facturée",
   financeProfitabilityEmpty: "Aucune valeur de projet sur cette période",
-  financeProfitabilityEmptyHint: "Le temps approuvé apparaîtra ici lorsqu’il se trouvera dans cette période.",
-  financeProfitabilityBasis: (from: string, to: string) => `Temps approuvé du ${from} au ${to} ; la consommation budgétaire est mesurée jusqu’à la date de fin.`,
+  financeProfitabilityEmptyHint:
+    "Le temps approuvé apparaîtra ici lorsqu’il se trouvera dans cette période.",
+  financeProfitabilityBasis: (from: string, to: string) =>
+    `Temps approuvé du ${from} au ${to} ; la consommation budgétaire est mesurée jusqu’à la date de fin.`,
   financeProjectPeriodValue: "Travail approuvé sur la période",
   financeOverBudget: "Budget dépassé",
   financeEarnedValue: "Valeur acquise",
   financeBudgetUsed: "Budget financier utilisé",
   financeBudgetRemaining: (amount: string) => `${amount} restant`,
-  financeUnratedMinutes: (minutes: number) => `${minutes} minutes facturables sans tarif`,
+  financeUnratedMinutes: (minutes: number) =>
+    `${minutes} minutes facturables sans tarif`,
   financeNoMoneyBudget: "Aucun budget financier",
   financeTabControls: "Contrôles",
   financePolicyEyebrow: "Gouvernance des dépenses",
@@ -4864,14 +4906,17 @@ export const fr: Partial<Catalog> = {
   financeBankStatement: "Relevé",
   financeBankAllStatements: "Tout ce qui n’est pas encore rapproché",
   financeBankSearch: "Rechercher des transactions bancaires",
-  financeBankSearchPlaceholder: "Rechercher un payeur, un IBAN ou une référence…",
+  financeBankSearchPlaceholder:
+    "Rechercher un payeur, un IBAN ou une référence…",
   financeBankConfidence: "Fiabilité de la suggestion",
   financeBankAllConfidence: "Tous les niveaux de fiabilité",
   financeBankReviewSuggested: "Suggéré — à vérifier",
   financeBankNoSuggestion: "Aucune suggestion",
   financeBankSelectSuggested: "Sélectionner tous les rapprochements suggérés",
-  financeBankSelectLine: (name: string) => `Sélectionner la transaction de ${name}`,
-  financeBankConfirmSelected: (count: number) => `Confirmer ${count} sélectionnés`,
+  financeBankSelectLine: (name: string) =>
+    `Sélectionner la transaction de ${name}`,
+  financeBankConfirmSelected: (count: number) =>
+    `Confirmer ${count} sélectionnés`,
   financeBankToMatchTitle: (count: number) =>
     count === 1
       ? "1 opération à rapprocher"

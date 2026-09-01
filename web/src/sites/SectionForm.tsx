@@ -15,6 +15,7 @@ import {
   Link2,
   MoreHorizontal,
   PanelTop,
+  Play,
   Plus,
   Sparkles,
   Settings2,
@@ -1034,6 +1035,10 @@ function HeroFields({
     { value: "split_right", label: strings.sitesHeroLayoutSplitRight },
     { value: "split_left", label: strings.sitesHeroLayoutSplitLeft },
     { value: "background", label: strings.sitesHeroLayoutBackground },
+    {
+      value: "video_background",
+      label: strings.sitesHeroLayoutVideoBackground,
+    },
     { value: "editorial", label: strings.sitesHeroLayoutEditorial },
   ] as const;
 
@@ -1047,7 +1052,7 @@ function HeroFields({
           {strings.sitesHeroLayoutHint}
         </p>
         <div
-          className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5"
+          className="grid grid-cols-2 gap-3 md:grid-cols-3"
           role="radiogroup"
           aria-label={strings.sitesHeroLayout}
         >
@@ -1068,7 +1073,7 @@ function HeroFields({
                 onClick={() => onChange({ ...draft, layout: layout.value })}
               >
                 <HeroLayoutVisual layout={layout.value} />
-                <span className="mt-3 block truncate text-sm font-semibold text-primary">
+                <span className="mt-3 block min-h-10 text-sm font-semibold leading-5 text-primary">
                   {layout.label}
                 </span>
                 {selected && (
@@ -1143,6 +1148,20 @@ function HeroFields({
           <h3 className="mb-4 mt-0 text-base font-semibold text-primary">
             {strings.sitesHeroMedia}
           </h3>
+          {draft.layout === "video_background" && (
+            <div className="mb-5 grid gap-2 border-b border-subtle pb-5">
+              <TextField
+                label={strings.sitesHeroVideoUrl}
+                value={draft.video_url}
+                onChange={(video_url) => onChange({ ...draft, video_url })}
+                hint={strings.sitesHeroVideoUrlHint}
+                mono
+              />
+              <p className="m-0 text-sm text-secondary">
+                {strings.sitesHeroVideoFallbackHint}
+              </p>
+            </div>
+          )}
           <ImageFields
             value={draft.image}
             pointer="/image"
@@ -1199,7 +1218,7 @@ function HeroLayoutVisual({ layout }: { layout: HeroDraft["layout"] }) {
     <span
       className={cx(
         "block h-24 overflow-hidden rounded-xl bg-raised p-3",
-        layout === "background" &&
+        (layout === "background" || layout === "video_background") &&
           "grid content-center bg-accent-soft px-5 text-center",
         layout === "editorial" && "border-l-4 border-accent",
       )}
@@ -1230,6 +1249,16 @@ function HeroLayoutVisual({ layout }: { layout: HeroDraft["layout"] }) {
           <span className="h-2 w-4/5 rounded-full bg-primary/75" />
           <span className="h-1.5 w-full rounded-full bg-primary/25" />
           <span className="h-4 w-14 rounded-md bg-accent" />
+        </span>
+      )}
+      {layout === "video_background" && (
+        <span className="relative grid justify-items-center gap-2">
+          <span className="h-2 w-4/5 rounded-full bg-primary/75" />
+          <span className="h-1.5 w-full rounded-full bg-primary/25" />
+          <span className="h-4 w-14 rounded-md bg-accent" />
+          <span className="absolute right-1 top-1 grid size-8 place-items-center rounded-full bg-surface/90 text-accent shadow-sm">
+            <Play className="size-4 fill-current" />
+          </span>
         </span>
       )}
       {layout === "editorial" && (

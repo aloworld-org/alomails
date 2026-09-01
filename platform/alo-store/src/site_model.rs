@@ -310,6 +310,7 @@ pub enum HeroLayout {
     SplitRight,
     SplitLeft,
     Background,
+    VideoBackground,
     Editorial,
 }
 
@@ -320,6 +321,7 @@ impl HeroLayout {
             Self::SplitRight => "hero-split-right",
             Self::SplitLeft => "hero-split-left",
             Self::Background => "hero-background",
+            Self::VideoBackground => "hero-video-background",
             Self::Editorial => "hero-editorial",
         }
     }
@@ -391,6 +393,10 @@ pub struct HeroSection {
     /// Optional hero image.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub image: Option<SiteImage>,
+    /// Optional direct HTTPS MP4/WebM source. The image remains its poster and
+    /// reduced-motion fallback.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub video_url: Option<String>,
     /// Primary call-to-action button.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub primary_cta: Option<Link>,
@@ -866,6 +872,7 @@ impl Section {
                 check_short(kind, "heading", &s.heading)?;
                 check_opt_short(kind, "subheading", s.subheading.as_deref())?;
                 check_opt_image(kind, s.image.as_ref())?;
+                check_opt_video_url(kind, s.video_url.as_deref())?;
                 check_opt_link(kind, s.primary_cta.as_ref())?;
                 check_opt_link(kind, s.secondary_cta.as_ref())
             }
@@ -1161,6 +1168,36 @@ fn check_opt_link(section: &'static str, link: Option<&Link>) -> Result<(), Sect
     link.map_or(Ok(()), |l| check_link(section, l))
 }
 
+/// Background video is deliberately narrower than a general link: published
+/// pages are HTTPS, so accepting an insecure source would create mixed-content
+/// failures. Control characters and whitespace are rejected before the value
+/// ever reaches a `src` attribute.
+fn check_opt_video_url(
+    section: &'static str,
+    video_url: Option<&str>,
+) -> Result<(), SectionSchemaError> {
+    let Some(video_url) = video_url else {
+        return Ok(());
+    };
+    if video_url.chars().count() > MAX_HREF_CHARS {
+        return Err(invalid(
+            section,
+            format!("video URL must be at most {MAX_HREF_CHARS} characters"),
+        ));
+    }
+    if !video_url.to_ascii_lowercase().starts_with("https://")
+        || video_url.len() <= "https://".len()
+        || video_url.chars().any(char::is_whitespace)
+        || video_url.chars().any(char::is_control)
+    {
+        return Err(invalid(
+            section,
+            "video URL must be a direct HTTPS address without spaces".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
 /// Href safety: site-relative paths (`/…` but not `//…`), fragments (`#…`),
 /// and `http(s)`/`mailto:`/`tel:` targets only. Scheme matching is
 /// case-insensitive so `JavaScript:` cannot slip past; everything not on the
@@ -1338,6 +1375,7 @@ mod tests {
                 heading: "Coffee roasted the morning it ships".to_owned(),
                 subheading: Some("Small-batch roastery on the harbour".to_owned()),
                 image: Some(image.clone()),
+                video_url: Some("https://media.example/roastery.webm".to_owned()),
                 primary_cta: Some(link("Shop roasts", "/shop")),
                 secondary_cta: Some(link("Our story", "/about")),
                 layout: Some(HeroLayout::SplitRight),
@@ -1547,6 +1585,7 @@ mod tests {
                 heading: "Hello".to_owned(),
                 subheading: None,
                 image: None,
+                video_url: None,
                 primary_cta: None,
                 secondary_cta: None,
                 layout: None,
@@ -1687,11 +1726,37 @@ mod tests {
     }
 
     #[test]
+    fn hero_video_accepts_direct_https_and_rejects_unsafe_sources() {
+        for accepted in [
+            "https://media.example/hero.mp4",
+            "HTTPS://cdn.example/hero.webm?version=2",
+        ] {
+            assert!(check_opt_video_url("hero", Some(accepted)).is_ok());
+        }
+        for rejected in [
+            "",
+            "http://media.example/hero.mp4",
+            "//media.example/hero.mp4",
+            "javascript:alert(1)",
+            "https://media.example/hero video.mp4",
+        ] {
+            assert!(matches!(
+                check_opt_video_url("hero", Some(rejected)),
+                Err(SectionSchemaError::Invalid {
+                    section: "hero",
+                    ..
+                })
+            ));
+        }
+    }
+
+    #[test]
     fn content_rules_reject_blank_over_cap_and_empty_lists() {
         let blank_heading = envelope(vec![Section::Hero(HeroSection {
             heading: "   ".to_owned(),
             subheading: None,
             image: None,
+            video_url: None,
             primary_cta: None,
             secondary_cta: None,
             layout: None,
@@ -2036,6 +2101,7 @@ mod tests {
                 heading: "Hello".to_owned(),
                 subheading: None,
                 image: Some(image.clone()),
+                video_url: None,
                 primary_cta: None,
                 secondary_cta: None,
                 layout: None,

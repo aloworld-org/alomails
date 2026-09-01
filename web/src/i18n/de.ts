@@ -63,10 +63,12 @@ export const de: Partial<Catalog> = {
   moduleAi: "KI fragen",
   moduleSearch: "Suche",
   moduleCrm: "Vertrieb",
-  crmWorkspaceSubtitle: "Führen Sie Chancen vom ersten Gespräch bis zum sicheren Abschluss.",
+  crmWorkspaceSubtitle:
+    "Führen Sie Chancen vom ersten Gespräch bis zum sicheren Abschluss.",
   crmFocusEyebrow: "Tagesfokus",
   crmFocusTitle: "Pipeline-Überblick",
-  crmFocusHint: "Beginnen Sie mit Chancen, die eine Entscheidung oder Nachverfolgung benötigen.",
+  crmFocusHint:
+    "Beginnen Sie mit Chancen, die eine Entscheidung oder Nachverfolgung benötigen.",
   crmFocusOpen: "Offene Deals",
   crmFocusClosingSoon: "Abschluss in 14 Tagen",
   crmFocusOverdue: "Erwarteter Abschluss überschritten",
@@ -81,13 +83,16 @@ export const de: Partial<Catalog> = {
   moduleInsights: "Auswertungen",
   moduleProjects: "Projekte",
   moduleFinance: "Finanzen",
-  financeWorkspacePurpose: "Liquidität, Ausgaben und Konten in einem Finanzarbeitsbereich.",
+  financeWorkspacePurpose:
+    "Liquidität, Ausgaben und Konten in einem Finanzarbeitsbereich.",
   financeTabOverview: "Übersicht",
   financeOverviewEyebrow: "Finanzkontrolle",
   financeOverviewTitle: "Ihr Finanzarbeitsbereich",
-  financeOverviewSubtitle: "Sehen Sie frühzeitig, was Ihre Aufmerksamkeit braucht.",
+  financeOverviewSubtitle:
+    "Sehen Sie frühzeitig, was Ihre Aufmerksamkeit braucht.",
   financeOverviewLoadFailed: "Die Finanzübersicht konnte nicht geladen werden.",
-  financeAttentionCount: (count: number) => `${count} ${count === 1 ? "Vorgang braucht" : "Vorgänge brauchen"} Aufmerksamkeit`,
+  financeAttentionCount: (count: number) =>
+    `${count} ${count === 1 ? "Vorgang braucht" : "Vorgänge brauchen"} Aufmerksamkeit`,
   financePendingApprovals: "Offene Freigaben",
   financeNeedsDecision: "Ausgaben, die auf eine Entscheidung warten",
   financeToReimburse: "Zu erstatten",
@@ -95,20 +100,25 @@ export const de: Partial<Catalog> = {
   financeUnreconciled: "Nicht abgeglichen",
   financeBankItems: "Bankbuchungen, die noch geprüft werden müssen",
   financeReceivables: "Forderungen",
-  financeOpenDocuments: (count: number) => `${count} offene ${count === 1 ? "Position" : "Positionen"}`,
+  financeOpenDocuments: (count: number) =>
+    `${count} offene ${count === 1 ? "Position" : "Positionen"}`,
   financeNeedsAttention: "Aufmerksamkeit erforderlich",
-  financeNeedsAttentionHint: "Eine zentrale Liste für alles, was saubere Bücher und gesunde Liquidität gefährdet.",
+  financeNeedsAttentionHint:
+    "Eine zentrale Liste für alles, was saubere Bücher und gesunde Liquidität gefährdet.",
   financeBanking: "Bank",
   financeLatestStatement: "Neuester Kontoauszug",
   financeNoStatements: "Noch kein Kontoauszug importiert.",
-  financeStatementLines: (count: number) => `${count} ${count === 1 ? "Transaktion" : "Transaktionen"}`,
+  financeStatementLines: (count: number) =>
+    `${count} ${count === 1 ? "Transaktion" : "Transaktionen"}`,
   financeClosingBalance: "Schlusssaldo des Kontoauszugs",
   financeOpenBanking: "Bank öffnen",
   financeTabCashFlow: "Liquidität",
   financeForecastEyebrow: "Vorausschau",
   financeForecastTitle: "Liquiditätsprognose",
-  financeForecastSubtitle: "Prüfen Sie anhand offener Belege, wann Geld ein- und ausgehen könnte.",
-  financeForecastLoadFailed: "Die Liquiditätsprognose konnte nicht geladen werden.",
+  financeForecastSubtitle:
+    "Prüfen Sie anhand offener Belege, wann Geld ein- und ausgehen könnte.",
+  financeForecastLoadFailed:
+    "Die Liquiditätsprognose konnte nicht geladen werden.",
   financeForecastExpected: "Erwartet",
   financeForecastConservative: "Konservativ",
   financeForecastOptimistic: "Optimistisch",
@@ -118,14 +128,21 @@ export const de: Partial<Catalog> = {
   financeForecast90Days: "Nächste 90 Tage",
   financeForecastCustomerDelay: "Kundenzahlungen",
   financeForecastSupplierDelay: "Lieferantenzahlungen",
-  financeForecastDays: (days: number) => days === 0 ? "Am Fälligkeitstag" : days < 0 ? `${Math.abs(days)} Tage früher` : `${days} Tage später`,
-  financeForecastUnconverted: (count: number) => `${count} offene ${count === 1 ? "Position wird" : "Positionen werden"} ausgeschlossen, da kein Wert in Buchungswährung vorliegt.`,
+  financeForecastDays: (days: number) =>
+    days === 0
+      ? "Am Fälligkeitstag"
+      : days < 0
+        ? `${Math.abs(days)} Tage früher`
+        : `${days} Tage später`,
+  financeForecastUnconverted: (count: number) =>
+    `${count} offene ${count === 1 ? "Position wird" : "Positionen werden"} ausgeschlossen, da kein Wert in Buchungswährung vorliegt.`,
   financeForecastPeriod: "Prognosezeitraum",
   financeForecastOpening: "Anfangsliquidität",
   financeForecastProjected: "Prognostizierte Liquidität",
   financeForecastUnavailable: "Banksaldo importieren",
   financeForecastWeekly: "Wöchentliche Bewegung",
-  financeForecastWeeklyHint: "Erwartete Bewegungen und der serverseitig berechnete laufende Saldo.",
+  financeForecastWeeklyHint:
+    "Erwartete Bewegungen und der serverseitig berechnete laufende Saldo.",
   financeForecastWeek: "Woche",
   financeForecastIncoming: "Geldeingang",
   financeForecastOutgoing: "Geldausgang",
@@ -134,8 +151,10 @@ export const de: Partial<Catalog> = {
   financeTabProfitability: "Rentabilität",
   financeProfitabilityEyebrow: "Projekte und Finanzen",
   financeProfitabilityTitle: "Projektrentabilität",
-  financeProfitabilitySubtitle: "Ertragswert, nicht fakturierte Leistungen und Budgetrisiken direkt in Finanzen.",
-  financeProfitabilityLoadFailed: "Die Projektrentabilität konnte nicht geladen werden.",
+  financeProfitabilitySubtitle:
+    "Ertragswert, nicht fakturierte Leistungen und Budgetrisiken direkt in Finanzen.",
+  financeProfitabilityLoadFailed:
+    "Die Projektrentabilität konnte nicht geladen werden.",
   financeOpenProjects: "Projektbericht öffnen",
   financeThisQuarter: "Dieses Quartal",
   financeLastQuarter: "Letztes Quartal",
@@ -143,14 +162,17 @@ export const de: Partial<Catalog> = {
   financeProfitabilityExceptions: "Aufmerksamkeit nötig",
   financeUnbilledValue: "Nicht fakturierter Wert",
   financeProfitabilityEmpty: "Kein Projektwert in diesem Zeitraum",
-  financeProfitabilityEmptyHint: "Freigegebene Projektzeit erscheint hier, sobald sie in den Zeitraum fällt.",
-  financeProfitabilityBasis: (from: string, to: string) => `Freigegebene Zeit vom ${from} bis ${to}; der Budgetverbrauch gilt bis zum Enddatum.`,
+  financeProfitabilityEmptyHint:
+    "Freigegebene Projektzeit erscheint hier, sobald sie in den Zeitraum fällt.",
+  financeProfitabilityBasis: (from: string, to: string) =>
+    `Freigegebene Zeit vom ${from} bis ${to}; der Budgetverbrauch gilt bis zum Enddatum.`,
   financeProjectPeriodValue: "Freigegebene Arbeit im Zeitraum",
   financeOverBudget: "Über Budget",
   financeEarnedValue: "Ertragswert",
   financeBudgetUsed: "Geldbudget verbraucht",
   financeBudgetRemaining: (amount: string) => `${amount} verbleibend`,
-  financeUnratedMinutes: (minutes: number) => `${minutes} abrechenbare Minuten ohne Satz`,
+  financeUnratedMinutes: (minutes: number) =>
+    `${minutes} abrechenbare Minuten ohne Satz`,
   financeNoMoneyBudget: "Kein Geldbudget",
   financeTabControls: "Kontrollen",
   financePolicyEyebrow: "Ausgabensteuerung",
@@ -3380,8 +3402,10 @@ export const de: Partial<Catalog> = {
   crmMailOpportunitySubtitle:
     "Prüfen Sie die Verkaufsdaten. Die vollständige Unterhaltung bleibt mit der Verkaufschance verknüpft.",
   crmMailOpportunityConfirm: "Verkaufschance erstellen",
-  crmMailOpportunityLoadFailed: "Die Sales-Pipelines konnten nicht geladen werden.",
-  crmMailOpportunityCreateFailed: "Die Verkaufschance konnte nicht erstellt werden.",
+  crmMailOpportunityLoadFailed:
+    "Die Sales-Pipelines konnten nicht geladen werden.",
+  crmMailOpportunityCreateFailed:
+    "Die Verkaufschance konnte nicht erstellt werden.",
   crmMailConversation: "Quellunterhaltung",
   crmMailSource: "E-Mail",
   crmChoosePipeline: "Pipeline auswählen",
@@ -3392,7 +3416,8 @@ export const de: Partial<Catalog> = {
   crmProjectCreateTitle: "Umsetzungsprojekt starten",
   crmProjectCreateSubtitle:
     "Prüfen Sie das Projekt vor dem Erstellen. Die gewonnene Chance und die Umsetzung bleiben in beiden Apps verknüpft.",
-  crmProjectCreateSummary: (deal: string) => `Umsetzung aus „${deal}“ erstellen.`,
+  crmProjectCreateSummary: (deal: string) =>
+    `Umsetzung aus „${deal}“ erstellen.`,
   crmProjectName: "Projektname",
   crmProjectCreateConfirm: "Projekt erstellen",
   crmProjectCreateFailed: "Das Projekt konnte nicht erstellt werden.",
@@ -3401,8 +3426,10 @@ export const de: Partial<Catalog> = {
   crmDocumentQuote: "Angebotsentwurf",
   crmDocumentInvoice: "Rechnungsentwurf",
   crmRelatedBilling: "Zugehörige Abrechnung",
-  crmRelatedBillingEmpty: "Aus dieser Verkaufschance wurden noch keine Abrechnungsdokumente erstellt.",
-  crmRelatedBillingLoadFailed: "Zugehörige Abrechnungsdokumente konnten nicht geladen werden.",
+  crmRelatedBillingEmpty:
+    "Aus dieser Verkaufschance wurden noch keine Abrechnungsdokumente erstellt.",
+  crmRelatedBillingLoadFailed:
+    "Zugehörige Abrechnungsdokumente konnten nicht geladen werden.",
   crmRaiseTitle: (document: string) => `${document} erstellen`,
   crmRaiseSubtitle:
     "Er landet als Entwurf unter Rechnungen, damit Sie ihn prüfen und vervollständigen. Nichts wird ausgestellt, nichts wird gesendet.",
@@ -3621,28 +3648,37 @@ export const de: Partial<Catalog> = {
   projectsLoadFailed: "Ihre Projekte konnten nicht geladen werden.",
   projectsSalesOrigin: "In Sales gewonnen",
   projectsOpenSalesOrigin: "Verkaufschance in Sales öffnen",
-  projectsSalesOriginLoadFailed: "Die ursprüngliche Verkaufschance konnte nicht geladen werden.",
+  projectsSalesOriginLoadFailed:
+    "Die ursprüngliche Verkaufschance konnte nicht geladen werden.",
   projectsResources: "Projektarbeitsbereich",
-  projectsResourcesSubtitle: "Dateien, Unterhaltung, Kickoff und Startaufgaben für dieses Projekt.",
+  projectsResourcesSubtitle:
+    "Dateien, Unterhaltung, Kickoff und Startaufgaben für dieses Projekt.",
   projectsSetupAction: "Arbeitsbereich einrichten",
   projectsSetupAddAction: "Ressourcen hinzufügen",
   projectsSetupTitle: "Projektarbeitsbereich einrichten",
-  projectsSetupSubtitle: (project: string) => `Prüfen Sie, was Alo für „${project}“ erstellen soll.`,
+  projectsSetupSubtitle: (project: string) =>
+    `Prüfen Sie, was Alo für „${project}“ erstellen soll.`,
   projectsSetupConfirm: "Ausgewählte Ressourcen erstellen",
   projectsSetupFiles: "Gemeinsame Projektdateien",
-  projectsSetupFilesDetail: "Einen Drive-Bereich für Projektdokumente und Assets erstellen.",
+  projectsSetupFilesDetail:
+    "Einen Drive-Bereich für Projektdokumente und Assets erstellen.",
   projectsSetupChat: "Projektunterhaltung",
-  projectsSetupChatDetail: "Einen mandantenweit sichtbaren Chatraum für die Umsetzung erstellen.",
+  projectsSetupChatDetail:
+    "Einen mandantenweit sichtbaren Chatraum für die Umsetzung erstellen.",
   projectsSetupTasks: "Startaufgaben",
-  projectsSetupTasksDetail: "Aufgaben für Umfang, Kickoff und Lieferplan hinzufügen.",
+  projectsSetupTasksDetail:
+    "Aufgaben für Umfang, Kickoff und Lieferplan hinzufügen.",
   projectsSetupKickoff: "Kickoff-Meeting",
-  projectsSetupKickoffDetail: "Einen einstündigen Kickoff mit Erinnerung zur Agenda hinzufügen.",
+  projectsSetupKickoffDetail:
+    "Einen einstündigen Kickoff mit Erinnerung zur Agenda hinzufügen.",
   projectsSetupKickoffTime: "Kickoff beginnt",
-  projectsSetupReviewNote: "Bis zur Bestätigung wird nichts erstellt. Wiederholungen ergänzen nur fehlende Ressourcen.",
+  projectsSetupReviewNote:
+    "Bis zur Bestätigung wird nichts erstellt. Wiederholungen ergänzen nur fehlende Ressourcen.",
   projectsSetupTaskScope: "Lieferumfang bestätigen",
   projectsSetupTaskKickoff: "Projekt-Kickoff vorbereiten",
   projectsSetupTaskPlan: "Lieferplan veröffentlichen",
-  projectsSetupFailed: "Die ausgewählten Projektressourcen konnten nicht erstellt werden.",
+  projectsSetupFailed:
+    "Die ausgewählten Projektressourcen konnten nicht erstellt werden.",
   projectsSetupLoadFailed: "Projektressourcen konnten nicht geladen werden.",
   projectsFiles: "Projektdateien",
   projectsChatRoom: "Projektchat",
@@ -4396,7 +4432,8 @@ export const de: Partial<Catalog> = {
   financeBankNoSuggestion: "Kein Vorschlag",
   financeBankSelectSuggested: "Alle vorgeschlagenen Zuordnungen auswählen",
   financeBankSelectLine: (name: string) => `Transaktion von ${name} auswählen`,
-  financeBankConfirmSelected: (count: number) => `${count} ausgewählte bestätigen`,
+  financeBankConfirmSelected: (count: number) =>
+    `${count} ausgewählte bestätigen`,
   financeBankToMatchTitle: (count: number) =>
     count === 1
       ? "1 Transaktion zuzuordnen"
@@ -6123,6 +6160,7 @@ export const de: Partial<Catalog> = {
   sitesHeroLayoutSplitRight: "Bild rechts",
   sitesHeroLayoutSplitLeft: "Bild links",
   sitesHeroLayoutBackground: "Hintergrundbild",
+  sitesHeroLayoutVideoBackground: "Hintergrundvideo",
   sitesHeroLayoutEditorial: "Editorial",
   sitesHeroDesign: "Design",
   sitesHeroHeight: "Höhe",
@@ -6138,7 +6176,12 @@ export const de: Partial<Catalog> = {
   sitesHeroContentWidthBalanced: "Ausgewogen",
   sitesHeroContentWidthWide: "Breit",
   sitesHeroContent: "Inhalt",
-  sitesHeroMedia: "Bild",
+  sitesHeroMedia: "Medien",
+  sitesHeroVideoUrl: "Video-URL",
+  sitesHeroVideoUrlHint:
+    "Fügen Sie einen direkten HTTPS-Link zu einem MP4- oder WebM-Video ein. Es wird stumm und in einer Schleife abgespielt.",
+  sitesHeroVideoFallbackHint:
+    "Das Bild unten dient als Poster und ersetzt das Video bei reduzierter Bewegung oder wenn es nicht geladen werden kann.",
   sitesHeroActions: "Buttons",
   sitesFieldHeading: "Überschrift",
   sitesFieldSubheading: "Unterzeile",
