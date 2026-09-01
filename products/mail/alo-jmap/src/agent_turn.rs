@@ -42,25 +42,39 @@
 //! - **A handoff reaches only agents the asker can see.** The roster is the
 //!   asker's own module-gated agent list; a handle outside it is dropped with
 //!   a line the model can answer around, never resolved more widely.
-//! - **Its own records first.** An agent with reading tools may not hand a
-//!   question on before it has run one of them. The prompt said "never hand
-//!   off what your own tools cover" for months and a real model ignored it:
-//!   asked where a customer stood, Billing asked Finance, which asked Sales
-//!   three times, and the run died on the handoff budget with the answer in
-//!   Billing's own invoice. Strengthening the wording helped and did not cure
-//!   it — asking is the easier move for a model than looking, so looking is
-//!   made the only first move.
+//! - **Never the same question twice.** A run that has already asked `@x`
+//!   something does not ask `@x` that again: one run put a single question to
+//!   Sales three times, which is a loop spending somebody's inference budget,
+//!   not deliberation. The refusal costs no handoff — charging for it would
+//!   punish a run twice for one mistake.
 //!
-//!   It costs a model call on a question that really was another product's:
-//!   "@billing can we fulfil the quote?" now looks at the quote before it asks
-//!   Inventory about stock. That is the trade, taken deliberately — a wasted
-//!   lookup is cheaper than a question nobody answers, and the lookup is
-//!   usually not wasted, because an agent asked about its own customer
-//!   generally does need its own record to say anything useful.
+//! **A bound tried, shipped, measured and withdrawn** (2026-09-01), recorded
+//! because the measurement is the useful part. An agent was briefly forbidden
+//! to hand off before running one of its own reading tools, to stop Billing
+//! handing a Billing question to Finance. It did stop that. It also stopped
+//! everything else: over six questions that plainly belonged to another
+//! product, with that product's agent in the room, handoffs went from four to
+//! **zero** — and Billing, forbidden to ask @tasks for a task, proposed a
+//! `create_invoice_draft` whose line item read "Chase the offer before
+//! Friday". Forbidding the right move does not produce the right move; it
+//! produces the nearest wrong one, and here the nearest wrong one was an
+//! invoice. Which questions an agent's own tools cover is a judgement, and
+//! judgement lives in the prompt (`handoff_offer` in `alo_ai::agent`), which
+//! carries it well enough alone: the Billing question that prompted the bound
+//! answers correctly without it.
 //! - **Never the same question twice.** A run that has already asked `@x`
 //!   something does not ask `@x` that again. The same run repeated one
 //!   question to Sales three times, which is not deliberation, it is a loop
 //!   spending somebody's inference budget.
+//!
+//! A bound tried and withdrawn, because it is worth knowing why: an agent was
+//! briefly forbidden to hand off before running one of its own reading tools,
+//! to stop Billing handing a Billing question to Finance. It broke seven
+//! delegation tests and they were right to break — "@billing can we fulfil the
+//! quote?" *should* reach Inventory on the first move, and a forced billing
+//! lookup first buys a wasted model call and a worse answer. Which questions an
+//! agent's own tools cover is a judgement; judgement belongs in the prompt, and
+//! only the countable things belong here.
 //!
 //! Everything runs through the **asker's** account door, exactly as the
 //! retrieval that grounds the turn already did. A read's blast radius under
@@ -168,11 +182,6 @@ impl RunBudget {
     /// Take one handoff from the run, saying whether there was one to take.
     fn take_handoff(&self) -> bool {
         take(&self.handoffs, MAX_HANDOFFS)
-    }
-
-    /// Whether this run has looked anything up yet.
-    fn has_read(&self) -> bool {
-        self.reads.load(Ordering::SeqCst) > 0
     }
 
     /// Record a question put to an agent, saying whether it is a new one.
@@ -414,7 +423,7 @@ fn turn_at<'a>(env: &'a RunEnv<'a>, turn: &'a Turn<'a>, depth: usize) -> TurnFut
                 Step::Handoff { to, ask } => {
                     // Refused before it is spent: the model is sent back to
                     // its own records rather than charged for asking.
-                    if let Some(refusal) = handoff_refused(env, turn, &to, &ask) {
+                    if let Some(refusal) = handoff_refused(env, &to, &ask) {
                         (DELEGATED_KIND, format!("@{to}"), refusal)
                     } else if !env.budget.take_handoff() {
                         return Ok((finish(Step::Handoff { to, ask }), sources));
@@ -482,17 +491,7 @@ fn handoff_offers<'a>(turn: &'a Turn<'_>, depth: usize) -> Vec<PlanAgent<'a>> {
 /// Neither refusal spends a handoff: the point is to send the model back to
 /// its own tools, and charging it for the attempt would leave a turn that
 /// looked first with fewer asks than one that did not.
-fn handoff_refused(env: &RunEnv<'_>, turn: &Turn<'_>, to: &str, ask: &str) -> Option<String> {
-    let reads_of_its_own = alo_ai::tools_for(turn.product)
-        .iter()
-        .any(|tool| tool.effect == alo_ai::Effect::Read);
-    if reads_of_its_own && !env.budget.has_read() {
-        return Some(format!(
-            "nobody was asked yet: look in your own records first — you have reading tools for \
-             this product and @{to} cannot see them. Run one of yours, then hand on only what is \
-             left over"
-        ));
-    }
+fn handoff_refused(env: &RunEnv<'_>, to: &str, ask: &str) -> Option<String> {
     if !env.budget.first_time_asking(to, ask) {
         return Some(format!(
             "nobody was asked: you have already put that to @{to} in this run, and the answer is above. Use it, ask something different, or say which part you could not do"

@@ -207,9 +207,6 @@ async fn a_handoff_runs_the_delegates_turn_and_folds_the_answer_in() {
     let tasks = an_agent(&h, "tasks", AgentProduct::Tasks).await;
 
     let (base, seen) = scripted_model(vec![
-        // Its own records first (the bound): a handoff before any lookup is
-        // refused, so every asker here looks before it asks.
-        wants("open_quotes", json!({}), "Checking our own offers first."),
         delegates("tasks", "what is on my plate this week?"),
         wants("my_plate", json!({}), "Looking at the list."),
         says("Nothing is due this week."),
@@ -252,23 +249,23 @@ async fn a_handoff_runs_the_delegates_turn_and_folds_the_answer_in() {
 
     // Four model calls: the handoff decision, the delegate's read turn, the
     // delegate's answer, the asking agent's answer over the folded source.
-    assert_eq!(calls(&seen), 5);
+    assert_eq!(calls(&seen), 4);
 
     // The offer named the roster; the delegate's turn was its own — its
     // prompt, its request — and its read actually ran before it answered.
     assert!(user_of(&seen, 0).contains("@tasks (the tasks agent)"));
-    let delegate_prompt = system_of(&seen, 2);
+    let delegate_prompt = system_of(&seen, 1);
     assert!(
         delegate_prompt.starts_with("You are the alo Tasks agent"),
         "{delegate_prompt}"
     );
-    assert!(user_of(&seen, 2).contains("what is on my plate this week?"));
-    let after_read = user_of(&seen, 3);
+    assert!(user_of(&seen, 1).contains("what is on my plate this week?"));
+    let after_read = user_of(&seen, 2);
     assert!(after_read.contains("my_plate"));
     assert!(after_read.contains("result of a tool you just ran"));
 
     // The answer came back to the asking agent as a citable numbered source.
-    let folded = user_of(&seen, 4);
+    let folded = user_of(&seen, 3);
     assert!(
         folded.contains("delegated answer \"@tasks\""),
         "the fold names who was asked: {folded}"
@@ -300,9 +297,6 @@ async fn a_handle_the_asker_cannot_see_is_dropped_without_a_room_line() {
         .unwrap();
 
     let (base, seen) = scripted_model(vec![
-        // Its own records first (the bound): a handoff before any lookup is
-        // refused, so every asker here looks before it asks.
-        wants("open_quotes", json!({}), "Checking our own offers first."),
         delegates("ghost", "is the X100 in stock?"),
         delegates("inventory", "is the X100 in stock?"),
         says("I couldn't reach anyone who can check the stock."),
@@ -324,9 +318,9 @@ async fn a_handle_the_asker_cannot_see_is_dropped_without_a_room_line() {
     // was told there is nobody by that name, and answered around it.
     assert!(handoff_lines(&all).is_empty(), "{}", json!(all));
     assert_eq!(said_by(&all, &billing).len(), 1);
-    assert_eq!(calls(&seen), 4, "no delegate turn was ever taken");
-    assert!(user_of(&seen, 2).contains("there is no @ghost"));
-    assert!(user_of(&seen, 3).contains("there is no @inventory"));
+    assert_eq!(calls(&seen), 3, "no delegate turn was ever taken");
+    assert!(user_of(&seen, 1).contains("there is no @ghost"));
+    assert!(user_of(&seen, 2).contains("there is no @inventory"));
     // The offer itself never named either: one is another tenant's, the other
     // is behind the module gate.
     assert!(!user_of(&seen, 0).contains("@ghost"));
@@ -395,9 +389,6 @@ async fn the_fifth_handoff_is_refused_and_the_run_ends() {
     an_agent(&h, "tasks", AgentProduct::Tasks).await;
 
     let script = vec![
-        // Its own records first (the bound): a handoff before any lookup is
-        // refused, so every asker here looks before it asks.
-        wants("open_quotes", json!({}), "Checking our own offers first."),
         delegates("tasks", "part one?"),
         says("one"),
         delegates("tasks", "part two?"),
@@ -430,7 +421,7 @@ async fn the_fifth_handoff_is_refused_and_the_run_ends() {
     assert!(last.contains("as much as I'm allowed to"), "{last}");
     // Nine calls: four (decision + delegate answer) pairs and the refused
     // fifth decision. The fifth delegate turn was never taken.
-    assert_eq!(calls(&seen), 10);
+    assert_eq!(calls(&seen), 9);
     assert!(all.iter().all(|m| m["proposal"].is_null()));
 }
 
@@ -445,9 +436,6 @@ async fn a_handoff_chain_ends_at_depth_two() {
     an_agent(&h, "tasks", AgentProduct::Tasks).await;
 
     let (base, seen) = scripted_model(vec![
-        // Its own records first (the bound): a handoff before any lookup is
-        // refused, so every asker here looks before it asks.
-        wants("open_quotes", json!({}), "Checking our own offers first."),
         delegates("inventory", "can we ship the X100 order?"),
         delegates("tasks", "is there an open recount task?"),
         // The turn at depth two tries a third hop anyway.
@@ -478,14 +466,14 @@ async fn a_handoff_chain_ends_at_depth_two() {
     // The offer is made at depths zero and one, and not at two; the stray
     // envelope from depth two met the same line an unknown handle does.
     assert!(user_of(&seen, 0).contains("You can hand off to:"));
-    assert!(user_of(&seen, 2).contains("You can hand off to:"));
-    assert!(!user_of(&seen, 3).contains("You can hand off to:"));
-    assert!(user_of(&seen, 4).contains("there is no @billing"));
+    assert!(user_of(&seen, 1).contains("You can hand off to:"));
+    assert!(!user_of(&seen, 2).contains("You can hand off to:"));
+    assert!(user_of(&seen, 3).contains("there is no @billing"));
 
     // Each answer folded into the turn above it.
-    assert!(user_of(&seen, 5).contains("@tasks answered: No open recount task."));
-    assert!(user_of(&seen, 6).contains("@inventory answered: Stock is fine"));
-    assert_eq!(calls(&seen), 7);
+    assert!(user_of(&seen, 4).contains("@tasks answered: No open recount task."));
+    assert!(user_of(&seen, 5).contains("@inventory answered: Stock is fine"));
+    assert_eq!(calls(&seen), 6);
     assert_eq!(said_by(&all, &billing).len(), 2, "its line and its answer");
 }
 
@@ -500,9 +488,6 @@ async fn a_delegates_write_is_proposed_by_the_delegate_and_the_asker_approves_it
     let tasks = an_agent(&h, "tasks", AgentProduct::Tasks).await;
 
     let (base, seen) = scripted_model(vec![
-        // Its own records first (the bound): a handoff before any lookup is
-        // refused, so every asker here looks before it asks.
-        wants("open_quotes", json!({}), "Checking our own offers first."),
         delegates("tasks", "add a follow-up for the Northstar quote"),
         wants(
             "create_task",
@@ -533,7 +518,7 @@ async fn a_delegates_write_is_proposed_by_the_delegate_and_the_asker_approves_it
         "the handoff line and nothing after: {}",
         json!(all)
     );
-    assert_eq!(calls(&seen), 3);
+    assert_eq!(calls(&seen), 2);
 
     // The proposal is the DELEGATE's message: tasks joined the room to say it,
     // so the approval runs at the Tasks agent's scope, not Billing's.
@@ -659,9 +644,6 @@ async fn a_delegates_grounding_and_reads_are_the_askers_and_nobody_elses() {
         .unwrap();
 
     let (base, seen) = scripted_model(vec![
-        // Its own records first (the bound): a handoff before any lookup is
-        // refused, so every asker here looks before it asks.
-        wants("open_quotes", json!({}), "Checking our own offers first."),
         delegates("agenda", "what is on the diary about the kestrel?"),
         wants(
             "whats_on",
@@ -694,15 +676,13 @@ async fn a_delegates_grounding_and_reads_are_the_askers_and_nobody_elses() {
         "a delegate posts nothing"
     );
     assert_eq!(said_by(&all, &billing).len(), 2);
-    assert_eq!(calls(&seen), 5);
+    assert_eq!(calls(&seen), 4);
 
-    // The delegate's grounding and the diary read it executed carry the
-    // asker's entry and nobody else's. Calls 2 and 3: call 0 is the asker's
-    // own lookup (its own records first — the bound), call 1 the handoff it
-    // decides on after it. The negatives mean something because the positive
-    // is beside them: all three entries are on the same day and match the
-    // same word.
-    for call in [2, 3] {
+    // The delegate's grounding (its first call) and the diary read it executed
+    // (folded into its second) carry the asker's entry and nobody else's. The
+    // negatives mean something because the positive is beside them: all three
+    // entries are on the same day and match the same word.
+    for call in [1, 2] {
         let shown = user_of(&seen, call);
         assert!(
             shown.contains("kestrel planning"),
@@ -772,14 +752,10 @@ async fn a_shared_room_is_not_a_way_round_the_module_gate_for_a_handoff() {
     assert_eq!(carols, vec!["billing", "inventory"]);
 
     let (base, seen) = scripted_model(vec![
-        // The asker's run: it looks first (the bound), then the handle is
-        // dropped and no delegate turn is taken.
-        wants("open_quotes", json!({}), "Checking our own offers first."),
+        // The asker's run: the handle is dropped, no delegate turn is taken.
         delegates("inventory", "is the X100 in stock?"),
         says("I couldn't reach anyone who can check the stock."),
-        // Carol's run in the same room: she looks in her own records first too
-        // (the bound applies to whoever asks), then the same handle resolves.
-        wants("open_quotes", json!({}), "Checking our own offers first."),
+        // Carol's run in the same room: the same handle resolves and answers.
         delegates("inventory", "is the X100 in stock?"),
         says("The X100: twelve in stock."),
         says("Twelve on the shelf — @inventory checked [1]."),
@@ -805,8 +781,8 @@ async fn a_shared_room_is_not_a_way_round_the_module_gate_for_a_handoff() {
     // that name — the agent sitting in the room notwithstanding — and the
     // offer never named it either.
     assert!(handoff_lines(&all).is_empty(), "{}", json!(all));
-    assert_eq!(calls(&seen), 3);
-    assert!(user_of(&seen, 2).contains("there is no @inventory"));
+    assert_eq!(calls(&seen), 2);
+    assert!(user_of(&seen, 1).contains("there is no @inventory"));
     assert!(!user_of(&seen, 0).contains("@inventory"));
 
     let all = ask_as(
@@ -830,7 +806,7 @@ async fn a_shared_room_is_not_a_way_round_the_module_gate_for_a_handoff() {
         handoff_lines(&all),
         vec!["I'm asking @inventory: is the X100 in stock?"]
     );
-    assert_eq!(calls(&seen), 7);
-    assert!(user_of(&seen, 3).contains("@inventory"));
+    assert_eq!(calls(&seen), 5);
+    assert!(user_of(&seen, 2).contains("@inventory"));
     assert_eq!(said_by(&all, &billing).len(), 3, "{}", json!(all));
 }
