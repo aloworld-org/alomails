@@ -273,7 +273,7 @@ describe("the profit and loss", () => {
     ui("/finance/reports/pl");
     await waitFor(() => expect(reportCalls().length).toBe(1));
     fireEvent.click(screen.getByLabelText(strings.financeReportFrom));
-    fireEvent.click(screen.getByRole("button", { name: /January 2, 2026/ }));
+    fireEvent.click(screen.getByTitle(/January 2, 2026/));
     expect(reportCalls().length).toBe(1);
     fireEvent.click(screen.getByText(strings.financeReportShow));
     await waitFor(() => expect(reportCalls().length).toBe(2));

@@ -37,7 +37,9 @@ const TRIGGER =
  *  on it. */
 const POPOVER =
   "absolute top-full mt-2 left-0 z-60 w-[304px] p-4 " +
-  "bg-surface border border-subtle rounded-2xl shadow-xl";
+  "bg-surface border border-subtle rounded-2xl shadow-xl " +
+  "max-sm:fixed max-sm:left-1/2 max-sm:top-1/2 max-sm:mt-0 " +
+  "max-sm:-translate-x-1/2 max-sm:-translate-y-1/2";
 
 /** A day cell. The state below carries the ink, the weight and the hover, all
  *  three of which the stylesheet resolved by source order: `.dayOther`, then
@@ -214,98 +216,107 @@ export function DatePicker({
       </button>
 
       {open && (
-        <div className={POPOVER} role="dialog">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-primary capitalize">
-              {monthLabel}
-            </span>
-            <div className={NAV}>
+        <>
+          <div
+            className="fixed inset-0 z-50 hidden bg-overlay max-sm:block"
+            aria-hidden="true"
+            onClick={() => setOpen(false)}
+          />
+          <div className={POPOVER} role="dialog">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-semibold text-primary capitalize">
+                {monthLabel}
+              </span>
+              <div className={NAV}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setAnchor(
+                      new Date(anchor.getFullYear(), anchor.getMonth() - 1, 1),
+                    )
+                  }
+                  aria-label={strings.agendaPrev}
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setAnchor(
+                      new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1),
+                    )
+                  }
+                  aria-label={strings.agendaNext}
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-7 mb-2">
+              {weekdays.map((w, i) => (
+                <span
+                  key={i}
+                  // `text-[0.66rem]` is this row's own size: the seven heads have
+                  // to fit a 36px column in every locale we ship, and no step of
+                  // the type scale is between `--text-xs` and too small.
+                  className="text-center text-[0.66rem] font-medium text-tertiary uppercase"
+                >
+                  {w}
+                </span>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {days.map((d, i) => {
+                const isOther = d.getMonth() !== month;
+                const isToday = sameDay(d, today);
+                const isSelected = selected !== null && sameDay(d, selected);
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    className={cx(
+                      DAY,
+                      isOther && "opacity-55",
+                      dayState(isSelected, isToday, isOther),
+                  )}
+                  onClick={() => pick(d)}
+                  aria-hidden={isOther || undefined}
+                  tabIndex={isOther ? -1 : 0}
+                  title={new Intl.DateTimeFormat(locale, {
+                    dateStyle: "full",
+                  }).format(d)}
+                  >
+                    {d.getDate()}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-subtle">
               <button
                 type="button"
-                onClick={() =>
-                  setAnchor(
-                    new Date(anchor.getFullYear(), anchor.getMonth() - 1, 1),
-                  )
-                }
-                aria-label={strings.agendaPrev}
+                className={FOOT_BUTTON}
+                onClick={() => {
+                  onChange("");
+                  setOpen(false);
+                }}
               >
-                <ChevronLeft size={16} />
+                {strings.datePickerClear}
               </button>
               <button
                 type="button"
-                onClick={() =>
-                  setAnchor(
-                    new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1),
-                  )
-                }
-                aria-label={strings.agendaNext}
+                className={FOOT_BUTTON}
+                onClick={() => {
+                  setAnchor(new Date());
+                  pick(new Date());
+                }}
               >
-                <ChevronRight size={16} />
+                {strings.datePickerToday}
               </button>
             </div>
           </div>
-
-          <div className="grid grid-cols-7 mb-2">
-            {weekdays.map((w, i) => (
-              <span
-                key={i}
-                // `text-[0.66rem]` is this row's own size: the seven heads have
-                // to fit a 36px column in every locale we ship, and no step of
-                // the type scale is between `--text-xs` and too small.
-                className="text-center text-[0.66rem] font-medium text-tertiary uppercase"
-              >
-                {w}
-              </span>
-            ))}
-          </div>
-          <div className="grid grid-cols-7 gap-1">
-            {days.map((d, i) => {
-              const isOther = d.getMonth() !== month;
-              const isToday = sameDay(d, today);
-              const isSelected = selected !== null && sameDay(d, selected);
-              return (
-                <button
-                  key={i}
-                  type="button"
-                  className={cx(
-                    DAY,
-                    isOther && "opacity-55",
-                    dayState(isSelected, isToday, isOther),
-                  )}
-                  onClick={() => pick(d)}
-                  aria-label={new Intl.DateTimeFormat(locale, {
-                    dateStyle: "full",
-                  }).format(d)}
-                >
-                  {d.getDate()}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-subtle">
-            <button
-              type="button"
-              className={FOOT_BUTTON}
-              onClick={() => {
-                onChange("");
-                setOpen(false);
-              }}
-            >
-              {strings.datePickerClear}
-            </button>
-            <button
-              type="button"
-              className={FOOT_BUTTON}
-              onClick={() => {
-                setAnchor(new Date());
-                pick(new Date());
-              }}
-            >
-              {strings.datePickerToday}
-            </button>
-          </div>
-        </div>
+        </>
       )}
     </div>
   );

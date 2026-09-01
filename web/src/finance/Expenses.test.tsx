@@ -296,7 +296,7 @@ describe("the approver's queues", () => {
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(within(dialog).getByLabelText(strings.financeReimbursedOn));
     fireEvent.click(within(dialog).getByRole("button", { name: strings.agendaPrev }));
-    fireEvent.click(within(dialog).getByRole("button", { name: /August 9, 2026/ }));
+    fireEvent.click(within(dialog).getByTitle(/August 9, 2026/));
     fireEvent.click(within(dialog).getByRole("button", { name: strings.financeMarkPaidBack }));
 
     await waitFor(() => expect(lastWrite()?.url).toContain("/finance/expenses/exp-10/reimburse"));

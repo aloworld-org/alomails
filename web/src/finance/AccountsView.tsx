@@ -22,6 +22,7 @@ import { BookOpen, Plus } from "lucide-react";
 import { yearOf, type Period } from "../billing";
 import {
   Button,
+  Badge,
   Checkbox,
   DatePicker,
   Spinner,
@@ -201,7 +202,12 @@ export function AccountsView() {
           if (rows.length === 0) return null;
           return (
             <section key={kind} className={styles.section}>
-              <h2 className={styles.sectionTitle}>{accountTypeLabel(kind)}</h2>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className={styles.sectionTitle}>
+                  {accountTypeLabel(kind)}
+                </h2>
+                <Badge tone="neutral">{rows.length}</Badge>
+              </div>
               {/* Named by its own kind: five tables on one screen are told
                   apart by nothing but the eye until each says what it lists.
                   Not the heading repeated — the heading says which part of the

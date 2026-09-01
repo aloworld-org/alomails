@@ -42,9 +42,7 @@ test("persists a complete scheduled report contract", async () => {
   fireEvent.click(
     screen.getByRole("button", { name: strings.agendaNext }),
   );
-  fireEvent.click(
-    screen.getByRole("button", { name: /October 1, 2026/ }),
-  );
+  fireEvent.click(screen.getByTitle(/October 1, 2026/));
   fireEvent.click(
     screen.getByRole("button", { name: strings.financeAddSchedule }),
   );
