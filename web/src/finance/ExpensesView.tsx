@@ -145,7 +145,7 @@ export function ExpensesView({
           setPeriod(form);
         }}
       >
-        <Toolbar label={strings.financeClaimFilters}>
+        <Toolbar label={strings.financeClaimFilters} surface="card" align="end">
           <label className={styles.periodField}>
             {strings.financeFrom}
             <DatePicker
@@ -182,9 +182,11 @@ export function ExpensesView({
           </label>
           <ToolbarSpacer />
           {loading && <Spinner size={16} />}
-          <Button onClick={() => setCreating(true)}>
-            <Plus size={16} /> {strings.financeNewClaim}
-          </Button>
+          {claims.length > 0 && (
+            <Button onClick={() => setCreating(true)}>
+              <Plus size={16} /> {strings.financeNewClaim}
+            </Button>
+          )}
         </Toolbar>
       </form>
 

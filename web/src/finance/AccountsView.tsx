@@ -140,7 +140,7 @@ export function AccountsView() {
           setPeriod(form);
         }}
       >
-        <Toolbar label={strings.financeChartFilters}>
+        <Toolbar label={strings.financeChartFilters} surface="card" align="end">
           <label className={styles.periodField}>
             {strings.financeReportFrom}
             <DatePicker

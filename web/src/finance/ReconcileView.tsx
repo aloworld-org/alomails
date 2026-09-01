@@ -277,7 +277,7 @@ export function ReconcileView({
 
   return (
     <div className={styles.page}>
-      <Toolbar label={strings.financeBankFilters}>
+      <Toolbar label={strings.financeBankFilters} surface="card" align="end">
         <label className={styles.periodField}>
           {strings.financeBankStatement}
           {/* "Every statement" is an answer somebody must be able to return

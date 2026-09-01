@@ -59,13 +59,17 @@ export function BankView({ onImported }: { onImported: () => void }) {
 
   return (
     <div className={styles.page}>
-      <Toolbar label={strings.financeTabBank}>
-        <ToolbarSpacer />
-        {loading && <Spinner size={16} />}
-        <Button onClick={() => setImporting(true)}>
-          <Upload size={16} /> {strings.financeBankImportStatement}
-        </Button>
-      </Toolbar>
+      {(statements.length > 0 || loading) && (
+        <Toolbar label={strings.financeTabBank} className="min-h-10">
+          <ToolbarSpacer />
+          {loading && <Spinner size={16} />}
+          {statements.length > 0 && (
+            <Button onClick={() => setImporting(true)}>
+              <Upload size={16} /> {strings.financeBankImportStatement}
+            </Button>
+          )}
+        </Toolbar>
+      )}
 
       {error !== null && <ErrorBanner message={error} />}
       {/* What the commit actually did, in the server's own counts. The
@@ -106,9 +110,7 @@ export function BankView({ onImported }: { onImported: () => void }) {
                     className="cursor-pointer border-0 bg-transparent p-0 text-left text-sm font-medium text-accent hover:underline"
                     aria-expanded={statement.id === focused}
                     onClick={() =>
-                      setFocused(
-                        statement.id === focused ? null : statement.id,
-                      )
+                      setFocused(statement.id === focused ? null : statement.id)
                     }
                   >
                     {dayLabel(statement.fromDate, "—")} –{" "}

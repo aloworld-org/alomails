@@ -60,7 +60,7 @@ export function PeriodToolbar({
         onApply(form);
       }}
     >
-      <Toolbar label={strings.financeReportPeriod}>
+      <Toolbar label={strings.financeReportPeriod} surface="card" align="end">
         <label className={styles.periodField}>
           {strings.financeReportFrom}
           <DatePicker
@@ -135,7 +135,7 @@ export function DayToolbar({
         onApply(form);
       }}
     >
-      <Toolbar label={strings.financeReportPeriod}>
+      <Toolbar label={strings.financeReportPeriod} surface="card" align="end">
         <label className={styles.periodField}>
           {strings.financeReportOn}
           <DatePicker value={form} onChange={onForm} />
