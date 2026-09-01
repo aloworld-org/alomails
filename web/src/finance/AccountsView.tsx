@@ -23,7 +23,7 @@ import { yearOf, type Period } from "../billing";
 import {
   Button,
   Checkbox,
-  Input,
+  DatePicker,
   Spinner,
   Table,
   Td,
@@ -143,20 +143,16 @@ export function AccountsView() {
         <Toolbar label={strings.financeChartFilters}>
           <label className={styles.periodField}>
             {strings.financeReportFrom}
-            <Input
-              type="date"
+            <DatePicker
               value={form.from}
-              onChange={(e) => setForm({ ...form, from: e.target.value })}
-              required
+              onChange={(from) => setForm({ ...form, from })}
             />
           </label>
           <label className={styles.periodField}>
             {strings.financeReportTo}
-            <Input
-              type="date"
+            <DatePicker
               value={form.to}
-              onChange={(e) => setForm({ ...form, to: e.target.value })}
-              required
+              onChange={(to) => setForm({ ...form, to })}
             />
           </label>
           <Button type="submit" variant="ghost">

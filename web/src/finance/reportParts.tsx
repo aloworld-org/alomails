@@ -20,7 +20,7 @@ import { useCallback, useState } from "react";
 import type { ReactNode } from "react";
 
 import type { Period } from "../billing";
-import { Button, Input, Spinner, Th, Toolbar, ToolbarSpacer } from "../ds";
+import { Button, DatePicker, Spinner, Th, Toolbar, ToolbarSpacer } from "../ds";
 import { strings } from "../i18n";
 import { saveTextFile } from "../platform/download";
 import { financeMessage } from "./api";
@@ -63,20 +63,16 @@ export function PeriodToolbar({
       <Toolbar label={strings.financeReportPeriod}>
         <label className={styles.periodField}>
           {strings.financeReportFrom}
-          <Input
-            type="date"
+          <DatePicker
             value={form.from}
-            onChange={(e) => onForm({ ...form, from: e.target.value })}
-            required
+            onChange={(from) => onForm({ ...form, from })}
           />
         </label>
         <label className={styles.periodField}>
           {strings.financeReportTo}
-          <Input
-            type="date"
+          <DatePicker
             value={form.to}
-            onChange={(e) => onForm({ ...form, to: e.target.value })}
-            required
+            onChange={(to) => onForm({ ...form, to })}
           />
         </label>
         <Button type="submit" variant="ghost">
@@ -142,12 +138,7 @@ export function DayToolbar({
       <Toolbar label={strings.financeReportPeriod}>
         <label className={styles.periodField}>
           {strings.financeReportOn}
-          <Input
-            type="date"
-            value={form}
-            onChange={(e) => onForm(e.target.value)}
-            required
-          />
+          <DatePicker value={form} onChange={onForm} />
         </label>
         <Button type="submit" variant="ghost">
           {strings.financeReportShow}

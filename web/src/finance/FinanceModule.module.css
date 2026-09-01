@@ -73,10 +73,19 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-4) var(--space-5);
+  gap: var(--space-5);
+  width: 100%;
+  max-width: 108rem;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-8);
   min-height: 0;
   overflow: auto;
+}
+
+@media (max-width: 48rem) {
+  .page {
+    padding: var(--space-4);
+  }
 }
 
 /* Two lists on the approver's screen — what is waiting, and what is owed. Each
@@ -85,7 +94,7 @@
 .section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 .sectionTitle {
   margin: 0;
@@ -146,12 +155,24 @@
   flex-direction: column;
   align-items: center;
   gap: var(--space-3);
+  min-height: 15rem;
+  justify-content: center;
   padding: var(--space-8) var(--space-5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
   text-align: center;
   color: var(--text-secondary);
 }
 .emptyArt {
-  color: var(--text-tertiary);
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border-radius: var(--radius-lg);
+  background: var(--accent-tint);
+  color: var(--accent);
 }
 .emptyTitle {
   font-size: var(--text-lg);
@@ -218,6 +239,10 @@
   gap: 8px;
   font-size: var(--text-sm);
   color: var(--text-secondary);
+}
+
+.periodField > :last-child {
+  min-width: 13rem;
 }
 
 /* ---- the bank and the reconciliation screen (B4.13b) ------------------- */

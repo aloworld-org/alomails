@@ -12,7 +12,7 @@
 import { useState } from "react";
 import { Banknote } from "lucide-react";
 
-import { Field, Input } from "../ds";
+import { DatePicker, Field } from "../ds";
 import { strings } from "../i18n";
 import { financeMessage, useFinanceApi } from "./api";
 import { amountLabel, today } from "./format";
@@ -65,15 +65,7 @@ export function ReimburseDialog({
         label={strings.financeReimbursedOn}
         hint={strings.financeReimbursedOnHint}
       >
-        {(control) => (
-          <Input
-            {...control}
-            type="date"
-            value={day}
-            onChange={(e) => setDay(e.target.value)}
-            required
-          />
-        )}
+        {(control) => <DatePicker {...control} value={day} onChange={setDay} />}
       </Field>
     </DialogFrame>
   );

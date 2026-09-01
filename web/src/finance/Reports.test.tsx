@@ -272,13 +272,12 @@ describe("the profit and loss", () => {
   test("a half-typed period is not a request", async () => {
     ui("/finance/reports/pl");
     await waitFor(() => expect(reportCalls().length).toBe(1));
-    fireEvent.change(screen.getByLabelText(strings.financeReportFrom), {
-      target: { value: "2025-01-01" },
-    });
+    fireEvent.click(screen.getByLabelText(strings.financeReportFrom));
+    fireEvent.click(screen.getByRole("button", { name: /January 2, 2026/ }));
     expect(reportCalls().length).toBe(1);
     fireEvent.click(screen.getByText(strings.financeReportShow));
     await waitFor(() => expect(reportCalls().length).toBe(2));
-    expect(reportCalls()[1]).toContain("from=2025-01-01");
+    expect(reportCalls()[1]).toContain("from=2026-01-02");
   });
 
   test("the CSV goes through the authenticated client, under the period's own name", async () => {

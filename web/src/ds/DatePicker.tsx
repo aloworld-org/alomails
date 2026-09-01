@@ -272,6 +272,9 @@ export function DatePicker({
                     dayState(isSelected, isToday, isOther),
                   )}
                   onClick={() => pick(d)}
+                  aria-label={new Intl.DateTimeFormat(locale, {
+                    dateStyle: "full",
+                  }).format(d)}
                 >
                   {d.getDate()}
                 </button>

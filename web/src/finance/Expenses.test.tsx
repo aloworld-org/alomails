@@ -294,9 +294,9 @@ describe("the approver's queues", () => {
     fireEvent.click(await screen.findByRole("button", { name: strings.financeMarkPaidBack }));
 
     const dialog = await screen.findByRole("dialog");
-    fireEvent.change(within(dialog).getByLabelText(strings.financeReimbursedOn), {
-      target: { value: "2026-08-09" },
-    });
+    fireEvent.click(within(dialog).getByLabelText(strings.financeReimbursedOn));
+    fireEvent.click(within(dialog).getByRole("button", { name: strings.agendaPrev }));
+    fireEvent.click(within(dialog).getByRole("button", { name: /August 9, 2026/ }));
     fireEvent.click(within(dialog).getByRole("button", { name: strings.financeMarkPaidBack }));
 
     await waitFor(() => expect(lastWrite()?.url).toContain("/finance/expenses/exp-10/reimburse"));

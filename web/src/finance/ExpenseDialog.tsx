@@ -25,7 +25,7 @@ import { ReceiptText } from "lucide-react";
 
 import { RecordAgentPanel } from "../agents";
 import { hundredthsToInput, parseHundredths } from "../billing";
-import { Field, Input, Select } from "../ds";
+import { DatePicker, Field, Input, Select } from "../ds";
 import { strings } from "../i18n";
 import { financeMessage, useFinanceApi } from "./api";
 import { today } from "./format";
@@ -199,12 +199,10 @@ export function ExpenseDialog({
       <div className={styles.row}>
         <Field label={strings.financeSpentOn} hint={strings.financeSpentOnHint}>
           {(control) => (
-            <Input
+            <DatePicker
               {...control}
-              type="date"
               value={form.spentOn}
-              onChange={(e) => set("spentOn", e.target.value)}
-              required
+              onChange={(spentOn) => set("spentOn", spentOn)}
             />
           )}
         </Field>

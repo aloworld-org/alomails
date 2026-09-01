@@ -18,7 +18,7 @@ import { Plus, ReceiptText } from "lucide-react";
 import { quarterOf } from "../billing";
 import {
   Button,
-  Input,
+  DatePicker,
   Select,
   Spinner,
   Table,
@@ -148,20 +148,16 @@ export function ExpensesView({
         <Toolbar label={strings.financeClaimFilters}>
           <label className={styles.periodField}>
             {strings.financeFrom}
-            <Input
-              type="date"
+            <DatePicker
               value={form.from}
-              onChange={(e) => setForm({ ...form, from: e.target.value })}
-              required
+              onChange={(from) => setForm({ ...form, from })}
             />
           </label>
           <label className={styles.periodField}>
             {strings.financeTo}
-            <Input
-              type="date"
+            <DatePicker
               value={form.to}
-              onChange={(e) => setForm({ ...form, to: e.target.value })}
-              required
+              onChange={(to) => setForm({ ...form, to })}
             />
           </label>
           <Button type="submit" variant="ghost" size="sm">

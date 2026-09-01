@@ -1,13 +1,28 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { ArrowRight, BriefcaseBusiness, CircleAlert, Gauge, ReceiptText } from "lucide-react";
+import {
+  ArrowRight,
+  BriefcaseBusiness,
+  CircleAlert,
+  Gauge,
+  ReceiptText,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { formatAmount, previousQuarterOf, quarterOf, type Period } from "../billing";
-import { Button, Card, Input, Spinner } from "../ds";
+import {
+  formatAmount,
+  previousQuarterOf,
+  quarterOf,
+  type Period,
+} from "../billing";
+import { Button, Card, DatePicker, Spinner } from "../ds";
 import { getLocale, strings } from "../i18n";
 import { projectsMessage, useProjectsApi } from "../projects/api";
-import type { ProfitabilityCurrency, ProfitabilityReport, ProjectProfitability } from "../projects/types";
+import type {
+  ProfitabilityCurrency,
+  ProfitabilityReport,
+  ProjectProfitability,
+} from "../projects/types";
 import { dayLabel } from "./format";
 import { ErrorBanner } from "./parts";
 
@@ -21,44 +36,295 @@ export function ProjectProfitabilityView() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { setReport(await api.profitability(period.from, period.to)); setError(null); }
-    catch (reason) { setError(projectsMessage(reason, strings.financeProfitabilityLoadFailed)); }
-    finally { setLoading(false); }
+    try {
+      setReport(await api.profitability(period.from, period.to));
+      setError(null);
+    } catch (reason) {
+      setError(projectsMessage(reason, strings.financeProfitabilityLoadFailed));
+    } finally {
+      setLoading(false);
+    }
   }, [api, period]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
-  const exceptions = report?.projects.filter((project) => (project.budgetConsumptionBp ?? 0) > 10_000 || project.unratedMinutes > 0 || project.byCurrency.some((row) => row.unbilledNetCents > 0)).length ?? 0;
+  const exceptions =
+    report?.projects.filter(
+      (project) =>
+        (project.budgetConsumptionBp ?? 0) > 10_000 ||
+        project.unratedMinutes > 0 ||
+        project.byCurrency.some((row) => row.unbilledNetCents > 0),
+    ).length ?? 0;
 
-  return <main className="min-h-0 flex-1 overflow-auto px-8 py-6 max-sm:px-4"><div className="mx-auto flex w-full max-w-[108rem] flex-col gap-5">
-    <section className="flex flex-wrap items-end justify-between gap-3"><div><p className="m-0 text-xs font-semibold uppercase tracking-[0.12em] text-accent">{strings.financeProfitabilityEyebrow}</p><h2 className="m-0 mt-1 text-xl font-semibold tracking-tight text-primary">{strings.financeProfitabilityTitle}</h2><p className="m-0 mt-1 text-sm text-secondary">{strings.financeProfitabilitySubtitle}</p></div><Link to="/projects/reports" className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent hover:underline">{strings.financeOpenProjects}<ArrowRight className="size-4" /></Link></section>
-    <Card as="form" pad="sm" className="flex flex-wrap items-end gap-3" onSubmit={(event) => { event.preventDefault(); setPeriod(form); }}>
-      <label className="grid min-w-48 gap-1.5 text-xs font-semibold text-secondary">{strings.financeFrom}<Input type="date" value={form.from} onChange={(event) => setForm({ ...form, from: event.target.value })} required /></label>
-      <label className="grid min-w-48 gap-1.5 text-xs font-semibold text-secondary">{strings.financeTo}<Input type="date" value={form.to} onChange={(event) => setForm({ ...form, to: event.target.value })} required /></label>
-      <Button type="submit">{strings.financeShow}</Button>
-      <Button type="button" variant="ghost" size="sm" onClick={() => { const next = quarterOf(new Date()); setForm(next); setPeriod(next); }}>{strings.financeThisQuarter}</Button>
-      <Button type="button" variant="ghost" size="sm" onClick={() => { const next = previousQuarterOf(new Date()); setForm(next); setPeriod(next); }}>{strings.financeLastQuarter}</Button>
-      {loading && <Spinner size={16} />}
-    </Card>
-    {error !== null && <ErrorBanner message={error} />}
-    {report !== null && <>
-      <section className="grid gap-3 md:grid-cols-3"><Summary Icon={BriefcaseBusiness} label={strings.financeActiveEngagements} value={String(report.projects.length)} /><Summary Icon={CircleAlert} label={strings.financeProfitabilityExceptions} value={String(exceptions)} danger={exceptions > 0} /><Summary Icon={ReceiptText} label={strings.financeUnbilledValue} value={<Money rows={report.totals.byCurrency} field="unbilledNetCents" />} /></section>
-      {report.projects.length === 0 ? <Card pad="lg" className="text-center"><BriefcaseBusiness className="mx-auto size-8 text-tertiary" /><h3 className="m-0 mt-3 text-base font-semibold text-primary">{strings.financeProfitabilityEmpty}</h3><p className="m-0 mt-1 text-sm text-secondary">{strings.financeProfitabilityEmptyHint}</p></Card> : <section className="grid gap-3 xl:grid-cols-2">{report.projects.map((project) => <ProjectCard key={project.projectId} project={project} />)}</section>}
-      <p className="m-0 text-xs text-tertiary">{strings.financeProfitabilityBasis(dayLabel(report.from), dayLabel(report.to))}</p>
-    </>}
-  </div></main>;
+  return (
+    <main className="min-h-0 flex-1 overflow-auto px-8 py-6 max-sm:px-4">
+      <div className="mx-auto flex w-full max-w-[108rem] flex-col gap-5">
+        <section className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="m-0 text-xs font-semibold uppercase tracking-[0.12em] text-accent">
+              {strings.financeProfitabilityEyebrow}
+            </p>
+            <h2 className="m-0 mt-1 text-xl font-semibold tracking-tight text-primary">
+              {strings.financeProfitabilityTitle}
+            </h2>
+            <p className="m-0 mt-1 text-sm text-secondary">
+              {strings.financeProfitabilitySubtitle}
+            </p>
+          </div>
+          <Link
+            to="/projects/reports"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent hover:underline"
+          >
+            {strings.financeOpenProjects}
+            <ArrowRight className="size-4" />
+          </Link>
+        </section>
+        <Card
+          as="form"
+          pad="sm"
+          className="flex flex-wrap items-end gap-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setPeriod(form);
+          }}
+        >
+          <label className="grid min-w-56 gap-1.5 text-xs font-semibold text-secondary">
+            {strings.financeFrom}
+            <DatePicker
+              value={form.from}
+              onChange={(from) => setForm({ ...form, from })}
+            />
+          </label>
+          <label className="grid min-w-56 gap-1.5 text-xs font-semibold text-secondary">
+            {strings.financeTo}
+            <DatePicker
+              value={form.to}
+              onChange={(to) => setForm({ ...form, to })}
+            />
+          </label>
+          <Button type="submit">{strings.financeShow}</Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const next = quarterOf(new Date());
+              setForm(next);
+              setPeriod(next);
+            }}
+          >
+            {strings.financeThisQuarter}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const next = previousQuarterOf(new Date());
+              setForm(next);
+              setPeriod(next);
+            }}
+          >
+            {strings.financeLastQuarter}
+          </Button>
+          {loading && <Spinner size={16} />}
+        </Card>
+        {error !== null && <ErrorBanner message={error} />}
+        {report !== null && (
+          <>
+            <section className="grid gap-3 md:grid-cols-3">
+              <Summary
+                Icon={BriefcaseBusiness}
+                label={strings.financeActiveEngagements}
+                value={String(report.projects.length)}
+              />
+              <Summary
+                Icon={CircleAlert}
+                label={strings.financeProfitabilityExceptions}
+                value={String(exceptions)}
+                danger={exceptions > 0}
+              />
+              <Summary
+                Icon={ReceiptText}
+                label={strings.financeUnbilledValue}
+                value={
+                  <Money
+                    rows={report.totals.byCurrency}
+                    field="unbilledNetCents"
+                  />
+                }
+              />
+            </section>
+            {report.projects.length === 0 ? (
+              <Card pad="lg" className="text-center">
+                <BriefcaseBusiness className="mx-auto size-8 text-tertiary" />
+                <h3 className="m-0 mt-3 text-base font-semibold text-primary">
+                  {strings.financeProfitabilityEmpty}
+                </h3>
+                <p className="m-0 mt-1 text-sm text-secondary">
+                  {strings.financeProfitabilityEmptyHint}
+                </p>
+              </Card>
+            ) : (
+              <section className="grid gap-3 xl:grid-cols-2">
+                {report.projects.map((project) => (
+                  <ProjectCard key={project.projectId} project={project} />
+                ))}
+              </section>
+            )}
+            <p className="m-0 text-xs text-tertiary">
+              {strings.financeProfitabilityBasis(
+                dayLabel(report.from),
+                dayLabel(report.to),
+              )}
+            </p>
+          </>
+        )}
+      </div>
+    </main>
+  );
 }
 
 function ProjectCard({ project }: { project: ProjectProfitability }) {
   const consumption = project.budgetConsumptionBp;
   const over = consumption !== null && consumption > 10_000;
-  const width = consumption === null ? 0 : Math.min(100, Math.round(consumption / 100));
-  return <Card as="article" pad="md"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="m-0 truncate text-base font-semibold text-primary">{project.projectName}</h3><p className="m-0 mt-1 text-xs text-secondary">{strings.financeProjectPeriodValue}</p></div>{over && <span className="rounded-full bg-danger-soft px-2.5 py-1 text-xs font-semibold text-danger">{strings.financeOverBudget}</span>}</div>
-    <div className="mt-4 grid grid-cols-2 gap-4"><div><p className="m-0 text-xs text-secondary">{strings.financeEarnedValue}</p><div className="mt-1 font-semibold text-primary"><Money rows={project.byCurrency} field="netCents" /></div></div><div><p className="m-0 text-xs text-secondary">{strings.financeUnbilledValue}</p><div className="mt-1 font-semibold text-primary"><Money rows={project.byCurrency} field="unbilledNetCents" /></div></div></div>
-    {consumption !== null && <div className="mt-4"><div className="mb-1.5 flex justify-between text-xs"><span className="text-secondary">{strings.financeBudgetUsed}</span><span className={over ? "font-semibold text-danger" : "font-semibold text-primary"}>{Math.round(consumption / 100)}%</span></div><div className="h-2 overflow-hidden rounded-full bg-raised"><div className={`h-full rounded-full ${over ? "bg-danger" : "bg-accent"}`} style={{ width: `${width}%` }} /></div>{project.budgetRemainingCents !== null && <p className="m-0 mt-2 text-xs text-secondary">{strings.financeBudgetRemaining(formatAmount(project.budgetRemainingCents, getLocale(), project.currency))}</p>}</div>}
-    <div className="mt-4 flex flex-wrap gap-2">{project.unratedMinutes > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2.5 py-1 text-xs font-medium text-warning"><CircleAlert className="size-3.5" />{strings.financeUnratedMinutes(project.unratedMinutes)}</span>}{project.budgetCents === null && <span className="inline-flex items-center gap-1 rounded-full bg-raised px-2.5 py-1 text-xs font-medium text-secondary"><Gauge className="size-3.5" />{strings.financeNoMoneyBudget}</span>}</div>
-  </Card>;
+  const width =
+    consumption === null ? 0 : Math.min(100, Math.round(consumption / 100));
+  return (
+    <Card as="article" pad="md">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="m-0 truncate text-base font-semibold text-primary">
+            {project.projectName}
+          </h3>
+          <p className="m-0 mt-1 text-xs text-secondary">
+            {strings.financeProjectPeriodValue}
+          </p>
+        </div>
+        {over && (
+          <span className="rounded-full bg-danger-soft px-2.5 py-1 text-xs font-semibold text-danger">
+            {strings.financeOverBudget}
+          </span>
+        )}
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-4">
+        <div>
+          <p className="m-0 text-xs text-secondary">
+            {strings.financeEarnedValue}
+          </p>
+          <div className="mt-1 font-semibold text-primary">
+            <Money rows={project.byCurrency} field="netCents" />
+          </div>
+        </div>
+        <div>
+          <p className="m-0 text-xs text-secondary">
+            {strings.financeUnbilledValue}
+          </p>
+          <div className="mt-1 font-semibold text-primary">
+            <Money rows={project.byCurrency} field="unbilledNetCents" />
+          </div>
+        </div>
+      </div>
+      {consumption !== null && (
+        <div className="mt-4">
+          <div className="mb-1.5 flex justify-between text-xs">
+            <span className="text-secondary">{strings.financeBudgetUsed}</span>
+            <span
+              className={
+                over
+                  ? "font-semibold text-danger"
+                  : "font-semibold text-primary"
+              }
+            >
+              {Math.round(consumption / 100)}%
+            </span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-raised">
+            <div
+              className={`h-full rounded-full ${over ? "bg-danger" : "bg-accent"}`}
+              style={{ width: `${width}%` }}
+            />
+          </div>
+          {project.budgetRemainingCents !== null && (
+            <p className="m-0 mt-2 text-xs text-secondary">
+              {strings.financeBudgetRemaining(
+                formatAmount(
+                  project.budgetRemainingCents,
+                  getLocale(),
+                  project.currency,
+                ),
+              )}
+            </p>
+          )}
+        </div>
+      )}
+      <div className="mt-4 flex flex-wrap gap-2">
+        {project.unratedMinutes > 0 && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2.5 py-1 text-xs font-medium text-warning">
+            <CircleAlert className="size-3.5" />
+            {strings.financeUnratedMinutes(project.unratedMinutes)}
+          </span>
+        )}
+        {project.budgetCents === null && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-raised px-2.5 py-1 text-xs font-medium text-secondary">
+            <Gauge className="size-3.5" />
+            {strings.financeNoMoneyBudget}
+          </span>
+        )}
+      </div>
+    </Card>
+  );
 }
 
-function Money({ rows, field }: { rows: ProfitabilityCurrency[]; field: "netCents" | "unbilledNetCents" }) { return <>{rows.length === 0 ? "—" : rows.map((row) => <span className="block" key={row.currency}>{formatAmount(row[field], getLocale(), row.currency)}</span>)}</>; }
-function Summary({ Icon, label, value, danger = false }: { Icon: typeof BriefcaseBusiness; label: string; value: ReactNode; danger?: boolean }) { return <Card pad="sm"><div className="flex items-center gap-3"><span className={`grid size-10 place-items-center rounded-xl ${danger ? "bg-danger-soft text-danger" : "bg-[var(--accent-soft)] text-accent"}`}><Icon className="size-5" /></span><div><p className="m-0 text-xs text-secondary">{label}</p><div className={`mt-1 text-lg font-semibold ${danger ? "text-danger" : "text-primary"}`}>{value}</div></div></div></Card>; }
+function Money({
+  rows,
+  field,
+}: {
+  rows: ProfitabilityCurrency[];
+  field: "netCents" | "unbilledNetCents";
+}) {
+  return (
+    <>
+      {rows.length === 0
+        ? "—"
+        : rows.map((row) => (
+            <span className="block" key={row.currency}>
+              {formatAmount(row[field], getLocale(), row.currency)}
+            </span>
+          ))}
+    </>
+  );
+}
+function Summary({
+  Icon,
+  label,
+  value,
+  danger = false,
+}: {
+  Icon: typeof BriefcaseBusiness;
+  label: string;
+  value: ReactNode;
+  danger?: boolean;
+}) {
+  return (
+    <Card pad="sm">
+      <div className="flex items-center gap-3">
+        <span
+          className={`grid size-10 place-items-center rounded-xl ${danger ? "bg-danger-soft text-danger" : "bg-[var(--accent-soft)] text-accent"}`}
+        >
+          <Icon className="size-5" />
+        </span>
+        <div>
+          <p className="m-0 text-xs text-secondary">{label}</p>
+          <div
+            className={`mt-1 text-lg font-semibold ${danger ? "text-danger" : "text-primary"}`}
+          >
+            {value}
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
