@@ -22,6 +22,7 @@ import type {
   HeroMediaAnimation,
   HeroTextAnimation,
   PricingTier,
+  PricingLayout,
   Section,
   SectionImage,
   SectionKind,
@@ -136,6 +137,7 @@ export interface PricingDraft extends PresentableDraft {
   heading: string;
   intro: string;
   tiers: TierDraft[];
+  layout: PricingLayout;
 }
 
 export interface MemberDraft {
@@ -460,6 +462,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
           })),
           blankTier,
         ),
+        layout: s?.layout ?? "cards",
         presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
@@ -760,6 +763,7 @@ export function toSection(draft: SectionDraft): Section {
           cta: optLink(t.cta),
           highlighted: t.highlighted,
         })),
+        layout: draft.layout,
         presentation: draft.presentation,
       };
     case "team":

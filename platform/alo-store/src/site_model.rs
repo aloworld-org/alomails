@@ -744,6 +744,16 @@ pub struct PricingTier {
 }
 
 /// A pricing table.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PricingLayout {
+    Cards,
+    Comparison,
+    Featured,
+    Compact,
+    Editorial,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PricingSection {
@@ -755,6 +765,8 @@ pub struct PricingSection {
     pub intro: Option<String>,
     /// The tiers; at least one.
     pub tiers: Vec<PricingTier>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout: Option<PricingLayout>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub presentation: Option<SectionPresentation>,
 }
@@ -1733,6 +1745,7 @@ mod tests {
                     cta: Some(link("Start weekly", "/subscribe/weekly")),
                     highlighted: true,
                 }],
+                layout: None,
                 presentation: None,
             }),
             Section::Team(TeamSection {

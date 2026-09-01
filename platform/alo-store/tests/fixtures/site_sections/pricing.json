@@ -5,6 +5,7 @@
       "type": "pricing",
       "heading": "Subscriptions",
       "intro": "Pause, swap roasts, or cancel any time.",
+      "layout": "comparison",
       "tiers": [
         {
           "name": "Monthly",

@@ -2286,6 +2286,37 @@ function TestimonialsFields({
   );
 }
 
+function PricingLayoutVisual({ layout }: { layout: PricingDraft["layout"] }) {
+  const count = layout === "compact" ? 3 : 3;
+  return (
+    <span
+      className={cx(
+        "grid h-20 w-32 gap-1.5 overflow-hidden rounded-lg bg-raised p-2",
+        layout === "compact" ? "grid-cols-1" : "grid-cols-3",
+        layout === "comparison" && "gap-0",
+        layout === "editorial" && "bg-transparent",
+      )}
+      aria-hidden="true"
+    >
+      {Array.from({ length: count }, (_, item) => (
+        <span
+          key={item}
+          className={cx(
+            "grid content-center gap-1 rounded-md border border-default bg-surface p-1",
+            layout === "comparison" && "rounded-none",
+            layout === "featured" && item === 1 && "my-[-3px] border-2 border-accent",
+            layout === "compact" && "grid-cols-[1fr_.7fr] items-center px-2",
+            layout === "editorial" && "rounded-none border-x-0 border-b-0 bg-transparent",
+          )}
+        >
+          <span className="h-1.5 rounded-full bg-primary/70" />
+          <span className="h-1 rounded-full bg-accent/60" />
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function PricingFields({
   draft,
   onChange,
@@ -2295,6 +2326,28 @@ function PricingFields({
 }) {
   return (
     <>
+      <Card as="section" flat>
+        <HeroFormHeading icon={<PanelsTopLeft size={17} />}>
+          {strings.sitesPricingLayout}
+        </HeroFormHeading>
+        <p className="mb-5 mt-2 text-sm text-secondary">
+          {strings.sitesPricingLayoutHint}
+        </p>
+        <HeroOptionRow
+          label={strings.sitesPricingLayout}
+          value={draft.layout}
+          columns={5}
+          visual={(layout) => <PricingLayoutVisual layout={layout} />}
+          options={[
+            ["cards", strings.sitesPricingLayoutCards],
+            ["comparison", strings.sitesPricingLayoutComparison],
+            ["featured", strings.sitesPricingLayoutFeatured],
+            ["compact", strings.sitesPricingLayoutCompact],
+            ["editorial", strings.sitesPricingLayoutEditorial],
+          ]}
+          onChange={(layout) => onChange({ ...draft, layout })}
+        />
+      </Card>
       <TextField
         label={strings.sitesFieldHeading}
         value={draft.heading}

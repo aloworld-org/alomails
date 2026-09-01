@@ -224,11 +224,14 @@ export interface PricingTier {
 }
 
 /** A pricing table; at least one tier. */
+export type PricingLayout = "cards" | "comparison" | "featured" | "compact" | "editorial";
+
 export interface PricingSection extends PresentableSection {
   type: "pricing";
   heading?: string | undefined;
   intro?: string | undefined;
   tiers: PricingTier[];
+  layout?: PricingLayout | undefined;
 }
 
 /** One person on a team section. */

@@ -691,6 +691,7 @@ mod tests {
                         cta: Some(link("Subscribe", "/visit")),
                         highlighted: false,
                     }],
+                    layout: None,
                     presentation: None,
                 }),
                 Section::Team(TeamSection {
