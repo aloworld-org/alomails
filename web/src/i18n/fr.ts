@@ -2183,6 +2183,18 @@ export const fr: Partial<Catalog> = {
   // (deal) avance par « étapes » (stages) sur un « tableau » (board), et se
   // clôt gagnée ou perdue. « Pipeline » est passé dans l’usage : il reste.
   moduleCrm: "Ventes",
+  crmFocusEyebrow: "Priorités du jour",
+  crmFocusTitle: "État du pipeline",
+  crmFocusHint: "Commencez par les opportunités qui exigent une décision ou une relance.",
+  crmFocusOpen: "Affaires ouvertes",
+  crmFocusClosingSoon: "Clôture sous 14 jours",
+  crmFocusOverdue: "Date de clôture dépassée",
+  crmFocusQuiet: "Sans activité depuis 14 jours",
+  crmAttentionTitle: "À traiter",
+  crmAttentionCount: (count: number) => `${count} à examiner`,
+  crmAttentionOverdue: (day: string) => `Prévue le ${day}`,
+  crmAttentionQuiet: "Aucun mouvement récent",
+  crmAttentionOpen: (deal: string) => `Examiner ${deal}`,
   crmBoard: "Tableau",
   crmList: "Liste",
   crmPipeline: "Pipeline",

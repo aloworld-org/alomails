@@ -3341,6 +3341,18 @@ export const en = {
   // opportunities, what each is worth, what was said about it, what happens
   // next, and the conversation it came from.
   moduleCrm: "Sales",
+  crmFocusEyebrow: "Daily focus",
+  crmFocusTitle: "Pipeline pulse",
+  crmFocusHint: "Start with the opportunities that need a decision or a follow-up.",
+  crmFocusOpen: "Open deals",
+  crmFocusClosingSoon: "Closing in 14 days",
+  crmFocusOverdue: "Past expected close",
+  crmFocusQuiet: "Quiet for 14 days",
+  crmAttentionTitle: "Needs attention",
+  crmAttentionCount: (count: number) => `${count} to review`,
+  crmAttentionOverdue: (day: string) => `Expected ${day}`,
+  crmAttentionQuiet: "No recent movement",
+  crmAttentionOpen: (deal: string) => `Review ${deal}`,
   crmBoard: "Board",
   crmList: "List",
   crmPipeline: "Pipeline",

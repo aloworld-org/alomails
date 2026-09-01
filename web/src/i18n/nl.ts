@@ -2140,6 +2140,18 @@ export const nl: Partial<Catalog> = {
   // alo CRM (B2). Een „deal” heet in het Nederlandse zakenleven ook zo; hij
   // schuift per „fase” over een „bord” en sluit gewonnen of verloren.
   moduleCrm: "Verkoop",
+  crmFocusEyebrow: "Dagelijkse focus",
+  crmFocusTitle: "Pijplijn in één oogopslag",
+  crmFocusHint: "Begin met de kansen die een beslissing of opvolging nodig hebben.",
+  crmFocusOpen: "Open deals",
+  crmFocusClosingSoon: "Sluit binnen 14 dagen",
+  crmFocusOverdue: "Verwachte sluitdatum voorbij",
+  crmFocusQuiet: "14 dagen stil",
+  crmAttentionTitle: "Vraagt aandacht",
+  crmAttentionCount: (count: number) => `${count} te bekijken`,
+  crmAttentionOverdue: (day: string) => `Verwacht op ${day}`,
+  crmAttentionQuiet: "Geen recente voortgang",
+  crmAttentionOpen: (deal: string) => `${deal} bekijken`,
   crmBoard: "Bord",
   crmList: "Lijst",
   crmPipeline: "Pijplijn",

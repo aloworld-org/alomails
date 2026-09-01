@@ -14,11 +14,12 @@
 //     server's, and the reason it then demands is asked for BEFORE the move is
 //     sent, so a drag can never produce a half-closed deal.
 import { useState } from "react";
-import { CalendarDays, Plus } from "lucide-react";
+import { AlertCircle, CalendarDays, Clock3, Plus } from "lucide-react";
 
 import { Card, Select, useIsMobile } from "../ds";
 import { strings } from "../i18n";
 import { dayLabel, dealValue } from "./format";
+import { dealAttention } from "./salesFocus";
 import type { CrmDeal, CrmStage } from "./types";
 import styles from "./CrmModule.module.css";
 
@@ -143,7 +144,19 @@ export function BoardView({ stages, deals, onOpen, onMove, onAdd }: Props) {
                   }}
                   onClick={() => onOpen(deal.id)}
                 >
-                  <div className={styles.cardTitle}>{deal.title}</div>
+                  <div className={styles.cardTopline}>
+                    <div className={styles.cardTitle}>{deal.title}</div>
+                    {dealAttention(deal, new Date()) === "overdue" && (
+                      <span className={styles.cardAlert} title={strings.crmFocusOverdue}>
+                        <AlertCircle size={14} />
+                      </span>
+                    )}
+                    {dealAttention(deal, new Date()) === "quiet" && (
+                      <span className={styles.cardQuiet} title={strings.crmFocusQuiet}>
+                        <Clock3 size={14} />
+                      </span>
+                    )}
+                  </div>
                   {deal.companyName !== "" && (
                     <div className={styles.cardCompany}>{deal.companyName}</div>
                   )}
@@ -157,6 +170,7 @@ export function BoardView({ stages, deals, onOpen, onMove, onAdd }: Props) {
                       </span>
                     )}
                   </div>
+                  {deal.source !== "" && <div className={styles.cardSource}>{deal.source}</div>}
                 </Card>
               ))}
             </div>

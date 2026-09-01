@@ -32,6 +32,7 @@ import { useLostReason } from "./LostReasonDialog";
 import { moveDeal } from "./moveDeal";
 import { EmptyState, ErrorBanner } from "./parts";
 import { ReportView } from "./ReportView";
+import { SalesFocusPanel } from "./SalesFocusPanel";
 import { useBoardContext, useDealList } from "./useCrmData";
 import type { CrmStage } from "./types";
 import styles from "./CrmModule.module.css";
@@ -134,15 +135,18 @@ export function CrmModule() {
           <Route
             path="board"
             element={
-              <BoardView
-                stages={board.stages}
-                deals={deals.deals}
-                onOpen={openDeal}
-                onMove={(id, stage, position) =>
-                  void commitMove(id, stage, position)
-                }
-                onAdd={setCreatingIn}
-              />
+              <div className={styles.boardWorkspace}>
+                <SalesFocusPanel deals={deals.deals} onOpen={openDeal} />
+                <BoardView
+                  stages={board.stages}
+                  deals={deals.deals}
+                  onOpen={openDeal}
+                  onMove={(id, stage, position) =>
+                    void commitMove(id, stage, position)
+                  }
+                  onAdd={setCreatingIn}
+                />
+              </div>
             }
           />
           <Route
