@@ -196,27 +196,28 @@ export function DealDrawer({ dealId, stages, onClose, onChanged }: Props) {
                   })}
                 </div>
               </fieldset>
-              <span className="flex-1" />
-              {/* The handoff to billing (B2.08). Offered on any deal that has
-                  not been lost, because quoting an open deal is how it is won —
-                  and both raise a DRAFT the tenant then edits in billing. */}
-              {deal.state !== "lost" && (
-                <>
-                  <Button variant="primary" icon={<FileText />} onClick={() => setRaising("quote")}>{strings.crmRaiseQuote}</Button>
-                  <Button variant="ghost" icon={<Receipt />} onClick={() => setRaising("invoice")}>{strings.crmRaiseInvoice}</Button>
-                </>
-              )}
-              {deal.state === "won" && project === null && (
-                <Button variant="ghost" icon={<BriefcaseBusiness />} onClick={() => setCreatingProject(true)}>{strings.crmCreateProject}</Button>
-              )}
-              <Button variant="ghost" icon={<Pencil />} onClick={() => setEditing(true)}>{strings.crmEdit}</Button>
-              <button
-                type="button"
-                className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg !px-3 text-sm font-medium text-danger transition-colors hover:bg-danger/10 focus-visible:outline-2 focus-visible:outline-danger"
-                onClick={() => void remove()}
-              >
-                <Trash2 size={16} /> {strings.crmDeleteDeal}
-              </button>
+              <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
+                {/* The handoff to billing (B2.08). Offered on any deal that has
+                    not been lost, because quoting an open deal is how it is won —
+                    and both raise a DRAFT the tenant then edits in billing. */}
+                {deal.state !== "lost" && (
+                  <>
+                    <Button variant="primary" icon={<FileText />} onClick={() => setRaising("quote")}>{strings.crmRaiseQuote}</Button>
+                    <Button className="!px-3" variant="ghost" icon={<Receipt />} onClick={() => setRaising("invoice")}>{strings.crmRaiseInvoice}</Button>
+                  </>
+                )}
+                {deal.state === "won" && project === null && (
+                  <Button className="!px-3" variant="ghost" icon={<BriefcaseBusiness />} onClick={() => setCreatingProject(true)}>{strings.crmCreateProject}</Button>
+                )}
+                <Button className="!px-3" variant="ghost" icon={<Pencil />} onClick={() => setEditing(true)}>{strings.crmEdit}</Button>
+                <button
+                  type="button"
+                  className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg !px-3 text-sm font-medium text-danger transition-colors hover:bg-danger/10 focus-visible:outline-2 focus-visible:outline-danger"
+                  onClick={() => void remove()}
+                >
+                  <Trash2 size={16} /> {strings.crmDeleteDeal}
+                </button>
+              </div>
             </div>
           </>
         )}
