@@ -403,7 +403,7 @@ describe("the deal drawer", () => {
     ui(`/crm/board?deal=${DEAL.id}`);
     await screen.findByText(strings.crmActivityEmpty);
 
-    fireEvent.change(screen.getByLabelText(strings.crmActivityKind), { target: { value: "meeting" } });
+    fireEvent.click(screen.getByRole("radio", { name: strings.crmKindMeeting }));
     fireEvent.change(screen.getByLabelText(strings.crmActivityPlaceholder), {
       target: { value: "Walked them through the seats." },
     });

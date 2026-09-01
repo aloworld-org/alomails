@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { MessageSquare, Trash2 } from "lucide-react";
 
-import { Button, IconButton, Select } from "../ds";
+import { Button, IconButton } from "../ds";
 import { strings } from "../i18n";
 import { crmMessage, useCrmApi } from "./api";
 import { kindLabel, momentLabel } from "./format";
@@ -76,23 +76,33 @@ export function ActivityLog({ dealId }: { dealId: string }) {
       {error !== null && <ErrorBanner message={error} />}
 
       <form
-        className="mt-4 grid grid-cols-[9rem_minmax(0,1fr)_auto] items-start gap-3 max-md:grid-cols-1"
+        className="mt-4 grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 max-md:grid-cols-1"
         onSubmit={(e) => {
           e.preventDefault();
           if (!busy && body.trim() !== "") void add();
         }}
       >
-        <Select
-          value={kind}
-          onChange={(e) => setKind(e.target.value as ActivityKind)}
-          aria-label={strings.crmActivityKind}
-        >
-          {KINDS.map((k) => (
-            <option key={k} value={k}>
-              {kindLabel(k)}
-            </option>
-          ))}
-        </Select>
+        <fieldset className="flex min-h-10 overflow-hidden rounded-lg border border-default bg-raised/40 p-1">
+          <legend className="sr-only">{strings.crmActivityKind}</legend>
+          {KINDS.map((choice) => {
+            const selected = kind === choice;
+            return (
+              <label key={choice} className="cursor-pointer">
+                <input
+                  className="peer sr-only"
+                  type="radio"
+                  name={`activity-kind-${dealId}`}
+                  value={choice}
+                  checked={selected}
+                  onChange={() => setKind(choice)}
+                />
+                <span className="flex min-h-8 items-center rounded-md px-3 text-sm font-medium text-secondary transition-colors hover:bg-surface hover:text-primary peer-checked:bg-accent-soft peer-checked:text-accent peer-checked:shadow-sm peer-focus-visible:outline-2 peer-focus-visible:outline-accent">
+                  {kindLabel(choice)}
+                </span>
+              </label>
+            );
+          })}
+        </fieldset>
         <textarea
           className="min-h-24 w-full resize-y rounded-xl border border-default bg-surface !px-4 py-3 text-sm leading-5 text-primary placeholder:text-tertiary focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10"
           value={body}
