@@ -5,6 +5,7 @@
       "type": "features",
       "heading": "Why Nordwind",
       "intro": "Three promises printed on every bag.",
+      "layout": "bento",
       "items": [
         {
           "title": "Roasted to order",

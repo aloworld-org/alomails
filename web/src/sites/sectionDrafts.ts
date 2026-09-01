@@ -11,6 +11,7 @@
 import type {
   FaqItem,
   FeatureItem,
+  FeaturesLayout,
   HeroAlignment,
   HeroAnimationSpeed,
   HeroAppearance,
@@ -80,6 +81,7 @@ export interface FeaturesDraft extends PresentableDraft {
    *  it (resizing happens on the page, ADR 0042) and a save must never be the
    *  thing that throws it away. */
   columns?: string | undefined;
+  layout: FeaturesLayout;
 }
 
 export interface TextImageDraft extends PresentableDraft {
@@ -386,6 +388,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
           blankFeature,
         ),
         columns: s?.columns,
+        layout: s?.layout ?? "grid",
         presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
@@ -690,6 +693,7 @@ export function toSection(draft: SectionDraft): Section {
           icon: i.icon,
         })),
         columns: draft.columns,
+        layout: draft.layout,
         presentation: draft.presentation,
       };
     case "text_image":

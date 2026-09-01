@@ -586,6 +586,16 @@ pub struct FeatureItem {
 }
 
 /// A grid of product/service features.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FeaturesLayout {
+    Grid,
+    Bento,
+    List,
+    Steps,
+    Spotlight,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FeaturesSection {
@@ -601,6 +611,8 @@ pub struct FeaturesSection {
     /// the fluid grid this section has always used.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub columns: Option<GridColumns>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout: Option<FeaturesLayout>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub presentation: Option<SectionPresentation>,
 }
@@ -1644,6 +1656,7 @@ mod tests {
                     icon: Some("flame".to_owned()),
                 }],
                 columns: None,
+                layout: None,
                 presentation: None,
             }),
             Section::TextImage(TextImageSection {
@@ -2115,6 +2128,7 @@ mod tests {
                 icon: Some("Flame!".to_owned()),
             }],
             columns: None,
+            layout: None,
             presentation: None,
         })]);
         assert!(matches!(

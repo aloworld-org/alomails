@@ -151,6 +151,8 @@ export interface FeatureItem {
 }
 
 /** A grid of product/service features; at least one item. */
+export type FeaturesLayout = "grid" | "bento" | "list" | "steps" | "spotlight";
+
 export interface FeaturesSection extends PresentableSection {
   type: "features";
   heading?: string | undefined;
@@ -158,6 +160,7 @@ export interface FeaturesSection extends PresentableSection {
   items: FeatureItem[];
   /** Cards per row on a wide screen; absent is the fluid grid. */
   columns?: string | undefined;
+  layout?: FeaturesLayout | undefined;
 }
 
 /** A text block alongside an image. */

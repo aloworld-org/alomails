@@ -1933,6 +1933,22 @@ function HeroControlVisual({
   );
 }
 
+function FeaturesLayoutVisual({ layout }: { layout: FeaturesDraft["layout"] }) {
+  const cards = layout === "list" || layout === "spotlight" ? 3 : 4;
+  return (
+    <span className={cx("grid h-20 w-32 gap-1.5 rounded-lg bg-raised p-2", layout === "list" ? "grid-cols-1" : "grid-cols-2")} aria-hidden="true">
+      {Array.from({ length: cards }, (_, index) => (
+        <span key={index} className={cx(
+          "relative rounded-md border border-accent/25 bg-accent-soft",
+          layout === "bento" && index === 1 && "row-span-2",
+          layout === "spotlight" && index === 0 && "col-span-2 h-8",
+          layout === "steps" && "before:absolute before:left-1 before:top-1 before:size-2 before:rounded-full before:bg-accent",
+        )} />
+      ))}
+    </span>
+  );
+}
+
 function FeaturesFields({
   draft,
   onChange,
@@ -1942,6 +1958,24 @@ function FeaturesFields({
 }) {
   return (
     <>
+      <Card as="section" flat>
+        <HeroFormHeading icon={<PanelsTopLeft size={17} />}>{strings.sitesFeaturesLayout}</HeroFormHeading>
+        <p className="mb-5 mt-2 text-sm text-secondary">{strings.sitesFeaturesLayoutHint}</p>
+        <HeroOptionRow
+          label={strings.sitesFeaturesLayout}
+          value={draft.layout}
+          columns={5}
+          visual={(layout) => <FeaturesLayoutVisual layout={layout} />}
+          options={[
+            ["grid", strings.sitesFeaturesLayoutGrid],
+            ["bento", strings.sitesFeaturesLayoutBento],
+            ["list", strings.sitesFeaturesLayoutList],
+            ["steps", strings.sitesFeaturesLayoutSteps],
+            ["spotlight", strings.sitesFeaturesLayoutSpotlight],
+          ]}
+          onChange={(layout) => onChange({ ...draft, layout })}
+        />
+      </Card>
       <TextField
         label={strings.sitesFieldHeading}
         value={draft.heading}

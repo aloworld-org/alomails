@@ -94,6 +94,7 @@ fn fixture_site() -> SeedContext {
                     icon: Some("flame".to_owned()),
                 }],
                 columns: None,
+                layout: None,
                 presentation: None,
             }),
             Section::Gallery(GallerySection {

@@ -358,6 +358,7 @@ fn seed_features(ctx: &SeedContext) -> SectionSeed {
         intro: None,
         items,
         columns: None,
+        layout: None,
         presentation: None,
     }))
 }
