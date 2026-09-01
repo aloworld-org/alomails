@@ -114,6 +114,7 @@ fn fixture_site() -> SeedContext {
                     author: "Ines Kortekaas".to_owned(),
                     role: Some("Regular since 2019".to_owned()),
                 }],
+                layout: None,
                 presentation: None,
             }),
             Section::Team(TeamSection {

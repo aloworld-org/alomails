@@ -693,6 +693,16 @@ pub struct Testimonial {
 }
 
 /// A row of customer quotes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TestimonialsLayout {
+    Cards,
+    Featured,
+    Editorial,
+    Stacked,
+    Carousel,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TestimonialsSection {
@@ -701,6 +711,8 @@ pub struct TestimonialsSection {
     pub heading: Option<String>,
     /// The quotes; at least one.
     pub items: Vec<Testimonial>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout: Option<TestimonialsLayout>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub presentation: Option<SectionPresentation>,
 }
@@ -1706,6 +1718,7 @@ mod tests {
                     author: "Mara Lindqvist".to_owned(),
                     role: Some("Head barista, Kaffebaren".to_owned()),
                 }],
+                layout: None,
                 presentation: None,
             }),
             Section::Pricing(PricingSection {

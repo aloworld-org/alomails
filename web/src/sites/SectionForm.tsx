@@ -2182,6 +2182,41 @@ function GalleryLayoutVisual({ layout }: { layout: GalleryDraft["layout"] }) {
   );
 }
 
+function TestimonialsLayoutVisual({
+  layout,
+}: {
+  layout: TestimonialsDraft["layout"];
+}) {
+  const cards = layout === "carousel" ? 3 : layout === "stacked" ? 2 : 4;
+  return (
+    <span
+      className={cx(
+        "grid h-20 w-32 gap-1.5 overflow-hidden rounded-lg bg-raised p-2",
+        layout === "cards" && "grid-cols-2",
+        layout === "featured" && "grid-cols-2",
+        layout === "editorial" && "grid-cols-2 gap-x-3 bg-transparent",
+        layout === "stacked" && "grid-cols-1 px-5",
+        layout === "carousel" && "grid-flow-col grid-cols-[repeat(3,3rem)]",
+      )}
+      aria-hidden="true"
+    >
+      {Array.from({ length: cards }, (_, item) => (
+        <span
+          key={item}
+          className={cx(
+            "grid content-center gap-1 rounded-md border border-default bg-surface p-1.5",
+            layout === "featured" && item === 0 && "col-span-2",
+            layout === "editorial" && "border-0 bg-transparent p-0",
+          )}
+        >
+          <span className="h-1.5 rounded-full bg-primary/70" />
+          <span className="h-1 w-2/3 rounded-full bg-accent/60" />
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function TestimonialsFields({
   draft,
   onChange,
@@ -2191,6 +2226,28 @@ function TestimonialsFields({
 }) {
   return (
     <>
+      <Card as="section" flat>
+        <HeroFormHeading icon={<PanelsTopLeft size={17} />}>
+          {strings.sitesTestimonialsLayout}
+        </HeroFormHeading>
+        <p className="mb-5 mt-2 text-sm text-secondary">
+          {strings.sitesTestimonialsLayoutHint}
+        </p>
+        <HeroOptionRow
+          label={strings.sitesTestimonialsLayout}
+          value={draft.layout}
+          columns={5}
+          visual={(layout) => <TestimonialsLayoutVisual layout={layout} />}
+          options={[
+            ["cards", strings.sitesTestimonialsLayoutCards],
+            ["featured", strings.sitesTestimonialsLayoutFeatured],
+            ["editorial", strings.sitesTestimonialsLayoutEditorial],
+            ["stacked", strings.sitesTestimonialsLayoutStacked],
+            ["carousel", strings.sitesTestimonialsLayoutCarousel],
+          ]}
+          onChange={(layout) => onChange({ ...draft, layout })}
+        />
+      </Card>
       <TextField
         label={strings.sitesFieldHeading}
         value={draft.heading}

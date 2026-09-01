@@ -4,6 +4,7 @@
     {
       "type": "testimonials",
       "heading": "What cafés say",
+      "layout": "featured",
       "items": [
         {
           "quote": "The freshest beans we've ever pulled shots with — our regulars noticed in a week.",

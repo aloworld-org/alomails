@@ -197,10 +197,18 @@ export interface Testimonial {
 }
 
 /** A row of customer quotes; at least one. */
+export type TestimonialsLayout =
+  | "cards"
+  | "featured"
+  | "editorial"
+  | "stacked"
+  | "carousel";
+
 export interface TestimonialsSection extends PresentableSection {
   type: "testimonials";
   heading?: string | undefined;
   items: Testimonial[];
+  layout?: TestimonialsLayout | undefined;
 }
 
 /** One pricing tier. `price` is a display string ("€9/mo") — never parsed,

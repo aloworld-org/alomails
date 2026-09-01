@@ -31,6 +31,7 @@ import type {
   TeamMember,
   Testimonial,
   TextImageLayout,
+  TestimonialsLayout,
   TransitionDirection,
   TransitionEffect,
   TransitionSpeed,
@@ -116,6 +117,7 @@ export interface TestimonialsDraft extends PresentableDraft {
   type: "testimonials";
   heading: string;
   items: TestimonialDraft[];
+  layout: TestimonialsLayout;
 }
 
 export interface TierDraft {
@@ -436,6 +438,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
           })),
           blankTestimonial,
         ),
+        layout: s?.layout ?? "cards",
         presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
@@ -734,6 +737,7 @@ export function toSection(draft: SectionDraft): Section {
           author: req(i.author),
           role: opt(i.role),
         })),
+        layout: draft.layout,
         presentation: draft.presentation,
       };
     case "pricing":

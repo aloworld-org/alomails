@@ -676,6 +676,7 @@ mod tests {
                         author: "Ines Kortekaas".to_owned(),
                         role: Some("Regular since 2019".to_owned()),
                     }],
+                    layout: None,
                     presentation: None,
                 }),
                 Section::Pricing(PricingSection {
