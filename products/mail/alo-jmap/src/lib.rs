@@ -129,6 +129,7 @@ pub mod finance_bank_match;
 pub mod finance_chart;
 pub mod finance_chart_names;
 pub mod finance_expenses;
+pub mod finance_forecast;
 pub mod finance_intents;
 pub mod finance_mileage;
 pub mod finance_periods;

@@ -38,6 +38,7 @@ import type {
   BankLineStatus,
   BankStatement,
   BankSuggestions,
+  CashForecast,
   Chart,
   ChartAccount,
   ConfirmedMatch,
@@ -333,6 +334,13 @@ export class FinanceApi {
       `/finance/bank/lines/${encodeURIComponent(lineId)}/unignore`,
       {},
     ).then((r) => r.line);
+  }
+
+  cashForecast(options: { on: string; horizon: 30 | 60 | 90; receivableDelay?: number; payableDelay?: number }): Promise<CashForecast> {
+    const query = new URLSearchParams({ on: options.on, horizon: String(options.horizon) });
+    query.set("receivableDelay", String(options.receivableDelay ?? 0));
+    query.set("payableDelay", String(options.payableDelay ?? 0));
+    return this.#read<{ forecast: CashForecast }>(`/finance/forecast?${query.toString()}`).then((response) => response.forecast);
   }
 
   // ---- the chart of accounts ---------------------------------------------

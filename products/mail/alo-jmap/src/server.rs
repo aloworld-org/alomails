@@ -25,7 +25,7 @@ use crate::{
     chat_agent_memory, chat_agent_routes, chat_goals, contacts, crm_activities, crm_deals,
     crm_handoff, crm_imports, crm_next_steps, crm_pipelines, crm_projects, crm_reports, crm_stages,
     crm_threads, delegates, docs, drive, filters, finance_approvals, finance_bank,
-    finance_bank_match, finance_chart, finance_expenses, finance_mileage, finance_periods,
+    finance_bank_match, finance_chart, finance_expenses, finance_forecast, finance_mileage, finance_periods,
     finance_receipts, finance_report_aged, finance_report_balance, finance_report_pl,
     finance_report_vat, flagdue, hr_checklists, hr_documents, hr_employees, hr_holidays,
     hr_leave_balances, hr_leave_policies, hr_leave_requests, hr_letters, hr_org, hr_payroll,
@@ -2176,6 +2176,7 @@ pub fn app_with_site_boundaries(
             "/finance/periods/{id}/reopen",
             post(finance_periods::reopen_period),
         )
+        .route("/finance/forecast", get(finance_forecast::cash_forecast))
         // The chart of accounts (B4.13c) — the list of places money can be, and
         // the doors a tenant edits it through. Admin or accountant on every one
         // of them, the reads included: the chart says what the company owes, is

@@ -36,6 +36,7 @@ import {
   ReceiptText,
   Scale,
   WalletCards,
+  TrendingUp,
 } from "lucide-react";
 
 import { ModuleNavigation, moduleNavigationItemClassName } from "../ds";
@@ -45,6 +46,7 @@ import { useProjects } from "../projects";
 import { AccountsView } from "./AccountsView";
 import { ApprovalsView } from "./ApprovalsView";
 import { BankView } from "./BankView";
+import { CashFlowView } from "./CashFlowView";
 import { ExpensesView } from "./ExpensesView";
 import { FinanceOverviewView } from "./FinanceOverviewView";
 import { ReconcileView } from "./ReconcileView";
@@ -75,6 +77,7 @@ const TABS = [
   { path: "approvals", label: () => strings.financeTabApprovals, Icon: ListChecks, bookkeeper: true },
   { path: "bank", label: () => strings.financeTabBank, Icon: Landmark, bookkeeper: true },
   { path: "reconcile", label: () => strings.financeTabReconcile, Icon: Scale, bookkeeper: true },
+  { path: "cash-flow", label: () => strings.financeTabCashFlow, Icon: TrendingUp, bookkeeper: true },
   { path: "accounts", label: () => strings.financeTabAccounts, Icon: BadgeEuro, bookkeeper: true },
   { path: "reports", label: () => strings.financeTabReports, Icon: ChartNoAxesCombined, bookkeeper: true },
 ];
@@ -154,6 +157,7 @@ export function FinanceModule() {
             other's writes on a reload. */}
         <Route path="bank" element={<BankView onImported={bump} />} />
         <Route path="reconcile" element={<ReconcileView revision={revision} />} />
+        <Route path="cash-flow" element={<CashFlowView />} />
         {/* The chart and the four reports (B4.13c). Reports is a wildcard mount:
             it owns a second row of tabs of its own; the chart's editor is a
             dialog rather than a route. */}

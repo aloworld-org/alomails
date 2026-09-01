@@ -307,6 +307,28 @@ export interface ConfirmedMatch {
   invoiceBookedNow: boolean;
 }
 
+export interface CashForecastPoint {
+  from: string;
+  to: string;
+  incomingCents: number;
+  outgoingCents: number;
+  netCents: number;
+  projectedBalanceCents: number | null;
+}
+
+export interface CashForecast {
+  on: string;
+  through: string;
+  horizonDays: 30 | 60 | 90;
+  currency: string;
+  openingBalanceCents: number | null;
+  receivableDelayDays: number;
+  payableDelayDays: number;
+  unconvertedReceivables: number;
+  unconvertedPayables: number;
+  points: CashForecastPoint[];
+}
+
 // ---- the chart of accounts (B4.13c) ---------------------------------------
 
 /** What kind of thing an account holds — the five categories every

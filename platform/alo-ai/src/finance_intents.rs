@@ -357,6 +357,10 @@ pub const FINANCE_EXCLUDED: &[Excluded] = &[
         why: "Reopening a period unlocks the books; the accountant's own act in the app.",
     },
     Excluded {
+        route: "/finance/forecast",
+        why: "An interactive scenario with timing assumptions chosen and compared by a person in the app.",
+    },
+    Excluded {
         route: "/finance/reports/pl",
         why: "The full statement is a screen in the app; a later intent set.",
     },
