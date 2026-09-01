@@ -2300,15 +2300,50 @@ pub(crate) fn sites_domain() -> &'static str {
     })
 }
 
-/// The largest image the preview inlines as a `data:` URI. Beyond this the
-/// image falls back to its public path (unresolvable on the edit origin — a
-/// broken image in the preview only), keeping the preview document bounded.
+/// The largest image the preview carries without first trying to make a
+/// screen-sized derivative. Larger originals are reduced to the widest Sites
+/// responsive rung; formats the derivative pipeline cannot decode still use
+/// their original bytes, because a heavy preview is better than a preview
+/// that silently drops content the owner just added.
 const PREVIEW_INLINE_IMAGE_MAX_BYTES: usize = 4 * 1024 * 1024;
+
+/// One authenticated image as a self-contained preview source. Resizing is
+/// CPU-bound and the source is untrusted, so it uses the same bounded blocking
+/// derivative pipeline as public Sites rather than decoding on the async
+/// request worker.
+async fn preview_image_uri(image: alo_store::SiteImageData) -> Option<String> {
+    use base64::Engine;
+
+    let (content_type, bytes) = if image.bytes.len() <= PREVIEW_INLINE_IMAGE_MAX_BYTES {
+        (image.content_type.to_owned(), image.bytes)
+    } else {
+        let task = tokio::task::spawn_blocking(move || {
+            let derivative = alo_sites::serve::derivative::derive(
+                &image,
+                alo_store::site_model::ImageCrop::full(),
+                *alo_sites::images::DERIVATIVE_WIDTHS.last().unwrap_or(&1440),
+            );
+            (image, derivative)
+        });
+        match task.await {
+            Ok((_, Some(derivative))) => (derivative.content_type.to_owned(), derivative.bytes),
+            Ok((source, None)) => (source.content_type.to_owned(), source.bytes),
+            Err(error) => {
+                tracing::warn!(%error, "preview image resize task failed");
+                return None;
+            }
+        }
+    };
+    Some(format!(
+        "data:{content_type};base64,{}",
+        base64::engine::general_purpose::STANDARD.encode(bytes)
+    ))
+}
 
 /// The draft page's images as `data:` URIs, keyed by blob id — theme
 /// logo/favicon plus every section image, read tenant-scoped through the
-/// account door. Ids that don't resolve, aren't images, or are oversized are
-/// simply absent (the renderer then falls back to the public path).
+/// account door. Ids that don't resolve or aren't images are simply absent
+/// (the renderer then falls back to the public path).
 pub(crate) async fn preview_image_map<'a>(
     account: &Account,
     theme: &SiteTheme,
@@ -2316,8 +2351,6 @@ pub(crate) async fn preview_image_map<'a>(
     collections: impl Iterator<Item = &'a SiteCollectionSnapshot>,
     catalogs: impl Iterator<Item = &'a SiteCatalogSnapshot>,
 ) -> std::collections::HashMap<String, String> {
-    use base64::Engine;
-
     let mut ids: Vec<String> = [theme.logo.as_ref(), theme.favicon.as_ref()]
         .into_iter()
         .flatten()
@@ -2355,15 +2388,12 @@ pub(crate) async fn preview_image_map<'a>(
     let mut map = std::collections::HashMap::with_capacity(ids.len());
     for id in ids {
         match account.acc.site_image(&BlobId::new(id.clone())).await {
-            Ok(Some(image)) if image.bytes.len() <= PREVIEW_INLINE_IMAGE_MAX_BYTES => {
-                let uri = format!(
-                    "data:{};base64,{}",
-                    image.content_type,
-                    base64::engine::general_purpose::STANDARD.encode(&image.bytes)
-                );
-                map.insert(id, uri);
+            Ok(Some(image)) => {
+                if let Some(uri) = preview_image_uri(image).await {
+                    map.insert(id, uri);
+                }
             }
-            Ok(_) => {} // absent, non-image, or oversized: public-path fallback
+            Ok(None) => {} // absent or non-image: public-path fallback
             Err(error) => {
                 tracing::warn!(%error, "preview image read failed; falling back to public path");
             }
@@ -3144,4 +3174,46 @@ pub async fn remove_section(
     index_in(envelope.sections.len(), index)?;
     envelope.sections.remove(index);
     store_sections(&account, &sid, &page_id, &envelope).await
+}
+
+#[cfg(test)]
+mod preview_image_tests {
+    #![allow(clippy::unwrap_used)]
+
+    use bytes::Bytes;
+    use image::ImageEncoder;
+
+    use super::*;
+
+    /// A camera-sized upload above the old 4 MiB inline ceiling is reduced
+    /// for the iframe instead of falling back to an unresolvable public URL.
+    #[tokio::test]
+    async fn a_large_raster_becomes_a_compact_inline_preview() {
+        const SIDE: u32 = 1800;
+        let mut seed = 0x7a31_9d2bu32;
+        let mut pixels = vec![0u8; (SIDE * SIDE * 3) as usize];
+        for byte in &mut pixels {
+            seed ^= seed << 13;
+            seed ^= seed >> 17;
+            seed ^= seed << 5;
+            *byte = seed as u8;
+        }
+        let mut png = Vec::new();
+        image::codecs::png::PngEncoder::new(&mut png)
+            .write_image(&pixels, SIDE, SIDE, image::ExtendedColorType::Rgb8)
+            .unwrap();
+        assert!(png.len() > PREVIEW_INLINE_IMAGE_MAX_BYTES);
+
+        let original_len = png.len();
+        let uri = preview_image_uri(alo_store::SiteImageData {
+            content_type: "image/png",
+            bytes: Bytes::from(png),
+        })
+        .await
+        .unwrap();
+
+        assert!(uri.starts_with("data:image/jpeg;base64,"));
+        assert!(uri.len() < original_len, "preview was not made smaller");
+        assert!(!uri.contains("/assets/img/"));
+    }
 }
