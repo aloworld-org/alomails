@@ -433,6 +433,10 @@ pub const BILLING_EXCLUDED: &[Excluded] = &[
         why: "The quotation studio's layout is a person's design work.",
     },
     Excluded {
+        route: "/billing/invoices/{id}/design",
+        why: "An invoice's layout is a person's design work, exactly as a quotation's is.",
+    },
+    Excluded {
         route: "/billing/schedules/run",
         why: "Recurring invoices are a later intent set.",
     },

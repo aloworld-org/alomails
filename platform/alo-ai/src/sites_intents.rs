@@ -329,6 +329,10 @@ pub const SITES_EXCLUDED: &[Excluded] = &[
         why: "Arranging the navigation is a drag the owner does while looking at the menu; a layout is visual.",
     },
     Excluded {
+        route: "/sites/{id}/pages/{pid}/duplicate",
+        why: "Copying a page clones its layout and every translation the owner built, none of               which the agent chose — it writes a new page with site_page_draft instead.",
+    },
+    Excluded {
         route: "/sites/{id}/pages/{pid}/home",
         why: "Which page greets every visitor is a structural decision the owner takes on the page list; the drafted pages never claim it.",
     },
