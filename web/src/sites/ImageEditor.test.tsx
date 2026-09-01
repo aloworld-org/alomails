@@ -278,6 +278,20 @@ describe("framing a picture", () => {
 });
 
 describe("describing a picture", () => {
+  test("media guidance is available from information icons", async () => {
+    replies = [pageReply([heroWith(photo())])];
+    ui();
+    await openTheSection();
+
+    for (const [label, hint] of [
+      [strings.sitesFieldImageId, strings.sitesImageIdHint],
+      [strings.sitesFieldImageAlt, strings.sitesImageAltHint],
+      [strings.sitesImageDecorative, strings.sitesImageDecorativeHint],
+    ]) {
+      expect(screen.getByRole("note", { name: `${label}: ${hint}` })).toBeTruthy();
+    }
+  });
+
   test("an undescribed picture says so", async () => {
     replies = [pageReply([heroWith(photo({ alt: "" }))])];
     ui();

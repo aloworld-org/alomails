@@ -5,7 +5,7 @@
 // must not couple; promoting this dialog chrome into `ds` is a wave-review
 // candidate once three modules carry it.)
 import { useRef, type FormEvent, type ReactNode } from "react";
-import { X } from "lucide-react";
+import { Info, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { strings } from "../i18n";
@@ -59,12 +59,29 @@ export function EmptyState({
 export function Field({
   label,
   hint,
+  hintDisplay = "below",
   children,
 }: {
   label: string;
   hint?: string | undefined;
+  hintDisplay?: "below" | "tooltip" | undefined;
   children: ReactNode;
 }) {
+  if (hint !== undefined && hintDisplay === "tooltip") {
+    return (
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center gap-1.5 text-sm font-semibold text-primary">
+          <span>{label}</span>
+          <InformationTip label={label} hint={hint} />
+        </div>
+        <label className="flex flex-col gap-1.5">
+          <span className="sr-only">{label}</span>
+          {children}
+        </label>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-1.5">
       <label className="flex flex-col gap-1.5">
@@ -73,6 +90,33 @@ export function Field({
       </label>
       {hint !== undefined && <span className="text-sm text-secondary">{hint}</span>}
     </div>
+  );
+}
+
+/** Longer guidance that stays out of the form until somebody asks for it.
+ *  Focus mirrors hover so the information is equally available by keyboard. */
+export function InformationTip({
+  label,
+  hint,
+}: {
+  label: string;
+  hint: string;
+}) {
+  return (
+    <span
+      className="group relative inline-flex size-6 shrink-0 cursor-help items-center justify-center rounded-full text-tertiary transition-colors hover:bg-accent-soft hover:text-accent focus-visible:bg-accent-soft focus-visible:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20"
+      role="note"
+      tabIndex={0}
+      aria-label={`${label}: ${hint}`}
+    >
+      <Info className="size-4" aria-hidden="true" />
+      <span
+        className="pointer-events-none absolute left-0 top-[calc(100%+.4rem)] z-30 hidden w-max max-w-72 rounded-lg bg-primary px-3 py-2 text-left text-xs font-normal leading-relaxed text-on-accent shadow-lg group-hover:block group-focus-visible:block"
+        role="tooltip"
+      >
+        {hint}
+      </span>
+    </span>
   );
 }
 

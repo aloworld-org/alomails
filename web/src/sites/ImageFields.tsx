@@ -21,7 +21,7 @@ import { sitesMessage, useSitesApi } from "./api";
 import { useCopyContext } from "./copyContext";
 import { useImageSource } from "./imageSource";
 import { ImageFraming } from "./ImageFraming";
-import { Field } from "./parts";
+import { Field, InformationTip } from "./parts";
 import type { SectionImage } from "./sections";
 import type { SiteEditEnvelope } from "./types";
 import styles from "./SitesModule.module.css";
@@ -178,7 +178,11 @@ export function ImageFields({
           {legend}
         </legend>
       )}
-      <Field label={strings.sitesFieldImageId} hint={strings.sitesImageIdHint}>
+      <Field
+        label={strings.sitesFieldImageId}
+        hint={strings.sitesImageIdHint}
+        hintDisplay="tooltip"
+      >
         <div className={styles.uploadRow}>
           <input
             className={`${styles.input} ${styles.mono}`}
@@ -216,7 +220,11 @@ export function ImageFields({
         </p>
       )}
       {chosen && <ImageFraming value={value} url={source} onChange={onChange} />}
-      <Field label={strings.sitesFieldImageAlt} hint={strings.sitesImageAltHint}>
+      <Field
+        label={strings.sitesFieldImageAlt}
+        hint={strings.sitesImageAltHint}
+        hintDisplay="tooltip"
+      >
         <input
           className={styles.input}
           value={value.alt}
@@ -232,20 +240,25 @@ export function ImageFields({
       {chosen && pointer !== undefined && !decorative && (
         <AltTextTool pointer={pointer} value={value.alt} />
       )}
-      <label className={styles.toggle}>
-        <input
-          type="checkbox"
-          checked={decorative}
-          onChange={(e) =>
-            // A decorative picture has nothing to describe, and the schema
-            // refuses one that still carries a description — so the two move
-            // together rather than saving into a refusal.
-            onChange(e.target.checked ? { decorative: true, alt: "" } : { decorative: false })
-          }
+      <div className="flex items-center gap-1.5">
+        <label className={styles.toggle}>
+          <input
+            type="checkbox"
+            checked={decorative}
+            onChange={(e) =>
+              // A decorative picture has nothing to describe, and the schema
+              // refuses one that still carries a description — so the two move
+              // together rather than saving into a refusal.
+              onChange(e.target.checked ? { decorative: true, alt: "" } : { decorative: false })
+            }
+          />
+          {strings.sitesImageDecorative}
+        </label>
+        <InformationTip
+          label={strings.sitesImageDecorative}
+          hint={strings.sitesImageDecorativeHint}
         />
-        {strings.sitesImageDecorative}
-      </label>
-      <p className={styles.hint}>{strings.sitesImageDecorativeHint}</p>
+      </div>
     </fieldset>
   );
 }
