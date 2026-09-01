@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarRange, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarRange, ChevronDown, ChevronLeft, ChevronRight, X } from "lucide-react";
 
 import { previousQuarterOf, quarterOf, type Period } from "../billing";
-import { Button } from "../ds";
+import { Button, IconButton, Modal } from "../ds";
 import { getLocale, strings } from "../i18n";
 
 function ymd(date: Date): string {
@@ -77,8 +77,21 @@ export function ReportPeriodPicker({ value, onApply }: { value: Period; onApply:
       </button>
 
       {open && (
-        <div className="absolute left-0 top-[calc(100%+.5rem)] z-50 grid w-[58rem] grid-cols-[13rem_minmax(0,1fr)] overflow-hidden rounded-2xl border border-subtle bg-surface shadow-xl max-xl:w-[min(48rem,calc(100vw-4rem))] max-md:w-[min(34rem,calc(100vw-2rem))] max-md:grid-cols-1" role="dialog" aria-label={strings.crmReportPeriod}>
-          <div className="border-r border-subtle p-2 max-md:border-b max-md:border-r-0">
+        <Modal
+          title={strings.crmReportPeriod}
+          icon={<CalendarRange className="size-5" />}
+          wide="extra"
+          onClose={() => { setDraft(value); setOpen(false); }}
+          actions={<IconButton label={strings.crmCancel} icon={<X />} onClick={() => { setDraft(value); setOpen(false); }} />}
+          footer={
+            <div className="ml-auto flex items-center gap-2">
+              <Button variant="ghost" onClick={() => { setDraft(value); setOpen(false); }}>{strings.crmCancel}</Button>
+              <Button disabled={draft.from === "" || draft.to === "" || draft.from > draft.to} onClick={() => { onApply(draft); setOpen(false); }}>{strings.crmReportApply}</Button>
+            </div>
+          }
+        >
+          <div className="grid min-h-0 grid-cols-[13rem_minmax(0,1fr)] overflow-hidden rounded-xl border border-subtle max-md:grid-cols-1">
+          <div className="bg-raised/25 p-3 max-md:border-b max-md:border-subtle">
             <p className="m-0 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-tertiary">{strings.crmReportQuickRanges}</p>
             <div className="flex flex-col gap-1 max-md:grid max-md:grid-cols-2">
               {presets.map((preset) => (
@@ -88,7 +101,7 @@ export function ReportPeriodPicker({ value, onApply }: { value: Period; onApply:
               ))}
             </div>
           </div>
-          <div className="p-5">
+          <div className="min-w-0 p-5 max-sm:p-3">
             <h3 className="m-0 text-base font-semibold text-primary">{strings.crmReportCustom}</h3>
             <div className="mt-4 grid grid-cols-2 gap-3">
               <button type="button" className={`rounded-xl border !p-3 text-left transition-colors ${choosing === "from" ? "!border-accent !bg-accent-soft" : "!border-default !bg-surface hover:!border-strong"}`} onClick={() => setChoosing("from")}>
@@ -109,12 +122,9 @@ export function ReportPeriodPicker({ value, onApply }: { value: Period; onApply:
                 setChoosing("from");
               }
             }} />
-            <div className="mt-6 flex justify-end gap-2 border-t border-subtle pt-4">
-              <Button variant="ghost" onClick={() => { setDraft(value); setOpen(false); }}>{strings.crmCancel}</Button>
-              <Button disabled={draft.from === "" || draft.to === "" || draft.from > draft.to} onClick={() => { onApply(draft); setOpen(false); }}>{strings.crmReportApply}</Button>
-            </div>
           </div>
-        </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
