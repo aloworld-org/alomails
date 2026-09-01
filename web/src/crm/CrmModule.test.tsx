@@ -718,6 +718,19 @@ describe("the handoff to Projects", () => {
 });
 
 describe("the report", () => {
+  test("applies a quick range only after the user confirms it", async () => {
+    ui("/crm/report");
+    await waitFor(() => expect(reads("/crm/reports/pipeline")).toHaveLength(1));
+
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(strings.crmReportThisQuarter) }));
+    fireEvent.click(screen.getByRole("button", { name: strings.crmReportLast28Days }));
+    expect(reads("/crm/reports/pipeline")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: strings.crmReportApply }));
+
+    await waitFor(() => expect(reads("/crm/reports/pipeline")).toHaveLength(2));
+    expect(screen.getByRole("button", { name: new RegExp(strings.crmReportLast28Days) })).toBeTruthy();
+  });
+
   test("shows the server's figures, keeps the two questions apart, and never sums", async () => {
     ui("/crm/report");
 
@@ -727,8 +740,12 @@ describe("the report", () => {
     expect(asked.url).toContain(`pipelineId=${PIPELINE.id}`);
     expect(asked.url).toMatch(/from=\d{4}-\d{2}-\d{2}/);
     expect(asked.url).toMatch(/to=\d{4}-\d{2}-\d{2}/);
+    const range = screen.getByRole("button", { name: new RegExp(strings.crmReportThisQuarter) });
+    expect(range.getAttribute("aria-haspopup")).toBe("dialog");
+    fireEvent.click(range);
     expect(screen.getByRole("button", { name: strings.crmReportFrom }).getAttribute("aria-haspopup")).toBe("dialog");
     expect(screen.getByRole("button", { name: strings.crmReportTo }).getAttribute("aria-haspopup")).toBe("dialog");
+    expect(screen.getByRole("button", { name: strings.crmReportApply })).toBeTruthy();
 
     const open = await screen.findByRole("table", {
       name: strings.crmReportOpenCaption("EUR"),

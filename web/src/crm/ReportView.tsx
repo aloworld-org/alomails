@@ -21,16 +21,16 @@ import type { LucideIcon } from "lucide-react";
 import {
   formatAmount,
   formatRate,
-  previousQuarterOf,
   quarterOf,
   type Period,
 } from "../billing";
-import { Button, DatePicker, Field, Spinner, Table, Td, Th } from "../ds";
+import { Button, Spinner, Table, Td, Th } from "../ds";
 import { strings, useLocale } from "../i18n";
 import { saveTextFile } from "../platform/download";
 import { crmMessage, useCrmApi } from "./api";
 import { dayLabel, momentLabel } from "./format";
 import { EmptyState, ErrorBanner } from "./parts";
+import { ReportPeriodPicker } from "./ReportPeriodPicker";
 import type { PipelineCurrency, PipelineReport } from "./types";
 
 interface Props {
@@ -54,7 +54,6 @@ export function ReportView({ pipelineId, revision }: Props) {
   // The form opens on the quarter being lived through; the one being reviewed
   // is one click away.
   const [period, setPeriod] = useState<Period>(() => quarterOf(new Date()));
-  const [form, setForm] = useState<Period>(period);
   const [report, setReport] = useState<PipelineReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
@@ -79,13 +78,6 @@ export function ReportView({ pipelineId, revision }: Props) {
   useEffect(() => {
     void load();
   }, [load]);
-
-  /** Applies a period from a quick pick: the form and the request move
-   *  together, so what is shown always matches what is written. */
-  function pick(next: Period) {
-    setForm(next);
-    setPeriod(next);
-  }
 
   async function download() {
     if (pipelineId === null) return;
@@ -126,33 +118,9 @@ export function ReportView({ pipelineId, revision }: Props) {
           </Button>
         </div>
 
-        <form
-          className="mt-5 flex flex-wrap items-end gap-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            setPeriod(form);
-          }}
-        >
-          <div className="min-w-[13rem] flex-1 max-w-[18rem]">
-            <Field label={strings.crmReportFrom}>
-              {(control) => (
-                <DatePicker {...control} value={form.from} onChange={(from) => setForm({ ...form, from })} />
-              )}
-            </Field>
-          </div>
-          <div className="min-w-[13rem] flex-1 max-w-[18rem]">
-            <Field label={strings.crmReportTo}>
-              {(control) => (
-                <DatePicker {...control} value={form.to} onChange={(to) => setForm({ ...form, to })} />
-              )}
-            </Field>
-          </div>
-          <Button type="submit" disabled={form.from === "" || form.to === ""}>{strings.crmReportShow}</Button>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => pick(quarterOf(new Date()))}>{strings.crmReportThisQuarter}</Button>
-            <Button variant="ghost" size="sm" onClick={() => pick(previousQuarterOf(new Date()))}>{strings.crmReportLastQuarter}</Button>
-          </div>
-        </form>
+        <div className="mt-5">
+          <ReportPeriodPicker value={period} onApply={setPeriod} />
+        </div>
       </section>
 
       {error !== null && <ErrorBanner message={error} />}
