@@ -308,6 +308,10 @@ fn seed_hero(ctx: &SeedContext) -> SectionSeed {
             .and_then(|hero| hero.primary_cta.clone())
             .or_else(|| ctx.away_link()),
         secondary_cta: None,
+        layout: existing.and_then(|hero| hero.layout),
+        height: existing.and_then(|hero| hero.height),
+        alignment: existing.and_then(|hero| hero.alignment),
+        content_width: existing.and_then(|hero| hero.content_width),
     }))
 }
 
@@ -627,6 +631,10 @@ mod tests {
                     image: Some(image("9hK3vQ2mR8pT1xWz4bC5dg", "Roasting drum mid-batch")),
                     primary_cta: Some(link("Visit us", "/visit")),
                     secondary_cta: None,
+                    layout: None,
+                    height: None,
+                    alignment: None,
+                    content_width: None,
                 }),
                 Section::Testimonials(TestimonialsSection {
                     heading: Some("What the neighbourhood says".to_owned()),

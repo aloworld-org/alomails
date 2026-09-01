@@ -51,8 +51,6 @@ describe("SitePagesPanel", () => {
                 loading={false}
                 protectedPages={new Set()}
                 siteStatus="draft"
-                enabledLocales={["en"]}
-                onTheme={vi.fn()}
                 onCreate={vi.fn()}
                 onRename={vi.fn()}
                 onDuplicate={vi.fn()}
@@ -66,14 +64,13 @@ describe("SitePagesPanel", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByText("/studio"));
+    fireEvent.click(screen.getByText("Studio"));
     expect(screen.getByTestId("location").textContent).toBe(
       "/sites/site-1/pages/page-1",
     );
   });
 
-  test("keeps theme and page creation as clear actions", () => {
-    const onTheme = vi.fn();
+  test("keeps the quotation-style page creation action", () => {
     const onCreate = vi.fn();
     render(
       <MemoryRouter>
@@ -82,8 +79,6 @@ describe("SitePagesPanel", () => {
           loading={false}
           protectedPages={new Set()}
           siteStatus="draft"
-          enabledLocales={["en"]}
-          onTheme={onTheme}
           onCreate={onCreate}
           onRename={vi.fn()}
           onDuplicate={vi.fn()}
@@ -93,12 +88,10 @@ describe("SitePagesPanel", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesTheme }));
     fireEvent.click(
       screen.getByRole("button", { name: strings.sitesNewPage }),
     );
 
-    expect(onTheme).toHaveBeenCalledOnce();
     expect(onCreate).toHaveBeenCalledOnce();
   });
 
@@ -111,8 +104,6 @@ describe("SitePagesPanel", () => {
           loading={false}
           protectedPages={new Set(["page-1"])}
           siteStatus="live"
-          enabledLocales={["en", "fr", "nl", "de"]}
-          onTheme={vi.fn()}
           onCreate={onCreate}
           onRename={vi.fn()}
           onDuplicate={vi.fn()}
@@ -129,9 +120,9 @@ describe("SitePagesPanel", () => {
     expect(screen.getByText("Studio")).toBeTruthy();
     expect(screen.queryByText("Home")).toBeNull();
 
-    fireEvent.click(
-      screen.getByRole("button", { name: strings.sitesFilterProtectedPages }),
-    );
+    fireEvent.change(screen.getByLabelText(strings.sitesPageFilter), {
+      target: { value: "protected" },
+    });
     fireEvent.click(
       screen.getByRole("button", { name: strings.sitesNewPage }),
     );
@@ -139,7 +130,7 @@ describe("SitePagesPanel", () => {
     expect(onCreate).toHaveBeenCalledOnce();
   });
 
-  test("shows search and access readiness on page rows", () => {
+  test("keeps the page list focused on essential status", () => {
     render(
       <MemoryRouter>
         <SitePagesPanel
@@ -147,8 +138,6 @@ describe("SitePagesPanel", () => {
           loading={false}
           protectedPages={new Set(["page-1"])}
           siteStatus="live"
-          enabledLocales={["en", "fr", "nl", "de"]}
-          onTheme={vi.fn()}
           onCreate={vi.fn()}
           onRename={vi.fn()}
           onDuplicate={vi.fn()}
@@ -158,11 +147,37 @@ describe("SitePagesPanel", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getAllByText(strings.sitesSeoReady)).toHaveLength(1);
-    expect(screen.getByText(strings.sitesSeoNeedsWork)).toBeTruthy();
-    expect(screen.getByText(strings.sitesPagePasswordBadge)).toBeTruthy();
-    expect(screen.getByText(strings.sitesPublicPage)).toBeTruthy();
+    expect(screen.queryByText(strings.sitesColSeo)).toBeNull();
+    expect(screen.queryByText(strings.sitesColAccess)).toBeNull();
     expect(screen.getAllByText(strings.sitesStatusPublished).length).toBeGreaterThan(0);
-    expect(screen.getAllByText("FR").length).toBeGreaterThan(0);
+  });
+
+  test("nests child pages under an expandable parent", () => {
+    render(
+      <MemoryRouter>
+        <SitePagesPanel
+          pages={[homePage, { ...page, parentId: homePage.id }]}
+          loading={false}
+          protectedPages={new Set()}
+          siteStatus="draft"
+          onCreate={vi.fn()}
+          onRename={vi.fn()}
+          onDuplicate={vi.fn()}
+          onSetHome={vi.fn()}
+          onDelete={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+
+    const rows = screen
+      .getAllByRole("row")
+      .filter((row) => row.hasAttribute("aria-level"));
+    expect(rows[0]?.getAttribute("aria-level")).toBe("1");
+    expect(rows[1]?.getAttribute("aria-level")).toBe("2");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesCollapseChildPages }),
+    );
+    expect(screen.queryByText("Studio")).toBeNull();
   });
 });

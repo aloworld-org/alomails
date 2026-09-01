@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 import { strings } from "../../i18n";
-import { IconButton, Select, Spinner, cx } from "../../ds";
+import { IconButton, MODAL_BACKDROP_CLASS, Select, Spinner, cx } from "../../ds";
 import { useJmapClient } from "../../jmap";
 import type { EmailAddress, EmailFull } from "../../jmap";
 import { formatBytes, formatDate, mailErrorReason, senderName } from "../format";
@@ -669,7 +669,9 @@ export function ComposeModal({
 
   return (
     <div className={cx(styles.host, styles[`host_${view}`])}>
-      {view === "full" && <div className={styles.backdrop} />}
+      {view === "full" && (
+        <div className={`${styles.backdrop} ${MODAL_BACKDROP_CLASS}`} />
+      )}
       <div
         className={cx(styles.window, styles[`window_${view}`])}
         role="dialog"

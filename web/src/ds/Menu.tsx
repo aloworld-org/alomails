@@ -37,9 +37,14 @@ const TEXT_TRIGGER_OPEN = "bg-raised border-strong";
  *  a phone-width window; `z-[var(--z-overlay)]` is the layer tokens.css puts
  *  transient surfaces on. */
 const POPOVER =
-  "absolute min-w-50 max-h-80 overflow-y-auto p-2 " +
+  "absolute max-h-80 overflow-y-auto " +
   "bg-surface border border-subtle rounded-lg shadow-lg " +
   "z-[var(--z-overlay)] max-w-[calc(100vw-var(--space-4))]";
+
+const POPOVER_SIZE = {
+  default: "min-w-50 p-2",
+  comfortable: "min-w-56 p-2.5",
+} as const;
 
 /** Which edge it hangs from, and which edge it lines up with. Pinned with a
  *  margin rather than a `calc`, so up and down are one exclusive choice. */
@@ -49,10 +54,19 @@ const EDGE = { start: "left-0", end: "right-0" } as const;
 /** An action. The ink is chosen once, below, because a danger item replaces it
  *  rather than tinting over it. */
 const ITEM =
-  "flex items-center gap-3 w-full py-2 px-3 rounded-md " +
+  "flex items-center gap-3 w-full rounded-md " +
   "text-base text-left whitespace-nowrap " +
   "transition-colors duration-[var(--duration-fast)] ease-standard " +
   "enabled:hover:!bg-accent-soft enabled:hover:!text-accent disabled:opacity-45 disabled:cursor-not-allowed";
+
+const ITEM_SIZE = {
+  // Native buttons inherit the global zero-padding reset. These important
+  // utilities protect the menu option's required inset from that reset (UX:
+  // controls protect their content), rather than merely appearing to do so in
+  // the class list while rendering the icon against the hover edge.
+  default: "!px-4 !py-2",
+  comfortable: "min-h-11 !px-4 !py-2.5",
+} as const;
 
 export interface MenuItem {
   key: string;
@@ -76,6 +90,9 @@ interface MenuProps {
   /** When set, the trigger is a labelled text button (e.g. "New ▾") instead of
    *  an icon-only button. */
   triggerLabel?: string;
+  /** More room for primary workspace action menus without changing the
+   * compact menus used in editors and toolbars. */
+  size?: "default" | "comfortable";
 }
 
 export function Menu({
@@ -84,6 +101,7 @@ export function Menu({
   items,
   align = "end",
   triggerLabel,
+  size = "default",
 }: MenuProps) {
   const [open, setOpen] = useState(false);
   const [placement, setPlacement] = useState<{
@@ -138,6 +156,7 @@ export function Menu({
         <div
           className={cx(
             POPOVER,
+            POPOVER_SIZE[size],
             EDGE[placement.align],
             PLACE[placement.up ? "up" : "down"],
           )}
@@ -155,6 +174,7 @@ export function Menu({
                 role="menuitem"
                 className={cx(
                   ITEM,
+                  ITEM_SIZE[size],
                   item.danger === true ? "text-danger" : "text-primary",
                 )}
                 disabled={item.disabled}

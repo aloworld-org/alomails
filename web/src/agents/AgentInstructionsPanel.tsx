@@ -18,7 +18,7 @@ import { X } from "lucide-react";
 
 import { chatMessage, useChatApi } from "../chat/api";
 import type { Agent, AgentInstruction } from "../chat/types";
-import { Button, Field, IconButton, Input, Select } from "../ds";
+import { Button, Field, IconButton, Input, MODAL_BACKDROP_CLASS, Select } from "../ds";
 import { strings } from "../i18n";
 
 /** The schedules the form offers. The server's floor is one hour. */
@@ -122,7 +122,7 @@ export function AgentInstructionsPanel({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4"
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4 ${MODAL_BACKDROP_CLASS}`}
       role="dialog"
       aria-modal="true"
       aria-label={strings.agentInstructionsTitle}

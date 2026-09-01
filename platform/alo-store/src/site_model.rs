@@ -301,6 +301,84 @@ pub struct NavSection {
     pub appearance: Option<NavAppearance>,
 }
 
+/// The hero's visual composition. These are deliberately named layouts, not
+/// free coordinates, so every choice remains responsive and accessible.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HeroLayout {
+    Centered,
+    SplitRight,
+    SplitLeft,
+    Background,
+    Editorial,
+}
+
+impl HeroLayout {
+    pub const fn class(self) -> &'static str {
+        match self {
+            Self::Centered => "hero-centered",
+            Self::SplitRight => "hero-split-right",
+            Self::SplitLeft => "hero-split-left",
+            Self::Background => "hero-background",
+            Self::Editorial => "hero-editorial",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HeroHeight {
+    Compact,
+    Standard,
+    Tall,
+}
+
+impl HeroHeight {
+    pub const fn class(self) -> &'static str {
+        match self {
+            Self::Compact => "hero-height-compact",
+            Self::Standard => "hero-height-standard",
+            Self::Tall => "hero-height-tall",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HeroAlignment {
+    Left,
+    Center,
+    Right,
+}
+
+impl HeroAlignment {
+    pub const fn class(self) -> &'static str {
+        match self {
+            Self::Left => "hero-align-left",
+            Self::Center => "hero-align-center",
+            Self::Right => "hero-align-right",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HeroContentWidth {
+    Narrow,
+    Balanced,
+    Wide,
+}
+
+impl HeroContentWidth {
+    pub const fn class(self) -> &'static str {
+        match self {
+            Self::Narrow => "hero-width-narrow",
+            Self::Balanced => "hero-width-balanced",
+            Self::Wide => "hero-width-wide",
+        }
+    }
+}
+
 /// The page's lead banner.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -319,6 +397,18 @@ pub struct HeroSection {
     /// Secondary, quieter call-to-action.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub secondary_cta: Option<Link>,
+    /// Named responsive composition; absent preserves the original hero.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout: Option<HeroLayout>,
+    /// Vertical breathing room.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub height: Option<HeroHeight>,
+    /// Copy and action alignment.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub alignment: Option<HeroAlignment>,
+    /// Maximum text measure.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_width: Option<HeroContentWidth>,
 }
 
 /// One entry in a `features` grid.
@@ -1250,6 +1340,10 @@ mod tests {
                 image: Some(image.clone()),
                 primary_cta: Some(link("Shop roasts", "/shop")),
                 secondary_cta: Some(link("Our story", "/about")),
+                layout: Some(HeroLayout::SplitRight),
+                height: Some(HeroHeight::Tall),
+                alignment: Some(HeroAlignment::Left),
+                content_width: Some(HeroContentWidth::Narrow),
             }),
             Section::Features(FeaturesSection {
                 heading: Some("Why Nordwind".to_owned()),
@@ -1455,6 +1549,10 @@ mod tests {
                 image: None,
                 primary_cta: None,
                 secondary_cta: None,
+                layout: None,
+                height: None,
+                alignment: None,
+                content_width: None,
             }),
             Section::Gallery(GallerySection {
                 heading: None,
@@ -1596,6 +1694,10 @@ mod tests {
             image: None,
             primary_cta: None,
             secondary_cta: None,
+            layout: None,
+            height: None,
+            alignment: None,
+            content_width: None,
         })]);
         assert!(matches!(
             blank_heading.validate(),
@@ -1936,6 +2038,10 @@ mod tests {
                 image: Some(image.clone()),
                 primary_cta: None,
                 secondary_cta: None,
+                layout: None,
+                height: None,
+                alignment: None,
+                content_width: None,
             }),
             Section::TextImage(TextImageSection {
                 heading: None,

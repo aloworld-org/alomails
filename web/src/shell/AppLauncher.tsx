@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 import { strings } from "../i18n";
+import { MODAL_BACKDROP_CLASS } from "../ds";
 import type { ProductModule } from "../product";
 import { AppTile } from "./AppTile";
 
@@ -88,7 +89,7 @@ export function AppLauncher({ apps, favoriteModules }: AppLauncherProps) {
           <>
             <div
               data-app-launcher-backdrop
-              className="fixed inset-0 z-[1190] cursor-default bg-[#102A43]/20 backdrop-blur-[1px]"
+              className={`fixed inset-0 z-[1190] cursor-default bg-overlay ${MODAL_BACKDROP_CLASS}`}
               onPointerDown={() => setOpen(false)}
               aria-hidden="true"
             />

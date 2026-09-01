@@ -16,8 +16,14 @@ export interface SectionLink {
 }
 
 export type ThemeColorRole =
-  | "background" | "text" | "border"
-  | "accent_1" | "accent_2" | "accent_3" | "accent_4" | "accent_5";
+  | "background"
+  | "text"
+  | "border"
+  | "accent_1"
+  | "accent_2"
+  | "accent_3"
+  | "accent_4"
+  | "accent_5";
 
 /** Optional navigation styling references the reusable site-theme palette. */
 export interface NavAppearance {
@@ -66,6 +72,12 @@ export interface NavSection {
 }
 
 /** The page's lead banner. */
+export type HeroLayout =
+  "centered" | "split_right" | "split_left" | "background" | "editorial";
+export type HeroHeight = "compact" | "standard" | "tall";
+export type HeroAlignment = "left" | "center" | "right";
+export type HeroContentWidth = "narrow" | "balanced" | "wide";
+
 export interface HeroSection {
   type: "hero";
   heading: string;
@@ -73,6 +85,10 @@ export interface HeroSection {
   image?: SectionImage | undefined;
   primary_cta?: SectionLink | undefined;
   secondary_cta?: SectionLink | undefined;
+  layout?: HeroLayout | undefined;
+  height?: HeroHeight | undefined;
+  alignment?: HeroAlignment | undefined;
+  content_width?: HeroContentWidth | undefined;
 }
 
 /** One entry in a features grid. `icon` is a token the renderer may not ship

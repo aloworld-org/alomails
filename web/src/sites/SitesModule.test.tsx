@@ -5,7 +5,14 @@
 //
 // The auth layer is stubbed down to one recording `fetch`, so the REAL
 // client and the real views run — only the network is fake.
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -38,7 +45,8 @@ const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
     body: typeof init?.body === "string" ? JSON.parse(init.body) : undefined,
   });
   const index = replies.findIndex((r) => r.match(url, method));
-  const answer = index === -1 ? fallback(url) : (replies.splice(index, 1)[0] as Reply);
+  const answer =
+    index === -1 ? fallback(url) : (replies.splice(index, 1)[0] as Reply);
   return new Response(
     typeof answer.body === "string" ? answer.body : JSON.stringify(answer.body),
     {
@@ -62,12 +70,12 @@ function fallback(url: string): Reply {
         languages: [{ locale: "en", translatedPages: 0, ready: true }],
       }
     : url.includes("/posts")
-    ? { posts: [] }
-    : url.includes("/pages")
-      ? { pages: [] }
-    : url.endsWith("/sites")
-      ? { sites: [] }
-      : {};
+      ? { posts: [] }
+      : url.includes("/pages")
+        ? { pages: [] }
+        : url.endsWith("/sites")
+          ? { sites: [] }
+          : {};
   return { match: () => true, status: 200, body };
 }
 
@@ -136,7 +144,9 @@ const ARTICLE: SitePost = {
 
 function LocationProbe() {
   const location = useLocation();
-  return <output data-testid="location">{`${location.pathname}${location.search}`}</output>;
+  return (
+    <output data-testid="location">{`${location.pathname}${location.search}`}</output>
+  );
 }
 
 /** The module as it is really mounted: at `/sites/*`, routing itself. */
@@ -200,16 +210,24 @@ describe("the site list", () => {
       },
     ];
     ui("/sites");
-    fireEvent.click(await screen.findByRole("button", { name: /Alpha Bakery/ }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Alpha Bakery/ }),
+    );
     expect(screen.getByTestId("location").textContent).toBe("/sites/site-1");
   });
 
   test("an empty tenant sees the empty state, not a bare table", async () => {
     ui("/sites");
     expect(await screen.findByText(strings.sitesNoSitesTitle)).toBeTruthy();
-    expect(screen.getByRole("region", { name: strings.moduleSites })).toBeTruthy();
-    expect(screen.getByRole("region", { name: strings.sitesNoSitesTitle })).toBeTruthy();
-    expect(screen.getAllByRole("button", { name: strings.sitesNewSite })).toHaveLength(1);
+    expect(
+      screen.getByRole("region", { name: strings.moduleSites }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("region", { name: strings.sitesNoSitesTitle }),
+    ).toBeTruthy();
+    expect(
+      screen.getAllByRole("button", { name: strings.sitesNewSite }),
+    ).toHaveLength(1);
   });
 
   test("a failure to load is shown, never swallowed", async () => {
@@ -229,7 +247,8 @@ describe("the site list", () => {
 describe("the Base-backed collections workspace", () => {
   const baseReplies = (): Reply[] => [
     {
-      match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/collections"),
+      match: (url, method) =>
+        method === "GET" && url.endsWith("/sites/site-1/collections"),
       status: 200,
       body: { collections: [] },
     },
@@ -244,15 +263,20 @@ describe("the Base-backed collections workspace", () => {
     replies = [
       ...baseReplies(),
       {
-        match: (url, method) => method === "GET" && url.includes("/drive/list?"),
+        match: (url, method) =>
+          method === "GET" && url.includes("/drive/list?"),
         status: 200,
         body: { nodes: [] },
       },
     ];
     ui("/sites/site-1/collections");
 
-    expect(await screen.findByText(strings.sitesCollectionNoBasesTitle)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesCollectionOpenDrive }));
+    expect(
+      await screen.findByText(strings.sitesCollectionNoBasesTitle),
+    ).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesCollectionOpenDrive }),
+    );
     expect(screen.getByTestId("location").textContent).toBe("/drive");
   });
 
@@ -260,27 +284,31 @@ describe("the Base-backed collections workspace", () => {
     replies = [
       ...baseReplies(),
       {
-        match: (url, method) => method === "GET" && url.includes("/drive/list?"),
+        match: (url, method) =>
+          method === "GET" && url.includes("/drive/list?"),
         status: 200,
         body: { nodes: [{ id: "base-1", kind: "base", name: "Roasts" }] },
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/drive/base/base-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/drive/base/base-1"),
         status: 200,
         body: {
           nodeId: "base-1",
-          tables: [{
-            id: "table-1",
-            name: "Seasonal roasts",
-            records: [{ id: "record-1" }],
-            fields: [
-              { id: "title-1", name: "Name", type: "text" },
-              { id: "summary-1", name: "Tasting notes", type: "text" },
-              { id: "image-1", name: "Photo", type: "attachment" },
-              { id: "date-1", name: "Published", type: "date" },
-              { id: "ignored-1", name: "Score", type: "number" },
-            ],
-          }],
+          tables: [
+            {
+              id: "table-1",
+              name: "Seasonal roasts",
+              records: [{ id: "record-1" }],
+              fields: [
+                { id: "title-1", name: "Name", type: "text" },
+                { id: "summary-1", name: "Tasting notes", type: "text" },
+                { id: "image-1", name: "Photo", type: "attachment" },
+                { id: "date-1", name: "Published", type: "date" },
+                { id: "ignored-1", name: "Score", type: "number" },
+              ],
+            },
+          ],
         },
       },
     ];
@@ -311,30 +339,36 @@ describe("the Base-backed collections workspace", () => {
     };
     replies.push(
       {
-        match: (url, method) => method === "POST" && url.endsWith("/sites/site-1/collections"),
+        match: (url, method) =>
+          method === "POST" && url.endsWith("/sites/site-1/collections"),
         status: 200,
         body: stored,
       },
       {
         match: (url, method) =>
-          method === "GET" && url.endsWith("/sites/site-1/collections/collection-1/preview"),
+          method === "GET" &&
+          url.endsWith("/sites/site-1/collections/collection-1/preview"),
         status: 200,
         body: {
           id: "collection-1",
           name: "Seasonal roasts",
-          items: [{
-            title: "Harbour Blend",
-            slug: "harbour-blend",
-            summary: "Chocolate and red apple",
-            body: null,
-            imageBlobId: null,
-            link: null,
-            publishedAt: null,
-          }],
+          items: [
+            {
+              title: "Harbour Blend",
+              slug: "harbour-blend",
+              summary: "Chocolate and red apple",
+              body: null,
+              imageBlobId: null,
+              link: null,
+              publishedAt: null,
+            },
+          ],
         },
       },
     );
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesCollectionSave }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesCollectionSave }),
+    );
 
     await waitFor(() => {
       const write = lastWrite();
@@ -352,14 +386,21 @@ describe("the Base-backed collections workspace", () => {
 
     replies.push({
       match: (url, method) =>
-        method === "DELETE" && url.endsWith("/sites/site-1/collections/collection-1"),
+        method === "DELETE" &&
+        url.endsWith("/sites/site-1/collections/collection-1"),
       status: 200,
       body: { status: "ok" },
     });
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesCollectionDisconnect }));
-    expect(screen.getByText(strings.sitesCollectionDisconnectHint)).toBeTruthy();
     fireEvent.click(
-      screen.getByRole("button", { name: strings.sitesCollectionDisconnectConfirm }),
+      screen.getByRole("button", { name: strings.sitesCollectionDisconnect }),
+    );
+    expect(
+      screen.getByText(strings.sitesCollectionDisconnectHint),
+    ).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: strings.sitesCollectionDisconnectConfirm,
+      }),
     );
     await waitFor(() => expect(lastWrite()?.method).toBe("DELETE"));
   });
@@ -381,12 +422,14 @@ describe("the contact submissions inbox", () => {
   test("reads a visitor message and marks it handled without leaving the inbox", async () => {
     replies = [
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1"),
         status: 200,
         body: detail,
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/submissions"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/submissions"),
         status: 200,
         body: { submissions: [submission] },
       },
@@ -402,40 +445,55 @@ describe("the contact submissions inbox", () => {
     ui("/sites/site-1/submissions");
     expect((await screen.findAllByText("Ada Lovelace")).length).toBe(2);
     expect(screen.getByText("Could you call me tomorrow?")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesMarkHandled }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesMarkHandled }),
+    );
 
     expect(await screen.findByText(strings.sitesHandled)).toBeTruthy();
-    expect(lastWrite()).toMatchObject({ method: "PUT", body: { handled: true } });
-    expect(screen.getByRole("button", { name: strings.sitesReopenSubmission })).toBeTruthy();
+    expect(lastWrite()).toMatchObject({
+      method: "PUT",
+      body: { handled: true },
+    });
+    expect(
+      screen.getByRole("button", { name: strings.sitesReopenSubmission }),
+    ).toBeTruthy();
   });
 
   test("an empty inbox teaches the next step", async () => {
     replies = [
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1"),
         status: 200,
         body: detail,
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/submissions"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/submissions"),
         status: 200,
         body: { submissions: [] },
       },
     ];
     ui("/sites/site-1/submissions");
-    expect(await screen.findByText(strings.sitesNoSubmissionsTitle)).toBeTruthy();
-    expect(screen.getByRole("button", { name: strings.sitesOpenPages })).toBeTruthy();
+    expect(
+      await screen.findByText(strings.sitesNoSubmissionsTitle),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: strings.sitesOpenPages }),
+    ).toBeTruthy();
   });
 
   test("exports the visible inbox in one click", async () => {
     replies = [
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1"),
         status: 200,
         body: detail,
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/submissions"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/submissions"),
         status: 200,
         body: { submissions: [submission] },
       },
@@ -449,7 +507,9 @@ describe("the contact submissions inbox", () => {
 
     ui("/sites/site-1/submissions");
     fireEvent.click(
-      await screen.findByRole("button", { name: strings.sitesExportSubmissions }),
+      await screen.findByRole("button", {
+        name: strings.sitesExportSubmissions,
+      }),
     );
 
     await waitFor(() => expect(saveTextFile).toHaveBeenCalledTimes(1));
@@ -467,12 +527,14 @@ describe("the site analytics desk", () => {
   test("shows actionable traffic and the no-cookie promise", async () => {
     replies = [
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1"),
         status: 200,
         body: detail,
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/config"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/config"),
         status: 200,
         body: { domain: "sites.test" },
       },
@@ -495,28 +557,35 @@ describe("the site analytics desk", () => {
     ];
 
     ui("/sites/site-1/analytics");
-    expect(await screen.findByText(strings.sitesAnalyticsPrivacyTitle)).toBeTruthy();
+    expect(
+      await screen.findByText(strings.sitesAnalyticsPrivacyTitle),
+    ).toBeTruthy();
     expect(screen.getByText("42")).toBeTruthy();
     expect(screen.getByText("17")).toBeTruthy();
     expect(screen.getByText("/menu")).toBeTruthy();
     expect(screen.getByText(strings.sitesAnalyticsDirect)).toBeTruthy();
-    expect(screen.getByRole("list", { name: strings.sitesAnalyticsChartLabel })).toBeTruthy();
+    expect(
+      screen.getByRole("list", { name: strings.sitesAnalyticsChartLabel }),
+    ).toBeTruthy();
   });
 
   test("an empty report teaches the one next step", async () => {
     replies = [
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1"),
         status: 200,
         body: detail,
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/config"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/config"),
         status: 200,
         body: { domain: "sites.test" },
       },
       {
-        match: (url, method) => method === "GET" && url.includes("/analytics?days=30"),
+        match: (url, method) =>
+          method === "GET" && url.includes("/analytics?days=30"),
         status: 200,
         body: {
           from: "2026-07-11",
@@ -530,40 +599,68 @@ describe("the site analytics desk", () => {
     ];
 
     ui("/sites/site-1/analytics");
-    expect(await screen.findByText(strings.sitesAnalyticsEmptyTitle)).toBeTruthy();
+    expect(
+      await screen.findByText(strings.sitesAnalyticsEmptyTitle),
+    ).toBeTruthy();
     expect(screen.getByText(strings.sitesAnalyticsEmptyBody)).toBeTruthy();
-    expect(screen.getByRole("button", { name: strings.sitesAnalyticsOpenSite })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: strings.sitesAnalyticsOpenSite }),
+    ).toBeTruthy();
   });
 });
 
 describe("creating a site", () => {
   function chooseTemplatePath() {
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesTemplateChoice }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesTemplateChoice }),
+    );
   }
 
   test("a description generates a private draft and opens its Home page", async () => {
     replies = [
       {
-        match: (url, method) => method === "POST" && url.endsWith("/sites/generate"),
+        match: (url, method) =>
+          method === "POST" && url.endsWith("/sites/generate"),
         status: 200,
         body: {
-          site: { ...BETA, id: "site-generated", name: "Acme Bakery", subdomain: "acme-bakery" },
-          pages: [{ ...HOME, id: "page-generated", sections: { schema_version: 1, sections: [] } }],
+          site: {
+            ...BETA,
+            id: "site-generated",
+            name: "Acme Bakery",
+            subdomain: "acme-bakery",
+          },
+          pages: [
+            {
+              ...HOME,
+              id: "page-generated",
+              sections: { schema_version: 1, sections: [] },
+            },
+          ],
         },
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-generated/pages/page-generated"),
+        match: (url, method) =>
+          method === "GET" &&
+          url.endsWith("/sites/site-generated/pages/page-generated"),
         status: 200,
-        body: { ...HOME, id: "page-generated", sections: { schema_version: 1, sections: [] } },
+        body: {
+          ...HOME,
+          id: "page-generated",
+          sections: { schema_version: 1, sections: [] },
+        },
       },
     ];
 
     ui("/sites");
-    fireEvent.click(await screen.findByRole("button", { name: strings.sitesNewSite }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesNewSite }),
+    );
     fireEvent.change(screen.getByLabelText(strings.sitesBusinessDescription), {
       target: { value: "A neighborhood bakery for local families" },
     });
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesGenerateSite }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesGenerateSite }),
+    );
 
     await waitFor(() =>
       expect(screen.getByTestId("location").textContent).toBe(
@@ -573,8 +670,12 @@ describe("creating a site", () => {
     expect(await screen.findByText(strings.sitesNoSectionsTitle)).toBeTruthy();
     // One click from adding a hero (S1.30c): the empty page's CTA opens the
     // section palette, and an unseeded hero tile opens its prop form.
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesAddSection }));
-    const heroTile = document.querySelector<HTMLElement>('[data-palette-tile="hero"]');
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesAddSection }),
+    );
+    const heroTile = document.querySelector<HTMLElement>(
+      '[data-palette-tile="hero"]',
+    );
     if (heroTile === null) throw new Error("no hero tile in the palette");
     fireEvent.click(heroTile);
     expect(
@@ -582,7 +683,9 @@ describe("creating a site", () => {
         name: strings.sitesAddSectionTitle(strings.sitesSectionHero),
       }),
     ).toBeTruthy();
-    expect(calls.find((call) => call.url.endsWith("/sites/generate"))?.body).toEqual({
+    expect(
+      calls.find((call) => call.url.endsWith("/sites/generate"))?.body,
+    ).toEqual({
       description: "A neighborhood bakery for local families",
     });
   });
@@ -590,33 +693,46 @@ describe("creating a site", () => {
   test("an unconfigured workspace reveals the complete manual template path", async () => {
     replies = [
       {
-        match: (url, method) => method === "POST" && url.endsWith("/sites/generate"),
+        match: (url, method) =>
+          method === "POST" && url.endsWith("/sites/generate"),
         status: 503,
-        body: { reason: "unconfigured", detail: "AI is not configured for this tenant" },
+        body: {
+          reason: "unconfigured",
+          detail: "AI is not configured for this tenant",
+        },
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/templates"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/templates"),
         status: 200,
         body: { templates: [] },
       },
       {
-        match: (url, method) => method === "GET" && url.includes("/sites/subdomain-check"),
+        match: (url, method) =>
+          method === "GET" && url.includes("/sites/subdomain-check"),
         status: 200,
         body: { subdomain: "manual-studio", available: true },
       },
       {
         match: (url, method) => method === "POST" && url.endsWith("/sites"),
         status: 200,
-        body: { ...BETA, id: "site-manual", name: "Manual Studio", subdomain: "manual-studio" },
+        body: {
+          ...BETA,
+          id: "site-manual",
+          name: "Manual Studio",
+          subdomain: "manual-studio",
+        },
       },
       {
-        match: (url, method) => method === "POST" && url.endsWith("/sites/site-manual/pages"),
+        match: (url, method) =>
+          method === "POST" && url.endsWith("/sites/site-manual/pages"),
         status: 200,
         body: { ...HOME, id: "page-manual", title: strings.sitesHomePageTitle },
       },
       {
         match: (url, method) =>
-          method === "GET" && url.endsWith("/sites/site-manual/pages/page-manual"),
+          method === "GET" &&
+          url.endsWith("/sites/site-manual/pages/page-manual"),
         status: 200,
         body: {
           ...HOME,
@@ -628,16 +744,24 @@ describe("creating a site", () => {
     ];
 
     ui("/sites");
-    fireEvent.click(await screen.findByRole("button", { name: strings.sitesNewSite }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesNewSite }),
+    );
     fireEvent.change(screen.getByLabelText(strings.sitesBusinessDescription), {
       target: { value: "A useful business website" },
     });
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesGenerateSite }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesGenerateSite }),
+    );
 
-    expect(await screen.findByText(strings.sitesGenerationUnavailable)).toBeTruthy();
+    expect(
+      await screen.findByText(strings.sitesGenerationUnavailable),
+    ).toBeTruthy();
     expect(screen.getByLabelText(strings.sitesFieldName)).toBeTruthy();
     expect(
-      await screen.findByRole("radio", { name: new RegExp(strings.sitesBlankTemplate, "i") }),
+      await screen.findByRole("radio", {
+        name: new RegExp(strings.sitesBlankTemplate, "i"),
+      }),
     ).toBeTruthy();
     fireEvent.change(screen.getByLabelText(strings.sitesFieldName), {
       target: { value: "Manual Studio" },
@@ -645,10 +769,16 @@ describe("creating a site", () => {
     fireEvent.change(screen.getByLabelText(strings.sitesFieldSubdomain), {
       target: { value: "manual-studio" },
     });
-    await waitFor(() => expect(screen.getByText(strings.sitesAddressAvailable)).toBeTruthy(), {
-      timeout: 3000,
-    });
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesCreateSite }));
+    await waitFor(
+      () =>
+        expect(screen.getByText(strings.sitesAddressAvailable)).toBeTruthy(),
+      {
+        timeout: 3000,
+      },
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesCreateSite }),
+    );
     await waitFor(() =>
       expect(screen.getByTestId("location").textContent).toBe(
         "/sites/site-manual/pages/page-manual",
@@ -659,20 +789,24 @@ describe("creating a site", () => {
   test("the typed address is checked live against the server", async () => {
     replies = [
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/config"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/config"),
         status: 200,
         body: { domain: "alosites.com" },
       },
     ];
     ui("/sites");
-    fireEvent.click(await screen.findByRole("button", { name: strings.sitesNewSite }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesNewSite }),
+    );
     chooseTemplatePath();
     const dialog = screen.getByRole("dialog");
     expect(dialog).toBeTruthy();
 
     replies = [
       {
-        match: (url, method) => method === "GET" && url.includes("/sites/subdomain-check"),
+        match: (url, method) =>
+          method === "GET" && url.includes("/sites/subdomain-check"),
         status: 200,
         body: { subdomain: "acme", available: true },
       },
@@ -681,7 +815,8 @@ describe("creating a site", () => {
       target: { value: "acme" },
     });
     await waitFor(
-      () => expect(screen.getByText(strings.sitesAddressAvailable)).toBeTruthy(),
+      () =>
+        expect(screen.getByText(strings.sitesAddressAvailable)).toBeTruthy(),
       { timeout: 3000 },
     );
     expect(screen.getByText("acme.alosites.com")).toBeTruthy();
@@ -692,18 +827,22 @@ describe("creating a site", () => {
   test("the site name suggests an editable full address and explains a disabled Create", async () => {
     replies = [
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/config"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/config"),
         status: 200,
         body: { domain: "alosites.com" },
       },
       {
-        match: (url, method) => method === "GET" && url.includes("/sites/subdomain-check"),
+        match: (url, method) =>
+          method === "GET" && url.includes("/sites/subdomain-check"),
         status: 200,
         body: { subdomain: "axon-studio", available: true },
       },
     ];
     ui("/sites");
-    fireEvent.click(await screen.findByRole("button", { name: strings.sitesNewSite }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesNewSite }),
+    );
     chooseTemplatePath();
 
     expect(screen.getByText(strings.sitesNameRequired)).toBeTruthy();
@@ -717,74 +856,89 @@ describe("creating a site", () => {
     );
     expect(await screen.findByText("axon-studio.alosites.com")).toBeTruthy();
     expect(screen.queryByText(strings.sitesNameRequired)).toBeNull();
-    await waitFor(() => expect(screen.getByText(strings.sitesAddressAvailable)).toBeTruthy(), {
-      timeout: 3000,
-    });
+    await waitFor(
+      () =>
+        expect(screen.getByText(strings.sitesAddressAvailable)).toBeTruthy(),
+      {
+        timeout: 3000,
+      },
+    );
 
     fireEvent.change(screen.getByLabelText(strings.sitesFieldSubdomain), {
       target: { value: "" },
     });
     expect(screen.getByText(strings.sitesAddressRequired)).toBeTruthy();
-    expect(screen.getByRole("button", { name: strings.sitesCreateSite })).toHaveProperty(
-      "disabled",
-      true,
-    );
+    expect(
+      screen.getByRole("button", { name: strings.sitesCreateSite }),
+    ).toHaveProperty("disabled", true);
   });
 
   test("a taken address, and a rule the server names, are both shown", async () => {
     ui("/sites");
-    fireEvent.click(await screen.findByRole("button", { name: strings.sitesNewSite }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesNewSite }),
+    );
     chooseTemplatePath();
 
     replies = [
       {
-        match: (url, method) => method === "GET" && url.includes("/sites/subdomain-check"),
+        match: (url, method) =>
+          method === "GET" && url.includes("/sites/subdomain-check"),
         status: 200,
         body: { subdomain: "taken", available: false },
       },
     ];
     const address = screen.getByLabelText(strings.sitesFieldSubdomain);
     fireEvent.change(address, { target: { value: "taken" } });
-    await waitFor(() => expect(screen.getByText(strings.sitesAddressTaken)).toBeTruthy(), {
-      timeout: 3000,
-    });
-    expect(screen.getByRole("button", { name: strings.sitesCreateSite })).toHaveProperty(
-      "disabled",
-      true,
+    await waitFor(
+      () => expect(screen.getByText(strings.sitesAddressTaken)).toBeTruthy(),
+      {
+        timeout: 3000,
+      },
     );
+    expect(
+      screen.getByRole("button", { name: strings.sitesCreateSite }),
+    ).toHaveProperty("disabled", true);
 
     replies = [
       {
-        match: (url, method) => method === "GET" && url.includes("/sites/subdomain-check"),
+        match: (url, method) =>
+          method === "GET" && url.includes("/sites/subdomain-check"),
         status: 422,
         body: { detail: "subdomain is reserved" },
       },
     ];
     fireEvent.change(address, { target: { value: "mail" } });
-    await waitFor(() => expect(screen.getByText("subdomain is reserved")).toBeTruthy(), {
-      timeout: 3000,
-    });
-    expect(screen.getByRole("button", { name: strings.sitesCreateSite })).toHaveProperty(
-      "disabled",
-      true,
+    await waitFor(
+      () => expect(screen.getByText("subdomain is reserved")).toBeTruthy(),
+      {
+        timeout: 3000,
+      },
     );
+    expect(
+      screen.getByRole("button", { name: strings.sitesCreateSite }),
+    ).toHaveProperty("disabled", true);
   });
 
   test("Create only enables for the address whose availability was confirmed", async () => {
     replies = [
       {
-        match: (url, method) => method === "GET" && url.includes("subdomain=first-address"),
+        match: (url, method) =>
+          method === "GET" && url.includes("subdomain=first-address"),
         status: 200,
         body: { subdomain: "first-address", available: true },
       },
       {
-        match: (url, method) => method === "GET" && url.includes("subdomain=second-address"),
+        match: (url, method) =>
+          method === "GET" && url.includes("subdomain=second-address"),
         status: 200,
         body: { subdomain: "second-address", available: true },
       },
     ];
     ui("/sites");
-    fireEvent.click(await screen.findByRole("button", { name: strings.sitesNewSite }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesNewSite }),
+    );
     chooseTemplatePath();
     fireEvent.change(screen.getByLabelText(strings.sitesFieldName), {
       target: { value: "Confirmed Studio" },
@@ -792,47 +946,61 @@ describe("creating a site", () => {
     const address = screen.getByLabelText(strings.sitesFieldSubdomain);
     fireEvent.change(address, { target: { value: "first-address" } });
 
-    await waitFor(() => expect(screen.getByText(strings.sitesAddressAvailable)).toBeTruthy(), {
-      timeout: 3000,
-    });
-    expect(screen.getByRole("button", { name: strings.sitesCreateSite })).toHaveProperty(
-      "disabled",
-      false,
+    await waitFor(
+      () =>
+        expect(screen.getByText(strings.sitesAddressAvailable)).toBeTruthy(),
+      {
+        timeout: 3000,
+      },
     );
+    expect(
+      screen.getByRole("button", { name: strings.sitesCreateSite }),
+    ).toHaveProperty("disabled", false);
 
     fireEvent.change(address, { target: { value: "second-address" } });
-    expect(screen.getByRole("button", { name: strings.sitesCreateSite })).toHaveProperty(
-      "disabled",
-      true,
+    expect(
+      screen.getByRole("button", { name: strings.sitesCreateSite }),
+    ).toHaveProperty("disabled", true);
+    await waitFor(
+      () =>
+        expect(screen.getByText(strings.sitesAddressAvailable)).toBeTruthy(),
+      {
+        timeout: 3000,
+      },
     );
-    await waitFor(() => expect(screen.getByText(strings.sitesAddressAvailable)).toBeTruthy(), {
-      timeout: 3000,
-    });
-    expect(screen.getByRole("button", { name: strings.sitesCreateSite })).toHaveProperty(
-      "disabled",
-      false,
-    );
+    expect(
+      screen.getByRole("button", { name: strings.sitesCreateSite }),
+    ).toHaveProperty("disabled", false);
   });
 
   test("a pasted full address is normalized before check and create", async () => {
     replies = [
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/config"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/config"),
         status: 200,
         body: { domain: "alosites.com" },
       },
       {
-        match: (url, method) => method === "GET" && url.includes("/sites/subdomain-check"),
+        match: (url, method) =>
+          method === "GET" && url.includes("/sites/subdomain-check"),
         status: 200,
         body: { subdomain: "acme", available: true },
       },
       {
         match: (url, method) => method === "POST" && url.endsWith("/sites"),
         status: 200,
-        body: { ...ALPHA, id: "site-9", name: "Acme", subdomain: "acme", status: "draft" },
+        body: {
+          ...ALPHA,
+          id: "site-9",
+          name: "Acme",
+          subdomain: "acme",
+          status: "draft",
+        },
       },
       {
-        match: (url, method) => method === "POST" && url.endsWith("/sites/site-9/pages"),
+        match: (url, method) =>
+          method === "POST" && url.endsWith("/sites/site-9/pages"),
         status: 200,
         body: { ...HOME, id: "page-9", title: strings.sitesHomePageTitle },
       },
@@ -849,7 +1017,9 @@ describe("creating a site", () => {
       },
     ];
     ui("/sites");
-    fireEvent.click(await screen.findByRole("button", { name: strings.sitesNewSite }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesNewSite }),
+    );
     chooseTemplatePath();
     fireEvent.change(screen.getByLabelText(strings.sitesFieldName), {
       target: { value: "Acme" },
@@ -858,32 +1028,49 @@ describe("creating a site", () => {
       target: { value: "https://acme.alosites.com/" },
     });
     await waitFor(() =>
-      expect(screen.getByLabelText(strings.sitesFieldSubdomain)).toHaveProperty("value", "acme"),
+      expect(screen.getByLabelText(strings.sitesFieldSubdomain)).toHaveProperty(
+        "value",
+        "acme",
+      ),
     );
     await waitFor(
-      () => expect(calls.some((call) => call.url.includes("subdomain=acme"))).toBe(true),
+      () =>
+        expect(calls.some((call) => call.url.includes("subdomain=acme"))).toBe(
+          true,
+        ),
       { timeout: 3000 },
     );
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesCreateSite }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesCreateSite }),
+    );
 
     // The write carries the label behind the displayed complete address…
-    await waitFor(() => expect(calls.some((call) => call.url.endsWith("/sites/site-9/pages"))).toBe(true));
+    await waitFor(() =>
+      expect(
+        calls.some((call) => call.url.endsWith("/sites/site-9/pages")),
+      ).toBe(true),
+    );
     expect(
-      calls.find((call) => call.method === "POST" && call.url.endsWith("/sites")),
+      calls.find(
+        (call) => call.method === "POST" && call.url.endsWith("/sites"),
+      ),
     ).toMatchObject({
       method: "POST",
       body: { name: "Acme", subdomain: "acme" },
     });
     // …and the module navigated directly into its new Home page.
     await waitFor(() =>
-      expect(screen.getByTestId("location").textContent).toContain("/sites/site-9/pages/"),
+      expect(screen.getByTestId("location").textContent).toContain(
+        "/sites/site-9/pages/",
+      ),
     );
   });
 
   test("the server's refusal is shown in the dialog, which stays open", async () => {
     replies = [
       {
-        match: (url, method) => method === "GET" && url.includes("/sites/subdomain-check"),
+        match: (url, method) =>
+          method === "GET" && url.includes("/sites/subdomain-check"),
         status: 200,
         body: { subdomain: "acme", available: true },
       },
@@ -894,7 +1081,9 @@ describe("creating a site", () => {
       },
     ];
     ui("/sites");
-    fireEvent.click(await screen.findByRole("button", { name: strings.sitesNewSite }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesNewSite }),
+    );
     chooseTemplatePath();
     fireEvent.change(screen.getByLabelText(strings.sitesFieldName), {
       target: { value: "Acme" },
@@ -902,10 +1091,16 @@ describe("creating a site", () => {
     fireEvent.change(screen.getByLabelText(strings.sitesFieldSubdomain), {
       target: { value: "acme" },
     });
-    await waitFor(() => expect(screen.getByText(strings.sitesAddressAvailable)).toBeTruthy(), {
-      timeout: 3000,
-    });
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesCreateSite }));
+    await waitFor(
+      () =>
+        expect(screen.getByText(strings.sitesAddressAvailable)).toBeTruthy(),
+      {
+        timeout: 3000,
+      },
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesCreateSite }),
+    );
     expect(await screen.findByText("subdomain is already taken")).toBeTruthy();
     expect(screen.getByRole("dialog")).toBeTruthy();
   });
@@ -922,23 +1117,27 @@ describe("publishing a site", () => {
     replies = [
       config,
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-2"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-2"),
         status: 200,
         body: { ...BETA, publish: null },
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-2/pages"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-2/pages"),
         status: 200,
         body: { pages: [HOME] },
       },
       {
-        match: (url, method) => method === "POST" && url.endsWith("/sites/site-2/publish"),
+        match: (url, method) =>
+          method === "POST" && url.endsWith("/sites/site-2/publish"),
         status: 200,
         body: { publishId: "pub-9", status: "live" },
       },
       // The reload after publishing.
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-2"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-2"),
         status: 200,
         body: {
           ...BETA,
@@ -952,16 +1151,22 @@ describe("publishing a site", () => {
       await screen.findByRole("tab", { name: strings.sitesPublishing }),
     );
     // The copy names the real address the site will serve at.
-    expect(await screen.findByText(strings.sitesGoesLiveAt("beta.alosites.com"))).toBeTruthy();
+    expect(
+      await screen.findByText(strings.sitesGoesLiveAt("beta.alosites.com")),
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: strings.sitesPublish }));
     await waitFor(() => expect(lastWrite()).toBeTruthy());
     expect(lastWrite()?.method).toBe("POST");
     expect(lastWrite()?.url.endsWith("/sites/site-2/publish")).toBe(true);
     // The reload shows the live state, the address now a real link.
     await waitFor(() =>
-      expect(screen.getAllByText(strings.sitesStatusLive).length).toBeGreaterThan(0),
+      expect(
+        screen.getAllByText(strings.sitesStatusLive).length,
+      ).toBeGreaterThan(0),
     );
-    const link = screen.getByRole("link", { name: "beta.alosites.com" }) as HTMLAnchorElement;
+    const link = screen.getByRole("link", {
+      name: "beta.alosites.com",
+    }) as HTMLAnchorElement;
     expect(link.href).toBe("https://beta.alosites.com/");
   });
 
@@ -969,12 +1174,14 @@ describe("publishing a site", () => {
     replies = [
       config,
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-2"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-2"),
         status: 200,
         body: { ...BETA, publish: null },
       },
       {
-        match: (url, method) => method === "POST" && url.endsWith("/sites/site-2/publish"),
+        match: (url, method) =>
+          method === "POST" && url.endsWith("/sites/site-2/publish"),
         status: 422,
         body: { detail: "site has no home page" },
       },
@@ -983,27 +1190,37 @@ describe("publishing a site", () => {
     fireEvent.click(
       await screen.findByRole("tab", { name: strings.sitesPublishing }),
     );
-    fireEvent.click(await screen.findByRole("button", { name: strings.sitesPublish }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesPublish }),
+    );
     expect(await screen.findByText("site has no home page")).toBeTruthy();
-    expect(screen.getAllByText(strings.sitesStatusDraft).length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(strings.sitesStatusDraft).length,
+    ).toBeGreaterThan(0);
   });
 
   test("taking a live site offline needs the second click", async () => {
     replies = [
       config,
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1"),
         status: 200,
-        body: { ...ALPHA, publish: { id: "pub-1", publishedAt: "2026-08-07T10:00:00Z" } },
+        body: {
+          ...ALPHA,
+          publish: { id: "pub-1", publishedAt: "2026-08-07T10:00:00Z" },
+        },
       },
       {
-        match: (url, method) => method === "POST" && url.endsWith("/sites/site-1/unpublish"),
+        match: (url, method) =>
+          method === "POST" && url.endsWith("/sites/site-1/unpublish"),
         status: 200,
         body: { status: "draft" },
       },
       // The reload after unpublishing.
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1"),
         status: 200,
         body: { ...ALPHA, status: "draft", publish: null },
       },
@@ -1012,22 +1229,32 @@ describe("publishing a site", () => {
     fireEvent.click(
       await screen.findByRole("tab", { name: strings.sitesPublishing }),
     );
-    fireEvent.click(await screen.findByRole("button", { name: strings.sitesUnpublish }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesUnpublish }),
+    );
     // Armed, not fired: nothing was written, the button now asks to confirm.
     expect(lastWrite()).toBeUndefined();
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesConfirmUnpublish }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesConfirmUnpublish }),
+    );
     await waitFor(() => expect(lastWrite()).toBeTruthy());
     expect(lastWrite()?.url.endsWith("/sites/site-1/unpublish")).toBe(true);
     await waitFor(() =>
-      expect(screen.getAllByText(strings.sitesStatusDraft).length).toBeGreaterThan(0),
+      expect(
+        screen.getAllByText(strings.sitesStatusDraft).length,
+      ).toBeGreaterThan(0),
     );
   });
 
   test("the create form previews the full address once the domain is known", async () => {
     replies = [config];
     ui("/sites");
-    fireEvent.click(await screen.findByRole("button", { name: strings.sitesNewSite }));
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesTemplateChoice }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesNewSite }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesTemplateChoice }),
+    );
     fireEvent.change(screen.getByLabelText(strings.sitesFieldSubdomain), {
       target: { value: "Acme" },
     });
@@ -1037,37 +1264,47 @@ describe("publishing a site", () => {
 });
 
 describe("one site", () => {
-  test("shows the site and its pages in order, the home page marked", async () => {
+  test("shows the site and its pages without duplicating the home label", async () => {
     replies = [
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1"),
         status: 200,
-        body: { ...ALPHA, publish: { id: "pub-1", publishedAt: "2026-08-07T10:00:00Z" } },
+        body: {
+          ...ALPHA,
+          publish: { id: "pub-1", publishedAt: "2026-08-07T10:00:00Z" },
+        },
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/pages"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/pages"),
         status: 200,
         body: { pages: [HOME, ABOUT] },
       },
     ];
     ui("/sites/site-1?section=pages");
     expect(await screen.findByText("Alpha Bakery")).toBeTruthy();
-    expect(screen.getAllByText(strings.sitesStatusLive).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(strings.sitesStatusLive).length).toBeGreaterThan(
+      0,
+    );
     expect(screen.getByText("Welcome")).toBeTruthy();
-    expect(screen.getByText(strings.sitesHomeBadge)).toBeTruthy();
+    expect(screen.queryByText("/")).toBeNull();
+    expect(screen.queryByText(strings.sitesHomeBadge)).toBeNull();
     expect(screen.getByText("About us")).toBeTruthy();
-    expect(screen.getByText("/about")).toBeTruthy();
+    expect(screen.queryByText("/about")).toBeNull();
   });
 
   test("keeps pages, publishing, and languages in separate workspaces", async () => {
     replies = [
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1"),
         status: 200,
         body: { ...ALPHA, publish: null },
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/pages"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/pages"),
         status: 200,
         body: { pages: [HOME] },
       },
@@ -1077,38 +1314,101 @@ describe("one site", () => {
     expect(
       await screen.findByRole("heading", { name: strings.sitesPages }),
     ).toBeTruthy();
-    expect(screen.getAllByText(strings.sitesStatusLive).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(strings.sitesStatusLive).length).toBeGreaterThan(
+      0,
+    );
     expect(screen.queryByLabelText(strings.sitesLanguagesHint)).toBeNull();
 
-    fireEvent.click(
-      screen.getByRole("tab", { name: strings.sitesPublishing }),
+    fireEvent.click(screen.getByRole("tab", { name: strings.sitesPublishing }));
+    expect(screen.getAllByText(strings.sitesStatusLive).length).toBeGreaterThan(
+      0,
     );
-    expect(screen.getAllByText(strings.sitesStatusLive).length).toBeGreaterThan(0);
     expect(
       screen.queryByRole("heading", { name: strings.sitesPages }),
     ).toBeNull();
 
-    fireEvent.click(
-      screen.getByRole("tab", { name: strings.sitesLanguages }),
-    );
+    fireEvent.click(screen.getByRole("tab", { name: strings.sitesLanguages }));
     expect(screen.getByLabelText(strings.sitesLanguagesHint)).toBeTruthy();
-    expect(screen.getAllByText(strings.sitesStatusLive).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(strings.sitesStatusLive).length).toBeGreaterThan(
+      0,
+    );
+  });
+
+  test("opens navigation beside footer as a website workspace", async () => {
+    replies = [
+      {
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: { ...ALPHA, publish: null },
+      },
+      {
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/pages"),
+        status: 200,
+        body: { pages: [HOME] },
+      },
+      {
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/pages/page-1"),
+        status: 200,
+        body: {
+          ...HOME,
+          sections: {
+            schema_version: 1,
+            sections: [{ type: "nav", links: [{ label: "Home", href: "/" }] }],
+          },
+        },
+      },
+    ];
+    ui("/sites/site-1?section=navigation");
+
+    const workspaceChrome = document.querySelector(
+      "[data-site-workspace-chrome]",
+    );
+    expect(workspaceChrome?.className).toContain("sticky");
+    expect(workspaceChrome?.className).toContain("top-0");
+    expect(workspaceChrome?.parentElement?.className).toContain("h-full");
+    expect(workspaceChrome?.parentElement?.className).toContain("bg-app");
+    expect(workspaceChrome?.firstElementChild?.className).toContain(
+      "max-w-[var(--workspace-shell-max)]",
+    );
+    expect(
+      (
+        await screen.findByRole("tab", { name: strings.sitesNavigation })
+      ).getAttribute("aria-selected"),
+    ).toBe("true");
+    expect(
+      await screen.findByRole("heading", { name: strings.sitesNavigation }),
+    ).toBeTruthy();
+    const tabs = screen.getAllByRole("tab");
+    expect(
+      tabs.findIndex((tab) => tab.textContent === strings.sitesNavigation),
+    ).toBeLessThan(
+      tabs.findIndex((tab) => tab.textContent === strings.sitesSectionFooter),
+    );
   });
 
   test("a page behind a password is marked in the list, in one read", async () => {
     replies = [
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1"),
         status: 200,
-        body: { ...ALPHA, publish: { id: "pub-1", publishedAt: "2026-08-07T10:00:00Z" } },
+        body: {
+          ...ALPHA,
+          publish: { id: "pub-1", publishedAt: "2026-08-07T10:00:00Z" },
+        },
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/pages"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/pages"),
         status: 200,
         body: { pages: [HOME, ABOUT] },
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/passwords"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/passwords"),
         status: 200,
         body: {
           pages: [
@@ -1138,18 +1438,24 @@ describe("one site", () => {
   test("duplicating a page uses the server page-copy API", async () => {
     replies = [
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1"),
         status: 200,
-        body: { ...ALPHA, publish: { id: "pub-1", publishedAt: "2026-08-07T10:00:00Z" } },
+        body: {
+          ...ALPHA,
+          publish: { id: "pub-1", publishedAt: "2026-08-07T10:00:00Z" },
+        },
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/pages"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/pages"),
         status: 200,
         body: { pages: [HOME, ABOUT] },
       },
       {
         match: (url, method) =>
-          method === "POST" && url.endsWith("/sites/site-1/pages/page-2/duplicate"),
+          method === "POST" &&
+          url.endsWith("/sites/site-1/pages/page-2/duplicate"),
         status: 200,
         body: {
           ...ABOUT,
@@ -1160,18 +1466,28 @@ describe("one site", () => {
         },
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1"),
         status: 200,
-        body: { ...ALPHA, publish: { id: "pub-1", publishedAt: "2026-08-07T10:00:00Z" } },
+        body: {
+          ...ALPHA,
+          publish: { id: "pub-1", publishedAt: "2026-08-07T10:00:00Z" },
+        },
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/pages"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/pages"),
         status: 200,
         body: {
           pages: [
             HOME,
             ABOUT,
-            { ...ABOUT, id: "page-copy", slug: "about-copy", title: "About us copy" },
+            {
+              ...ABOUT,
+              id: "page-copy",
+              slug: "about-copy",
+              title: "About us copy",
+            },
           ],
         },
       },
@@ -1181,10 +1497,16 @@ describe("one site", () => {
     const pageName = await screen.findByText("About us");
     const row = pageName.closest("tr") as HTMLElement;
     fireEvent.click(within(row).getByLabelText(strings.sitesPageActions));
-    fireEvent.click(within(row).getByRole("button", { name: strings.sitesDuplicatePage }));
+    fireEvent.click(
+      within(row).getByRole("menuitem", {
+        name: strings.sitesDuplicatePage,
+      }),
+    );
 
     await waitFor(() =>
-      expect(lastWrite()?.url.endsWith("/sites/site-1/pages/page-2/duplicate")).toBe(true),
+      expect(
+        lastWrite()?.url.endsWith("/sites/site-1/pages/page-2/duplicate"),
+      ).toBe(true),
     );
     expect(await screen.findByText("About us copy")).toBeTruthy();
   });
@@ -1207,37 +1529,46 @@ describe("one site", () => {
     };
     replies = [
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1"),
         status: 200,
         body: multilingual,
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/pages"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/pages"),
         status: 200,
         body: { pages: [HOME, ABOUT] },
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/translation-readiness"),
+        match: (url, method) =>
+          method === "GET" &&
+          url.endsWith("/sites/site-1/translation-readiness"),
         status: 200,
         body: readiness,
       },
       {
-        match: (url, method) => method === "PUT" && url.endsWith("/sites/site-1"),
+        match: (url, method) =>
+          method === "PUT" && url.endsWith("/sites/site-1"),
         status: 200,
         body: { status: "ok" },
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1"),
         status: 200,
         body: { ...multilingual, enabledLocales: ["en", "fr", "nl"] },
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/pages"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/pages"),
         status: 200,
         body: { pages: [HOME, ABOUT] },
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/translation-readiness"),
+        match: (url, method) =>
+          method === "GET" &&
+          url.endsWith("/sites/site-1/translation-readiness"),
         status: 200,
         body: {
           ...readiness,
@@ -1253,19 +1584,33 @@ describe("one site", () => {
     fireEvent.click(
       await screen.findByRole("tab", { name: strings.sitesLanguages }),
     );
-    expect(await screen.findByText(strings.sitesTranslationProgress(1, 2))).toBeTruthy();
-    fireEvent.change(screen.getByPlaceholderText(strings.sitesLanguagePlaceholder), {
-      target: { value: "nl" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesAddLanguageAction }));
+    expect(
+      await screen.findByText(strings.sitesTranslationProgress(1, 2)),
+    ).toBeTruthy();
+    fireEvent.change(
+      screen.getByPlaceholderText(strings.sitesLanguagePlaceholder),
+      {
+        target: { value: "nl" },
+      },
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesAddLanguageAction }),
+    );
 
-    await waitFor(() => expect(calls.some((call) =>
-      call.method === "PUT" && call.url.endsWith("/sites/site-1") &&
-      JSON.stringify(call.body) === JSON.stringify({
-        defaultLocale: "en",
-        enabledLocales: ["en", "fr", "nl"],
-      })
-    )).toBe(true));
+    await waitFor(() =>
+      expect(
+        calls.some(
+          (call) =>
+            call.method === "PUT" &&
+            call.url.endsWith("/sites/site-1") &&
+            JSON.stringify(call.body) ===
+              JSON.stringify({
+                defaultLocale: "en",
+                enabledLocales: ["en", "fr", "nl"],
+              }),
+        ),
+      ).toBe(true),
+    );
     expect(await screen.findByText("NL")).toBeTruthy();
   });
 
@@ -1311,7 +1656,12 @@ describe("one site", () => {
       ],
       posts: [
         {
-          before: { id: "post-1", title: "News", slug: "news", excerpt: "Latest" },
+          before: {
+            id: "post-1",
+            title: "News",
+            slug: "news",
+            excerpt: "Latest",
+          },
           after: {
             id: "post-1",
             title: "Actualités",
@@ -1323,7 +1673,8 @@ describe("one site", () => {
     };
     replies = [
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1"),
         status: 200,
         body: multilingual,
       },
@@ -1352,7 +1703,8 @@ describe("one site", () => {
         body: { applied: true },
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1"),
         status: 200,
         body: multilingual,
       },
@@ -1382,7 +1734,9 @@ describe("one site", () => {
       await screen.findByRole("tab", { name: strings.sitesLanguages }),
     );
     fireEvent.click(
-      await screen.findByRole("button", { name: strings.sitesTranslateWholeSite }),
+      await screen.findByRole("button", {
+        name: strings.sitesTranslateWholeSite,
+      }),
     );
     expect(await screen.findByText("Bienvenue")).toBeTruthy();
     expect(screen.getByText("Actualités")).toBeTruthy();
@@ -1396,7 +1750,9 @@ describe("one site", () => {
     ).toBe(true);
 
     fireEvent.click(
-      screen.getByRole("button", { name: strings.sitesWholeTranslationApprove }),
+      screen.getByRole("button", {
+        name: strings.sitesWholeTranslationApprove,
+      }),
     );
     await waitFor(() =>
       expect(
@@ -1414,7 +1770,8 @@ describe("one site", () => {
   test("a foreign or stale id reads as not-found with the way back", async () => {
     replies = [
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/other"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/other"),
         status: 404,
         body: { detail: "no such site" },
       },
@@ -1427,44 +1784,59 @@ describe("one site", () => {
   test("adding a page sends title, path and the home flag", async () => {
     replies = [
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-2"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-2"),
         status: 200,
         body: { ...BETA, publish: null },
       },
       // The initial load: no pages yet (replies are consumed in order, so the
       // reload below answers the second pages request, not this one).
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-2/pages"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-2/pages"),
         status: 200,
         body: { pages: [] },
       },
       {
-        match: (url, method) => method === "POST" && url.endsWith("/sites/site-2/pages"),
+        match: (url, method) =>
+          method === "POST" && url.endsWith("/sites/site-2/pages"),
         status: 200,
         body: { id: "page-9", slug: "", title: "Welcome", home: true },
       },
       // The reload after creating.
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-2"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-2"),
         status: 200,
         body: { ...BETA, publish: null },
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-2/pages"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-2/pages"),
         status: 200,
-        body: { pages: [{ id: "page-9", slug: "", title: "Welcome", home: true }] },
+        body: {
+          pages: [{ id: "page-9", slug: "", title: "Welcome", home: true }],
+        },
       },
     ];
     ui("/sites/site-2?section=pages");
     // The site has no pages, so the empty state's CTA opens the dialog and the
     // home flag defaults to on — the first page IS the home page.
-    fireEvent.click((await screen.findAllByRole("button", { name: strings.sitesNewPage }))[0]!);
-    const homeToggle = screen.getByLabelText(strings.sitesFieldHome) as HTMLInputElement;
+    fireEvent.click(
+      (
+        await screen.findAllByRole("button", { name: strings.sitesNewPage })
+      )[0]!,
+    );
+    const homeToggle = screen.getByLabelText(
+      strings.sitesFieldHome,
+    ) as HTMLInputElement;
     expect(homeToggle.checked).toBe(true);
     fireEvent.change(screen.getByLabelText(strings.sitesFieldPageTitle), {
       target: { value: "Welcome" },
     });
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesCreatePage }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesCreatePage }),
+    );
 
     await waitFor(() => expect(lastWrite()).toBeTruthy());
     expect(lastWrite()).toMatchObject({
@@ -1482,12 +1854,14 @@ describe("blog authoring", () => {
   test("lists linked articles and opens the source document in one click", async () => {
     replies = [
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1"),
         status: 200,
         body: detail,
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/posts"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/posts"),
         status: 200,
         body: { posts: [ARTICLE] },
       },
@@ -1496,33 +1870,47 @@ describe("blog authoring", () => {
     ui("/sites/site-1/posts");
     expect(await screen.findByText("Our summer menu")).toBeTruthy();
     expect(screen.getByText("Fresh bakes for long afternoons.")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesEditInDocs }));
-    expect(screen.getByTestId("location").textContent).toBe("/drive?open=doc-1");
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesEditInDocs }),
+    );
+    expect(screen.getByTestId("location").textContent).toBe(
+      "/drive?open=doc-1",
+    );
   });
 
   test("creates and links an alo Doc before opening it", async () => {
     fakeJmap.driveCreateDoc.mockResolvedValueOnce("doc-9");
     replies = [
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1"),
         status: 200,
         body: detail,
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/posts"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/posts"),
         status: 200,
         body: { posts: [] },
       },
       {
-        match: (url, method) => method === "POST" && url.endsWith("/sites/site-1/posts"),
+        match: (url, method) =>
+          method === "POST" && url.endsWith("/sites/site-1/posts"),
         status: 200,
-        body: { ...ARTICLE, id: "post-9", docNodeId: "doc-9", title: strings.sitesUntitledArticle },
+        body: {
+          ...ARTICLE,
+          id: "post-9",
+          docNodeId: "doc-9",
+          title: strings.sitesUntitledArticle,
+        },
       },
     ];
 
     ui("/sites/site-1/posts");
     fireEvent.click(
-      (await screen.findAllByRole("button", { name: strings.sitesWriteInDocs }))[0]!,
+      (
+        await screen.findAllByRole("button", { name: strings.sitesWriteInDocs })
+      )[0]!,
     );
 
     await waitFor(() => expect(lastWrite()).toBeTruthy());
@@ -1540,24 +1928,29 @@ describe("blog authoring", () => {
         excerpt: "",
       },
     });
-    expect(screen.getByTestId("location").textContent).toBe("/drive?open=doc-9");
+    expect(screen.getByTestId("location").textContent).toBe(
+      "/drive?open=doc-9",
+    );
   });
 
   test("shows the server reason and trashes a new blank doc when linking is refused", async () => {
     fakeJmap.driveCreateDoc.mockResolvedValueOnce("doc-9");
     replies = [
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1"),
         status: 200,
         body: detail,
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/posts"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/posts"),
         status: 200,
         body: { posts: [] },
       },
       {
-        match: (url, method) => method === "POST" && url.endsWith("/sites/site-1/posts"),
+        match: (url, method) =>
+          method === "POST" && url.endsWith("/sites/site-1/posts"),
         status: 422,
         body: { detail: "the document is not available in this workspace" },
       },
@@ -1565,14 +1958,20 @@ describe("blog authoring", () => {
 
     ui("/sites/site-1/posts");
     fireEvent.click(
-      (await screen.findAllByRole("button", { name: strings.sitesWriteInDocs }))[0]!,
+      (
+        await screen.findAllByRole("button", { name: strings.sitesWriteInDocs })
+      )[0]!,
     );
 
     expect(
-      await screen.findByText("the document is not available in this workspace"),
+      await screen.findByText(
+        "the document is not available in this workspace",
+      ),
     ).toBeTruthy();
     expect(fakeJmap.driveTrashNode).toHaveBeenCalledWith("doc-9");
-    expect(screen.getByTestId("location").textContent).toBe("/sites/site-1/posts");
+    expect(screen.getByTestId("location").textContent).toBe(
+      "/sites/site-1/posts",
+    );
   });
 
   test("publishes a draft with its public details and uploaded cover", async () => {
@@ -1583,33 +1982,39 @@ describe("blog authoring", () => {
     });
     replies = [
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1"),
         status: 200,
         body: detail,
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/posts"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/posts"),
         status: 200,
         body: { posts: [ARTICLE] },
       },
       {
-        match: (url, method) => method === "PUT" && url.endsWith("/sites/site-1/posts/post-1"),
+        match: (url, method) =>
+          method === "PUT" && url.endsWith("/sites/site-1/posts/post-1"),
         status: 200,
         body: { status: "ok" },
       },
       {
         match: (url, method) =>
-          method === "POST" && url.endsWith("/sites/site-1/posts/post-1/publish"),
+          method === "POST" &&
+          url.endsWith("/sites/site-1/posts/post-1/publish"),
         status: 200,
         body: { status: "ok" },
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1"),
         status: 200,
         body: detail,
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/posts"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/posts"),
         status: 200,
         body: {
           posts: [
@@ -1628,34 +2033,55 @@ describe("blog authoring", () => {
     ];
 
     ui("/sites/site-1/posts");
-    fireEvent.click(await screen.findByRole("button", { name: strings.sitesPublishArticle }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesPublishArticle }),
+    );
     const dialog = screen.getByRole("dialog");
-    fireEvent.change(within(dialog).getByLabelText(strings.sitesFieldPostTitle), {
-      target: { value: "Summer at Alpha" },
-    });
-    fireEvent.change(within(dialog).getByLabelText(strings.sitesFieldPostSlug), {
-      target: { value: "summer-at-alpha" },
-    });
-    fireEvent.change(within(dialog).getByLabelText(strings.sitesFieldPostExcerpt), {
-      target: { value: "The season's newest bakes." },
-    });
-    const cover = dialog.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(
+      within(dialog).getByLabelText(strings.sitesFieldPostTitle),
+      {
+        target: { value: "Summer at Alpha" },
+      },
+    );
+    fireEvent.change(
+      within(dialog).getByLabelText(strings.sitesFieldPostSlug),
+      {
+        target: { value: "summer-at-alpha" },
+      },
+    );
+    fireEvent.change(
+      within(dialog).getByLabelText(strings.sitesFieldPostExcerpt),
+      {
+        target: { value: "The season's newest bakes." },
+      },
+    );
+    const cover = dialog.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
     const file = new File(["hero"], "summer.png", { type: "image/png" });
     fireEvent.change(cover, { target: { files: [file] } });
-    expect(await within(dialog).findByText(strings.sitesPostCoverAdded)).toBeTruthy();
-    fireEvent.click(within(dialog).getByRole("button", { name: strings.sitesPublishArticle }));
+    expect(
+      await within(dialog).findByText(strings.sitesPostCoverAdded),
+    ).toBeTruthy();
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: strings.sitesPublishArticle }),
+    );
 
     await waitFor(() =>
       expect(
         calls.some(
-          (call) => call.method === "POST" && call.url.endsWith("/posts/post-1/publish"),
+          (call) =>
+            call.method === "POST" &&
+            call.url.endsWith("/posts/post-1/publish"),
         ),
       ).toBe(true),
     );
     expect(fakeJmap.driveUploadBlob).toHaveBeenCalledWith(null, null, file);
     expect(
       calls.find(
-        (call) => call.method === "PUT" && call.url.endsWith("/sites/site-1/posts/post-1"),
+        (call) =>
+          call.method === "PUT" &&
+          call.url.endsWith("/sites/site-1/posts/post-1"),
       ),
     ).toMatchObject({
       body: {
@@ -1665,43 +2091,58 @@ describe("blog authoring", () => {
         coverBlobId: "cover-blob",
       },
     });
-    expect(await screen.findByText(strings.sitesPostStatusPublished)).toBeTruthy();
+    expect(
+      await screen.findByText(strings.sitesPostStatusPublished),
+    ).toBeTruthy();
   });
 
   test("keeps a refused publish open with the server's reason", async () => {
     replies = [
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1"),
         status: 200,
         body: detail,
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/posts"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/posts"),
         status: 200,
         body: { posts: [ARTICLE] },
       },
       {
-        match: (url, method) => method === "PUT" && url.endsWith("/sites/site-1/posts/post-1"),
+        match: (url, method) =>
+          method === "PUT" && url.endsWith("/sites/site-1/posts/post-1"),
         status: 200,
         body: { status: "ok" },
       },
       {
         match: (url, method) =>
-          method === "POST" && url.endsWith("/sites/site-1/posts/post-1/publish"),
+          method === "POST" &&
+          url.endsWith("/sites/site-1/posts/post-1/publish"),
         status: 422,
         body: { detail: "the article document is empty" },
       },
     ];
 
     ui("/sites/site-1/posts");
-    fireEvent.click(await screen.findByRole("button", { name: strings.sitesPublishArticle }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesPublishArticle }),
+    );
     const dialog = screen.getByRole("dialog");
-    fireEvent.change(within(dialog).getByLabelText(strings.sitesFieldPostSlug), {
-      target: { value: "summer-menu" },
-    });
-    fireEvent.click(within(dialog).getByRole("button", { name: strings.sitesPublishArticle }));
+    fireEvent.change(
+      within(dialog).getByLabelText(strings.sitesFieldPostSlug),
+      {
+        target: { value: "summer-menu" },
+      },
+    );
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: strings.sitesPublishArticle }),
+    );
 
-    expect(await within(dialog).findByText("the article document is empty")).toBeTruthy();
+    expect(
+      await within(dialog).findByText("the article document is empty"),
+    ).toBeTruthy();
     expect(screen.getByRole("dialog")).toBeTruthy();
   });
 
@@ -1713,40 +2154,51 @@ describe("blog authoring", () => {
     };
     replies = [
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1"),
         status: 200,
         body: detail,
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/posts"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/posts"),
         status: 200,
         body: { posts: [published] },
       },
       {
         match: (url, method) =>
-          method === "POST" && url.endsWith("/sites/site-1/posts/post-1/unpublish"),
+          method === "POST" &&
+          url.endsWith("/sites/site-1/posts/post-1/unpublish"),
         status: 200,
         body: { status: "ok" },
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1"),
         status: 200,
         body: detail,
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/posts"),
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/posts"),
         status: 200,
         body: { posts: [ARTICLE] },
       },
     ];
 
     ui("/sites/site-1/posts");
-    fireEvent.click(await screen.findByRole("button", { name: strings.sitesUnpublishArticle }));
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: strings.sitesUnpublishArticle,
+      }),
+    );
 
     await waitFor(() =>
       expect(
         calls.some(
-          (call) => call.method === "POST" && call.url.endsWith("/posts/post-1/unpublish"),
+          (call) =>
+            call.method === "POST" &&
+            call.url.endsWith("/posts/post-1/unpublish"),
         ),
       ).toBe(true),
     );

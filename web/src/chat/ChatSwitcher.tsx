@@ -1,12 +1,13 @@
 import { Bot, Hash, Users } from "lucide-react";
 
 import { strings } from "../i18n";
+import { MODAL_BACKDROP_CLASS } from "../ds";
 import { channelLabel } from "./presentation";
 import type { ChannelSummary } from "./types";
 
 export function ChatSwitcher({ query, rooms, onQuery, onChoose, onClose }: { query: string; rooms: ChannelSummary[]; onQuery: (query: string) => void; onChoose: (id: string) => void; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-overlay px-4 pt-16" role="dialog" aria-modal="true" aria-label={strings.chatJumpTo} onClick={onClose}>
+    <div className={`fixed inset-0 z-50 flex items-start justify-center bg-overlay px-4 pt-16 ${MODAL_BACKDROP_CLASS}`} role="dialog" aria-modal="true" aria-label={strings.chatJumpTo} onClick={onClose}>
       <div className="w-full max-w-xl overflow-hidden rounded-xl border border-subtle bg-surface shadow-lg" onClick={(event) => event.stopPropagation()}>
         <input className="min-h-12 w-full border-0 border-b border-subtle bg-transparent px-4 text-base text-primary outline-none placeholder:text-tertiary" value={query} onChange={(event) => onQuery(event.target.value)} placeholder={strings.chatJumpTo} aria-label={strings.chatJumpTo} autoFocus onKeyDown={(event) => {
           if (event.key === "Escape") onClose();

@@ -21,6 +21,7 @@
 import { useRef, type ReactNode } from "react";
 
 import { useModalStack } from "./useModalStack";
+import { MODAL_BACKDROP_CLASS } from "./modalBackdrop";
 
 export interface ModalProps {
   /** Names the dialog for assistive technology, and renders as its heading. */
@@ -58,7 +59,7 @@ export interface ModalProps {
  *  keeps a full-height dialog off the edges of the window, and what
  *  `--modal-max-height` subtracts. */
 const OVERLAY =
-  "fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-6 bg-overlay";
+  `fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-6 bg-overlay ${MODAL_BACKDROP_CLASS}`;
 
 /** The panel. `overflow-hidden` is what makes the rounded corners clip the
  *  header's border and the body's scrollbar. */

@@ -256,7 +256,6 @@
 }
 .rowName:hover {
   color: var(--accent-active);
-  text-decoration: underline;
 }
 .pageLink {
   font-size: var(--text-base);
@@ -267,7 +266,6 @@
 }
 .pageLink:hover {
   color: var(--accent-active);
-  text-decoration: underline;
 }
 .badge {
   display: inline-block;
@@ -510,14 +508,12 @@
   font-size: var(--text-xs);
   color: var(--text-secondary);
 }
-/* Links inside hints and the alo-address line inherit the ds link
- * terracotta, which measures 3.84:1 on the warm grounds these lines sit
- * on — below AA for small text. Same treatment as .liveLink: primary text
- * with a permanent underline, so the affordance survives the color. */
+/* Links inside hints and the alo-address line use primary text for readable
+ * contrast on warm surfaces. Their surrounding copy provides the context. */
 .hint a,
 .domainAloAddress a {
   color: var(--text-primary);
-  text-decoration: underline;
+  text-decoration: none;
 }
 .toggle {
   display: inline-flex;
@@ -550,10 +546,9 @@
   transition:
     border-color var(--duration-fast) var(--ease-standard),
     background var(--duration-fast) var(--ease-standard),
-    box-shadow var(--duration-fast) var(--ease-standard),
-    transform var(--duration-fast) var(--ease-standard);
+    box-shadow var(--duration-fast) var(--ease-standard);
 }
-.card:hover {
+.card:not(.navigationCard):hover {
   background: var(--bg-raised);
 }
 .cardDropTarget {
@@ -606,12 +601,6 @@
   border-color: var(--border-subtle);
   background: var(--bg-surface);
   box-shadow: var(--shadow-sm);
-}
-.navigationCard:hover {
-  border-color: var(--border-default);
-  background: var(--bg-surface);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
 }
 .navigationMarker {
   display: inline-flex;
@@ -684,15 +673,6 @@
   font-size: var(--text-sm);
   color: var(--text-tertiary);
   line-height: var(--leading-relaxed);
-}
-.palettePosition {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-1);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  color: var(--text-secondary);
 }
 .paletteBody {
   display: grid;
@@ -778,51 +758,6 @@
 .paletteTileNeeds {
   color: var(--text-secondary);
 }
-.palettePreview {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-width: 0;
-  min-height: 24rem;
-  padding: var(--space-3);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  background: var(--bg-raised);
-}
-.palettePreviewViewport {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  background: var(--bg-sunken);
-  padding: var(--space-2);
-  box-shadow: var(--shadow-sm);
-}
-.palettePreviewFrame {
-  display: block;
-  width: 100%;
-  height: 100%;
-  min-height: 20rem;
-  border: 0;
-  border-radius: var(--radius-md);
-  background: #fff;
-  /* A picture of the block: no link inside a sandboxed preview should be
-     followable, and no click in it is an edit. */
-  pointer-events: none;
-}
-.paletteNote {
-  margin: auto 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-5);
-  font-size: var(--text-xs);
-  color: var(--text-tertiary);
-  line-height: var(--leading-relaxed);
-  text-align: center;
-}
 @media (max-width: 900px) {
   .paletteBody {
     grid-template-columns: minmax(0, 1fr);
@@ -832,9 +767,6 @@
   .paletteGrid {
     grid-template-columns: repeat(2, minmax(8.5rem, 1fr));
     overflow: visible;
-  }
-  .palettePreview {
-    min-height: 20rem;
   }
 }
 
@@ -954,330 +886,6 @@
   color: var(--text-tertiary);
 }
 
-/* Navigation is a header system, not a generic repeated-item form. The
-   editor mirrors that hierarchy: orientation first, primary links second,
-   and the one high-emphasis action last. */
-.navEditor {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
-}
-.navEditorIntro {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
-  border-radius: var(--radius-lg);
-  background: var(--accent-soft);
-}
-.navEditorIntroIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  flex-shrink: 0;
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  color: var(--accent);
-  box-shadow: var(--shadow-sm);
-}
-.navEditorIntro strong,
-.navLinksHead h3 {
-  margin: 0;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  color: var(--text-primary);
-}
-.navEditorIntro p,
-.navLinksHead p,
-.navPrimaryAction > p {
-  margin: var(--space-1) 0 0;
-  font-size: var(--text-sm);
-  line-height: var(--leading-relaxed);
-  color: var(--text-secondary);
-}
-.navLinksGroup,
-.navPrimaryAction {
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-.navLinksGroup {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-.navLinksHead {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-.navPagesError {
-  margin: 0;
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  background: var(--warning-tint);
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-}
-.navLinkList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-.navLinkCard {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  background: var(--bg-surface);
-  box-shadow: var(--shadow-sm);
-  transition:
-    border-color var(--duration-fast) var(--ease-standard),
-    opacity var(--duration-fast) var(--ease-standard);
-}
-.navLinkCard:focus-within {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--border-default));
-}
-.navLinkCardDragging {
-  opacity: 0.55;
-  border-color: var(--accent);
-}
-.navLinkHead {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-.navLinkHead strong {
-  flex: 1;
-  min-width: 0;
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-tertiary);
-}
-.navLinkDrag {
-  display: inline-flex;
-  padding: var(--space-1);
-  color: var(--text-tertiary);
-  cursor: grab;
-}
-.navLinkActions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-.navPrimaryAction {
-  padding: var(--space-4);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  background: var(--bg-raised);
-}
-.navPrimaryAction > legend {
-  padding: 0 var(--space-1);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  color: var(--text-primary);
-}
-.navPrimaryAction > .subGroup {
-  margin-top: var(--space-3);
-  padding: 0;
-  border: 0;
-}
-.navAppearance {
-  overflow: visible;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  background: var(--bg-surface);
-}
-.navAppearanceToggle {
-  display: flex;
-  width: 100%;
-  min-height: var(--control-height-lg);
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border-radius: inherit;
-  color: var(--text-primary);
-  text-align: left;
-  cursor: pointer;
-}
-.navAppearanceToggle:hover {
-  background: var(--bg-raised);
-}
-.navAppearanceToggle > span {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-.navAppearanceToggle strong,
-.navColorField strong {
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-}
-.navAppearanceToggle small,
-.navColorField small {
-  color: var(--text-tertiary);
-  font-size: var(--text-xs);
-}
-.navAppearanceToggle svg {
-  transition: transform var(--duration-fast) var(--ease-standard);
-}
-.navAppearanceChevronOpen {
-  transform: rotate(90deg);
-}
-.navAppearanceBody {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  padding: 0 var(--space-4) var(--space-4);
-  border-top: 1px solid var(--border-subtle);
-}
-.navPaletteChoices {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-2);
-  padding-top: var(--space-4);
-}
-.navPaletteChoices button {
-  display: flex;
-  min-height: var(--control-height-lg);
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  cursor: pointer;
-}
-.navPaletteChoices button:hover,
-.navPaletteChoices button:focus-visible,
-.navPaletteChoices button[aria-pressed="true"] {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-}
-.navPaletteChoices button > span {
-  display: inline-grid;
-  width: 2.25rem;
-  height: 2.25rem;
-  flex: none;
-  place-items: center;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-}
-.navThemeSwatch {
-  background: linear-gradient(135deg, var(--bg-surface) 50%, var(--accent) 50%);
-}
-.navBrandSwatch {
-  background: conic-gradient(#e76f51, #f4a261, #2a9d8f, #457b9d, #7b2cbf, #e76f51);
-}
-.navColorHint {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: var(--space-4) 0 0;
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-}
-.navColorHint span {
-  flex: 1;
-}
-.navColorFields {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-3);
-}
-.navColorField {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  background: var(--bg-raised);
-}
-.navColorField > span {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-}
-.navHexInput {
-  width: 5.75rem;
-  min-height: var(--control-height-sm);
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--text-tertiary);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  outline: none;
-}
-.navHexInput:focus {
-  color: var(--text-primary);
-}
-.navAppearancePreview {
-  display: flex;
-  min-height: var(--control-height-lg);
-  align-items: center;
-  gap: var(--space-5);
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  font-size: var(--text-sm);
-}
-.navAppearancePreview strong {
-  margin-right: auto;
-}
-.navContrast,
-.navContrastFail {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-}
-.navContrast svg {
-  color: var(--success);
-}
-.navContrastFail {
-  color: var(--danger);
-}
-@media (max-width: 640px) {
-  .navLinksHead,
-  .navEditorIntro {
-    align-items: stretch;
-  }
-  .navLinksHead {
-    flex-direction: column;
-  }
-  .navLinkCard .fieldRow {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .navPaletteChoices,
-  .navColorFields {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .navAppearancePreview {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-}
 .copyTools {
   display: flex;
   flex-direction: column;
@@ -1372,7 +980,7 @@
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   color: var(--text-primary);
-  text-decoration: underline;
+  text-decoration: none;
 }
 .publishActions {
   margin-left: auto;
@@ -2326,7 +1934,7 @@
   cursor: pointer;
 }
 .analyticsMore:hover {
-  text-decoration: underline;
+  color: var(--accent-hover);
 }
 /* ---- attention map (S2.09b) ---- */
 .analyticsDrill {
@@ -2610,7 +2218,7 @@
   width: 1rem;
   height: 1rem;
   border-radius: 50%;
-  border: 1px solid rgb(0 0 0 / 12%);
+  border: 1px solid var(--border-default);
 }
 .themeSlot {
   display: flex;
@@ -2675,13 +2283,13 @@
   border: var(--border-width-strong) solid var(--accent);
   /* Everything outside the frame is dimmed by one enormous shadow, so the
      owner sees what the visitor will see and what is being left out. */
-  box-shadow: 0 0 0 100vmax rgb(0 0 0 / 45%);
+  box-shadow: 0 0 0 100vmax var(--bg-overlay);
   cursor: move;
 }
 .framingFrame:focus-visible {
   outline: none;
   box-shadow:
-    0 0 0 100vmax rgb(0 0 0 / 45%),
+    0 0 0 100vmax var(--bg-overlay),
     var(--focus-ring);
 }
 .framingHandle {

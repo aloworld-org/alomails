@@ -5,6 +5,7 @@ export { cx } from "./cx";
 export { Menu } from "./Menu";
 export { useDismiss } from "./useDismiss";
 export { useModalStack } from "./useModalStack";
+export { MODAL_BACKDROP_CLASS } from "./modalBackdrop";
 export type { MenuItem } from "./Menu";
 export { ResizeHandle } from "./ResizeHandle";
 export { usePanelWidth, clampWidth } from "./usePanelWidth";

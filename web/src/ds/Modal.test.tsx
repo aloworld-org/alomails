@@ -74,6 +74,13 @@ describe("the modal behaves for somebody without a mouse", () => {
     expect(dialog.getAttribute("aria-label")).toBe("Invite a colleague");
   });
 
+  test("it softens the workspace behind every blocking popup", () => {
+    open();
+    expect(screen.getByRole("dialog").parentElement?.className).toContain(
+      "backdrop-blur-[var(--overlay-backdrop-blur)]",
+    );
+  });
+
   test("a click on the backdrop dismisses, a click inside does not", () => {
     const onClose = vi.fn();
     open(onClose);

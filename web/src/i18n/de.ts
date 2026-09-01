@@ -5559,10 +5559,51 @@ export const de: Partial<Catalog> = {
   sitesOverview: "Uebersicht",
   sitesOverviewHealth: "Website-Status",
   sitesOverviewActions: "Letzte Aktivitaet",
+  sitesOverviewReadiness: "Bereit fuer den Start",
+  sitesOverviewReadinessHint:
+    "Schliessen Sie die Grundlagen ab, bevor Sie die Website teilen.",
+  sitesOverviewReadyCount: (ready: number, total: number) =>
+    `${ready} von ${total} bereit`,
+  sitesOverviewDomainStep: "Website-Adresse verbunden",
+  sitesOverviewPagesStep: "Mindestens eine Seite erstellt",
+  sitesOverviewLanguagesStep: "Aktivierte Sprachen vorbereitet",
+  sitesOverviewPublishStep: "Website veroeffentlicht",
+  sitesOverviewContinue: "Weiterarbeiten",
+  sitesOverviewContinueHint: "Direkt zu den wichtigsten Website-Werkzeugen.",
+  sitesOverviewReadinessScore: "Gesamtbereitschaft",
+  sitesOverviewFoundation: "Grundlage",
+  sitesOverviewContent: "Seiteninhalt",
+  sitesOverviewLocalization: "Sprachen",
+  sitesOverviewLaunch: "Veroeffentlichung",
+  sitesOverviewElements: "Seitenelemente",
+  sitesOverviewElementsHint:
+    "Eine starke Startseite verbindet Struktur, klare Einfuehrung, nuetzliche Inhalte und eine Handlungsaufforderung.",
+  sitesOverviewNavigationElements: "Navigation",
+  sitesOverviewHeroElements: "Einfuehrung",
+  sitesOverviewContentElements: "Inhalt",
+  sitesOverviewActionElements: "Handlungsaufforderung",
+  sitesOverviewSeo: "Sucheinstellungen",
+  sitesOverviewAccessibility: "Barrierefreiheit",
+  sitesOverviewBranding: "Markenidentitaet",
+  sitesOverviewQuality: "SEO- und Markenqualitaet",
+  sitesOverviewQualityHint:
+    "Verbessern Sie Suchdarstellung, Bildverstaendlichkeit und den einheitlichen Markenauftritt Ihrer Website.",
+  sitesOverviewSeoTitles: "SEO-Titel",
+  sitesOverviewMetaDescriptions: "Meta-Beschreibungen",
+  sitesOverviewImageDescriptions: "Bildbeschreibungen",
+  sitesOverviewLogo: "Logo",
+  sitesOverviewFavicon: "Favicon",
+  sitesOverviewRecommendedNext: "Empfohlener naechster Schritt",
+  sitesOverviewAddIntroduction: "Klare Einfuehrung hinzufuegen",
+  sitesOverviewAddContent: "Nuetzliche Seiteninhalte hinzufuegen",
+  sitesOverviewAddAction: "Handlungsaufforderung hinzufuegen",
+  sitesOverviewEditPage: "Seiteneditor oeffnen",
   sitesSiteTools: "Website-Einstellungen",
   sitesSiteSettings: "Website-Einstellungen",
-  sitesSiteToolsHint: "Domains, SEO-Standards, Weiterleitungen, Statistiken und Code",
-  sitesSiteSettingsHint: "Domains, Versionsverlauf, Statistiken, Shop, Formulare und Automatisierung.",
+  sitesSiteToolsHint:
+    "Domains, SEO-Standards, Weiterleitungen, Statistiken und Code",
+  sitesSiteSettingsHint:
+    "Domains, Versionsverlauf, Statistiken, Shop, Formulare und Automatisierung.",
   sitesPublishing: "Veröffentlichen",
   sitesWebsiteNavigation: "Website-Einstellungen",
   sitesNewPage: "Neue Seite",
@@ -5589,6 +5630,20 @@ export const de: Partial<Catalog> = {
   sitesSortPath: "Pfad",
   sitesEditPage: "Bearbeiten",
   sitesPageActions: "Seitenaktionen",
+  sitesExpandChildPages: "Unterseiten einblenden",
+  sitesCollapseChildPages: "Unterseiten ausblenden",
+  sitesRenamePage: "Umbenennen",
+  sitesRenamePagePrompt:
+    "Wählen Sie den Seitennamen, der in Alo und auf der Website angezeigt wird.",
+  sitesDuplicatePage: "Duplizieren",
+  sitesSetHomepage: "Als Startseite festlegen",
+  sitesSetHomepageConfirm: (page: string) =>
+    `${page} als Startseite festlegen?`,
+  sitesDeletePage: "Löschen",
+  sitesDeletePageConfirm: (page: string) =>
+    `${page} löschen? Dadurch wird die Entwurfsseite von dieser Website entfernt.`,
+  sitesPageActionFailed: "Die Seitenaktion konnte nicht abgeschlossen werden.",
+  sitesLastEdited: (date: string) => `Aktualisiert ${date}`,
   sitesStatusPublished: "Veroeffentlicht",
   sitesViewSite: "Website ansehen",
   sitesDomainHealthy: "Domain bereit",
@@ -5749,6 +5804,7 @@ export const de: Partial<Catalog> = {
   sitesAddSectionTitle: (section: string) => `${section} hinzufügen`,
   sitesEditSectionTitle: (section: string) => `${section} bearbeiten`,
   sitesSaveSection: "Abschnitt speichern",
+  sitesSectionSaved: "Gespeichert",
   sitesMoveUp: (section: string) => `${section} nach oben schieben`,
   sitesMoveDown: (section: string) => `${section} nach unten schieben`,
   sitesEditSection: (section: string) => `${section} bearbeiten`,
@@ -5786,6 +5842,7 @@ export const de: Partial<Catalog> = {
   sitesSeoSaveFailed:
     "Die Suchangaben konnten nicht gespeichert werden. Versuchen Sie es erneut.",
   sitesSectionNav: "Navigationsleiste",
+  sitesNavigation: "Navigation",
   sitesSectionNavDesc: "Links quer über den Seitenkopf.",
   sitesSectionHero: "Aufmacher",
   sitesSectionHeroDesc: "Die große Schlagzeile am Anfang.",
@@ -5816,6 +5873,12 @@ export const de: Partial<Catalog> = {
   sitesNavEditorIntro:
     "Ihr Logo oder Sitename kommt aus dem Design. Halten Sie das Hauptmenü übersichtlich und verwenden Sie eine Schaltfläche für die wichtigste Aktion.",
   sitesNavMenuLinks: "Menülinks",
+  sitesNavSettings: "Navigationseinstellungen",
+  sitesNavEditorTabs: "Navigationseditor",
+  sitesNavLinksTab: "Links",
+  sitesNavSettingsTab: "Einstellungen",
+  sitesNavSettingsHint:
+    "Menülinks, primäre Aktion und Erscheinungsbild zentral verwalten.",
   sitesNavMenuLinksHint:
     "Fügen Sie die wichtigsten Seiten hinzu. Die Reihenfolge hier entspricht der Reihenfolge in der Kopfzeile.",
   sitesNavAddPages: "Siteseiten hinzufügen",
@@ -5832,14 +5895,17 @@ export const de: Partial<Catalog> = {
     "Optional. Sie erscheint als hervorgehobene Schaltfläche in der Kopfzeile.",
   sitesNavPagesLoadFailed:
     "Die Siteseiten konnten nicht geladen werden. Sie können Links weiterhin manuell eingeben.",
-  sitesNavMoveLinkUp: (position: number) => `Link ${position} nach oben verschieben`,
-  sitesNavMoveLinkDown: (position: number) => `Link ${position} nach unten verschieben`,
+  sitesNavMoveLinkUp: (position: number) =>
+    `Link ${position} nach oben verschieben`,
+  sitesNavMoveLinkDown: (position: number) =>
+    `Link ${position} nach unten verschieben`,
   sitesNavAlreadyAdded: "Bereits auf dieser Seite",
   sitesNavAppearance: "Erscheinungsbild",
   sitesNavAppearanceShow: "Navigationserscheinungsbild anzeigen",
   sitesNavUsesTheme: "Verwendet das Website-Theme",
   sitesNavUsesBrandRoles: "Verwendet wiederverwendbare Markenfarben",
-  sitesNavBrandRoleHint: "Wählen Sie Farben aus dem Website-Theme. Eine Änderung der Markenpalette aktualisiert alle verbundenen Abschnitte.",
+  sitesNavBrandRoleHint:
+    "Wählen Sie Farben aus dem Website-Theme. Eine Änderung der Markenpalette aktualisiert alle verbundenen Abschnitte.",
   sitesNavResetRoles: "Standardwerte verwenden",
   sitesNavCustomPalette: "Eigene Navigationsfarben",
   sitesNavPaletteChoices: "Navigationsfarbstile",
@@ -5847,7 +5913,8 @@ export const de: Partial<Catalog> = {
   sitesNavPaletteLight: "Hell",
   sitesNavPaletteDark: "Dunkel",
   sitesNavPaletteCustom: "Eigene Marke",
-  sitesNavCustomHint: "Wählen Sie eine beliebige Farbe oder geben Sie den exakten HEX-Markenwert ein.",
+  sitesNavCustomHint:
+    "Wählen Sie eine beliebige Farbe oder geben Sie den exakten HEX-Markenwert ein.",
   sitesNavHexValue: (label: string) => `${label}-HEX-Wert`,
   sitesNavBackground: "Hintergrund",
   sitesNavText: "Text",
@@ -5869,6 +5936,30 @@ export const de: Partial<Catalog> = {
   sitesAddTier: "Paket hinzufügen",
   sitesAddMember: "Person hinzufügen",
   sitesAddQuestion: "Frage hinzufügen",
+  sitesHeroLayout: "Layout",
+  sitesHeroLayoutHint:
+    "Wählen Sie die Anordnung, die Überschrift und Bild am besten unterstützt.",
+  sitesHeroLayoutCentered: "Zentriert",
+  sitesHeroLayoutSplitRight: "Bild rechts",
+  sitesHeroLayoutSplitLeft: "Bild links",
+  sitesHeroLayoutBackground: "Hintergrundbild",
+  sitesHeroLayoutEditorial: "Editorial",
+  sitesHeroDesign: "Design",
+  sitesHeroHeight: "Höhe",
+  sitesHeroHeightCompact: "Kompakt",
+  sitesHeroHeightStandard: "Standard",
+  sitesHeroHeightTall: "Hoch",
+  sitesHeroAlignment: "Inhaltsausrichtung",
+  sitesHeroAlignmentLeft: "Links",
+  sitesHeroAlignmentCenter: "Mittig",
+  sitesHeroAlignmentRight: "Rechts",
+  sitesHeroContentWidth: "Textbreite",
+  sitesHeroContentWidthNarrow: "Schmal",
+  sitesHeroContentWidthBalanced: "Ausgewogen",
+  sitesHeroContentWidthWide: "Breit",
+  sitesHeroContent: "Inhalt",
+  sitesHeroMedia: "Bild",
+  sitesHeroActions: "Buttons",
   sitesFieldHeading: "Überschrift",
   sitesFieldSubheading: "Unterzeile",
   sitesFieldIntro: "Einleitung",
@@ -5943,13 +6034,16 @@ export const de: Partial<Catalog> = {
     "Das Formular steht bereits auf der Seite; das Absenden funktioniert, sobald es die Formulare gibt.",
   sitesTheme: "Design",
   sitesThemeTitle: "Design der Website",
-  sitesThemeSubtitle: "Fügen Sie Website-Logo und Browsersymbol hinzu. Markenfarben kommen aus Marke.",
+  sitesThemeSubtitle:
+    "Fügen Sie Website-Logo und Browsersymbol hinzu. Markenfarben kommen aus Marke.",
   sitesThemeApply: "Design übernehmen",
   sitesThemeLoadFailed: "Die Design-Optionen konnten nicht geladen werden.",
   sitesThemePresets: "Farben & Schrift",
   sitesThemeBrandColors: "Markenakzente",
-  sitesThemeBrandColorsHint: "Verwenden Sie den Primärakzent für wichtige Aktionen und den Sekundärakzent für unterstützende Hervorhebungen.",
-  sitesThemeBrandManaged: "Diese Farben stammen aus Ihrem Marken-Kit. Ändern Sie sie einmal in Marke und verwenden Sie sie überall.",
+  sitesThemeBrandColorsHint:
+    "Verwenden Sie den Primärakzent für wichtige Aktionen und den Sekundärakzent für unterstützende Hervorhebungen.",
+  sitesThemeBrandManaged:
+    "Diese Farben stammen aus Ihrem Marken-Kit. Ändern Sie sie einmal in Marke und verwenden Sie sie überall.",
   sitesThemeBaseColors: "Grundfarben",
   sitesThemeAccentColors: "Akzentfarben",
   sitesThemeResetColors: "Voreinstellungsfarben verwenden",
@@ -5957,9 +6051,14 @@ export const de: Partial<Catalog> = {
   sitesThemeTextColor: "Text",
   sitesThemeBorderColor: "Rahmen",
   sitesThemeAccentColor: (number: number) =>
-    number === 1 ? "Primärakzent" : number === 2 ? "Sekundärakzent" : `Akzent ${number}`,
+    number === 1
+      ? "Primärakzent"
+      : number === 2
+        ? "Sekundärakzent"
+        : `Akzent ${number}`,
   sitesThemeHexValue: (label: string) => `HEX-Wert für ${label}`,
-  sitesThemeColorError: "Verwenden Sie sechsstellige HEX-Farben und mindestens 4,5:1 Kontrast zwischen Text und Hintergrund.",
+  sitesThemeColorError:
+    "Verwenden Sie sechsstellige HEX-Farben und mindestens 4,5:1 Kontrast zwischen Text und Hintergrund.",
   sitesThemeLogo: "Logo",
   sitesThemeLogoHint:
     "Erscheint in der Navigationsleiste anstelle des Website-Namens.",
@@ -5972,23 +6071,29 @@ export const de: Partial<Catalog> = {
   sitesThemeNotSet: "Noch keines",
   sitesUploadFailed: "Das Bild konnte nicht hochgeladen werden.",
   brandingTitle: "Marke",
-  brandingSubtitle: "Erstellen Sie ein verlässliches Marken-Kit für Websites, Angebote, Rechnungen, Kampagnen, Dokumente und alle Markenausgaben.",
+  brandingSubtitle:
+    "Erstellen Sie ein verlässliches Marken-Kit für Websites, Angebote, Rechnungen, Kampagnen, Dokumente und alle Markenausgaben.",
   brandingSave: "Marken-Kit speichern",
   brandingSaved: "Marken-Kit gespeichert",
   brandingUnsaved: "Ungespeicherte Änderungen",
   brandingAccentsTitle: "Markenakzente",
-  brandingAccentsHint: "Dies sind gemeinsame Arbeitsbereichsrollen, nicht Farben für nur eine App. Primär trägt wichtige Aktionen und Wiedererkennung; Sekundär unterstützt, ohne zu konkurrieren.",
+  brandingAccentsHint:
+    "Dies sind gemeinsame Arbeitsbereichsrollen, nicht Farben für nur eine App. Primär trägt wichtige Aktionen und Wiedererkennung; Sekundär unterstützt, ohne zu konkurrieren.",
   brandingPrimary: "Primärakzent",
-  brandingPrimaryHint: "Nutzen Sie diese Farbe für wichtigste Aktionen und Markenmomente, etwa Angebotsannahmen, Rechnungsakzente, Kampagnenaufrufe und Website-Schaltflächen.",
+  brandingPrimaryHint:
+    "Nutzen Sie diese Farbe für wichtigste Aktionen und Markenmomente, etwa Angebotsannahmen, Rechnungsakzente, Kampagnenaufrufe und Website-Schaltflächen.",
   brandingSecondary: "Sekundärakzent",
   brandingNeutral: "Neutraler Raum",
-  brandingSecondaryHint: "Nutzen Sie diese ergänzende Farbe für sekundäre Aktionen, unterstützende Akzente, Diagramme und Kontrast. Sie soll Primär ergänzen, nicht mit ihm konkurrieren.",
+  brandingSecondaryHint:
+    "Nutzen Sie diese ergänzende Farbe für sekundäre Aktionen, unterstützende Akzente, Diagramme und Kontrast. Sie soll Primär ergänzen, nicht mit ihm konkurrieren.",
   brandingAddSecondary: "Sekundärakzent hinzufügen",
   brandingRemoveSecondary: "Sekundärakzent entfernen",
   brandingSupportingTitle: "Unterstützende Farben",
-  brandingSupportingHint: "Fügen Sie nur Farben mit klarem wiederverwendbarem Zweck hinzu, etwa Produktlinie, Kampagnenfamilie, Diagrammreihe oder Untermarke. Benennen Sie jede verständlich.",
+  brandingSupportingHint:
+    "Fügen Sie nur Farben mit klarem wiederverwendbarem Zweck hinzu, etwa Produktlinie, Kampagnenfamilie, Diagrammreihe oder Untermarke. Benennen Sie jede verständlich.",
   brandingAddSupporting: "Unterstützende Farbe hinzufügen",
-  brandingSupportingLimit: "Bis zu drei unterstützende Farben halten die Palette konsistent und einfach.",
+  brandingSupportingLimit:
+    "Bis zu drei unterstützende Farben halten die Palette konsistent und einfach.",
   brandingColorName: "Farbname",
   brandingColorHex: "HEX-Wert",
   brandingMoreInfo: (field: string) => `Weitere Informationen zu ${field}`,
@@ -5996,11 +6101,13 @@ export const de: Partial<Catalog> = {
   brandingRemoveColor: (name: string) => `${name} entfernen`,
   brandingMoveColorUp: (name: string) => `${name} nach oben verschieben`,
   brandingMoveColorDown: (name: string) => `${name} nach unten verschieben`,
-  brandingInvalidColor: "Geben Sie jeder Farbe einen Namen und einen sechsstelligen HEX-Wert.",
+  brandingInvalidColor:
+    "Geben Sie jeder Farbe einen Namen und einen sechsstelligen HEX-Wert.",
   brandingPreviewTitle: "Live-Vorschau",
   brandingPreviewEyebrow: "Arbeitsbereichsmarke",
   brandingPreviewHeading: "Unverkennbar Ihre Marke",
-  brandingPreviewBody: "Ihre Markenrollen fließen in Websites, Live-Angebote, Rechnungen, Kampagnen, Dokumente und alle benötigten Bereiche ein.",
+  brandingPreviewBody:
+    "Ihre Markenrollen fließen in Websites, Live-Angebote, Rechnungen, Kampagnen, Dokumente und alle benötigten Bereiche ein.",
   brandingPreviewPrimary: "Primäre Aktion",
   brandingPreviewSecondary: "Sekundäre Aktion",
   brandingVisualStudio: "Visuelles Markenstudio",
@@ -6015,12 +6122,14 @@ export const de: Partial<Catalog> = {
   brandingColorCopied: (color: string) => `${color} kopiert`,
   quoteStudioImportBrandColors: "Markenfarben importieren",
   quoteStudioImportBrandTypography: "Markentypografie importieren",
-  brandingToneScaleHint: "Nutzen Sie helle Töne für Hintergründe und dunkle für Akzente, ohne eine weitere Markenfarbe einzuführen.",
+  brandingToneScaleHint:
+    "Nutzen Sie helle Töne für Hintergründe und dunkle für Akzente, ohne eine weitere Markenfarbe einzuführen.",
   brandingContrast: "Lesbarer Text",
   brandingUseLightText: "Hellen Text verwenden",
   brandingUseDarkText: "Dunklen Text verwenden",
   brandingColorBalance: "Farbbalance",
-  brandingColorBalanceHint: "Lassen Sie neutralen Raum führen, nutzen Sie Sekundär für Struktur und Primär nur für wichtige Momente.",
+  brandingColorBalanceHint:
+    "Lassen Sie neutralen Raum führen, nutzen Sie Sekundär für Struktur und Primär nur für wichtige Momente.",
   brandingGuidanceTitle: "Empfohlene Palette",
   brandingGuidancePrimary: "1 primär — erforderlich",
   brandingGuidanceSecondary: "1 sekundär — optional",
@@ -6032,43 +6141,58 @@ export const de: Partial<Catalog> = {
   brandingVisualIdentityNav: "Visuelle Identität",
   brandingApplicationsNav: "Markenanwendungen",
   brandingGuidelinesNav: "Richtlinien",
-  brandingSaveFailed: "Das Marken-Kit konnte nicht gespeichert werden. Ihre Änderungen bleiben erhalten; versuchen Sie es erneut.",
+  brandingSaveFailed:
+    "Das Marken-Kit konnte nicht gespeichert werden. Ihre Änderungen bleiben erhalten; versuchen Sie es erneut.",
   brandingFoundationTitle: "Definieren Sie, wofür Ihre Marke steht",
-  brandingFoundationSubtitle: "Geben Sie jedem Team dieselbe klare Grundlage für Entscheidungen, Texte und Gestaltung.",
+  brandingFoundationSubtitle:
+    "Geben Sie jedem Team dieselbe klare Grundlage für Entscheidungen, Texte und Gestaltung.",
   brandingBrandName: "Markenname",
-  brandingBrandNameHint: "Der öffentliche Name, der in allen Markenausgaben verwendet wird.",
+  brandingBrandNameHint:
+    "Der öffentliche Name, der in allen Markenausgaben verwendet wird.",
   brandingBrandNamePlaceholder: "Markennamen eingeben",
   brandingTagline: "Claim",
-  brandingTaglineHint: "Ein kurzes Versprechen oder eine Idee, die in Erinnerung bleiben soll.",
+  brandingTaglineHint:
+    "Ein kurzes Versprechen oder eine Idee, die in Erinnerung bleiben soll.",
   brandingTaglinePlaceholder: "Ein prägnantes Markenversprechen formulieren",
   brandingPurpose: "Zweck",
-  brandingPurposeHint: "Erklären Sie, warum die Marke über ihr Angebot hinaus existiert.",
+  brandingPurposeHint:
+    "Erklären Sie, warum die Marke über ihr Angebot hinaus existiert.",
   brandingPurposePlaceholder: "Warum gibt es Ihre Marke?",
   brandingAudience: "Zielgruppe",
-  brandingAudienceHint: "Beschreiben Sie klar die Menschen oder Organisationen, für die Sie arbeiten.",
+  brandingAudienceHint:
+    "Beschreiben Sie klar die Menschen oder Organisationen, für die Sie arbeiten.",
   brandingAudiencePlaceholder: "Für wen ist diese Marke?",
   brandingPositioning: "Positionierung",
-  brandingPositioningHint: "Beschreiben Sie den Platz, den Ihre Marke im Markt einnehmen soll.",
-  brandingPositioningPlaceholder: "Was unterscheidet Ihre Marke auf relevante Weise?",
+  brandingPositioningHint:
+    "Beschreiben Sie den Platz, den Ihre Marke im Markt einnehmen soll.",
+  brandingPositioningPlaceholder:
+    "Was unterscheidet Ihre Marke auf relevante Weise?",
   brandingPersonality: "Persönlichkeit",
-  brandingPersonalityHint: "Wählen Sie einige menschliche Eigenschaften, die in jeder Interaktion erkennbar sein sollen.",
+  brandingPersonalityHint:
+    "Wählen Sie einige menschliche Eigenschaften, die in jeder Interaktion erkennbar sein sollen.",
   brandingPersonalityPlaceholder: "Zum Beispiel: klar, warm, souverän",
   brandingVoice: "Sprache und Ton",
-  brandingVoiceHint: "Beschreiben Sie, wie die Marke spricht und ihren Ton an den Kontext anpasst.",
+  brandingVoiceHint:
+    "Beschreiben Sie, wie die Marke spricht und ihren Ton an den Kontext anpasst.",
   brandingVoicePlaceholder: "Wie soll die Marke klingen?",
-  brandingVisualIdentityTitle: "Schaffen Sie eine wiedererkennbare visuelle Identität",
-  brandingVisualIdentitySubtitle: "Legen Sie wiederverwendbare Elemente und Rollen fest, die Alo im gesamten Arbeitsbereich nutzt.",
+  brandingVisualIdentityTitle:
+    "Schaffen Sie eine wiedererkennbare visuelle Identität",
+  brandingVisualIdentitySubtitle:
+    "Legen Sie wiederverwendbare Elemente und Rollen fest, die Alo im gesamten Arbeitsbereich nutzt.",
   brandingLogoTitle: "Logo-Bibliothek",
-  brandingLogoHint: "Verwalten Sie alle freigegebenen Logo-Varianten gemeinsam und wählen Sie die primäre Version für Alo.",
+  brandingLogoHint:
+    "Verwalten Sie alle freigegebenen Logo-Varianten gemeinsam und wählen Sie die primäre Version für Alo.",
   brandingLogoDropTitle: "Logos hier ablegen oder durchsuchen",
   brandingLogoDropNow: "Ablegen, um diese Logos hinzuzufügen",
   brandingLogoPrimary: "Primär",
   brandingLogoMakePrimary: "Als primär festlegen",
   brandingLogoDisplayName: "Logo-Name",
   brandingLogoRemoveTitle: "Logo entfernen?",
-  brandingLogoRemoveConfirm: (name: string) => `${name} aus der Logo-Bibliothek entfernen? Dies kann nicht rückgängig gemacht werden.`,
+  brandingLogoRemoveConfirm: (name: string) =>
+    `${name} aus der Logo-Bibliothek entfernen? Dies kann nicht rückgängig gemacht werden.`,
   brandingLogoLimit: "Sie können bis zu 8 Logo-Varianten speichern.",
-  brandingLogoCount: (count: number, maximum: number) => `${count} von ${maximum}`,
+  brandingLogoCount: (count: number, maximum: number) =>
+    `${count} von ${maximum}`,
   brandingLogoReplaceNamed: (name: string) => `${name} ersetzen`,
   brandingLogoRemoveNamed: (name: string) => `${name} entfernen`,
   brandingLogoUpload: "Logo hochladen",
@@ -6076,9 +6200,11 @@ export const de: Partial<Catalog> = {
   brandingLogoRemove: "Logo entfernen",
   brandingLogoRequirements: "SVG, PNG, JPEG oder WebP · maximal 500 KB",
   brandingLogoTooLarge: "Wählen Sie ein Logo unter 500 KB.",
-  brandingLogoUnsupported: "Wählen Sie eine sichere SVG-, PNG-, JPEG- oder WebP-Datei.",
+  brandingLogoUnsupported:
+    "Wählen Sie eine sichere SVG-, PNG-, JPEG- oder WebP-Datei.",
   brandingTypographyTitle: "Typografie",
-  brandingTypographyHint: "Weisen Sie Überschriften und gut lesbaren Fließtexten jeweils eine Schriftrolle zu.",
+  brandingTypographyHint:
+    "Weisen Sie Überschriften und gut lesbaren Fließtexten jeweils eine Schriftrolle zu.",
   brandingHeadingFont: "Schrift für Überschriften",
   brandingBodyFont: "Schrift für Fließtext",
   brandingFontInter: "Inter",
@@ -6086,12 +6212,15 @@ export const de: Partial<Catalog> = {
   brandingFontGeorgia: "Georgia",
   brandingFontGaramond: "Garamond",
   brandingColorsTitle: "Farbsystem",
-  brandingColorsSubtitle: "Definieren Sie eine kleine, barrierearme Palette nach Rolle statt nach einzelner App.",
+  brandingColorsSubtitle:
+    "Definieren Sie eine kleine, barrierearme Palette nach Rolle statt nach einzelner App.",
   brandingApplicationsTitle: "Sehen Sie die Marke in echten Anwendungen",
-  brandingApplicationsSubtitle: "Prüfen Sie eine Identität in den Ausgaben, die Kunden und Teams tatsächlich verwenden.",
+  brandingApplicationsSubtitle:
+    "Prüfen Sie eine Identität in den Ausgaben, die Kunden und Teams tatsächlich verwenden.",
   brandingPreviewWorkspaceDocument: "Dokument",
   brandingGuidelinesTitle: "Ihre lebendigen Markenrichtlinien",
-  brandingGuidelinesSubtitle: "Eine klare, druckbare Referenz aus demselben Marken-Kit, das jede Alo-App verwendet.",
+  brandingGuidelinesSubtitle:
+    "Eine klare, druckbare Referenz aus demselben Marken-Kit, das jede Alo-App verwendet.",
   brandingPrintGuidelines: "Richtlinien drucken",
   brandingGuidelineFoundation: "Fundament",
   brandingGuidelineLogo: "Logo-Anwendung",
@@ -6100,10 +6229,14 @@ export const de: Partial<Catalog> = {
   brandingGuidelineVoice: "Sprache und Ton",
   brandingGuidelineMissing: "Noch nicht definiert",
   brandingGuidelineLogoMissing: "Es wurde noch kein Hauptlogo hinzugefügt.",
-  brandingGuidelineLogoRule: "Lassen Sie Freiraum um das Logo und verzerren oder färben Sie es nie um. Vermeiden Sie Hintergründe, die seine Lesbarkeit mindern.",
-  brandingGuidelineColorRule: "Nutzen Sie die Primärfarbe für Wiedererkennung und wichtige Aktionen. Verwenden Sie unterstützende Farben nur für ihre benannte Rolle.",
-  brandingGuidelineTypographyRule: "Nutzen Sie die Überschriftenschrift für Hierarchie und die Textschrift für längere, gut lesbare Inhalte.",
-  brandingGuidelineVoiceRule: "Bewahren Sie dieselbe Persönlichkeit und passen Sie den Ton an Leser und Situation an.",
+  brandingGuidelineLogoRule:
+    "Lassen Sie Freiraum um das Logo und verzerren oder färben Sie es nie um. Vermeiden Sie Hintergründe, die seine Lesbarkeit mindern.",
+  brandingGuidelineColorRule:
+    "Nutzen Sie die Primärfarbe für Wiedererkennung und wichtige Aktionen. Verwenden Sie unterstützende Farben nur für ihre benannte Rolle.",
+  brandingGuidelineTypographyRule:
+    "Nutzen Sie die Überschriftenschrift für Hierarchie und die Textschrift für längere, gut lesbare Inhalte.",
+  brandingGuidelineVoiceRule:
+    "Bewahren Sie dieselbe Persönlichkeit und passen Sie den Ton an Leser und Situation an.",
   brandingSampleName: "Atelier North",
   brandingSampleClient: "Northstar Studio",
   brandingSampleTagline: "Klarheit sichtbar gemacht",
@@ -6111,8 +6244,10 @@ export const de: Partial<Catalog> = {
   brandingPreviewAbout: "Über uns",
   brandingPreviewStartProject: "Projekt starten",
   brandingPreviewWebsiteEyebrow: "Unabhängiges Designstudio",
-  brandingPreviewWebsiteHeading: "Ideen werden zu Marken, die Menschen im Gedächtnis bleiben.",
-  brandingPreviewWebsiteBody: "Eine klare Identität, durchdachte digitale Erlebnisse und ein System, das Ihr Team sicher anwenden kann.",
+  brandingPreviewWebsiteHeading:
+    "Ideen werden zu Marken, die Menschen im Gedächtnis bleiben.",
+  brandingPreviewWebsiteBody:
+    "Eine klare Identität, durchdachte digitale Erlebnisse und ein System, das Ihr Team sicher anwenden kann.",
   brandingPreviewExploreWork: "Arbeiten ansehen",
   brandingPreviewOurApproach: "Unser Ansatz",
   brandingPreviewLaunches: "Markteinführungen",
@@ -6125,18 +6260,22 @@ export const de: Partial<Catalog> = {
   brandingPreviewVisualIdentity: "Visuelle Identität",
   brandingPreviewLaunchToolkit: "Launch-Toolkit",
   brandingPreviewTotal: "Gesamt",
-  brandingPreviewQuoteFooter: "Vielen Dank für die Gelegenheit, gemeinsam etwas Unvergessliches zu schaffen.",
+  brandingPreviewQuoteFooter:
+    "Vielen Dank für die Gelegenheit, gemeinsam etwas Unvergessliches zu schaffen.",
   brandingPreviewCampaignBadge: "NEUE KOLLEKTION",
   brandingPreviewCampaignEyebrow: "Ein durchdachtes neues Kapitel",
   brandingPreviewCampaignHeading: "Entwickelt für Ihre heutige Arbeitsweise.",
-  brandingPreviewCampaignBody: "Entdecken Sie eine Kollektion, die auf Klarheit, Handwerk und dauerhaftem Nutzen beruht.",
+  brandingPreviewCampaignBody:
+    "Entdecken Sie eine Kollektion, die auf Klarheit, Handwerk und dauerhaftem Nutzen beruht.",
   brandingPreviewCampaignAction: "Kollektion ansehen",
   brandingPreviewCampaignLocation: "Brüssel",
   brandingPreviewDocumentType: "PROJEKTBRIEFING",
   brandingPreviewDocumentHeading: "Ein klarerer Weg von der Idee bis zum Start",
-  brandingPreviewDocumentBody: "Dieses Dokument vereint das Team hinter einem Zweck, einer Zielgruppe und einer sicheren Richtung.",
+  brandingPreviewDocumentBody:
+    "Dieses Dokument vereint das Team hinter einem Zweck, einer Zielgruppe und einer sicheren Richtung.",
   brandingPreviewDocumentSection: "Die Chance",
-  brandingPreviewDocumentSectionBody: "Machen Sie aus einer starken Haltung ein konsistentes Erlebnis an jedem Kundenkontaktpunkt.",
+  brandingPreviewDocumentSectionBody:
+    "Machen Sie aus einer starken Haltung ein konsistentes Erlebnis an jedem Kundenkontaktpunkt.",
   sitesUploadImage: "Bild hochladen",
   sitesPublish: "Veröffentlichen",
   sitesPublishChanges: "Änderungen veröffentlichen",

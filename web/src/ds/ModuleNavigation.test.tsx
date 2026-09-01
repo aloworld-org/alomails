@@ -38,6 +38,8 @@ describe("ModuleNavigation", () => {
       "!text-sm",
       "[&_svg]:!size-4",
       "!font-semibold",
+      "!bg-accent-soft",
+      "!text-accent",
     ]) {
       expect(currentClasses.has(className)).toBe(true);
     }

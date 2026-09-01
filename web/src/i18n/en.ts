@@ -3719,10 +3719,50 @@ export const en = {
   sitesOverview: "Overview",
   sitesOverviewHealth: "Site health",
   sitesOverviewActions: "Recent activity",
+  sitesOverviewReadiness: "Launch readiness",
+  sitesOverviewReadinessHint:
+    "Complete the essentials before sharing your website.",
+  sitesOverviewReadyCount: (ready: number, total: number) =>
+    `${ready} of ${total} ready`,
+  sitesOverviewDomainStep: "Website address connected",
+  sitesOverviewPagesStep: "At least one page created",
+  sitesOverviewLanguagesStep: "Enabled languages prepared",
+  sitesOverviewPublishStep: "Website published",
+  sitesOverviewContinue: "Continue building",
+  sitesOverviewContinueHint: "Jump back into the most useful website tools.",
+  sitesOverviewReadinessScore: "Overall readiness",
+  sitesOverviewFoundation: "Foundation",
+  sitesOverviewContent: "Page content",
+  sitesOverviewLocalization: "Languages",
+  sitesOverviewLaunch: "Publishing",
+  sitesOverviewElements: "Page elements",
+  sitesOverviewElementsHint:
+    "A strong home page combines structure, a clear introduction, useful content, and an action.",
+  sitesOverviewNavigationElements: "Navigation",
+  sitesOverviewHeroElements: "Introduction",
+  sitesOverviewContentElements: "Content",
+  sitesOverviewActionElements: "Call to action",
+  sitesOverviewSeo: "Search setup",
+  sitesOverviewAccessibility: "Accessibility",
+  sitesOverviewBranding: "Brand identity",
+  sitesOverviewQuality: "SEO and brand quality",
+  sitesOverviewQualityHint:
+    "Improve how pages appear in search, how images are understood, and how consistently the site represents your brand.",
+  sitesOverviewSeoTitles: "SEO titles",
+  sitesOverviewMetaDescriptions: "Meta descriptions",
+  sitesOverviewImageDescriptions: "Image descriptions",
+  sitesOverviewLogo: "Logo",
+  sitesOverviewFavicon: "Favicon",
+  sitesOverviewRecommendedNext: "Recommended next step",
+  sitesOverviewAddIntroduction: "Add a clear introduction",
+  sitesOverviewAddContent: "Add useful page content",
+  sitesOverviewAddAction: "Add a call to action",
+  sitesOverviewEditPage: "Open page editor",
   sitesSiteTools: "Site settings",
   sitesSiteSettings: "Site settings",
   sitesSiteToolsHint: "Domains, SEO defaults, redirects, analytics, and code",
-  sitesSiteSettingsHint: "Domains, publishing history, analytics, shop, forms, and automation.",
+  sitesSiteSettingsHint:
+    "Domains, publishing history, analytics, shop, forms, and automation.",
   sitesPublishing: "Publishing",
   sitesWebsiteNavigation: "Website settings",
   sitesNewPage: "New page",
@@ -3748,13 +3788,17 @@ export const en = {
   sitesSortPath: "Path",
   sitesEditPage: "Edit",
   sitesPageActions: "Page actions",
+  sitesExpandChildPages: "Expand child pages",
+  sitesCollapseChildPages: "Collapse child pages",
   sitesRenamePage: "Rename",
-  sitesRenamePagePrompt: "Choose the page name shown in Alo and on the website.",
+  sitesRenamePagePrompt:
+    "Choose the page name shown in Alo and on the website.",
   sitesDuplicatePage: "Duplicate",
   sitesSetHomepage: "Set as homepage",
   sitesSetHomepageConfirm: (page: string) => `Make ${page} the homepage?`,
   sitesDeletePage: "Delete",
-  sitesDeletePageConfirm: (page: string) => `Delete ${page}? This removes the draft page from this website.`,
+  sitesDeletePageConfirm: (page: string) =>
+    `Delete ${page}? This removes the draft page from this website.`,
   sitesPageActionFailed: "The page action could not be completed.",
   sitesStatusPublished: "Published",
   sitesViewSite: "View site",
@@ -3914,6 +3958,7 @@ export const en = {
   sitesAddSectionTitle: (section: string) => `Add ${section}`,
   sitesEditSectionTitle: (section: string) => `Edit ${section}`,
   sitesSaveSection: "Save section",
+  sitesSectionSaved: "Saved",
   // Named, because a stack of five sections is otherwise twenty buttons
   // called "Move up", "Edit section", "Delete section" with nothing in the
   // name to say which one they act on (S2.16b2).
@@ -3952,6 +3997,7 @@ export const en = {
   sitesSeoSave: "Save search details",
   sitesSeoSaveFailed: "The search details could not be saved. Try again.",
   sitesSectionNav: "Navigation bar",
+  sitesNavigation: "Navigation",
   sitesSectionNavDesc: "Links across the top of the page.",
   sitesSectionHero: "Hero",
   sitesSectionHeroDesc: "The big opening headline.",
@@ -3982,6 +4028,12 @@ export const en = {
   sitesNavEditorIntro:
     "Your logo or site name comes from Theme. Keep the main menu focused, then use one button for the most important action.",
   sitesNavMenuLinks: "Menu links",
+  sitesNavSettings: "Navigation settings",
+  sitesNavEditorTabs: "Navigation editor",
+  sitesNavLinksTab: "Links",
+  sitesNavSettingsTab: "Settings",
+  sitesNavSettingsHint:
+    "Manage menu links, the primary action, and appearance in one place.",
   sitesNavMenuLinksHint:
     "Add the pages visitors need most. Their order here is their order in the header.",
   sitesNavAddPages: "Add site pages",
@@ -4005,7 +4057,8 @@ export const en = {
   sitesNavAppearanceShow: "Show navigation appearance",
   sitesNavUsesTheme: "Using the site theme",
   sitesNavUsesBrandRoles: "Using reusable brand color roles",
-  sitesNavBrandRoleHint: "Choose colors from Site theme. Update the brand palette once and every connected section follows.",
+  sitesNavBrandRoleHint:
+    "Choose colors from Site theme. Update the brand palette once and every connected section follows.",
   sitesNavResetRoles: "Use defaults",
   sitesNavCustomPalette: "Custom navigation colours",
   sitesNavPaletteChoices: "Navigation colour styles",
@@ -4013,7 +4066,8 @@ export const en = {
   sitesNavPaletteLight: "Light",
   sitesNavPaletteDark: "Dark",
   sitesNavPaletteCustom: "Custom brand",
-  sitesNavCustomHint: "Choose any colour from the picker or enter your exact brand HEX value.",
+  sitesNavCustomHint:
+    "Choose any colour from the picker or enter your exact brand HEX value.",
   sitesNavHexValue: (label: string) => `${label} HEX value`,
   sitesNavBackground: "Background",
   sitesNavText: "Text",
@@ -4035,6 +4089,30 @@ export const en = {
   sitesAddTier: "Add plan",
   sitesAddMember: "Add person",
   sitesAddQuestion: "Add question",
+  sitesHeroLayout: "Layout",
+  sitesHeroLayoutHint:
+    "Choose the composition that best supports your headline and image.",
+  sitesHeroLayoutCentered: "Centered",
+  sitesHeroLayoutSplitRight: "Image right",
+  sitesHeroLayoutSplitLeft: "Image left",
+  sitesHeroLayoutBackground: "Background image",
+  sitesHeroLayoutEditorial: "Editorial",
+  sitesHeroDesign: "Design",
+  sitesHeroHeight: "Height",
+  sitesHeroHeightCompact: "Compact",
+  sitesHeroHeightStandard: "Standard",
+  sitesHeroHeightTall: "Tall",
+  sitesHeroAlignment: "Content alignment",
+  sitesHeroAlignmentLeft: "Left",
+  sitesHeroAlignmentCenter: "Center",
+  sitesHeroAlignmentRight: "Right",
+  sitesHeroContentWidth: "Text width",
+  sitesHeroContentWidthNarrow: "Narrow",
+  sitesHeroContentWidthBalanced: "Balanced",
+  sitesHeroContentWidthWide: "Wide",
+  sitesHeroContent: "Content",
+  sitesHeroMedia: "Image",
+  sitesHeroActions: "Buttons",
   sitesFieldHeading: "Heading",
   sitesFieldSubheading: "Subheading",
   sitesFieldIntro: "Intro",
@@ -4112,13 +4190,16 @@ export const en = {
   // Sites — theme (preset picker + logo/favicon upload).
   sitesTheme: "Theme",
   sitesThemeTitle: "Site theme",
-  sitesThemeSubtitle: "Add your site logo and browser icon. Brand colors come from Branding.",
+  sitesThemeSubtitle:
+    "Add your site logo and browser icon. Brand colors come from Branding.",
   sitesThemeApply: "Apply theme",
   sitesThemeLoadFailed: "The theme options could not be loaded.",
   sitesThemePresets: "Colors & type",
   sitesThemeBrandColors: "Brand accents",
-  sitesThemeBrandColorsHint: "Use the primary accent for key actions and the secondary accent for supporting emphasis.",
-  sitesThemeBrandManaged: "These colors come from your workspace Brand Kit. Change them once in Branding and reuse them everywhere.",
+  sitesThemeBrandColorsHint:
+    "Use the primary accent for key actions and the secondary accent for supporting emphasis.",
+  sitesThemeBrandManaged:
+    "These colors come from your workspace Brand Kit. Change them once in Branding and reuse them everywhere.",
   sitesThemeBaseColors: "Base colors",
   sitesThemeAccentColors: "Accent colors",
   sitesThemeResetColors: "Use preset colors",
@@ -4126,9 +4207,14 @@ export const en = {
   sitesThemeTextColor: "Text",
   sitesThemeBorderColor: "Border",
   sitesThemeAccentColor: (number: number) =>
-    number === 1 ? "Primary accent" : number === 2 ? "Secondary accent" : `Accent ${number}`,
+    number === 1
+      ? "Primary accent"
+      : number === 2
+        ? "Secondary accent"
+        : `Accent ${number}`,
   sitesThemeHexValue: (label: string) => `${label} hex value`,
-  sitesThemeColorError: "Use six-digit HEX colors and keep text readable against the background (at least 4.5:1).",
+  sitesThemeColorError:
+    "Use six-digit HEX colors and keep text readable against the background (at least 4.5:1).",
   sitesThemeLogo: "Logo",
   sitesThemeLogoHint: "Shown in the navigation bar instead of the site name.",
   sitesThemeFavicon: "Favicon",
@@ -4140,23 +4226,29 @@ export const en = {
   sitesThemeNotSet: "None yet",
   sitesUploadFailed: "The image could not be uploaded.",
   brandingTitle: "Branding",
-  brandingSubtitle: "Create one trusted brand kit for websites, quotations, invoices, campaigns, documents, and every branded output.",
+  brandingSubtitle:
+    "Create one trusted brand kit for websites, quotations, invoices, campaigns, documents, and every branded output.",
   brandingSave: "Save brand kit",
   brandingSaved: "Brand kit saved",
   brandingUnsaved: "Unsaved changes",
   brandingAccentsTitle: "Brand accents",
-  brandingAccentsHint: "These are shared workspace roles, not colors for one app. Primary drives key actions and recognition; Secondary supports it without competing.",
+  brandingAccentsHint:
+    "These are shared workspace roles, not colors for one app. Primary drives key actions and recognition; Secondary supports it without competing.",
   brandingPrimary: "Primary accent",
-  brandingPrimaryHint: "Use this for the most important actions and recognizable brand moments, such as quotation acceptance, invoice highlights, campaign calls to action, and website buttons.",
+  brandingPrimaryHint:
+    "Use this for the most important actions and recognizable brand moments, such as quotation acceptance, invoice highlights, campaign calls to action, and website buttons.",
   brandingSecondary: "Secondary accent",
   brandingNeutral: "Neutral space",
-  brandingSecondaryHint: "Use this complementary color for secondary actions, supporting highlights, charts, and visual contrast. It should work with the Primary accent rather than compete with it.",
+  brandingSecondaryHint:
+    "Use this complementary color for secondary actions, supporting highlights, charts, and visual contrast. It should work with the Primary accent rather than compete with it.",
   brandingAddSecondary: "Add secondary accent",
   brandingRemoveSecondary: "Remove secondary accent",
   brandingSupportingTitle: "Supporting colors",
-  brandingSupportingHint: "Add only distinct colors with a clear reusable purpose, such as a product line, campaign family, chart series, or sub-brand. Give each one a meaningful name.",
+  brandingSupportingHint:
+    "Add only distinct colors with a clear reusable purpose, such as a product line, campaign family, chart series, or sub-brand. Give each one a meaningful name.",
   brandingAddSupporting: "Add supporting color",
-  brandingSupportingLimit: "Up to three supporting colors keeps the palette consistent and easy to use.",
+  brandingSupportingLimit:
+    "Up to three supporting colors keeps the palette consistent and easy to use.",
   brandingColorName: "Color name",
   brandingColorHex: "HEX value",
   brandingMoreInfo: (field: string) => `More information about ${field}`,
@@ -4168,7 +4260,8 @@ export const en = {
   brandingPreviewTitle: "Live preview",
   brandingPreviewEyebrow: "Workspace brand",
   brandingPreviewHeading: "Made to feel unmistakably yours",
-  brandingPreviewBody: "Your brand roles flow into websites, live quotations, invoices, campaigns, documents, and every place that needs them.",
+  brandingPreviewBody:
+    "Your brand roles flow into websites, live quotations, invoices, campaigns, documents, and every place that needs them.",
   brandingPreviewPrimary: "Primary action",
   brandingPreviewSecondary: "Secondary action",
   brandingVisualStudio: "Visual brand studio",
@@ -4183,12 +4276,14 @@ export const en = {
   brandingColorCopied: (color: string) => `${color} copied`,
   quoteStudioImportBrandColors: "Import brand colors",
   quoteStudioImportBrandTypography: "Import brand typography",
-  brandingToneScaleHint: "Use lighter tones for backgrounds and darker tones for emphasis without introducing another brand color.",
+  brandingToneScaleHint:
+    "Use lighter tones for backgrounds and darker tones for emphasis without introducing another brand color.",
   brandingContrast: "Readable text",
   brandingUseLightText: "Use light text",
   brandingUseDarkText: "Use dark text",
   brandingColorBalance: "Color balance",
-  brandingColorBalanceHint: "Let neutral space lead, use Secondary for structure, and reserve Primary for the moments that matter.",
+  brandingColorBalanceHint:
+    "Let neutral space lead, use Secondary for structure, and reserve Primary for the moments that matter.",
   brandingGuidanceTitle: "Recommended palette",
   brandingGuidancePrimary: "1 primary — required",
   brandingGuidanceSecondary: "1 secondary — optional",
@@ -4200,9 +4295,11 @@ export const en = {
   brandingVisualIdentityNav: "Visual identity",
   brandingApplicationsNav: "Brand applications",
   brandingGuidelinesNav: "Guidelines",
-  brandingSaveFailed: "The brand kit could not be saved. Your changes are still here; please try again.",
+  brandingSaveFailed:
+    "The brand kit could not be saved. Your changes are still here; please try again.",
   brandingFoundationTitle: "Define what your brand stands for",
-  brandingFoundationSubtitle: "Give every team the same clear foundation for decisions, writing, and design.",
+  brandingFoundationSubtitle:
+    "Give every team the same clear foundation for decisions, writing, and design.",
   brandingBrandName: "Brand name",
   brandingBrandNameHint: "The public name used across branded outputs.",
   brandingBrandNamePlaceholder: "Enter your brand name",
@@ -4213,30 +4310,39 @@ export const en = {
   brandingPurposeHint: "Explain why the brand exists beyond what it sells.",
   brandingPurposePlaceholder: "Why does your brand exist?",
   brandingAudience: "Audience",
-  brandingAudienceHint: "Describe the people or organizations you serve most clearly.",
+  brandingAudienceHint:
+    "Describe the people or organizations you serve most clearly.",
   brandingAudiencePlaceholder: "Who is this brand for?",
   brandingPositioning: "Positioning",
-  brandingPositioningHint: "State the place you want the brand to own in the market.",
-  brandingPositioningPlaceholder: "What makes your brand meaningfully different?",
+  brandingPositioningHint:
+    "State the place you want the brand to own in the market.",
+  brandingPositioningPlaceholder:
+    "What makes your brand meaningfully different?",
   brandingPersonality: "Personality",
-  brandingPersonalityHint: "Choose a few human qualities that should be recognizable in every interaction.",
+  brandingPersonalityHint:
+    "Choose a few human qualities that should be recognizable in every interaction.",
   brandingPersonalityPlaceholder: "For example: clear, warm, assured",
   brandingVoice: "Voice and tone",
-  brandingVoiceHint: "Describe how the brand speaks and how its tone changes with context.",
+  brandingVoiceHint:
+    "Describe how the brand speaks and how its tone changes with context.",
   brandingVoicePlaceholder: "How should the brand sound?",
   brandingVisualIdentityTitle: "Build a recognizable visual identity",
-  brandingVisualIdentitySubtitle: "Set the reusable assets and roles Alo applies across your workspace.",
+  brandingVisualIdentitySubtitle:
+    "Set the reusable assets and roles Alo applies across your workspace.",
   brandingLogoTitle: "Logo library",
-  brandingLogoHint: "Keep every approved logo variant together and choose the primary version used across Alo.",
+  brandingLogoHint:
+    "Keep every approved logo variant together and choose the primary version used across Alo.",
   brandingLogoDropTitle: "Drop logos here or browse",
   brandingLogoDropNow: "Drop to add these logos",
   brandingLogoPrimary: "Primary",
   brandingLogoMakePrimary: "Make primary",
   brandingLogoDisplayName: "Logo name",
   brandingLogoRemoveTitle: "Remove logo?",
-  brandingLogoRemoveConfirm: (name: string) => `Remove ${name} from the logo library? This cannot be undone.`,
+  brandingLogoRemoveConfirm: (name: string) =>
+    `Remove ${name} from the logo library? This cannot be undone.`,
   brandingLogoLimit: "You can keep up to 8 logo variants.",
-  brandingLogoCount: (count: number, maximum: number) => `${count} of ${maximum}`,
+  brandingLogoCount: (count: number, maximum: number) =>
+    `${count} of ${maximum}`,
   brandingLogoReplaceNamed: (name: string) => `Replace ${name}`,
   brandingLogoRemoveNamed: (name: string) => `Remove ${name}`,
   brandingLogoUpload: "Upload logo",
@@ -4246,7 +4352,8 @@ export const en = {
   brandingLogoTooLarge: "Choose a logo smaller than 500 KB.",
   brandingLogoUnsupported: "Choose a safe SVG, PNG, JPEG, or WebP image.",
   brandingTypographyTitle: "Typography",
-  brandingTypographyHint: "Assign one font role to headings and another to readable body copy.",
+  brandingTypographyHint:
+    "Assign one font role to headings and another to readable body copy.",
   brandingHeadingFont: "Heading font",
   brandingBodyFont: "Body font",
   brandingFontInter: "Inter",
@@ -4254,12 +4361,15 @@ export const en = {
   brandingFontGeorgia: "Georgia",
   brandingFontGaramond: "Garamond",
   brandingColorsTitle: "Colour system",
-  brandingColorsSubtitle: "Define a small, accessible palette by role rather than by individual app.",
+  brandingColorsSubtitle:
+    "Define a small, accessible palette by role rather than by individual app.",
   brandingApplicationsTitle: "See the brand in real work",
-  brandingApplicationsSubtitle: "Review one identity across the outputs customers and teams actually use.",
+  brandingApplicationsSubtitle:
+    "Review one identity across the outputs customers and teams actually use.",
   brandingPreviewWorkspaceDocument: "Document",
   brandingGuidelinesTitle: "Your living brand guidelines",
-  brandingGuidelinesSubtitle: "A clear, printable reference generated from the same brand kit every Alo app uses.",
+  brandingGuidelinesSubtitle:
+    "A clear, printable reference generated from the same brand kit every Alo app uses.",
   brandingPrintGuidelines: "Print guidelines",
   brandingGuidelineFoundation: "Foundation",
   brandingGuidelineLogo: "Logo usage",
@@ -4268,10 +4378,14 @@ export const en = {
   brandingGuidelineVoice: "Voice and tone",
   brandingGuidelineMissing: "Not defined yet",
   brandingGuidelineLogoMissing: "No primary logo has been added yet.",
-  brandingGuidelineLogoRule: "Keep clear space around the logo and never stretch, recolour, or place it on a background that reduces legibility.",
-  brandingGuidelineColorRule: "Reserve the primary colour for recognition and important actions. Use supporting colours only for their named role.",
-  brandingGuidelineTypographyRule: "Use the heading font for hierarchy and the body font for longer, readable content.",
-  brandingGuidelineVoiceRule: "Keep the same personality while adapting tone to the reader and situation.",
+  brandingGuidelineLogoRule:
+    "Keep clear space around the logo and never stretch, recolour, or place it on a background that reduces legibility.",
+  brandingGuidelineColorRule:
+    "Reserve the primary colour for recognition and important actions. Use supporting colours only for their named role.",
+  brandingGuidelineTypographyRule:
+    "Use the heading font for hierarchy and the body font for longer, readable content.",
+  brandingGuidelineVoiceRule:
+    "Keep the same personality while adapting tone to the reader and situation.",
   brandingSampleName: "Atelier North",
   brandingSampleClient: "Northstar Studio",
   brandingSampleTagline: "Clarity made visible",
@@ -4280,7 +4394,8 @@ export const en = {
   brandingPreviewStartProject: "Start a project",
   brandingPreviewWebsiteEyebrow: "Independent design studio",
   brandingPreviewWebsiteHeading: "Ideas shaped into brands people remember.",
-  brandingPreviewWebsiteBody: "A clear identity, thoughtful digital experiences, and a system your team can use with confidence.",
+  brandingPreviewWebsiteBody:
+    "A clear identity, thoughtful digital experiences, and a system your team can use with confidence.",
   brandingPreviewExploreWork: "Explore our work",
   brandingPreviewOurApproach: "Our approach",
   brandingPreviewLaunches: "launches",
@@ -4293,18 +4408,22 @@ export const en = {
   brandingPreviewVisualIdentity: "Visual identity",
   brandingPreviewLaunchToolkit: "Launch toolkit",
   brandingPreviewTotal: "Total",
-  brandingPreviewQuoteFooter: "Thank you for the opportunity to build something memorable together.",
+  brandingPreviewQuoteFooter:
+    "Thank you for the opportunity to build something memorable together.",
   brandingPreviewCampaignBadge: "NEW COLLECTION",
   brandingPreviewCampaignEyebrow: "A considered new chapter",
   brandingPreviewCampaignHeading: "Designed for the way you work now.",
-  brandingPreviewCampaignBody: "Discover a collection built around clarity, craft, and lasting usefulness.",
+  brandingPreviewCampaignBody:
+    "Discover a collection built around clarity, craft, and lasting usefulness.",
   brandingPreviewCampaignAction: "See the collection",
   brandingPreviewCampaignLocation: "Brussels",
   brandingPreviewDocumentType: "PROJECT BRIEF",
   brandingPreviewDocumentHeading: "A clearer path from idea to launch",
-  brandingPreviewDocumentBody: "This document brings the team around one purpose, one audience, and one confident direction.",
+  brandingPreviewDocumentBody:
+    "This document brings the team around one purpose, one audience, and one confident direction.",
   brandingPreviewDocumentSection: "The opportunity",
-  brandingPreviewDocumentSectionBody: "Turn a strong point of view into a consistent experience across every customer touchpoint.",
+  brandingPreviewDocumentSectionBody:
+    "Turn a strong point of view into a consistent experience across every customer touchpoint.",
   sitesUploadImage: "Upload picture",
   sitesPublish: "Publish",
   sitesPublishChanges: "Publish changes",
@@ -7981,7 +8100,8 @@ export const en = {
   billingInvoiceEdit: "Edit invoice",
   billingInvoicePreview: "Invoice preview",
   billingQuoteQrLabel: "Scan to accept this quotation",
-  billingQuoteQrSubject: (number: string) => `Acceptance of quotation ${number}`,
+  billingQuoteQrSubject: (number: string) =>
+    `Acceptance of quotation ${number}`,
   billingQuoteQrBody: (number: string) =>
     `I confirm that I accept quotation ${number}. Please contact me if you need any further information.`,
   billingInvoiceQrLabel: "Scan with your banking app to pay",

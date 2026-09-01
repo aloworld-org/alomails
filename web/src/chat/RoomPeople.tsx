@@ -19,7 +19,7 @@ import { Brain, Sparkles, UserMinus, UserPlus, X } from "lucide-react";
 
 import { AgentMemoryPanel, RecordAgentPanel } from "../agents";
 import type { RecordOrigin } from "../agents";
-import { Avatar, Button, IconButton } from "../ds";
+import { Avatar, Button, IconButton, MODAL_BACKDROP_CLASS } from "../ds";
 import { strings } from "../i18n";
 import { chatMessage, useChatApi } from "./api";
 import type { Agent, ChannelDetail } from "./types";
@@ -113,7 +113,7 @@ export function RoomPeople({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4"
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4 ${MODAL_BACKDROP_CLASS}`}
       role="dialog"
       aria-modal="true"
       aria-label={strings.chatWhoIsHere}

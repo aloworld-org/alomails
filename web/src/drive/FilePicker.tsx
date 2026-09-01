@@ -14,7 +14,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ChevronRight, File, Folder, Loader2, Lock, Users } from "lucide-react";
 
-import { Button } from "../ds";
+import { Button, MODAL_BACKDROP_CLASS } from "../ds";
 import { strings } from "../i18n";
 import { useJmapClient } from "../jmap";
 import type { DriveNodeDto, SpaceDto } from "../jmap/types";
@@ -112,7 +112,7 @@ export function FilePicker({
 
   return (
     <div
-      className={styles.backdrop}
+      className={`${styles.backdrop} ${MODAL_BACKDROP_CLASS}`}
       role="dialog"
       aria-modal="true"
       aria-label={strings.pickerTitle}

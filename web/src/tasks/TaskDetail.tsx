@@ -44,6 +44,7 @@ import {
   Select,
   Spinner,
   useModalStack,
+  MODAL_BACKDROP_CLASS,
 } from "../ds";
 import { Avatar, COLUMNS, LABEL_PALETTE, statusColor } from "./parts";
 import { projectsMessage, useProjectsApi } from "../projects/api";
@@ -53,7 +54,7 @@ import type { RunningTimer } from "../projects/types";
 /** The scrim, anchoring the panel to the right edge rather than centring it —
  *  the one drawing decision that keeps this from being a `ds/Modal`. */
 const OVERLAY =
-  "fixed inset-0 z-[var(--z-modal)] flex justify-end bg-overlay";
+  `fixed inset-0 z-[var(--z-modal)] flex justify-end bg-overlay ${MODAL_BACKDROP_CLASS}`;
 
 /** The panel. Both the loading and the loaded return render this same shell in
  *  the same position, so React keeps one DOM node across the switch — the

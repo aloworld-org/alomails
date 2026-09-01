@@ -97,6 +97,11 @@ const NAV: Section = {
   type: "nav",
   links: [{ label: "Home", href: "/" }],
 };
+const FOOTER: Section = {
+  type: "footer",
+  text: "Fresh bread daily",
+  links: [],
+};
 
 /** The page GET the editor loads first. */
 function pageReply(sections: Section[]): Reply {
@@ -291,6 +296,32 @@ describe("the section stack", () => {
     expect(screen.getByText(strings.sitesCountEntries(1))).toBeTruthy();
   });
 
+  test("keeps website navigation and footer out of the page section stack", async () => {
+    replies = [pageReply([NAV, FOOTER])];
+    ui();
+
+    const sectionsPanel = await screen.findByRole("region", {
+      name: strings.sitesSections,
+    });
+    expect(screen.queryByText(strings.sitesSectionNav)).toBeNull();
+    expect(screen.queryByText(strings.sitesSectionFooter)).toBeNull();
+    expect(sectionsPanel.textContent).toContain("0");
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesAddSection }),
+    );
+    await screen.findByRole("dialog", { name: strings.sitesPaletteTitle });
+    expect(document.querySelector('[data-palette-tile="nav"]')).toBeNull();
+    expect(document.querySelector('[data-palette-tile="footer"]')).toBeNull();
+    const back = screen.getByRole("link", { name: strings.sitesBackToSite });
+    expect(back.getAttribute("href")).toBe("/sites/site-1?section=pages");
+    expect(back.parentElement?.className).toContain(
+      "max-w-[var(--workspace-content-max)]",
+    );
+    expect(sectionsPanel.parentElement?.className).toContain(
+      "max-w-[var(--workspace-content-max)]",
+    );
+  });
+
   test("a foreign or stale page reads as an error with the way back", async () => {
     replies = [
       {
@@ -483,7 +514,7 @@ function paletteTile(kind: string): HTMLElement {
 }
 
 describe("adding a section", () => {
-  test("the palette offers every type; saving the form POSTs exactly the typed section", async () => {
+  test("the palette offers every page section; saving the form POSTs exactly the typed section", async () => {
     replies = [pageReply([])];
     ui();
     // Empty page → empty state; the header control opens the palette.
@@ -495,9 +526,13 @@ describe("adding a section", () => {
       screen.getByRole("region", { name: strings.sitesPaletteTitle }),
     ).toBeTruthy();
 
-    for (const kind of SECTION_KINDS) {
+    for (const kind of SECTION_KINDS.filter(
+      (kind) => kind !== "nav" && kind !== "footer",
+    )) {
       expect(paletteTile(kind)).toBeTruthy();
     }
+    expect(document.querySelector('[data-palette-tile="nav"]')).toBeNull();
+    expect(document.querySelector('[data-palette-tile="footer"]')).toBeNull();
 
     replies = [
       {
@@ -521,11 +556,17 @@ describe("adding a section", () => {
     );
 
     await waitFor(() => expect(lastWrite()).toBeTruthy());
-    // Exactly the typed section: trimmed, untouched optionals ABSENT — the
-    // stored JSON never grows blank keys — plus the position the palette
-    // chose for it (an empty page has only the top).
+    // Blank content stays absent while the visible design choices are stored
+    // explicitly, so the published result always matches this editor.
     expect(lastWrite()!.body).toEqual({
-      section: { type: "hero", heading: "Big and warm" },
+      section: {
+        type: "hero",
+        heading: "Big and warm",
+        layout: "centered",
+        height: "standard",
+        alignment: "center",
+        content_width: "balanced",
+      },
       index: 0,
     });
     // The stack renders the envelope the server answered.
@@ -612,166 +653,6 @@ describe("adding a section", () => {
 });
 
 describe("editing a section", () => {
-  test("navigation is pinned and can fill, order, and save links from site pages", async () => {
-    replies = [
-      pageReply([HERO, NAV]),
-      {
-        match: (url, method) =>
-          method === "GET" && url.endsWith("/sites/site-1/pages"),
-        status: 200,
-        body: {
-          pages: [
-            {
-              id: "page-1",
-              slug: "",
-              title: "Welcome",
-              home: true,
-              seoTitle: null,
-              seoDescription: null,
-            },
-            {
-              id: "page-2",
-              slug: "about",
-              title: "About us",
-              home: false,
-              seoTitle: null,
-              seoDescription: null,
-            },
-            {
-              id: "page-3",
-              slug: "contact",
-              title: "Contact",
-              home: false,
-              seoTitle: null,
-              seoDescription: null,
-            },
-          ],
-        },
-      },
-    ];
-    ui();
-
-    const navigationCard = await screen.findByTestId("navigation-section-card");
-    expect(navigationCard.textContent).toContain(strings.sitesNavPinned);
-    expect(
-      navigationCard.querySelector("[data-navigation-preview]"),
-    ).toBeNull();
-    expect(
-      navigationCard.querySelector('[data-section-control="up"]'),
-    ).toBeNull();
-    expect(
-      navigationCard.querySelector('[data-section-control="down"]'),
-    ).toBeNull();
-
-    fireEvent.click(
-      navigationCard.querySelector<HTMLElement>(
-        '[data-section-control="edit"]',
-      )!,
-    );
-    expect(await screen.findByText(strings.sitesNavEditorIntroTitle)).toBeTruthy();
-    const addPages = await screen.findByRole("button", {
-      name: strings.sitesNavAddPages,
-    });
-    fireEvent.click(addPages);
-
-    const menu = screen.getByRole("group", { name: strings.sitesNavMenuLinks });
-    expect(menu.querySelectorAll("[data-navigation-link]")).toHaveLength(3);
-    expect(screen.getByDisplayValue("About us")).toBeTruthy();
-    expect(screen.getByDisplayValue("/contact")).toBeTruthy();
-
-    fireEvent.click(
-      screen.getByRole("button", { name: strings.sitesNavMoveLinkUp(3) }),
-    );
-    replies = [
-      {
-        match: (url, method) =>
-          method === "PUT" &&
-          url.endsWith("/sites/site-1/pages/page-1/sections/1"),
-        status: 200,
-        body: {
-          sections: env([
-            HERO,
-            {
-              type: "nav",
-              links: [
-                { label: "Home", href: "/" },
-                { label: "Contact", href: "/contact" },
-                { label: "About us", href: "/about" },
-              ],
-            },
-          ]),
-        },
-      },
-    ];
-    fireEvent.click(
-      screen.getByRole("button", { name: strings.sitesSaveSection }),
-    );
-    await waitFor(() => expect(lastWrite()?.method).toBe("PUT"));
-    expect(lastWrite()?.body).toEqual({
-      section: {
-        type: "nav",
-        links: [
-          { label: "Home", href: "/" },
-          { label: "Contact", href: "/contact" },
-          { label: "About us", href: "/about" },
-        ],
-      },
-    });
-  });
-
-  test("navigation links can target page sections and reuse site-theme color roles", async () => {
-    replies = [
-      pageReply([NAV, HERO, FAQ]),
-      {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/pages"),
-        status: 200,
-        body: {
-          pages: [{
-            id: "page-1", slug: "", title: "Welcome", home: true,
-            seoTitle: null, seoDescription: null,
-          }],
-        },
-      },
-    ];
-    ui();
-
-    const navigationCard = await screen.findByTestId("navigation-section-card");
-    fireEvent.click(
-      navigationCard.querySelector<HTMLElement>('[data-section-control="edit"]')!,
-    );
-
-    const destination = await screen.findByLabelText(strings.sitesNavDestination);
-    expect(destination.querySelector('option[value="/#hero"]')?.textContent).toContain(
-      strings.sitesSectionHero,
-    );
-    fireEvent.change(destination, { target: { value: "/#hero" } });
-
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesNavAppearanceShow }));
-    fireEvent.change(screen.getByLabelText(strings.sitesNavBackground), { target: { value: "accent_2" } });
-    fireEvent.change(screen.getByLabelText(strings.sitesNavText), { target: { value: "background" } });
-    fireEvent.change(screen.getByLabelText(strings.sitesNavHover), { target: { value: "accent_2" } });
-
-    replies = [{
-      match: (url, method) =>
-        method === "PUT" && url.endsWith("/sites/site-1/pages/page-1/sections/0"),
-      status: 200,
-      body: { sections: env([NAV, HERO, FAQ]) },
-    }];
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesSaveSection }));
-    await waitFor(() => expect(lastWrite()?.method).toBe("PUT"));
-    expect(lastWrite()?.body).toEqual({
-      section: {
-        type: "nav",
-        links: [{ label: "Home", href: "/#hero" }],
-        appearance: {
-          background: "accent_2",
-          text: "background",
-          hover: "accent_2",
-        },
-      },
-    });
-  });
-
   test("copy tools propose one selected field and write only after approval", async () => {
     replies = [pageReply([HERO])];
     ui();
@@ -885,9 +766,67 @@ describe("editing a section", () => {
         type: "hero",
         heading: "Warm bread daily",
         subheading: "Since 1962",
+        layout: "centered",
+        height: "standard",
+        alignment: "center",
+        content_width: "balanced",
       },
     });
     expect(await screen.findByText("Warm bread daily")).toBeTruthy();
+  });
+
+  test("hero layout cards and design controls save the chosen composition", async () => {
+    replies = [pageReply([HERO])];
+    ui();
+    await screen.findByText(strings.sitesSectionHero);
+    fireEvent.click(sectionControls("edit")[0]!);
+
+    fireEvent.click(
+      screen.getByRole("radio", { name: strings.sitesHeroLayoutSplitRight }),
+    );
+    fireEvent.click(
+      screen.getByRole("radio", { name: strings.sitesHeroHeightTall }),
+    );
+    fireEvent.click(
+      screen.getByRole("radio", { name: strings.sitesHeroAlignmentLeft }),
+    );
+    fireEvent.click(
+      screen.getByRole("radio", { name: strings.sitesHeroContentWidthNarrow }),
+    );
+
+    replies = [
+      {
+        match: (url, method) =>
+          method === "PUT" &&
+          url.endsWith("/sites/site-1/pages/page-1/sections/0"),
+        status: 200,
+        body: {
+          sections: env([
+            {
+              ...HERO,
+              layout: "split_right",
+              height: "tall",
+              alignment: "left",
+              content_width: "narrow",
+            },
+          ]),
+        },
+      },
+    ];
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesSaveSection }),
+    );
+
+    await waitFor(() => expect(lastWrite()).toBeTruthy());
+    expect(lastWrite()!.body).toEqual({
+      section: {
+        ...HERO,
+        layout: "split_right",
+        height: "tall",
+        alignment: "left",
+        content_width: "narrow",
+      },
+    });
   });
 
   test("props the form does not offer (form_id) survive an edit untouched", async () => {
@@ -955,7 +894,14 @@ describe("editing a section", () => {
 
     await waitFor(() => expect(lastWrite()).toBeTruthy());
     expect(lastWrite()!.body).toEqual({
-      section: { ...framed, heading: "Warm bread daily" },
+      section: {
+        ...framed,
+        heading: "Warm bread daily",
+        layout: "centered",
+        height: "standard",
+        alignment: "center",
+        content_width: "balanced",
+      },
     });
   });
 });

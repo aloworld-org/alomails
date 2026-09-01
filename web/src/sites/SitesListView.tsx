@@ -125,7 +125,7 @@ export function SitesListView() {
                   <SiteStatusChip status={site.status} />
                   <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-tertiary transition-colors group-hover:bg-surface group-hover:text-primary">
                     <ArrowRight
-                      className="size-4 transition-transform group-hover:translate-x-0.5"
+                      className="size-4"
                       aria-hidden="true"
                     />
                   </span>

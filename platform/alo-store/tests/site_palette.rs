@@ -75,6 +75,10 @@ fn fixture_site() -> SeedContext {
                 image: Some(image("9hK3vQ2mR8pT1xWz4bC5dg", "Roasting drum mid-batch")),
                 primary_cta: Some(link("Visit us", "/visit")),
                 secondary_cta: None,
+                layout: None,
+                height: None,
+                alignment: None,
+                content_width: None,
             }),
             Section::Features(FeaturesSection {
                 heading: Some("Why Nordwind".to_owned()),

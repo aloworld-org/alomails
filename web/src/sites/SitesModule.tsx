@@ -24,7 +24,7 @@ import { SitesListView } from "./SitesListView";
 import { SubmissionsView } from "./SubmissionsView";
 export function SitesModule() {
   return (
-    <div className="flex h-full min-h-0 flex-col bg-surface">
+    <div className="flex h-full min-h-0 flex-col overflow-auto overscroll-contain bg-surface">
       <Routes>
         <Route index element={<SitesListView />} />
         <Route path=":siteId" element={<SiteView />} />

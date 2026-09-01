@@ -15,7 +15,7 @@ import { X } from "lucide-react";
 
 import { chatMessage, useChatApi } from "../chat/api";
 import type { Agent, AgentMemory } from "../chat/types";
-import { Button, IconButton } from "../ds";
+import { Button, IconButton, MODAL_BACKDROP_CLASS } from "../ds";
 import { strings } from "../i18n";
 
 export function AgentMemoryPanel({
@@ -70,7 +70,7 @@ export function AgentMemoryPanel({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4"
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4 ${MODAL_BACKDROP_CLASS}`}
       role="dialog"
       aria-modal="true"
       aria-label={strings.agentMemoryTitle(agent.handle)}

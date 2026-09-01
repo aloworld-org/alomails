@@ -9,7 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
 
-import { cx } from "../../ds";
+import { cx, MODAL_BACKDROP_CLASS } from "../../ds";
 import { strings } from "../../i18n";
 import { numberListItems, type ListItem } from "./listItems";
 import {
@@ -130,7 +130,7 @@ export function ListStyleGallery({
         // document tree: portalling preserves both invariants at once.
         createPortal(
           <div
-            className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-overlay p-4 max-sm:items-end"
+            className={`fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-overlay p-4 max-sm:items-end ${MODAL_BACKDROP_CLASS}`}
             role="presentation"
             onPointerDown={(event) => {
               if (event.target === event.currentTarget) close();

@@ -8,20 +8,32 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import {
   Blocks,
+  Check,
   ChevronDown,
   ChevronUp,
   ChevronRight,
-  GripVertical,
+  Link2,
+  MoreHorizontal,
   PanelTop,
-  Palette,
   Plus,
   Sparkles,
+  Settings2,
   Trash2,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { strings } from "../i18n";
-import { Button, IconButton, Select, Spinner } from "../ds";
+import {
+  Button,
+  Card,
+  ChoicePicker,
+  cx,
+  IconButton,
+  Input,
+  Menu,
+  moduleNavigationItemClassName,
+  Spinner,
+} from "../ds";
 import { readBrandKit } from "../branding/repository";
 import { kindDescription, kindLabel } from "./sectionInfo";
 import { contrastRatio } from "./accentContrast";
@@ -56,8 +68,19 @@ import type {
   ShopDraft,
   TicketsDraft,
 } from "./sectionDrafts";
-import type { Section, SectionKind, SectionLink, ThemeColorRole } from "./sections";
-import type { BrandColors, SiteCopyAction, SiteEditEnvelope, SitePage, ThemePreset } from "./types";
+import type {
+  Section,
+  SectionKind,
+  SectionLink,
+  ThemeColorRole,
+} from "./sections";
+import type {
+  BrandColors,
+  SiteCopyAction,
+  SiteEditEnvelope,
+  SitePage,
+  ThemePreset,
+} from "./types";
 import type {
   SiteBooking,
   SiteCatalog,
@@ -91,14 +114,19 @@ function CopyTools({ pointer, value }: { pointer: string; value: string }) {
     setBusy(true);
     setError(null);
     try {
-      const prepared = await api.proposePageCopyEdit(context.siteId, context.pageId, {
-        target: context.target,
-        pointer,
-        action,
-        ...(action === "tone" ? { tone: tone.trim() } : {}),
-      });
+      const prepared = await api.proposePageCopyEdit(
+        context.siteId,
+        context.pageId,
+        {
+          target: context.target,
+          pointer,
+          action,
+          ...(action === "tone" ? { tone: tone.trim() } : {}),
+        },
+      );
       const operation = prepared.proposal.operations[0];
-      if (operation?.op !== "rewrite_copy") throw new Error(strings.sitesAiCopyFailed);
+      if (operation?.op !== "rewrite_copy")
+        throw new Error(strings.sitesAiCopyFailed);
       setProposal(prepared.proposal);
       setAfter(operation.text);
     } catch (reason) {
@@ -113,7 +141,9 @@ function CopyTools({ pointer, value }: { pointer: string; value: string }) {
     setBusy(true);
     setError(null);
     try {
-      context.onApplied(await api.applyPageEdit(context.siteId, context.pageId, proposal));
+      context.onApplied(
+        await api.applyPageEdit(context.siteId, context.pageId, proposal),
+      );
     } catch (reason) {
       setError(sitesMessage(reason, strings.sitesAiApplyFailed));
       setBusy(false);
@@ -135,14 +165,29 @@ function CopyTools({ pointer, value }: { pointer: string; value: string }) {
         {strings.sitesAiImproveCopy}
       </Button>
       {open && proposal === null && (
-        <div className={styles.copyChoices} aria-label={strings.sitesAiCopyActions}>
-          <Button variant="ghost" disabled={busy} onClick={() => void propose("rewrite")}>
+        <div
+          className={styles.copyChoices}
+          aria-label={strings.sitesAiCopyActions}
+        >
+          <Button
+            variant="ghost"
+            disabled={busy}
+            onClick={() => void propose("rewrite")}
+          >
             {strings.sitesAiRewrite}
           </Button>
-          <Button variant="ghost" disabled={busy} onClick={() => void propose("shorter")}>
+          <Button
+            variant="ghost"
+            disabled={busy}
+            onClick={() => void propose("shorter")}
+          >
             {strings.sitesAiShorter}
           </Button>
-          <Button variant="ghost" disabled={busy} onClick={() => void propose("longer")}>
+          <Button
+            variant="ghost"
+            disabled={busy}
+            onClick={() => void propose("longer")}
+          >
             {strings.sitesAiLonger}
           </Button>
           <div className={styles.copyTone}>
@@ -174,7 +219,9 @@ function CopyTools({ pointer, value }: { pointer: string; value: string }) {
             <span>{strings.sitesAiCopyAfter}</span>
             <p>{after}</p>
           </div>
-          <p className={styles.copyProposalHint}>{strings.sitesAiPreviewHint}</p>
+          <p className={styles.copyProposalHint}>
+            {strings.sitesAiPreviewHint}
+          </p>
           <div className={styles.copyProposalActions}>
             <Button
               variant="ghost"
@@ -192,7 +239,11 @@ function CopyTools({ pointer, value }: { pointer: string; value: string }) {
           </div>
         </div>
       )}
-      {error !== null && <p className={styles.aiEditError} role="alert">{error}</p>}
+      {error !== null && (
+        <p className={styles.aiEditError} role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
@@ -221,9 +272,13 @@ function TextField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         autoFocus={autoFocus}
-        {...(mono ? { autoCapitalize: "none", autoCorrect: "off", spellCheck: false } : {})}
+        {...(mono
+          ? { autoCapitalize: "none", autoCorrect: "off", spellCheck: false }
+          : {})}
       />
-      {copyPointer !== undefined && <CopyTools pointer={copyPointer} value={value} />}
+      {copyPointer !== undefined && (
+        <CopyTools pointer={copyPointer} value={value} />
+      )}
     </Field>
   );
 }
@@ -249,7 +304,9 @@ function LongTextField({
         rows={4}
         onChange={(e) => onChange(e.target.value)}
       />
-      {copyPointer !== undefined && <CopyTools pointer={copyPointer} value={value} />}
+      {copyPointer !== undefined && (
+        <CopyTools pointer={copyPointer} value={value} />
+      )}
     </Field>
   );
 }
@@ -265,7 +322,11 @@ function CheckField({
 }) {
   return (
     <label className={styles.toggle}>
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+      />
       {label}
     </label>
   );
@@ -283,7 +344,9 @@ function LinkFields({
 }) {
   return (
     <fieldset className={styles.subGroup}>
-      {legend !== undefined && <legend className={styles.subLegend}>{legend}</legend>}
+      {legend !== undefined && (
+        <legend className={styles.subLegend}>{legend}</legend>
+      )}
       <div className={styles.fieldRow}>
         <Field label={strings.sitesFieldLinkLabel}>
           <input
@@ -321,10 +384,16 @@ function ItemsEditor<T extends object>({
   items: T[];
   onChange: (items: T[]) => void;
   blank: () => T;
-  render: (item: T, update: (patch: Partial<T>) => void, index: number) => ReactNode;
+  render: (
+    item: T,
+    update: (patch: Partial<T>) => void,
+    index: number,
+  ) => ReactNode;
 }) {
   const update = (index: number) => (patch: Partial<T>) => {
-    onChange(items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+    onChange(
+      items.map((item, i) => (i === index ? { ...item, ...patch } : item)),
+    );
   };
   return (
     <div className={styles.itemsEditor}>
@@ -332,7 +401,9 @@ function ItemsEditor<T extends object>({
         // Entries have no identity of their own — the position is the key.
         <div key={i} className={styles.itemGroup}>
           <div className={styles.itemGroupHead}>
-            <span className={styles.itemGroupName}>{strings.sitesItemN(i + 1)}</span>
+            <span className={styles.itemGroupName}>
+              {strings.sitesItemN(i + 1)}
+            </span>
             <IconButton
               size="sm"
               label={strings.sitesRemoveItem}
@@ -359,19 +430,25 @@ function ItemsEditor<T extends object>({
 
 type Change = (draft: SectionDraft) => void;
 
-const NAV_DEFAULT_ROLES = { background: "background", text: "text", hover: "accent_1" } as const;
+const NAV_DEFAULT_ROLES = {
+  background: "background",
+  text: "text",
+  hover: "accent_1",
+} as const;
 
 function themeColors(preset: ThemePreset, custom?: BrandColors): BrandColors {
-  return custom ?? {
-    background: preset.palette.background,
-    text: preset.palette.text,
-    border: preset.palette.border,
-    accent_1: preset.palette.primary,
-    accent_2: preset.palette.mutedText,
-    accent_3: preset.palette.surface,
-    accent_4: preset.palette.text,
-    accent_5: preset.palette.background,
-  };
+  return (
+    custom ?? {
+      background: preset.palette.background,
+      text: preset.palette.text,
+      border: preset.palette.border,
+      accent_1: preset.palette.primary,
+      accent_2: preset.palette.mutedText,
+      accent_3: preset.palette.surface,
+      accent_4: preset.palette.text,
+      accent_5: preset.palette.background,
+    }
+  );
 }
 
 function roleColor(colors: BrandColors, role: ThemeColorRole): string {
@@ -384,13 +461,16 @@ function sectionTargets(page: SitePage, sections: Section[]) {
     if (section.type === "nav" || section.type === "footer") return [];
     const occurrence = (occurrences.get(section.type) ?? 0) + 1;
     occurrences.set(section.type, occurrence);
-    const anchor = occurrence === 1 ? section.type : `${section.type}-${occurrence}`;
+    const anchor =
+      occurrence === 1 ? section.type : `${section.type}-${occurrence}`;
     const path = page.home ? "/" : `/${page.slug}`;
-    return [{
-      href: `${path}#${anchor}`,
-      label: `${page.title} · ${kindLabel(section.type)}`,
-      defaultLabel: kindLabel(section.type),
-    }];
+    return [
+      {
+        href: `${path}#${anchor}`,
+        label: `${page.title} · ${kindLabel(section.type)}`,
+        defaultLabel: kindLabel(section.type),
+      },
+    ];
   });
 }
 
@@ -405,7 +485,8 @@ function NavFields({
   currentPage?: SitePage | undefined;
   currentSections: Section[];
 }) {
-  const { siteId = "", pageId = "" } = useParams();
+  const { siteId = "", pageId: routePageId = "" } = useParams();
+  const pageId = routePageId || currentPage?.id || "";
   const api = useSitesApi();
   const workspaceBrand = readBrandKit();
   const [pages, setPages] = useState<SitePage[]>([]);
@@ -414,8 +495,12 @@ function NavFields({
   const [pageSections, setPageSections] = useState<Record<string, Section[]>>(
     currentPage === undefined ? {} : { [currentPage.id]: currentSections },
   );
-  const [dragging, setDragging] = useState<number | null>(null);
-  const [appearanceOpen, setAppearanceOpen] = useState(draft.appearance !== undefined);
+  const [openLink, setOpenLink] = useState<number | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [actionOpen, setActionOpen] = useState(
+    draft.cta.label.trim() !== "" || draft.cta.href.trim() !== "",
+  );
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
   const [brandColors, setBrandColors] = useState<BrandColors | null>(null);
 
   useEffect(() => {
@@ -429,21 +514,24 @@ function NavFields({
         if (!current) return;
         setPages(loaded);
         const missing = loaded.filter((page) => page.id !== pageId);
-        void Promise.allSettled(missing.map((page) => api.page(siteId, page.id))).then(
-          (results) => {
-            if (!current) return;
-            const loadedSections: Record<string, Section[]> =
-              currentPage === undefined ? {} : { [currentPage.id]: currentSections };
-            results.forEach((result, index) => {
-              const page = missing[index];
-              if (result.status === "fulfilled" && page !== undefined) {
-                const sections: unknown = result.value.sections?.sections;
-                if (Array.isArray(sections)) loadedSections[page.id] = sections as Section[];
-              }
-            });
-            setPageSections(loadedSections);
-          },
-        );
+        void Promise.allSettled(
+          missing.map((page) => api.page(siteId, page.id)),
+        ).then((results) => {
+          if (!current) return;
+          const loadedSections: Record<string, Section[]> =
+            currentPage === undefined
+              ? {}
+              : { [currentPage.id]: currentSections };
+          results.forEach((result, index) => {
+            const page = missing[index];
+            if (result.status === "fulfilled" && page !== undefined) {
+              const sections: unknown = result.value.sections?.sections;
+              if (Array.isArray(sections))
+                loadedSections[page.id] = sections as Section[];
+            }
+          });
+          setPageSections(loadedSections);
+        });
       })
       .catch(() => {
         if (current) setPagesFailed(true);
@@ -462,17 +550,50 @@ function NavFields({
     void Promise.all([api.site(siteId), api.themePresets()])
       .then(([site, presets]) => {
         if (!current) return;
-        const preset = presets.find((item) => item.id === (site.theme.preset ?? presets[0]?.id));
-        if (preset !== undefined) setBrandColors(themeColors(preset, site.theme.colors));
+        const preset = presets.find(
+          (item) => item.id === (site.theme.preset ?? presets[0]?.id),
+        );
+        if (preset !== undefined)
+          setBrandColors(themeColors(preset, site.theme.colors));
       })
       .catch(() => undefined);
-    return () => { current = false; };
+    return () => {
+      current = false;
+    };
   }, [api, siteId]);
 
   const pagePath = (page: SitePage) => (page.home ? "/" : `/${page.slug}`);
   const linkedTargets = new Set(draft.links.map((link) => link.href.trim()));
-  const missingPages = pages.filter((page) => !linkedTargets.has(pagePath(page)));
-  const destinations = pages.flatMap((page) => sectionTargets(page, pageSections[page.id] ?? []));
+  const missingPages = pages.filter(
+    (page) => !linkedTargets.has(pagePath(page)),
+  );
+  const destinations = pages.flatMap((page) =>
+    sectionTargets(page, pageSections[page.id] ?? []),
+  );
+  const destinationOptions = [
+    { value: "custom", label: strings.sitesNavCustomTarget },
+    ...pages.map((page) => ({
+      value: pagePath(page),
+      label: `${page.title} · ${pagePath(page)}`,
+    })),
+    ...destinations.map((target) => ({
+      value: target.href,
+      label: target.label,
+    })),
+  ];
+  const appearanceOptions = [
+    { value: "background", label: strings.sitesThemeBackgroundColor },
+    { value: "text", label: strings.sitesThemeTextColor },
+    { value: "border", label: strings.sitesThemeBorderColor },
+    { value: "accent_1", label: strings.sitesThemeAccentColor(1) },
+    ...(workspaceBrand.secondary === null
+      ? []
+      : [{ value: "accent_2", label: strings.sitesThemeAccentColor(2) }]),
+    ...workspaceBrand.supporting.map((color, index) => ({
+      value: `accent_${index + 3}`,
+      label: color.name,
+    })),
+  ];
   const reorder = (from: number, to: number) => {
     if (from === to || to < 0 || to >= draft.links.length) return;
     const links = [...draft.links];
@@ -492,341 +613,692 @@ function NavFields({
     onChange({ ...draft, links: [...typed, ...added] });
   };
 
+  const selectedAppearance = draft.appearance ?? NAV_DEFAULT_ROLES;
+  const readable =
+    brandColors === null ||
+    ((contrastRatio(
+      roleColor(brandColors, selectedAppearance.background),
+      roleColor(brandColors, selectedAppearance.text),
+    ) ?? 0) >= 4.5 &&
+      (contrastRatio(
+        roleColor(brandColors, selectedAppearance.background),
+        roleColor(brandColors, selectedAppearance.hover),
+      ) ?? 0) >= 4.5);
+
   return (
-    <div className={styles.navEditor}>
-      <div className={styles.navEditorIntro}>
-        <span className={styles.navEditorIntroIcon} aria-hidden="true">
-          <PanelTop size="var(--icon-size-control)" />
-        </span>
-        <div>
-          <strong>{strings.sitesNavEditorIntroTitle}</strong>
-          <p>{strings.sitesNavEditorIntro}</p>
-        </div>
-      </div>
-
-      <fieldset className={styles.navLinksGroup}>
-        <legend className={styles.srOnly}>{strings.sitesNavMenuLinks}</legend>
-        <div className={styles.navLinksHead}>
-          <div>
-            <h3>{strings.sitesNavMenuLinks}</h3>
-            <p>{strings.sitesNavMenuLinksHint}</p>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={pagesLoading || missingPages.length === 0}
-            onClick={addSitePages}
-          >
-            {pagesLoading ? strings.sitesNavPagesLoading : strings.sitesNavAddPages}
-          </Button>
-        </div>
-        {pagesFailed && (
-          <p className={styles.navPagesError} role="status">
-            {strings.sitesNavPagesLoadFailed}
-          </p>
-        )}
-
-        <div className={styles.navLinkList}>
-          {draft.links.map((link, index) => {
-            const selectedPage = pages.find((page) => pagePath(page) === link.href);
-            const selectedSection = destinations.find((target) => target.href === link.href);
-            return (
-              <div
-                key={index}
-                data-navigation-link=""
-                className={
-                  dragging === index
-                    ? `${styles.navLinkCard} ${styles.navLinkCardDragging}`
-                    : styles.navLinkCard
-                }
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  if (dragging !== null) reorder(dragging, index);
-                  setDragging(null);
-                }}
-              >
-                <div className={styles.navLinkHead}>
-                  <span
-                    className={styles.navLinkDrag}
-                    draggable
-                    aria-hidden="true"
-                    onDragStart={() => setDragging(index)}
-                    onDragEnd={() => setDragging(null)}
-                  >
-                    <GripVertical size="var(--icon-size-inline)" />
-                  </span>
-                  <strong>{strings.sitesItemN(index + 1)}</strong>
-                  <div className={styles.navLinkActions}>
-                    <IconButton
-                      size="sm"
-                      label={strings.sitesNavMoveLinkUp(index + 1)}
-                      icon={<ChevronUp size="var(--icon-size-inline)" />}
-                      disabled={index === 0}
-                      onClick={() => reorder(index, index - 1)}
-                    />
-                    <IconButton
-                      size="sm"
-                      label={strings.sitesNavMoveLinkDown(index + 1)}
-                      icon={<ChevronDown size="var(--icon-size-inline)" />}
-                      disabled={index === draft.links.length - 1}
-                      onClick={() => reorder(index, index + 1)}
-                    />
-                    <IconButton
-                      size="sm"
-                      label={strings.sitesRemoveItem}
-                      icon={<Trash2 size="var(--icon-size-inline)" />}
-                      onClick={() =>
-                        onChange({
-                          ...draft,
-                          links: draft.links.filter((_, item) => item !== index),
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-                {pages.length > 0 && (
-                  <Field label={strings.sitesNavDestination}>
-                    <Select
-                      value={
-                        selectedPage === undefined && selectedSection === undefined
-                          ? "custom"
-                          : link.href
-                      }
-                      onChange={(event) => {
-                        if (event.target.value === "custom") {
-                          onChange({
-                            ...draft,
-                            links: draft.links.map((item, itemIndex) =>
-                              itemIndex === index ? { ...item, href: "" } : item,
-                            ),
-                          });
-                          return;
-                        }
-                        const page = pages.find((candidate) => pagePath(candidate) === event.target.value);
-                        const section = destinations.find((candidate) => candidate.href === event.target.value);
-                        if (page === undefined && section === undefined) return;
-                        const links = draft.links.map((item, itemIndex) =>
-                          itemIndex === index
-                            ? {
-                                label:
-                                  item.label.trim() === ""
-                                    ? (page?.title ?? section?.defaultLabel ?? "")
-                                    : item.label,
-                                href: event.target.value,
-                              }
-                            : item,
-                        );
-                        onChange({ ...draft, links });
-                      }}
-                    >
-                      <option value="custom">{strings.sitesNavCustomTarget}</option>
-                      <optgroup label={strings.sitesNavPages}>
-                        {pages.map((page) => (
-                          <option key={page.id} value={pagePath(page)}>
-                            {page.title} · {pagePath(page)}
-                          </option>
-                        ))}
-                      </optgroup>
-                      {destinations.length > 0 && (
-                        <optgroup label={strings.sitesNavSections}>
-                          {destinations.map((target) => (
-                            <option key={target.href} value={target.href}>{target.label}</option>
-                          ))}
-                        </optgroup>
-                      )}
-                    </Select>
-                  </Field>
-                )}
-                <div className={styles.fieldRow}>
-                  <Field label={strings.sitesFieldLinkLabel}>
-                    <input
-                      className={styles.input}
-                      value={link.label}
-                      autoFocus={index === 0}
-                      onChange={(event) =>
-                        onChange({
-                          ...draft,
-                          links: draft.links.map((item, itemIndex) =>
-                            itemIndex === index
-                              ? { ...item, label: event.target.value }
-                              : item,
-                          ),
-                        })
-                      }
-                    />
-                  </Field>
-                  <Field
-                    label={strings.sitesFieldLinkHref}
-                    hint={strings.sitesNavDestinationHint}
-                  >
-                    <input
-                      className={`${styles.input} ${styles.mono}`}
-                      value={link.href}
-                      autoCapitalize="none"
-                      autoCorrect="off"
-                      spellCheck={false}
-                      onChange={(event) =>
-                        onChange({
-                          ...draft,
-                          links: draft.links.map((item, itemIndex) =>
-                            itemIndex === index
-                              ? { ...item, href: event.target.value }
-                              : item,
-                          ),
-                        })
-                      }
-                    />
-                  </Field>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={<Plus size="var(--icon-size-inline)" />}
-          onClick={() => onChange({ ...draft, links: [...draft.links, blankLink()] })}
-        >
-          {strings.sitesAddLink}
-        </Button>
-      </fieldset>
-
-      <fieldset className={styles.navPrimaryAction}>
-        <legend>{strings.sitesNavPrimaryAction}</legend>
-        <p>{strings.sitesNavPrimaryActionHint}</p>
-        <LinkFields
-          value={draft.cta}
-          onChange={(patch) =>
-            onChange({ ...draft, cta: { ...draft.cta, ...patch } })
-          }
-        />
-      </fieldset>
-
-      <section className={styles.navAppearance}>
+    <div className="flex min-w-0 flex-col gap-4">
+      <div
+        className="inline-flex max-w-full gap-2 overflow-x-auto"
+        role="tablist"
+        aria-label={strings.sitesNavEditorTabs}
+      >
         <button
           type="button"
-          className={styles.navAppearanceToggle}
-          aria-label={strings.sitesNavAppearanceShow}
-          aria-expanded={appearanceOpen}
-          onClick={() => setAppearanceOpen((open) => !open)}
+          role="tab"
+          aria-selected={!settingsOpen}
+          className={moduleNavigationItemClassName(!settingsOpen)}
+          onClick={() => setSettingsOpen(false)}
         >
-          <span>
-            <strong>{strings.sitesNavAppearance}</strong>
-            <small>{draft.appearance === undefined ? strings.sitesNavUsesTheme : strings.sitesNavUsesBrandRoles}</small>
-          </span>
-          <ChevronRight className={appearanceOpen ? styles.navAppearanceChevronOpen : ""} size="var(--icon-size-inline)" />
+          <Link2 className="size-4" aria-hidden="true" />
+          {strings.sitesNavLinksTab}
         </button>
-        {appearanceOpen && (
-          <div className={styles.navAppearanceBody}>
-            <div className={styles.navColorHint}>
-              <Palette size="var(--icon-size-inline)" aria-hidden="true" />
-              <span>{strings.sitesNavBrandRoleHint}</span>
-              {draft.appearance !== undefined && (
-                <Button variant="ghost" size="sm" onClick={() => onChange({ ...draft, appearance: undefined })}>
-                  {strings.sitesNavResetRoles}
-                </Button>
-              )}
-            </div>
-            <div className={styles.navColorFields}>
-              {([
-                ["background", strings.sitesNavBackground],
-                ["text", strings.sitesNavText],
-                ["hover", strings.sitesNavHover],
-              ] as const).map(([property, label]) => {
-                const selected = draft.appearance?.[property] ?? NAV_DEFAULT_ROLES[property];
-                return (
-                  <Field key={property} label={label}>
-                    <Select
-                      value={selected}
-                      onChange={(event) => onChange({
-                        ...draft,
-                        appearance: {
-                          ...(draft.appearance ?? NAV_DEFAULT_ROLES),
-                          [property]: event.target.value as ThemeColorRole,
-                        },
-                      })}
-                    >
-                      <option value="background">{strings.sitesThemeBackgroundColor}</option>
-                      <option value="text">{strings.sitesThemeTextColor}</option>
-                      <option value="border">{strings.sitesThemeBorderColor}</option>
-                      <option value="accent_1">{strings.sitesThemeAccentColor(1)}</option>
-                      {workspaceBrand.secondary !== null && (
-                        <option value="accent_2">{strings.sitesThemeAccentColor(2)}</option>
-                      )}
-                      {workspaceBrand.supporting.map((color, index) => (
-                        <option key={color.id} value={`accent_${index + 3}`}>{color.name}</option>
-                      ))}
-                    </Select>
-                  </Field>
-                );
-              })}
-            </div>
-            {brandColors !== null && (() => {
-              const appearance = draft.appearance ?? NAV_DEFAULT_ROLES;
-              const background = roleColor(brandColors, appearance.background);
-              const text = roleColor(brandColors, appearance.text);
-              const hover = roleColor(brandColors, appearance.hover);
-              const readable = (contrastRatio(background, text) ?? 0) >= 4.5
-                && (contrastRatio(background, hover) ?? 0) >= 4.5;
-              return (
-                <>
-                  <div className={styles.navAppearancePreview} style={{ background, color: text }}>
-                    <strong>{strings.sitesNavPreviewBrand}</strong>
-                    <span>{strings.sitesNavPreviewLink}</span>
-                    <span style={{ color: hover }}>{strings.sitesNavPreviewHover}</span>
-                  </div>
-                  {!readable && <p className={styles.navContrastFail}>{strings.sitesNavContrastFail}</p>}
-                </>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={settingsOpen}
+          className={moduleNavigationItemClassName(settingsOpen)}
+          onClick={() => setSettingsOpen(true)}
+        >
+          <Settings2 className="size-4" aria-hidden="true" />
+          {strings.sitesNavSettingsTab}
+        </button>
+      </div>
+
+      <header className="min-w-0 px-1">
+        <h3 className="m-0 text-base font-semibold text-primary">
+          {settingsOpen ? strings.sitesNavSettings : strings.sitesNavMenuLinks}
+        </h3>
+        <p className="mt-1 text-sm leading-5 text-secondary">
+          {settingsOpen
+            ? strings.sitesNavSettingsHint
+            : strings.sitesNavMenuLinksHint}
+        </p>
+      </header>
+
+      {!settingsOpen && (
+        <fieldset className="m-0 grid min-w-0 gap-3 overflow-visible border-0 p-0">
+          <legend className="sr-only">{strings.sitesNavMenuLinks}</legend>
+          {pagesFailed && (
+            <p
+              className="m-0 rounded-xl bg-warning-tint px-4 py-3 text-sm text-secondary"
+              role="status"
+            >
+              {strings.sitesNavPagesLoadFailed}
+            </p>
+          )}
+
+          <div className="flex flex-col gap-2">
+            {draft.links.map((link, index) => {
+              const selectedPage = pages.find(
+                (page) => pagePath(page) === link.href,
               );
-            })()}
+              const selectedSection = destinations.find(
+                (target) => target.href === link.href,
+              );
+              const customDestination =
+                selectedPage === undefined && selectedSection === undefined;
+              const expanded = openLink === index;
+              return (
+                <div
+                  key={index}
+                  data-navigation-link=""
+                  className="overflow-visible rounded-xl border border-subtle bg-surface"
+                >
+                  <div className="flex min-h-14 items-center gap-1 p-1.5">
+                    <button
+                      type="button"
+                      className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-lg !px-3 !py-2 text-left text-primary transition-colors hover:!bg-raised"
+                      aria-expanded={expanded}
+                      onClick={() => setOpenLink(expanded ? null : index)}
+                    >
+                      <span className="min-w-0 flex-1">
+                        <strong className="block truncate text-sm font-semibold">
+                          {link.label.trim() || strings.sitesItemN(index + 1)}
+                        </strong>
+                        <small className="mt-0.5 block truncate text-xs text-secondary">
+                          {link.href || strings.sitesNavCustomTarget}
+                        </small>
+                      </span>
+                      <ChevronRight
+                        className={`size-4 shrink-0 transition-transform ${expanded ? "rotate-90" : ""}`}
+                        aria-hidden="true"
+                      />
+                    </button>
+                    <Menu
+                      label={strings.sitesColActions}
+                      icon={<MoreHorizontal aria-hidden="true" />}
+                      items={[
+                        {
+                          key: "up",
+                          label: strings.sitesNavMoveLinkUp(index + 1),
+                          icon: <ChevronUp aria-hidden="true" />,
+                          disabled: index === 0,
+                          onClick: () => reorder(index, index - 1),
+                        },
+                        {
+                          key: "down",
+                          label: strings.sitesNavMoveLinkDown(index + 1),
+                          icon: <ChevronDown aria-hidden="true" />,
+                          disabled: index === draft.links.length - 1,
+                          onClick: () => reorder(index, index + 1),
+                        },
+                        {
+                          key: "delete",
+                          label: strings.sitesRemoveItem,
+                          icon: <Trash2 aria-hidden="true" />,
+                          danger: true,
+                          divider: true,
+                          onClick: () => {
+                            setOpenLink(null);
+                            onChange({
+                              ...draft,
+                              links: draft.links.filter(
+                                (_, item) => item !== index,
+                              ),
+                            });
+                          },
+                        },
+                      ]}
+                    />
+                  </div>
+
+                  {expanded && (
+                    <div className="grid gap-4 border-t border-subtle p-4">
+                      {pages.length > 0 && (
+                        <Field label={strings.sitesNavDestination}>
+                          <ChoicePicker
+                            value={customDestination ? "custom" : link.href}
+                            label={strings.sitesNavDestination}
+                            placeholder={strings.sitesNavDestination}
+                            options={destinationOptions}
+                            onChange={(value) => {
+                              if (value === "custom") {
+                                onChange({
+                                  ...draft,
+                                  links: draft.links.map((item, itemIndex) =>
+                                    itemIndex === index
+                                      ? { ...item, href: "" }
+                                      : item,
+                                  ),
+                                });
+                                return;
+                              }
+                              const page = pages.find(
+                                (candidate) => pagePath(candidate) === value,
+                              );
+                              const section = destinations.find(
+                                (candidate) => candidate.href === value,
+                              );
+                              if (page === undefined && section === undefined)
+                                return;
+                              onChange({
+                                ...draft,
+                                links: draft.links.map((item, itemIndex) =>
+                                  itemIndex === index
+                                    ? {
+                                        label:
+                                          item.label.trim() === ""
+                                            ? (page?.title ??
+                                              section?.defaultLabel ??
+                                              "")
+                                            : item.label,
+                                        href: value,
+                                      }
+                                    : item,
+                                ),
+                              });
+                            }}
+                          />
+                        </Field>
+                      )}
+                      <div
+                        className={`grid gap-4 ${customDestination ? "sm:grid-cols-2" : ""}`}
+                      >
+                        <Field label={strings.sitesFieldLinkLabel}>
+                          <Input
+                            value={link.label}
+                            onChange={(event) =>
+                              onChange({
+                                ...draft,
+                                links: draft.links.map((item, itemIndex) =>
+                                  itemIndex === index
+                                    ? { ...item, label: event.target.value }
+                                    : item,
+                                ),
+                              })
+                            }
+                          />
+                        </Field>
+                        {customDestination && (
+                          <Field
+                            label={strings.sitesFieldLinkHref}
+                            hint={strings.sitesNavDestinationHint}
+                          >
+                            <Input
+                              className="font-mono"
+                              value={link.href}
+                              autoCapitalize="none"
+                              autoCorrect="off"
+                              spellCheck={false}
+                              onChange={(event) =>
+                                onChange({
+                                  ...draft,
+                                  links: draft.links.map((item, itemIndex) =>
+                                    itemIndex === index
+                                      ? { ...item, href: event.target.value }
+                                      : item,
+                                  ),
+                                })
+                              }
+                            />
+                          </Field>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
-        )}
-      </section>
+
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<Plus aria-hidden="true" />}
+              onClick={() => {
+                const nextIndex = draft.links.length;
+                onChange({
+                  ...draft,
+                  links: [...draft.links, blankLink()],
+                });
+                setOpenLink(nextIndex);
+              }}
+            >
+              {strings.sitesAddLink}
+            </Button>
+            {(pagesLoading || missingPages.length > 0) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={pagesLoading}
+                onClick={addSitePages}
+              >
+                {pagesLoading
+                  ? strings.sitesNavPagesLoading
+                  : strings.sitesNavAddPages}
+              </Button>
+            )}
+          </div>
+        </fieldset>
+      )}
+
+      {settingsOpen && (
+        <>
+          <section className="overflow-hidden rounded-xl border border-subtle bg-surface">
+            <button
+              type="button"
+              className="flex min-h-14 w-full items-center gap-3 !px-4 !py-3 text-left text-primary transition-colors hover:!bg-raised"
+              aria-expanded={actionOpen}
+              onClick={() => setActionOpen((open) => !open)}
+            >
+              <span className="min-w-0 flex-1">
+                <strong className="block text-sm font-semibold">
+                  {strings.sitesNavPrimaryAction}
+                </strong>
+                <small className="mt-0.5 block truncate text-xs text-secondary">
+                  {draft.cta.label.trim() || strings.sitesNavPrimaryActionHint}
+                </small>
+              </span>
+              <ChevronRight
+                className={`size-4 shrink-0 transition-transform ${actionOpen ? "rotate-90" : ""}`}
+                aria-hidden="true"
+              />
+            </button>
+            {actionOpen && (
+              <div className="grid gap-4 border-t border-subtle p-4 sm:grid-cols-2">
+                <Field label={strings.sitesFieldLinkLabel}>
+                  <Input
+                    value={draft.cta.label}
+                    onChange={(event) =>
+                      onChange({
+                        ...draft,
+                        cta: { ...draft.cta, label: event.target.value },
+                      })
+                    }
+                  />
+                </Field>
+                <Field label={strings.sitesFieldLinkHref}>
+                  <Input
+                    className="font-mono"
+                    value={draft.cta.href}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    onChange={(event) =>
+                      onChange({
+                        ...draft,
+                        cta: { ...draft.cta, href: event.target.value },
+                      })
+                    }
+                  />
+                </Field>
+              </div>
+            )}
+          </section>
+
+          <section className="overflow-hidden rounded-xl border border-subtle bg-surface">
+            <button
+              type="button"
+              className="flex min-h-14 w-full items-center gap-3 !px-4 !py-3 text-left text-primary transition-colors hover:!bg-raised"
+              aria-label={strings.sitesNavAppearanceShow}
+              aria-expanded={appearanceOpen}
+              onClick={() => setAppearanceOpen((open) => !open)}
+            >
+              <span className="min-w-0 flex-1">
+                <strong className="block text-sm font-semibold">
+                  {strings.sitesNavAppearance}
+                </strong>
+                <small className="mt-0.5 block text-xs text-secondary">
+                  {draft.appearance === undefined
+                    ? strings.sitesNavUsesTheme
+                    : strings.sitesNavUsesBrandRoles}
+                </small>
+              </span>
+              <ChevronRight
+                className={`size-4 shrink-0 transition-transform ${appearanceOpen ? "rotate-90" : ""}`}
+                aria-hidden="true"
+              />
+            </button>
+            {appearanceOpen && (
+              <div className="border-t border-subtle p-4">
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {(
+                    [
+                      ["background", strings.sitesNavBackground],
+                      ["text", strings.sitesNavText],
+                      ["hover", strings.sitesNavHover],
+                    ] as const
+                  ).map(([property, label]) => {
+                    const selected =
+                      draft.appearance?.[property] ??
+                      NAV_DEFAULT_ROLES[property];
+                    return (
+                      <Field key={property} label={label}>
+                        <ChoicePicker
+                          value={selected}
+                          label={label}
+                          placeholder={label}
+                          options={appearanceOptions}
+                          onChange={(value) =>
+                            onChange({
+                              ...draft,
+                              appearance: {
+                                ...(draft.appearance ?? NAV_DEFAULT_ROLES),
+                                [property]: value as ThemeColorRole,
+                              },
+                            })
+                          }
+                        />
+                      </Field>
+                    );
+                  })}
+                </div>
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  {!readable && (
+                    <p className="m-0 text-xs text-danger">
+                      {strings.sitesNavContrastFail}
+                    </p>
+                  )}
+                  {draft.appearance !== undefined && (
+                    <Button
+                      className="ml-auto"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        onChange({ ...draft, appearance: undefined })
+                      }
+                    >
+                      {strings.sitesNavResetRoles}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+          </section>
+        </>
+      )}
     </div>
   );
 }
 
-function HeroFields({ draft, onChange }: { draft: HeroDraft; onChange: Change }) {
+function HeroFields({
+  draft,
+  onChange,
+}: {
+  draft: HeroDraft;
+  onChange: Change;
+}) {
+  const layouts = [
+    { value: "centered", label: strings.sitesHeroLayoutCentered },
+    { value: "split_right", label: strings.sitesHeroLayoutSplitRight },
+    { value: "split_left", label: strings.sitesHeroLayoutSplitLeft },
+    { value: "background", label: strings.sitesHeroLayoutBackground },
+    { value: "editorial", label: strings.sitesHeroLayoutEditorial },
+  ] as const;
+
   return (
-    <>
-      <TextField
-        label={strings.sitesFieldHeading}
-        value={draft.heading}
-        onChange={(heading) => onChange({ ...draft, heading })}
-        autoFocus
-        copyPointer="/heading"
-      />
-      <TextField
-        label={strings.sitesFieldSubheading}
-        value={draft.subheading}
-        onChange={(subheading) => onChange({ ...draft, subheading })}
-        copyPointer="/subheading"
-      />
-      <ImageFields
-        legend={strings.sitesFieldImage}
-        value={draft.image}
-        pointer="/image"
-        onChange={(patch) => onChange({ ...draft, image: { ...draft.image, ...patch } })}
-      />
-      <LinkFields
-        legend={strings.sitesFieldPrimaryButton}
-        value={draft.primary_cta}
-        onChange={(patch) => onChange({ ...draft, primary_cta: { ...draft.primary_cta, ...patch } })}
-      />
-      <LinkFields
-        legend={strings.sitesFieldSecondaryButton}
-        value={draft.secondary_cta}
-        onChange={(patch) =>
-          onChange({ ...draft, secondary_cta: { ...draft.secondary_cta, ...patch } })
-        }
-      />
-    </>
+    <div className="grid gap-6">
+      <fieldset>
+        <legend className="text-base font-semibold text-primary">
+          {strings.sitesHeroLayout}
+        </legend>
+        <p className="mb-4 mt-1 text-sm text-secondary">
+          {strings.sitesHeroLayoutHint}
+        </p>
+        <div
+          className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5"
+          role="radiogroup"
+          aria-label={strings.sitesHeroLayout}
+        >
+          {layouts.map((layout) => {
+            const selected = draft.layout === layout.value;
+            return (
+              <button
+                key={layout.value}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                className={cx(
+                  "group relative min-w-0 rounded-2xl !border-2 !p-5 text-left transition-[background-color,border-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
+                  selected
+                    ? "!border-accent bg-accent-soft/50 shadow-sm"
+                    : "!border-default bg-surface hover:!border-accent/40 hover:bg-accent-soft/20",
+                )}
+                onClick={() => onChange({ ...draft, layout: layout.value })}
+              >
+                <HeroLayoutVisual layout={layout.value} />
+                <span className="mt-3 block truncate text-sm font-semibold text-primary">
+                  {layout.label}
+                </span>
+                {selected && (
+                  <span className="absolute right-5 top-5 grid size-5 place-items-center rounded-full bg-accent text-on-accent shadow-sm ring-2 ring-surface">
+                    <Check className="size-3" aria-hidden="true" />
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
+
+      <Card as="section" flat>
+        <h3 className="m-0 text-base font-semibold text-primary">
+          {strings.sitesHeroDesign}
+        </h3>
+        <div className="mt-4 grid gap-4 lg:grid-cols-3">
+          <HeroOptionRow
+            label={strings.sitesHeroHeight}
+            value={draft.height}
+            options={[
+              ["compact", strings.sitesHeroHeightCompact],
+              ["standard", strings.sitesHeroHeightStandard],
+              ["tall", strings.sitesHeroHeightTall],
+            ]}
+            onChange={(height) => onChange({ ...draft, height })}
+          />
+          <HeroOptionRow
+            label={strings.sitesHeroAlignment}
+            value={draft.alignment}
+            options={[
+              ["left", strings.sitesHeroAlignmentLeft],
+              ["center", strings.sitesHeroAlignmentCenter],
+              ["right", strings.sitesHeroAlignmentRight],
+            ]}
+            onChange={(alignment) => onChange({ ...draft, alignment })}
+          />
+          <HeroOptionRow
+            label={strings.sitesHeroContentWidth}
+            value={draft.content_width}
+            options={[
+              ["narrow", strings.sitesHeroContentWidthNarrow],
+              ["balanced", strings.sitesHeroContentWidthBalanced],
+              ["wide", strings.sitesHeroContentWidthWide],
+            ]}
+            onChange={(content_width) => onChange({ ...draft, content_width })}
+          />
+        </div>
+      </Card>
+
+      <div className="grid items-start gap-5 lg:grid-cols-2">
+        <Card as="section" flat className="grid gap-4">
+          <h3 className="m-0 text-base font-semibold text-primary">
+            {strings.sitesHeroContent}
+          </h3>
+          <TextField
+            label={strings.sitesFieldHeading}
+            value={draft.heading}
+            onChange={(heading) => onChange({ ...draft, heading })}
+            autoFocus
+            copyPointer="/heading"
+          />
+          <TextField
+            label={strings.sitesFieldSubheading}
+            value={draft.subheading}
+            onChange={(subheading) => onChange({ ...draft, subheading })}
+            copyPointer="/subheading"
+          />
+        </Card>
+        <Card as="section" flat>
+          <h3 className="mb-4 mt-0 text-base font-semibold text-primary">
+            {strings.sitesHeroMedia}
+          </h3>
+          <ImageFields
+            value={draft.image}
+            pointer="/image"
+            onChange={(patch) =>
+              onChange({ ...draft, image: { ...draft.image, ...patch } })
+            }
+          />
+        </Card>
+      </div>
+
+      <Card as="section" flat>
+        <h3 className="mb-4 mt-0 text-base font-semibold text-primary">
+          {strings.sitesHeroActions}
+        </h3>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <LinkFields
+            legend={strings.sitesFieldPrimaryButton}
+            value={draft.primary_cta}
+            onChange={(patch) =>
+              onChange({
+                ...draft,
+                primary_cta: { ...draft.primary_cta, ...patch },
+              })
+            }
+          />
+          <LinkFields
+            legend={strings.sitesFieldSecondaryButton}
+            value={draft.secondary_cta}
+            onChange={(patch) =>
+              onChange({
+                ...draft,
+                secondary_cta: { ...draft.secondary_cta, ...patch },
+              })
+            }
+          />
+        </div>
+      </Card>
+    </div>
   );
 }
 
-function FeaturesFields({ draft, onChange }: { draft: FeaturesDraft; onChange: Change }) {
+function HeroLayoutVisual({ layout }: { layout: HeroDraft["layout"] }) {
+  const copy = (
+    <span className="grid content-center gap-2">
+      <span className="h-2 w-4/5 rounded-full bg-primary/75" />
+      <span className="h-1.5 w-full rounded-full bg-secondary/25" />
+      <span className="h-1.5 w-2/3 rounded-full bg-secondary/25" />
+      <span className="mt-1 h-4 w-14 rounded-md bg-accent" />
+    </span>
+  );
+  const image = <span className="min-h-16 rounded-lg bg-accent-soft" />;
+
+  return (
+    <span
+      className={cx(
+        "block h-24 overflow-hidden rounded-xl bg-raised p-3",
+        layout === "background" &&
+          "grid content-center bg-accent-soft px-5 text-center",
+        layout === "editorial" && "border-l-4 border-accent",
+      )}
+      aria-hidden="true"
+    >
+      {layout === "centered" && (
+        <span className="mx-auto grid max-w-24 justify-items-center gap-2 pt-2">
+          <span className="h-2 w-4/5 rounded-full bg-primary/75" />
+          <span className="h-1.5 w-full rounded-full bg-secondary/25" />
+          <span className="h-1.5 w-2/3 rounded-full bg-secondary/25" />
+          <span className="mt-1 h-4 w-14 rounded-md bg-accent" />
+        </span>
+      )}
+      {layout === "split_right" && (
+        <span className="grid h-full grid-cols-2 gap-2">
+          {copy}
+          {image}
+        </span>
+      )}
+      {layout === "split_left" && (
+        <span className="grid h-full grid-cols-2 gap-2">
+          {image}
+          {copy}
+        </span>
+      )}
+      {layout === "background" && (
+        <span className="grid justify-items-center gap-2">
+          <span className="h-2 w-4/5 rounded-full bg-primary/75" />
+          <span className="h-1.5 w-full rounded-full bg-primary/25" />
+          <span className="h-4 w-14 rounded-md bg-accent" />
+        </span>
+      )}
+      {layout === "editorial" && (
+        <span className="grid h-full content-center gap-2 pl-1">
+          <span className="h-2.5 w-4/5 rounded-full bg-primary/75" />
+          <span className="h-2.5 w-3/5 rounded-full bg-primary/75" />
+          <span className="h-1.5 w-full rounded-full bg-secondary/25" />
+          <span className="mt-1 h-4 w-14 rounded-md bg-accent" />
+        </span>
+      )}
+    </span>
+  );
+}
+
+function HeroOptionRow<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: readonly (readonly [T, string])[];
+  onChange: (value: T) => void;
+}) {
+  return (
+    <fieldset>
+      <legend className="mb-2 text-sm font-semibold text-primary">
+        {label}
+      </legend>
+      <div
+        className="grid grid-cols-3 gap-1 rounded-xl bg-raised p-1"
+        role="radiogroup"
+        aria-label={label}
+      >
+        {options.map(([option, optionLabel]) => {
+          const selected = option === value;
+          return (
+            <button
+              key={option}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              className={cx(
+                "min-h-11 min-w-0 rounded-lg !px-2 text-sm font-medium transition-[background-color,color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
+                selected
+                  ? "bg-surface text-accent shadow-sm"
+                  : "text-secondary hover:bg-surface/60 hover:text-primary",
+              )}
+              onClick={() => onChange(option)}
+            >
+              <span className="block whitespace-normal leading-tight">
+                {optionLabel}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
+function FeaturesFields({
+  draft,
+  onChange,
+}: {
+  draft: FeaturesDraft;
+  onChange: Change;
+}) {
   return (
     <>
       <TextField
@@ -868,7 +1340,13 @@ function FeaturesFields({ draft, onChange }: { draft: FeaturesDraft; onChange: C
   );
 }
 
-function TextImageFields({ draft, onChange }: { draft: TextImageDraft; onChange: Change }) {
+function TextImageFields({
+  draft,
+  onChange,
+}: {
+  draft: TextImageDraft;
+  onChange: Change;
+}) {
   return (
     <>
       <TextField
@@ -888,14 +1366,19 @@ function TextImageFields({ draft, onChange }: { draft: TextImageDraft; onChange:
         legend={strings.sitesFieldImage}
         value={draft.image}
         pointer="/image"
-        onChange={(patch) => onChange({ ...draft, image: { ...draft.image, ...patch } })}
+        onChange={(patch) =>
+          onChange({ ...draft, image: { ...draft.image, ...patch } })
+        }
       />
       <Field label={strings.sitesFieldImageSide}>
         <select
           className={styles.input}
           value={draft.image_side}
           onChange={(e) =>
-            onChange({ ...draft, image_side: e.target.value === "right" ? "right" : "left" })
+            onChange({
+              ...draft,
+              image_side: e.target.value === "right" ? "right" : "left",
+            })
           }
         >
           <option value="left">{strings.sitesSideLeft}</option>
@@ -906,7 +1389,13 @@ function TextImageFields({ draft, onChange }: { draft: TextImageDraft; onChange:
   );
 }
 
-function GalleryFields({ draft, onChange }: { draft: GalleryDraft; onChange: Change }) {
+function GalleryFields({
+  draft,
+  onChange,
+}: {
+  draft: GalleryDraft;
+  onChange: Change;
+}) {
   return (
     <>
       <TextField
@@ -922,14 +1411,24 @@ function GalleryFields({ draft, onChange }: { draft: GalleryDraft; onChange: Cha
         onChange={(images) => onChange({ ...draft, images })}
         blank={blankImage}
         render={(image, update, index) => (
-          <ImageFields value={image} onChange={update} pointer={`/images/${index}`} />
+          <ImageFields
+            value={image}
+            onChange={update}
+            pointer={`/images/${index}`}
+          />
         )}
       />
     </>
   );
 }
 
-function TestimonialsFields({ draft, onChange }: { draft: TestimonialsDraft; onChange: Change }) {
+function TestimonialsFields({
+  draft,
+  onChange,
+}: {
+  draft: TestimonialsDraft;
+  onChange: Change;
+}) {
   return (
     <>
       <TextField
@@ -970,7 +1469,13 @@ function TestimonialsFields({ draft, onChange }: { draft: TestimonialsDraft; onC
   );
 }
 
-function PricingFields({ draft, onChange }: { draft: PricingDraft; onChange: Change }) {
+function PricingFields({
+  draft,
+  onChange,
+}: {
+  draft: PricingDraft;
+  onChange: Change;
+}) {
   return (
     <>
       <TextField
@@ -1039,7 +1544,13 @@ function PricingFields({ draft, onChange }: { draft: PricingDraft; onChange: Cha
   );
 }
 
-function TeamFields({ draft, onChange }: { draft: TeamDraft; onChange: Change }) {
+function TeamFields({
+  draft,
+  onChange,
+}: {
+  draft: TeamDraft;
+  onChange: Change;
+}) {
   return (
     <>
       <TextField
@@ -1072,7 +1583,9 @@ function TeamFields({ draft, onChange }: { draft: TeamDraft; onChange: Change })
               legend={strings.sitesFieldPhoto}
               value={member.photo}
               pointer={`/members/${index}/photo`}
-              onChange={(patch) => update({ photo: { ...member.photo, ...patch } })}
+              onChange={(patch) =>
+                update({ photo: { ...member.photo, ...patch } })
+              }
             />
             <LongTextField
               label={strings.sitesFieldBio}
@@ -1142,13 +1655,21 @@ function CtaFields({ draft, onChange }: { draft: CtaDraft; onChange: Change }) {
       <LinkFields
         legend={strings.sitesFieldButton}
         value={draft.button}
-        onChange={(patch) => onChange({ ...draft, button: { ...draft.button, ...patch } })}
+        onChange={(patch) =>
+          onChange({ ...draft, button: { ...draft.button, ...patch } })
+        }
       />
     </>
   );
 }
 
-function ContactFormFields({ draft, onChange }: { draft: ContactFormDraft; onChange: Change }) {
+function ContactFormFields({
+  draft,
+  onChange,
+}: {
+  draft: ContactFormDraft;
+  onChange: Change;
+}) {
   return (
     <>
       <TextField
@@ -1175,7 +1696,13 @@ function ContactFormFields({ draft, onChange }: { draft: ContactFormDraft; onCha
   );
 }
 
-function CollectionFields({ draft, onChange }: { draft: CollectionDraft; onChange: Change }) {
+function CollectionFields({
+  draft,
+  onChange,
+}: {
+  draft: CollectionDraft;
+  onChange: Change;
+}) {
   const { siteId = "" } = useParams();
   const navigate = useNavigate();
   const api = useSitesApi();
@@ -1186,18 +1713,22 @@ function CollectionFields({ draft, onChange }: { draft: CollectionDraft; onChang
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    void api.collections(siteId).then(
-      (connected) => {
-        if (cancelled) return;
-        setCollections(connected);
-        setError(null);
-      },
-      (reason: unknown) => {
-        if (!cancelled) setError(sitesMessage(reason, strings.sitesCollectionsLoadFailed));
-      },
-    ).finally(() => {
-      if (!cancelled) setLoading(false);
-    });
+    void api
+      .collections(siteId)
+      .then(
+        (connected) => {
+          if (cancelled) return;
+          setCollections(connected);
+          setError(null);
+        },
+        (reason: unknown) => {
+          if (!cancelled)
+            setError(sitesMessage(reason, strings.sitesCollectionsLoadFailed));
+        },
+      )
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
       cancelled = true;
     };
@@ -1228,7 +1759,10 @@ function CollectionFields({ draft, onChange }: { draft: CollectionDraft; onChang
         <div className={styles.collectionFieldEmpty}>
           <strong>{strings.sitesCollectionSectionNoConnections}</strong>
           <span>{strings.sitesCollectionSectionNoConnectionsHint}</span>
-          <Button variant="ghost" onClick={() => navigate(`/sites/${siteId}/collections`)}>
+          <Button
+            variant="ghost"
+            onClick={() => navigate(`/sites/${siteId}/collections`)}
+          >
             {strings.sitesConnectTable}
           </Button>
         </div>
@@ -1238,15 +1772,23 @@ function CollectionFields({ draft, onChange }: { draft: CollectionDraft; onChang
           <select
             className={styles.input}
             value={draft.collection_id}
-            onChange={(event) => onChange({ ...draft, collection_id: event.target.value })}
+            onChange={(event) =>
+              onChange({ ...draft, collection_id: event.target.value })
+            }
           >
             {collections.map((collection) => (
-              <option key={collection.id} value={collection.id}>{collection.name}</option>
+              <option key={collection.id} value={collection.id}>
+                {collection.name}
+              </option>
             ))}
           </select>
         </label>
       )}
-      {error !== null && <p className={styles.aiEditError} role="alert">{error}</p>}
+      {error !== null && (
+        <p className={styles.aiEditError} role="alert">
+          {error}
+        </p>
+      )}
     </>
   );
 }
@@ -1256,7 +1798,13 @@ function CollectionFields({ draft, onChange }: { draft: CollectionDraft; onChang
  *  catalog's, frozen into the next publish — so this form asks two questions
  *  and says the two things that surprise people: an edit shows up at the next
  *  publish, and taking orders is a switch on the catalog, not on this page. */
-function CatalogFields({ draft, onChange }: { draft: CatalogDraft; onChange: Change }) {
+function CatalogFields({
+  draft,
+  onChange,
+}: {
+  draft: CatalogDraft;
+  onChange: Change;
+}) {
   const { siteId = "" } = useParams();
   const navigate = useNavigate();
   const api = useSitesApi();
@@ -1277,7 +1825,8 @@ function CatalogFields({ draft, onChange }: { draft: CatalogDraft; onChange: Cha
           setError(null);
         },
         (reason: unknown) => {
-          if (!cancelled) setError(sitesMessage(reason, strings.sitesCatalogsLoadFailed));
+          if (!cancelled)
+            setError(sitesMessage(reason, strings.sitesCatalogsLoadFailed));
         },
       )
       .finally(() => {
@@ -1324,7 +1873,8 @@ function CatalogFields({ draft, onChange }: { draft: CatalogDraft; onChange: Cha
 
   const chosen = catalogs.find((catalog) => catalog.id === draft.catalog_id);
   const missingGroup =
-    draft.category !== "" && !groups.some((group) => group.slug === draft.category);
+    draft.category !== "" &&
+    !groups.some((group) => group.slug === draft.category);
 
   return (
     <>
@@ -1344,7 +1894,10 @@ function CatalogFields({ draft, onChange }: { draft: CatalogDraft; onChange: Cha
         <div className={styles.collectionFieldEmpty}>
           <strong>{strings.sitesCatalogSectionNoCatalogs}</strong>
           <span>{strings.sitesCatalogSectionNoCatalogsHint}</span>
-          <Button variant="ghost" onClick={() => navigate(`/sites/${siteId}/catalogs`)}>
+          <Button
+            variant="ghost"
+            onClick={() => navigate(`/sites/${siteId}/catalogs`)}
+          >
             {strings.sitesNewCatalog}
           </Button>
         </div>
@@ -1358,7 +1911,11 @@ function CatalogFields({ draft, onChange }: { draft: CatalogDraft; onChange: Cha
                 // A group handle belongs to the catalog it came from; changing
                 // the catalog drops it rather than carrying a handle that
                 // means nothing here.
-                onChange({ ...draft, catalog_id: event.target.value, category: "" })
+                onChange({
+                  ...draft,
+                  catalog_id: event.target.value,
+                  category: "",
+                })
               }
             >
               {catalogs.map((catalog) => (
@@ -1375,7 +1932,9 @@ function CatalogFields({ draft, onChange }: { draft: CatalogDraft; onChange: Cha
             <select
               className={styles.input}
               value={draft.category}
-              onChange={(event) => onChange({ ...draft, category: event.target.value })}
+              onChange={(event) =>
+                onChange({ ...draft, category: event.target.value })
+              }
             >
               <option value="">{strings.sitesCatalogSectionAllGroups}</option>
               {groups.map((group) => (
@@ -1397,7 +1956,11 @@ function CatalogFields({ draft, onChange }: { draft: CatalogDraft; onChange: Cha
           </p>
         </>
       )}
-      {error !== null && <p className={styles.aiEditError} role="alert">{error}</p>}
+      {error !== null && (
+        <p className={styles.aiEditError} role="alert">
+          {error}
+        </p>
+      )}
     </>
   );
 }
@@ -1408,7 +1971,13 @@ function CatalogFields({ draft, onChange }: { draft: CatalogDraft; onChange: Cha
  *  which this form links to rather than duplicating. Two states are said out
  *  loud because a visitor would otherwise be the one to discover them: a site
  *  with no service yet, and a service that is switched off. */
-function BookingFields({ draft, onChange }: { draft: BookingDraft; onChange: Change }) {
+function BookingFields({
+  draft,
+  onChange,
+}: {
+  draft: BookingDraft;
+  onChange: Change;
+}) {
   const { siteId = "" } = useParams();
   const navigate = useNavigate();
   const api = useSitesApi();
@@ -1428,7 +1997,8 @@ function BookingFields({ draft, onChange }: { draft: BookingDraft; onChange: Cha
           setError(null);
         },
         (reason: unknown) => {
-          if (!cancelled) setError(sitesMessage(reason, strings.sitesBookingsLoadFailed));
+          if (!cancelled)
+            setError(sitesMessage(reason, strings.sitesBookingsLoadFailed));
         },
       )
       .finally(() => {
@@ -1465,7 +2035,10 @@ function BookingFields({ draft, onChange }: { draft: BookingDraft; onChange: Cha
         <div className={styles.collectionFieldEmpty}>
           <strong>{strings.sitesBookingSectionNoServices}</strong>
           <span>{strings.sitesBookingSectionNoServicesHint}</span>
-          <Button variant="ghost" onClick={() => navigate(`/sites/${siteId}/bookings`)}>
+          <Button
+            variant="ghost"
+            onClick={() => navigate(`/sites/${siteId}/bookings`)}
+          >
             {strings.sitesNewBooking}
           </Button>
         </div>
@@ -1475,7 +2048,9 @@ function BookingFields({ draft, onChange }: { draft: BookingDraft; onChange: Cha
             <select
               className={styles.input}
               value={draft.booking_id}
-              onChange={(event) => onChange({ ...draft, booking_id: event.target.value })}
+              onChange={(event) =>
+                onChange({ ...draft, booking_id: event.target.value })
+              }
             >
               {bookings.map((booking) => (
                 <option key={booking.id} value={booking.id}>
@@ -1495,7 +2070,11 @@ function BookingFields({ draft, onChange }: { draft: BookingDraft; onChange: Cha
           </p>
         </>
       )}
-      {error !== null && <p className={styles.aiEditError} role="alert">{error}</p>}
+      {error !== null && (
+        <p className={styles.aiEditError} role="alert">
+          {error}
+        </p>
+      )}
     </>
   );
 }
@@ -1505,7 +2084,13 @@ function BookingFields({ draft, onChange }: { draft: BookingDraft; onChange: Cha
  *  the Tickets screen, which this form links to rather than duplicating. A
  *  site with nothing on sale yet is told so here — a visitor must never be
  *  the one to discover an empty shop. */
-function TicketsFields({ draft, onChange }: { draft: TicketsDraft; onChange: Change }) {
+function TicketsFields({
+  draft,
+  onChange,
+}: {
+  draft: TicketsDraft;
+  onChange: Change;
+}) {
   const { siteId = "" } = useParams();
   const navigate = useNavigate();
   const api = useSitesApi();
@@ -1547,7 +2132,10 @@ function TicketsFields({ draft, onChange }: { draft: TicketsDraft; onChange: Cha
         <div className={styles.collectionFieldEmpty}>
           <strong>{strings.sitesTicketSectionNoEvents}</strong>
           <span>{strings.sitesTicketSectionNoEventsHint}</span>
-          <Button variant="ghost" onClick={() => navigate(`/sites/${siteId}/tickets`)}>
+          <Button
+            variant="ghost"
+            onClick={() => navigate(`/sites/${siteId}/tickets`)}
+          >
             {strings.sitesTickets}
           </Button>
         </div>
@@ -1568,7 +2156,13 @@ function TicketsFields({ draft, onChange }: { draft: TicketsDraft; onChange: Cha
  *  this form links to rather than duplicating. A site with an empty shelf is
  *  told so here — a visitor must never be the one to discover an empty
  *  shop. */
-function ShopFields({ draft, onChange }: { draft: ShopDraft; onChange: Change }) {
+function ShopFields({
+  draft,
+  onChange,
+}: {
+  draft: ShopDraft;
+  onChange: Change;
+}) {
   const { siteId = "" } = useParams();
   const navigate = useNavigate();
   const api = useSitesApi();
@@ -1610,7 +2204,10 @@ function ShopFields({ draft, onChange }: { draft: ShopDraft; onChange: Change })
         <div className={styles.collectionFieldEmpty}>
           <strong>{strings.sitesShopSectionNoItems}</strong>
           <span>{strings.sitesShopSectionNoItemsHint}</span>
-          <Button variant="ghost" onClick={() => navigate(`/sites/${siteId}/shop`)}>
+          <Button
+            variant="ghost"
+            onClick={() => navigate(`/sites/${siteId}/shop`)}
+          >
             {strings.sitesShop}
           </Button>
         </div>
@@ -1625,7 +2222,13 @@ function ShopFields({ draft, onChange }: { draft: ShopDraft; onChange: Change })
   );
 }
 
-function FooterFields({ draft, onChange }: { draft: FooterDraft; onChange: Change }) {
+function FooterFields({
+  draft,
+  onChange,
+}: {
+  draft: FooterDraft;
+  onChange: Change;
+}) {
   return (
     <>
       <TextField
@@ -1646,7 +2249,7 @@ function FooterFields({ draft, onChange }: { draft: FooterDraft; onChange: Chang
   );
 }
 
-function FormFields({
+export function SectionFormFields({
   draft,
   onChange,
   currentPage,
@@ -1756,7 +2359,9 @@ export function SectionFormDialog({
   currentPage?: SitePage | undefined;
   currentSections?: Section[] | undefined;
 }) {
-  const [draft, setDraft] = useState<SectionDraft>(() => toDraft(kind, initial));
+  const [draft, setDraft] = useState<SectionDraft>(() =>
+    toDraft(kind, initial),
+  );
   const label = kindLabel(kind);
   return (
     <DialogFrame
@@ -1771,12 +2376,12 @@ export function SectionFormDialog({
       busy={busy}
       canSubmit={canSubmit(draft)}
       submitLabel={strings.sitesSaveSection}
-      wide={kind === "nav"}
+      wide={kind === "nav" || kind === "hero"}
       onClose={onClose}
       onSubmit={() => onSave(toSection(draft))}
     >
       <CopyContext.Provider value={copyContext ?? null}>
-        <FormFields
+        <SectionFormFields
           draft={draft}
           onChange={setDraft}
           currentPage={currentPage}

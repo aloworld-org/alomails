@@ -42,7 +42,6 @@ import {
   LayoutGrid,
   Lock,
   Monitor,
-  PanelTop,
   Palette,
   Pencil,
   Plus,
@@ -55,7 +54,13 @@ import {
 } from "lucide-react";
 
 import { strings } from "../i18n";
-import { Button, IconButton, Modal, Spinner } from "../ds";
+import {
+  Button,
+  IconButton,
+  Modal,
+  Spinner,
+  moduleNavigationItemClassName,
+} from "../ds";
 import { sitesMessage, useSitesApi } from "./api";
 import { kindLabel, layoutValueLabel, sectionSummary } from "./sectionInfo";
 import { SectionFormDialog } from "./SectionForm";
@@ -100,6 +105,8 @@ import { insertionIndex, type PaletteTile } from "./palette";
 import type { Section, SectionKind, SectionsEnvelope } from "./sections";
 import type { SitePageDetail } from "./types";
 import styles from "./SitesModule.module.css";
+
+const WEBSITE_STRUCTURE_KINDS = ["nav", "footer"] as const;
 
 /** Which section the prop form is editing: a fresh one of `kind` when
  *  `index` is null, the stored one at `index` otherwise. `insertAt` is where a
@@ -877,7 +884,12 @@ export function PageEditorView() {
     document.querySelector<HTMLButtonElement>("[data-add-section]")?.focus();
   }
 
-  const empty = sections.length === 0;
+  const pageSections = sections
+    .map((section, index) => ({ section, index }))
+    .filter(
+      ({ section }) => section.type !== "nav" && section.type !== "footer",
+    );
+  const empty = pageSections.length === 0;
   const requestedLanguage = locale === null ? defaultLocale : locale;
 
   function setWorkspaceWidthFromPointer(clientX: number) {
@@ -929,40 +941,42 @@ export function PageEditorView() {
   }
 
   return (
-    <div className="flex min-h-full flex-col bg-bg-app px-4 py-4 text-text-primary sm:px-6 lg:px-8">
-      <header className="mx-auto flex w-full max-w-[1600px] flex-wrap items-center gap-3 pb-4">
-        <Link
-          to={`/sites/${siteId}`}
-          className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 font-semibold text-text-primary no-underline transition-colors hover:bg-surface-raised"
-        >
-          <ArrowLeft size={16} aria-hidden="true" />
-          {strings.sitesBackToSite}
-        </Link>
-        {page !== null && (
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl">
-                {page.title}
-              </h1>
-              <span className="font-mono text-sm text-text-secondary">
-                /{page.slug}
-              </span>
-              {page.home && (
-                <span className="rounded-full bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent">
-                  {strings.sitesHomeBadge}
+    <div className="flex h-full min-h-0 flex-col overflow-y-auto bg-app px-4 pb-4 text-text-primary sm:px-6 lg:px-8">
+      <header className="sticky top-0 z-[1] -mx-4 mb-4 border-b border-subtle bg-surface px-4 shadow-sm sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+        <div className="mx-auto flex w-full max-w-[var(--workspace-content-max)] flex-wrap items-center gap-3 py-3">
+          <Link
+            to={`/sites/${siteId}?section=pages`}
+            className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 font-semibold text-accent no-underline transition-colors hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
+          >
+            <ArrowLeft size={16} aria-hidden="true" />
+            {strings.sitesBackToSite}
+          </Link>
+          {page !== null && (
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl">
+                  {page.title}
+                </h1>
+                <span className="font-mono text-sm text-text-secondary">
+                  /{page.slug}
                 </span>
-              )}
+                {page.home && (
+                  <span className="rounded-full bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent">
+                    {strings.sitesHomeBadge}
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-        )}
-        {loading && <Spinner size={16} />}
+          )}
+          {loading && <Spinner size={16} />}
+        </div>
       </header>
 
       {error !== null && <ErrorBanner message={error} />}
 
       {page !== null && (
         <>
-          <section className="mx-auto w-full max-w-[1600px] overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm">
+          <section className="mx-auto w-full max-w-[var(--workspace-content-max)] overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm">
             <div className="flex flex-wrap items-center gap-2 px-4 py-3 sm:px-5">
               {locale === null && (
                 <>
@@ -1052,22 +1066,24 @@ export function PageEditorView() {
                 <span className="hidden text-sm font-medium text-secondary sm:inline">
                   {strings.sitesEditingLanguage}
                 </span>
-                <div className="flex items-center gap-1 rounded-xl bg-raised p-1">
+                <div
+                  className="flex max-w-full items-center gap-2 overflow-x-auto"
+                  role="tablist"
+                  aria-label={strings.sitesLanguagesLabel}
+                >
                   {enabledLocales.map((enabledLocale) => (
-                    <Button
+                    <button
                       key={enabledLocale}
-                      variant="ghost"
-                      size="sm"
-                      className={
-                        requestedLanguage === enabledLocale
-                          ? "bg-surface text-accent shadow-sm"
-                          : "text-secondary"
-                      }
-                      aria-pressed={requestedLanguage === enabledLocale}
+                      type="button"
+                      role="tab"
+                      className={moduleNavigationItemClassName(
+                        requestedLanguage === enabledLocale,
+                      )}
+                      aria-selected={requestedLanguage === enabledLocale}
                       onClick={() => chooseLocale(enabledLocale)}
                     >
                       {enabledLocale.toUpperCase()}
-                    </Button>
+                    </button>
                   ))}
                 </div>
               </nav>
@@ -1095,7 +1111,10 @@ export function PageEditorView() {
                 seeded={locale === null}
                 sections={sections}
                 busy={working || translationBusy}
-                {...(insertAt === undefined ? {} : { initialPosition: insertAt })}
+                excludedKinds={WEBSITE_STRUCTURE_KINDS}
+                {...(insertAt === undefined
+                  ? {}
+                  : { initialPosition: insertAt })}
                 onChoose={(tile, index) => {
                   // A picker is a single-choice task. Return the page to the
                   // workspace as soon as a block is chosen; an unseeded block
@@ -1109,7 +1128,7 @@ export function PageEditorView() {
 
           {locale !== null && translationFallback && (
             <section
-              className="mx-auto mt-4 flex w-full max-w-[1600px] flex-wrap items-center justify-between gap-4 rounded-2xl border border-accent/20 bg-accent-soft px-5 py-4"
+              className="mx-auto mt-4 flex w-full max-w-[var(--workspace-content-max)] flex-wrap items-center justify-between gap-4 rounded-2xl border border-accent/20 bg-accent-soft px-5 py-4"
               aria-live="polite"
             >
               <div>
@@ -1138,7 +1157,7 @@ export function PageEditorView() {
           )}
 
           {locale !== null && !translationFallback && (
-            <details className="mx-auto mt-4 w-full max-w-[1600px] rounded-2xl border border-subtle bg-surface shadow-sm">
+            <details className="mx-auto mt-4 w-full max-w-[var(--workspace-content-max)] rounded-2xl border border-subtle bg-surface shadow-sm">
               <summary className="cursor-pointer list-none px-5 py-4 marker:content-none">
                 <h2 className="font-semibold text-text-primary">
                   {strings.sitesTranslationDetails}
@@ -1212,8 +1231,8 @@ export function PageEditorView() {
             }
             className={
               previewOpen
-                ? "mx-auto mt-4 grid w-full max-w-[1600px] min-w-0 flex-1 gap-4 xl:grid-cols-[minmax(320px,var(--sections-panel-width))_12px_minmax(0,1fr)] xl:gap-0"
-                : "mx-auto mt-4 grid w-full max-w-[1600px] min-w-0 flex-1"
+                ? "mx-auto mt-4 grid w-full max-w-[var(--workspace-content-max)] min-w-0 flex-1 gap-4 xl:grid-cols-[minmax(320px,var(--sections-panel-width))_12px_minmax(0,1fr)] xl:gap-0"
+                : "mx-auto mt-4 grid w-full max-w-[var(--workspace-content-max)] min-w-0 flex-1"
             }
           >
             <section
@@ -1231,7 +1250,7 @@ export function PageEditorView() {
                     {strings.sitesSections}
                   </h2>
                   <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-raised px-2 py-0.5 text-xs font-semibold tabular-nums text-tertiary">
-                    {sections.length}
+                    {pageSections.length}
                   </span>
                 </div>
               </div>
@@ -1257,7 +1276,7 @@ export function PageEditorView() {
                     aria-expanded={picking}
                     disabled={working || translationBusy || translationFallback}
                     onClick={() => {
-                      setInsertAt(0);
+                      setInsertAt(sections.length);
                       setPicking(true);
                     }}
                   >
@@ -1275,183 +1294,158 @@ export function PageEditorView() {
 
               {!empty && (
                 <ol className={styles.stack} ref={stackRef}>
-                  {sections
-                    .map((section, index) => ({ section, index }))
-                    .sort((left, right) => {
-                      const leftNavigation = left.section.type === "nav";
-                      const rightNavigation = right.section.type === "nav";
-                      if (leftNavigation !== rightNavigation) {
-                        return leftNavigation ? -1 : 1;
-                      }
-                      return left.index - right.index;
-                    })
-                    .map(({ section, index: i }) => {
-                      const summary = sectionSummary(section);
-                      const navigation = section.type === "nav";
-                      const cardClass =
-                        dragOver === i && dragFrom !== null && dragFrom !== i
-                          ? `${styles.card} ${styles.cardDropTarget}`
-                          : navigation
-                            ? `${styles.card} ${styles.navigationCard}`
-                            : styles.card;
-                      return (
-                        <Fragment key={`${section.type}-${i}`}>
-                          {/* Sections use their canonical position as identity. */}
-                          <li
-                            className={cardClass}
-                            data-testid={
-                              navigation ? "navigation-section-card" : undefined
-                            }
-                            draggable={!navigation}
-                            onDragStart={() => setDragFrom(i)}
-                            onDragOver={(e) => {
-                              e.preventDefault();
-                              setDragOver(i);
-                            }}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              if (dragFrom !== null) void move(dragFrom, i);
-                              setDragFrom(null);
-                              setDragOver(null);
-                            }}
-                            onDragEnd={() => {
-                              setDragFrom(null);
-                              setDragOver(null);
-                            }}
+                  {pageSections.map(({ section, index: i }, visibleIndex) => {
+                    const summary = sectionSummary(section);
+                    const cardClass =
+                      dragOver === i && dragFrom !== null && dragFrom !== i
+                        ? `${styles.card} ${styles.cardDropTarget}`
+                        : styles.card;
+                    return (
+                      <Fragment key={`${section.type}-${i}`}>
+                        {/* Sections use their canonical position as identity. */}
+                        <li
+                          className={cardClass}
+                          draggable
+                          onDragStart={() => setDragFrom(i)}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            setDragOver(i);
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            if (dragFrom !== null) void move(dragFrom, i);
+                            setDragFrom(null);
+                            setDragOver(null);
+                          }}
+                          onDragEnd={() => {
+                            setDragFrom(null);
+                            setDragOver(null);
+                          }}
+                        >
+                          <span
+                            className={styles.dragHandle}
+                            aria-hidden="true"
                           >
-                            <span
-                              className={
-                                navigation
-                                  ? styles.navigationMarker
-                                  : styles.dragHandle
-                              }
-                              aria-hidden="true"
-                            >
-                              {navigation ? (
-                                <PanelTop size={16} />
-                              ) : (
-                                <GripVertical size={16} />
-                              )}
-                            </span>
-                            <div className={styles.cardMeta}>
-                              <div className={styles.cardTitleLine}>
-                                <span className={styles.cardKind}>
-                                  {kindLabel(section.type)}
-                                </span>
-                                {navigation && (
-                                  <span className={styles.navigationPinned}>
-                                    {strings.sitesNavPinned}
-                                  </span>
-                                )}
-                              </div>
-                              {summary !== "" && (
-                                <span className={styles.cardSummary}>
-                                  {summary}
-                                </span>
-                              )}
-                              {locale === null && (
-                                <SectionLayoutControls
-                                  section={section}
-                                  index={i}
-                                  layouts={layouts}
-                                  disabled={working || translationBusy}
-                                  onChoose={(at, key, value) => {
-                                    void applyLayout(at, key, value);
-                                  }}
-                                />
-                              )}
+                            <GripVertical size={16} />
+                          </span>
+                          <div className={styles.cardMeta}>
+                            <div className={styles.cardTitleLine}>
+                              <span className={styles.cardKind}>
+                                {kindLabel(section.type)}
+                              </span>
                             </div>
-                            <div className={styles.cardActions}>
-                              {!navigation && (
-                                <>
-                                  <IconButton
-                                    size="sm"
-                                    label={strings.sitesMoveUp(
-                                      kindLabel(section.type),
-                                    )}
-                                    data-section-control="up"
-                                    icon={<ChevronUp size={15} />}
-                                    disabled={
-                                      working ||
-                                      translationBusy ||
-                                      translationFallback ||
-                                      i === 0
-                                    }
-                                    onClick={() =>
-                                      void move(i, i - 1, { control: "up" })
-                                    }
-                                  />
-                                  <IconButton
-                                    size="sm"
-                                    label={strings.sitesMoveDown(
-                                      kindLabel(section.type),
-                                    )}
-                                    data-section-control="down"
-                                    icon={<ChevronDown size={15} />}
-                                    disabled={
-                                      working ||
-                                      translationBusy ||
-                                      translationFallback ||
-                                      i === sections.length - 1
-                                    }
-                                    onClick={() =>
-                                      void move(i, i + 1, { control: "down" })
-                                    }
-                                  />
-                                </>
+                            {summary !== "" && (
+                              <span className={styles.cardSummary}>
+                                {summary}
+                              </span>
+                            )}
+                            {locale === null && (
+                              <SectionLayoutControls
+                                section={section}
+                                index={i}
+                                layouts={layouts}
+                                disabled={working || translationBusy}
+                                onChoose={(at, key, value) => {
+                                  void applyLayout(at, key, value);
+                                }}
+                              />
+                            )}
+                          </div>
+                          <div className={styles.cardActions}>
+                            <IconButton
+                              size="sm"
+                              label={strings.sitesMoveUp(
+                                kindLabel(section.type),
                               )}
-                              <IconButton
+                              data-section-control="up"
+                              icon={<ChevronUp size={15} />}
+                              disabled={
+                                working ||
+                                translationBusy ||
+                                translationFallback ||
+                                visibleIndex === 0
+                              }
+                              onClick={() =>
+                                void move(
+                                  i,
+                                  pageSections[visibleIndex - 1]?.index ?? i,
+                                  { control: "up" },
+                                )
+                              }
+                            />
+                            <IconButton
+                              size="sm"
+                              label={strings.sitesMoveDown(
+                                kindLabel(section.type),
+                              )}
+                              data-section-control="down"
+                              icon={<ChevronDown size={15} />}
+                              disabled={
+                                working ||
+                                translationBusy ||
+                                translationFallback ||
+                                visibleIndex === pageSections.length - 1
+                              }
+                              onClick={() =>
+                                void move(
+                                  i,
+                                  pageSections[visibleIndex + 1]?.index ?? i,
+                                  { control: "down" },
+                                )
+                              }
+                            />
+                            <IconButton
+                              size="sm"
+                              label={strings.sitesEditSection(
+                                kindLabel(section.type),
+                              )}
+                              data-section-control="edit"
+                              icon={<Pencil size={15} />}
+                              disabled={
+                                working ||
+                                translationBusy ||
+                                translationFallback
+                              }
+                              onClick={() =>
+                                openForm({ kind: section.type, index: i })
+                              }
+                            />
+                            {confirmDelete === i ? (
+                              // The second, armed step of deleting: one more click
+                              // removes the section; anything else disarms.
+                              <Button
+                                variant="danger"
                                 size="sm"
-                                label={strings.sitesEditSection(
-                                  kindLabel(section.type),
-                                )}
-                                data-section-control="edit"
-                                icon={<Pencil size={15} />}
                                 disabled={
                                   working ||
                                   translationBusy ||
                                   translationFallback
                                 }
-                                onClick={() =>
-                                  openForm({ kind: section.type, index: i })
+                                onClick={() => remove(i)}
+                              >
+                                {strings.sitesConfirmDelete}
+                              </Button>
+                            ) : (
+                              <IconButton
+                                size="sm"
+                                label={strings.sitesDeleteSection(
+                                  kindLabel(section.type),
+                                )}
+                                data-section-control="delete"
+                                icon={<Trash2 size={15} />}
+                                disabled={
+                                  working ||
+                                  translationBusy ||
+                                  translationFallback
                                 }
+                                onClick={() => setConfirmDelete(i)}
                               />
-                              {confirmDelete === i ? (
-                                // The second, armed step of deleting: one more click
-                                // removes the section; anything else disarms.
-                                <Button
-                                  variant="danger"
-                                  size="sm"
-                                  disabled={
-                                    working ||
-                                    translationBusy ||
-                                    translationFallback
-                                  }
-                                  onClick={() => remove(i)}
-                                >
-                                  {strings.sitesConfirmDelete}
-                                </Button>
-                              ) : (
-                                <IconButton
-                                  size="sm"
-                                  label={strings.sitesDeleteSection(
-                                    kindLabel(section.type),
-                                  )}
-                                  data-section-control="delete"
-                                  icon={<Trash2 size={15} />}
-                                  disabled={
-                                    working ||
-                                    translationBusy ||
-                                    translationFallback
-                                  }
-                                  onClick={() => setConfirmDelete(i)}
-                                />
-                              )}
-                            </div>
-                          </li>
-                        </Fragment>
-                      );
-                    })}
+                            )}
+                          </div>
+                        </li>
+                      </Fragment>
+                    );
+                  })}
                   <SectionInsertControl
                     disabled={working || translationBusy || translationFallback}
                     expanded={picking && insertAt === sections.length}

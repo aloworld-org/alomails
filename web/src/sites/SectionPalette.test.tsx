@@ -9,7 +9,13 @@
 //
 // The first block is the pure wire reading; the rest drive the real editor
 // with the real API client, faking only the network.
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -32,7 +38,11 @@ describe("the palette is read defensively", () => {
     });
     expect(tiles).toHaveLength(3);
     expect(tiles[0]?.section).toEqual({ type: "hero", heading: "Us" });
-    expect(tiles[1]).toEqual({ kind: "pricing", section: null, needs: "writing" });
+    expect(tiles[1]).toEqual({
+      kind: "pricing",
+      section: null,
+      needs: "writing",
+    });
     expect(tiles[2]?.needs).toBe("picture");
   });
 
@@ -87,9 +97,6 @@ const SEEDED_CONTACT: Section = {
   success_message: "We answer within a day.",
 };
 
-const PREVIEW_HTML =
-  "<!doctype html><html><body><h2>Say hello</h2></body></html>";
-
 function env(sections: Section[]): SectionsEnvelope {
   return { schema_version: SECTIONS_SCHEMA_VERSION, sections };
 }
@@ -113,14 +120,10 @@ function json(body: unknown): Response {
 const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
   const method = init?.method ?? "GET";
   const body =
-    typeof init?.body === "string" ? (JSON.parse(init.body) as unknown) : undefined;
+    typeof init?.body === "string"
+      ? (JSON.parse(init.body) as unknown)
+      : undefined;
   calls.push({ url, method, body });
-  if (url.includes("/palette/") && url.endsWith("/preview")) {
-    return new Response(PREVIEW_HTML, {
-      status: 200,
-      headers: { "content-type": "text/html; charset=utf-8" },
-    });
-  }
   if (method === "GET" && url.endsWith("/palette")) {
     return json({
       items: [
@@ -171,9 +174,9 @@ function ui() {
 
 async function stackLoaded() {
   await waitFor(() =>
-    expect(document.querySelectorAll('[data-section-control="edit"]')).toHaveLength(
-      sections.length,
-    ),
+    expect(
+      document.querySelectorAll('[data-section-control="edit"]'),
+    ).toHaveLength(sections.length),
   );
 }
 
@@ -182,21 +185,26 @@ async function stackLoaded() {
  *  renders while loading has one per section type. Waiting on a kind alone
  *  would return before the seeded palette replaced the fallback. */
 async function openPalette() {
-  fireEvent.click(screen.getByRole("button", { name: strings.sitesAddSection }));
+  fireEvent.click(
+    screen.getByRole("button", { name: strings.sitesAddSection }),
+  );
   await waitFor(() =>
     expect(document.querySelectorAll("[data-palette-tile]")).toHaveLength(2),
   );
 }
 
 function tile(kind: string): HTMLElement {
-  const found = document.querySelector<HTMLElement>(`[data-palette-tile="${kind}"]`);
+  const found = document.querySelector<HTMLElement>(
+    `[data-palette-tile="${kind}"]`,
+  );
   if (found === null) throw new Error(`no ${kind} tile`);
   return found;
 }
 
 function adds(): Call[] {
   return calls.filter(
-    (call) => call.method === "POST" && call.url.endsWith("/pages/page-1/sections"),
+    (call) =>
+      call.method === "POST" && call.url.endsWith("/pages/page-1/sections"),
   );
 }
 
@@ -236,7 +244,7 @@ describe("the popup section library", () => {
 });
 
 describe("the same block can be placed without a mouse", () => {
-  test("choosing a position and pressing a tile makes the identical request", async () => {
+  test("pressing a tile uses the position of the add control", async () => {
     ui();
     await stackLoaded();
     await openPalette();
@@ -247,18 +255,16 @@ describe("the same block can be placed without a mouse", () => {
       expect(document.activeElement).toBe(tile("contact_form")),
     );
 
-    fireEvent.change(screen.getByLabelText(strings.sitesPalettePosition), {
-      target: { value: "1" },
-    });
+    expect(screen.queryByLabelText(strings.sitesPalettePosition)).toBeNull();
     fireEvent.click(tile("contact_form"));
 
     await waitFor(() => expect(adds()).toHaveLength(1));
-    expect(adds()[0]?.body).toEqual({ section: SEEDED_CONTACT, index: 1 });
+    expect(adds()[0]?.body).toEqual({ section: SEEDED_CONTACT, index: 2 });
     // Where it landed is said out loud: the stack growing is invisible to a
     // reader who cannot see it.
     const announced = strings.sitesSectionAdded(
       strings.sitesSectionContactForm,
-      2,
+      3,
       3,
     );
     await waitFor(() =>
@@ -276,7 +282,9 @@ describe("the same block can be placed without a mouse", () => {
 
     // Closed straight after opening — before the seeded tiles arrived. The
     // shared modal restores the exact button that opened it.
-    fireEvent.click(screen.getByRole("button", { name: strings.sitesAddSection }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesAddSection }),
+    );
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() =>
       expect(document.querySelector("[data-palette-tile]")).toBeNull(),
@@ -289,34 +297,27 @@ describe("the same block can be placed without a mouse", () => {
   });
 });
 
-describe("a tile shows the tenant's own content, or says it has none", () => {
-  test("selecting a seeded tile renders it through the site's own renderer", async () => {
+describe("the section library has no preview panel", () => {
+  test("selecting a seeded tile does not request or reserve a preview", async () => {
     ui();
     await stackLoaded();
     await openPalette();
 
     fireEvent.mouseEnter(tile("contact_form"));
-    const frame = await screen.findByTitle<HTMLIFrameElement>(
-      strings.sitesPalettePreviewTitle(strings.sitesSectionContactForm),
-    );
-    expect(frame.getAttribute("srcdoc")).toBe(PREVIEW_HTML);
+    expect(document.querySelector("iframe")).toBeNull();
     expect(
       calls.some((call) => call.url.endsWith("/palette/contact_form/preview")),
-    ).toBe(true);
-    expect(screen.getByText(strings.sitesPaletteOwnContent)).toBeTruthy();
+    ).toBe(false);
   });
 
-  test("a block with nothing of theirs in it says so and opens the form", async () => {
+  test("a block with no preview opens its form without a blank preview panel", async () => {
     ui();
     await stackLoaded();
     await openPalette();
 
     fireEvent.mouseEnter(tile("pricing"));
-    // `findByText`, not `getByText`: hovering sets state, and the note it draws
-    // arrives on a later render than the event that asked for it. Reading
-    // synchronously straight after the event is a race that an idle machine
-    // wins and a loaded CI runner loses.
-    expect(await screen.findByText(strings.sitesPaletteNeedsWriting)).toBeTruthy();
+    expect(screen.queryByText(strings.sitesPaletteNeedsWriting)).toBeNull();
+    expect(document.querySelector("iframe")).toBeNull();
     // Nothing is fetched to preview a block that has nothing to show.
     expect(
       calls.some((call) => call.url.endsWith("/palette/pricing/preview")),

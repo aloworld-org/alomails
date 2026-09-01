@@ -13,6 +13,7 @@ import { AlertTriangle } from "lucide-react";
 import { strings } from "../i18n";
 import { Button } from "./Button";
 import { Input } from "./Input";
+import { MODAL_BACKDROP_CLASS } from "./modalBackdrop";
 import {
   DialogContext,
   type Dialogs,
@@ -28,7 +29,7 @@ type Kind = "confirm" | "prompt" | "alert";
 /** Warm workshop identity via tokens; never a raw browser popup. */
 const SCRIM =
   "fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-6 " +
-  "bg-overlay animate-[alo-dialog-scrim_var(--animation-dialog-scrim)]";
+  `bg-overlay animate-[alo-dialog-scrim_var(--animation-dialog-scrim)] ${MODAL_BACKDROP_CLASS}`;
 
 const PANEL =
   "w-full max-w-[30rem] overflow-hidden border border-subtle " +

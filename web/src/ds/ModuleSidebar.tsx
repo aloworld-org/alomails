@@ -17,6 +17,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 
 import { useIsMobile } from "./useMediaQuery";
+import { MODAL_BACKDROP_CLASS } from "./modalBackdrop";
 
 export interface ModuleSidebarProps {
   /** Whether the drawer is open. Only read at phone widths — the desktop
@@ -94,7 +95,7 @@ function Drawer({
   return (
     <>
       <div
-        className="absolute inset-0 z-[calc(var(--z-overlay)-1)] bg-overlay"
+        className={`absolute inset-0 z-[calc(var(--z-overlay)-1)] bg-overlay ${MODAL_BACKDROP_CLASS}`}
         onClick={onClose}
         aria-hidden="true"
       />

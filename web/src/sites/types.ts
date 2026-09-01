@@ -225,9 +225,17 @@ export interface SitePage {
   slug: string;
   title: string;
   home: boolean;
+  /** Optional navigation parent. Absent and null both mean a top-level page. */
+  parentId?: string | null | undefined;
   navOrder?: number | undefined;
   createdAt?: string | undefined;
   updatedAt?: string | undefined;
+  /** Lightweight section metadata returned by the page list. It lets
+   * overviews measure real content without loading every section body. */
+  sectionKinds?: string[] | undefined;
+  /** Image audit totals; decorative images count as alt-complete. */
+  imageCount?: number | undefined;
+  imageAltCount?: number | undefined;
   /** Optional search/share overrides. `null` means use the page/site default. */
   seoTitle: string | null;
   seoDescription: string | null;

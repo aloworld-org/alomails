@@ -9,7 +9,7 @@ import { X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { strings } from "../i18n";
-import { Button } from "../ds";
+import { Button, MODAL_BACKDROP_CLASS } from "../ds";
 import { useDialogKeyboard } from "./useDialogKeyboard";
 
 /** A failure the page could not hide: shown, never swallowed. */
@@ -114,7 +114,7 @@ export function DialogFrame({
   }
   return (
     <div
-      className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-scrim p-4 sm:p-6"
+      className={`fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-scrim p-4 sm:p-6 ${MODAL_BACKDROP_CLASS}`}
       role="presentation"
       onMouseDown={onClose}
     >

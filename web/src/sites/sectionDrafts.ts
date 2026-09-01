@@ -11,6 +11,10 @@
 import type {
   FaqItem,
   FeatureItem,
+  HeroAlignment,
+  HeroContentWidth,
+  HeroHeight,
+  HeroLayout,
   PricingTier,
   Section,
   SectionImage,
@@ -35,6 +39,10 @@ export interface HeroDraft {
   image: SectionImage;
   primary_cta: SectionLink;
   secondary_cta: SectionLink;
+  layout: HeroLayout;
+  height: HeroHeight;
+  alignment: HeroAlignment;
+  content_width: HeroContentWidth;
 }
 
 export interface FeatureItemDraft {
@@ -242,7 +250,11 @@ export const DEFAULT_CUSTOM_CODE_HEIGHT_PX = 320;
 export const blankLink = (): SectionLink => ({ label: "", href: "" });
 export const blankImage = (): SectionImage => ({ blob_id: "", alt: "" });
 export const blankFeature = (): FeatureItemDraft => ({ title: "", body: "" });
-export const blankTestimonial = (): TestimonialDraft => ({ quote: "", author: "", role: "" });
+export const blankTestimonial = (): TestimonialDraft => ({
+  quote: "",
+  author: "",
+  role: "",
+});
 export const blankTier = (): TierDraft => ({
   name: "",
   price: "",
@@ -288,7 +300,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
   const from = initial?.type === kind ? initial : undefined;
   switch (kind) {
     case "nav": {
-      const s = from as Section & { type: "nav" } | undefined;
+      const s = from as (Section & { type: "nav" }) | undefined;
       return {
         type: "nav",
         links: seeded(s?.links ?? [], blankLink),
@@ -297,7 +309,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
       };
     }
     case "hero": {
-      const s = from as Section & { type: "hero" } | undefined;
+      const s = from as (Section & { type: "hero" }) | undefined;
       return {
         type: "hero",
         heading: s?.heading ?? "",
@@ -305,23 +317,31 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         image: draftImage(s?.image),
         primary_cta: draftLink(s?.primary_cta),
         secondary_cta: draftLink(s?.secondary_cta),
+        layout: s?.layout ?? "centered",
+        height: s?.height ?? "standard",
+        alignment: s?.alignment ?? "center",
+        content_width: s?.content_width ?? "balanced",
       };
     }
     case "features": {
-      const s = from as Section & { type: "features" } | undefined;
+      const s = from as (Section & { type: "features" }) | undefined;
       return {
         type: "features",
         heading: s?.heading ?? "",
         intro: s?.intro ?? "",
         items: seeded(
-          (s?.items ?? []).map((i: FeatureItem) => ({ title: i.title, body: i.body, icon: i.icon })),
+          (s?.items ?? []).map((i: FeatureItem) => ({
+            title: i.title,
+            body: i.body,
+            icon: i.icon,
+          })),
           blankFeature,
         ),
         columns: s?.columns,
       };
     }
     case "text_image": {
-      const s = from as Section & { type: "text_image" } | undefined;
+      const s = from as (Section & { type: "text_image" }) | undefined;
       return {
         type: "text_image",
         heading: s?.heading ?? "",
@@ -332,16 +352,19 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
       };
     }
     case "gallery": {
-      const s = from as Section & { type: "gallery" } | undefined;
+      const s = from as (Section & { type: "gallery" }) | undefined;
       return {
         type: "gallery",
         heading: s?.heading ?? "",
-        images: seeded((s?.images ?? []).map((i: SectionImage) => draftImage(i)), blankImage),
+        images: seeded(
+          (s?.images ?? []).map((i: SectionImage) => draftImage(i)),
+          blankImage,
+        ),
         columns: s?.columns,
       };
     }
     case "testimonials": {
-      const s = from as Section & { type: "testimonials" } | undefined;
+      const s = from as (Section & { type: "testimonials" }) | undefined;
       return {
         type: "testimonials",
         heading: s?.heading ?? "",
@@ -356,7 +379,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
       };
     }
     case "pricing": {
-      const s = from as Section & { type: "pricing" } | undefined;
+      const s = from as (Section & { type: "pricing" }) | undefined;
       return {
         type: "pricing",
         heading: s?.heading ?? "",
@@ -376,7 +399,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
       };
     }
     case "team": {
-      const s = from as Section & { type: "team" } | undefined;
+      const s = from as (Section & { type: "team" }) | undefined;
       return {
         type: "team",
         heading: s?.heading ?? "",
@@ -393,18 +416,21 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
       };
     }
     case "faq": {
-      const s = from as Section & { type: "faq" } | undefined;
+      const s = from as (Section & { type: "faq" }) | undefined;
       return {
         type: "faq",
         heading: s?.heading ?? "",
         items: seeded(
-          (s?.items ?? []).map((i: FaqItem) => ({ question: i.question, answer: i.answer })),
+          (s?.items ?? []).map((i: FaqItem) => ({
+            question: i.question,
+            answer: i.answer,
+          })),
           blankFaqItem,
         ),
       };
     }
     case "cta": {
-      const s = from as Section & { type: "cta" } | undefined;
+      const s = from as (Section & { type: "cta" }) | undefined;
       return {
         type: "cta",
         heading: s?.heading ?? "",
@@ -413,7 +439,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
       };
     }
     case "contact_form": {
-      const s = from as Section & { type: "contact_form" } | undefined;
+      const s = from as (Section & { type: "contact_form" }) | undefined;
       return {
         type: "contact_form",
         heading: s?.heading ?? "",
@@ -423,7 +449,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
       };
     }
     case "collection": {
-      const s = from as Section & { type: "collection" } | undefined;
+      const s = from as (Section & { type: "collection" }) | undefined;
       return {
         type: "collection",
         collection_id: s?.collection_id ?? "",
@@ -431,7 +457,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
       };
     }
     case "catalog": {
-      const s = from as Section & { type: "catalog" } | undefined;
+      const s = from as (Section & { type: "catalog" }) | undefined;
       return {
         type: "catalog",
         catalog_id: s?.catalog_id ?? "",
@@ -440,7 +466,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
       };
     }
     case "booking": {
-      const s = from as Section & { type: "booking" } | undefined;
+      const s = from as (Section & { type: "booking" }) | undefined;
       return {
         type: "booking",
         booking_id: s?.booking_id ?? "",
@@ -448,7 +474,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
       };
     }
     case "tickets": {
-      const s = from as Section & { type: "tickets" } | undefined;
+      const s = from as (Section & { type: "tickets" }) | undefined;
       return {
         type: "tickets",
         heading: s?.heading ?? "",
@@ -456,7 +482,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
       };
     }
     case "shop": {
-      const s = from as Section & { type: "shop" } | undefined;
+      const s = from as (Section & { type: "shop" }) | undefined;
       return {
         type: "shop",
         heading: s?.heading ?? "",
@@ -464,7 +490,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
       };
     }
     case "custom_code": {
-      const s = from as Section & { type: "custom_code" } | undefined;
+      const s = from as (Section & { type: "custom_code" }) | undefined;
       return {
         type: "custom_code",
         heading: s?.heading ?? "",
@@ -478,8 +504,12 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
       };
     }
     case "footer": {
-      const s = from as Section & { type: "footer" } | undefined;
-      return { type: "footer", text: s?.text ?? "", links: seeded(s?.links ?? [], blankLink) };
+      const s = from as (Section & { type: "footer" }) | undefined;
+      return {
+        type: "footer",
+        text: s?.text ?? "",
+        links: seeded(s?.links ?? [], blankLink),
+      };
     }
   }
 }
@@ -509,7 +539,9 @@ const reqLink = (link: SectionLink): SectionLink => ({
 /** An optional image: no blob id means no image. */
 function optImage(image: SectionImage): SectionImage | undefined {
   const blob_id = image.blob_id.trim();
-  return blob_id === "" ? undefined : { ...image, blob_id, alt: image.alt.trim() };
+  return blob_id === ""
+    ? undefined
+    : { ...image, blob_id, alt: image.alt.trim() };
 }
 
 const reqImage = (image: SectionImage): SectionImage => ({
@@ -532,8 +564,10 @@ function pruned<T>(items: T[], isBlank: (item: T) => boolean): T[] {
   return items.filter((item) => !isBlank(item));
 }
 
-const linkBlank = (l: SectionLink): boolean => l.label.trim() === "" && l.href.trim() === "";
-const imageBlank = (i: SectionImage): boolean => i.blob_id.trim() === "" && i.alt.trim() === "";
+const linkBlank = (l: SectionLink): boolean =>
+  l.label.trim() === "" && l.href.trim() === "";
+const imageBlank = (i: SectionImage): boolean =>
+  i.blob_id.trim() === "" && i.alt.trim() === "";
 
 /** The wire section a draft saves as — trimmed, blanks turned back into
  *  absent keys (`JSON.stringify` drops `undefined` props). */
@@ -554,6 +588,10 @@ export function toSection(draft: SectionDraft): Section {
         image: optImage(draft.image),
         primary_cta: optLink(draft.primary_cta),
         secondary_cta: optLink(draft.secondary_cta),
+        layout: draft.layout,
+        height: draft.height,
+        alignment: draft.alignment,
+        content_width: draft.content_width,
       };
     case "features":
       return {
@@ -563,7 +601,11 @@ export function toSection(draft: SectionDraft): Section {
         items: pruned(
           draft.items,
           (i) => i.title.trim() === "" && i.body.trim() === "",
-        ).map((i) => ({ title: req(i.title), body: req(i.body), icon: i.icon })),
+        ).map((i) => ({
+          title: req(i.title),
+          body: req(i.body),
+          icon: i.icon,
+        })),
         columns: draft.columns,
       };
     case "text_image":
@@ -589,7 +631,11 @@ export function toSection(draft: SectionDraft): Section {
         items: pruned(
           draft.items,
           (i) => i.quote.trim() === "" && i.author.trim() === "",
-        ).map((i) => ({ quote: req(i.quote), author: req(i.author), role: opt(i.role) })),
+        ).map((i) => ({
+          quote: req(i.quote),
+          author: req(i.author),
+          role: opt(i.role),
+        })),
       };
     case "pricing":
       return {
@@ -616,12 +662,14 @@ export function toSection(draft: SectionDraft): Section {
       return {
         type: "team",
         heading: opt(draft.heading),
-        members: pruned(draft.members, (m) => m.name.trim() === "").map((m) => ({
-          name: req(m.name),
-          role: opt(m.role),
-          photo: optImage(m.photo),
-          bio: opt(m.bio),
-        })),
+        members: pruned(draft.members, (m) => m.name.trim() === "").map(
+          (m) => ({
+            name: req(m.name),
+            role: opt(m.role),
+            photo: optImage(m.photo),
+            bio: opt(m.bio),
+          }),
+        ),
         columns: draft.columns,
       };
     case "faq":
@@ -691,7 +739,10 @@ export function toSection(draft: SectionDraft): Section {
         html: draft.html.trim(),
         css: opt(draft.css),
         js,
-        capabilities: { scripts: draft.scripts, inline_images: draft.inline_images },
+        capabilities: {
+          scripts: draft.scripts,
+          inline_images: draft.inline_images,
+        },
         height_px: heightPx(draft.height),
       };
     }

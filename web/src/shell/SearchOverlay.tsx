@@ -26,7 +26,7 @@ import {
   type SearchHitDto,
 } from "../jmap";
 import { surface } from "../product";
-import { IconButton, Spinner } from "../ds";
+import { IconButton, MODAL_BACKDROP_CLASS, Spinner } from "../ds";
 import { AgentActionCard } from "./AgentActionCard";
 import { AgentResultCard } from "./AgentResultCard";
 import styles from "./SearchOverlay.module.css";
@@ -178,7 +178,7 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className={styles.scrim} onMouseDown={onClose}>
+    <div className={`${styles.scrim} ${MODAL_BACKDROP_CLASS}`} onMouseDown={onClose}>
       <div className={styles.panel} onMouseDown={(e) => e.stopPropagation()}>
         <div className={styles.searchRow}>
           <Search size={18} className={styles.searchIcon} />

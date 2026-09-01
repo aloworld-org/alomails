@@ -1,23 +1,11 @@
 // The section palette (ADR 0042 §4, S3.01d): the blocks a page can be built
-// from, each shown with THIS website's own content.
+// from, shown as one scannable library without a competing preview pane.
 //
 // It is a focused popup library. A short category navigation keeps eighteen
 // block types scannable, while the insertion control makes exact placement
 // available without requiring a drag gesture through a covered page.
 //
-// What a tile shows is not an illustration. Selecting one (hover, or focus
-// while tabbing) renders it through the same renderer that publishes the site,
-// in the site's own theme, with the owner's own words in it. A block the
-// palette cannot fill from the website — a quote nobody has given, a picture
-// nobody has uploaded — says so in that space instead, and opens the prop form
-// the way it always did. Nothing is ever invented to fill a preview.
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   BriefcaseBusiness,
   FileText,
@@ -27,39 +15,14 @@ import {
 } from "lucide-react";
 
 import { strings } from "../i18n";
-import {
-  ModuleNavigation,
-  Select,
-  Spinner,
-  moduleNavigationItemClassName,
-} from "../ds";
+import { ModuleNavigation, moduleNavigationItemClassName } from "../ds";
 import { sitesMessage, useSitesApi } from "./api";
 import { kindDescription, kindLabel } from "./sectionInfo";
 import { sectionThumbnail } from "./sectionThumbnails";
-import { unseededPalette, type PaletteNeed, type PaletteTile } from "./palette";
+import { unseededPalette, type PaletteTile } from "./palette";
 import type { Section, SectionKind } from "./sections";
 import { ErrorBanner } from "./parts";
 import styles from "./SitesModule.module.css";
-
-/** The sentence a block that cannot be seeded shows in place of its picture. */
-function needMessage(need: PaletteNeed | null): string {
-  switch (need) {
-    case "picture":
-      return strings.sitesPaletteNeedsPicture;
-    case "catalog":
-      return strings.sitesPaletteNeedsCatalog;
-    case "collection":
-      return strings.sitesPaletteNeedsCollection;
-    case "booking":
-      return strings.sitesPaletteNeedsBooking;
-    case "code":
-      return strings.sitesPaletteNeedsCode;
-    case "writing":
-      return strings.sitesPaletteNeedsWriting;
-    default:
-      return strings.sitesPaletteOpensForm;
-  }
-}
 
 /** Every place a block can be inserted, in the words of the stack it joins. */
 export function positionOptions(
@@ -86,6 +49,7 @@ export function SectionPalette({
   seeded,
   sections,
   busy,
+  excludedKinds = [],
   initialPosition,
   onChoose,
 }: {
@@ -98,6 +62,8 @@ export function SectionPalette({
   /** The stack as it is now — what the position control names. */
   sections: Section[];
   busy: boolean;
+  /** Website-level structure that must not be offered as a page block. */
+  excludedKinds?: readonly SectionKind[];
   initialPosition?: number;
   /** A tile was chosen: insert its seeded section at `index`, or open the prop
    *  form there when it carries none. */
@@ -108,9 +74,6 @@ export function SectionPalette({
   const [loading, setLoading] = useState(seeded);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  const [previews, setPreviews] = useState<Record<string, string>>({});
-  const [previewBusy, setPreviewBusy] = useState(false);
-  const [position, setPosition] = useState(initialPosition ?? sections.length);
   const [category, setCategory] = useState("all");
   const panel = useRef<HTMLElement | null>(null);
 
@@ -127,14 +90,6 @@ export function SectionPalette({
       ?.querySelector<HTMLButtonElement>("[data-palette-tile]")
       ?.focus();
   }, [loading]);
-
-  // The position control names sections that can change under it (an undo, an
-  // AI edit, another tile dropped). "At the end" stays the end.
-  useEffect(() => {
-    setPosition((current) =>
-      current >= sections.length ? sections.length : current,
-    );
-  }, [sections.length]);
 
   useEffect(() => {
     if (!seeded) return undefined;
@@ -161,27 +116,14 @@ export function SectionPalette({
     };
   }, [api, siteId, pageId, seeded]);
 
-  const select = useCallback(
-    (tile: PaletteTile) => {
-      setSelected(tile.kind);
-      if (tile.section === null || previews[tile.kind] !== undefined) return;
-      setPreviewBusy(true);
-      api.palettePreview(siteId, pageId, tile.kind).then(
-        (html) => {
-          setPreviews((current) => ({ ...current, [tile.kind]: html }));
-          setPreviewBusy(false);
-        },
-        () => {
-          // A picture that will not load is a missing picture, not an error
-          // worth a banner: the tile still adds its block.
-          setPreviewBusy(false);
-        },
-      );
-    },
-    [api, pageId, previews, siteId],
-  );
+  function select(tile: PaletteTile) {
+    setSelected(tile.kind);
+  }
 
-  const shown = tiles.find((tile) => tile.kind === selected) ?? null;
+  const availableTiles = tiles.filter(
+    (tile) => !excludedKinds.includes(tile.kind),
+  );
+  const shown = availableTiles.find((tile) => tile.kind === selected) ?? null;
   const categories: {
     id: string;
     label: string;
@@ -231,11 +173,13 @@ export function SectionPalette({
     categories.find((item) => item.id === category) ?? categories[0]!;
   const visibleTiles =
     activeCategory.kinds === null
-      ? tiles
-      : tiles.filter((tile) => activeCategory.kinds?.includes(tile.kind));
+      ? availableTiles
+      : availableTiles.filter((tile) =>
+          activeCategory.kinds?.includes(tile.kind),
+        );
   const hasNavigation = sections.some((section) => section.type === "nav");
+  const position = initialPosition ?? sections.length;
   const positions = positionOptions(sections);
-  const chosenPosition = shown?.kind === "nav" ? 0 : position;
   const positionLabel =
     shown?.kind === "nav"
       ? strings.sitesNavPinned
@@ -265,8 +209,10 @@ export function SectionPalette({
                     setCategory(item.id);
                     const first =
                       item.kinds === null
-                        ? tiles[0]
-                        : tiles.find((tile) => item.kinds?.includes(tile.kind));
+                        ? availableTiles[0]
+                        : availableTiles.find((tile) =>
+                            item.kinds?.includes(tile.kind),
+                          );
                     if (first !== undefined) select(first);
                   }}
                 >
@@ -277,26 +223,11 @@ export function SectionPalette({
             })}
           </div>
         </ModuleNavigation>
-        <label className={styles.palettePosition}>
-          <span>{strings.sitesPalettePosition}</span>
-          <Select
-            size="md"
-            value={chosenPosition}
-            disabled={busy || shown?.kind === "nav"}
-            onChange={(event) => setPosition(Number(event.target.value))}
-          >
-            {positions.map((option) => (
-              <option key={option.index} value={option.index}>
-                {option.label}
-              </option>
-            ))}
-          </Select>
-        </label>
       </div>
 
       {error !== null && <ErrorBanner message={error} />}
 
-      <div className={styles.paletteBody}>
+      <div className={`${styles.paletteBody} !grid-cols-1`}>
         <div className={styles.paletteGrid}>
           {visibleTiles.map((tile) => (
             <button
@@ -348,45 +279,6 @@ export function SectionPalette({
               ) : null}
             </button>
           ))}
-        </div>
-
-        <div className={styles.palettePreview}>
-          {loading ? (
-            <p className={styles.paletteNote}>
-              <Spinner size={14} /> {strings.sitesPaletteLoading}
-            </p>
-          ) : shown === null ? (
-            <p className={styles.paletteNote}>{strings.sitesPaletteHint}</p>
-          ) : shown.section !== null && previews[shown.kind] !== undefined ? (
-            <>
-              <div className={styles.palettePreviewViewport}>
-                {/* Sandboxed and inert: the document may run its own menu
-                    script, but it never reaches this origin, and no click in a
-                    picture of a block should follow a link. */}
-                <iframe
-                  className={styles.palettePreviewFrame}
-                  title={strings.sitesPalettePreviewTitle(
-                    kindLabel(shown.kind),
-                  )}
-                  sandbox="allow-scripts"
-                  srcDoc={previews[shown.kind]}
-                />
-              </div>
-              <p className={styles.paletteNote}>
-                {strings.sitesPaletteOwnContent}
-              </p>
-            </>
-          ) : previewBusy ? (
-            <p className={styles.paletteNote}>
-              <Spinner size={14} /> {strings.sitesPaletteLoading}
-            </p>
-          ) : (
-            <p className={styles.paletteNote}>
-              {seeded
-                ? needMessage(shown.needs)
-                : strings.sitesPaletteOpensForm}
-            </p>
-          )}
         </div>
       </div>
     </section>

@@ -30,7 +30,7 @@ import { RecordAgentPanel } from "../agents";
 import { strings } from "../i18n";
 import { MeetRoom, useMeetApi } from "../meet";
 import type { Meeting } from "../meet";
-import { Button, useMediaQuery } from "../ds";
+import { Button, MODAL_BACKDROP_CLASS, useMediaQuery } from "../ds";
 import {
   useJmapClient,
   JmapError,
@@ -466,7 +466,7 @@ export function EventModal({
 
   return (
     <div
-      className={styles.modalScrim}
+      className={`${styles.modalScrim} ${MODAL_BACKDROP_CLASS}`}
       role="dialog"
       aria-modal="true"
       onMouseDown={onClose}

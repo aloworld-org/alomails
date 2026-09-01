@@ -141,6 +141,22 @@ fn site_domain_json(domain: &SiteDomain) -> Value {
 /// A page as JSON. The sections envelope rides along only where the caller
 /// asked for one page (`with_sections`); the list stays lean.
 pub(crate) fn page_json(p: &SitePage, with_sections: bool) -> Value {
+    // The list remains lean, but section kinds are useful overview metadata:
+    // callers can distinguish a real page from a navigation-only shell
+    // without downloading every complete section envelope.
+    let section_kinds = p
+        .sections
+        .get("sections")
+        .and_then(Value::as_array)
+        .map(|sections| {
+            sections
+                .iter()
+                .filter_map(|section| section.get("type").and_then(Value::as_str))
+                .map(str::to_owned)
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    let (image_count, image_alt_count) = image_readiness(&p.sections);
     let mut j = json!({
         "id": p.id.as_str(),
         "slug": p.slug,
@@ -151,11 +167,43 @@ pub(crate) fn page_json(p: &SitePage, with_sections: bool) -> Value {
         "home": p.is_home,
         "createdAt": iso(p.created_at),
         "updatedAt": iso(p.updated_at),
+        "sectionKinds": section_kinds,
+        "imageCount": image_count,
+        "imageAltCount": image_alt_count,
     });
     if with_sections && let Some(obj) = j.as_object_mut() {
         obj.insert("sections".to_owned(), p.sections.clone());
     }
     j
+}
+
+/// Counts images and the subset that are accessible. Decorative images are
+/// complete without alt text; informative images need a non-blank `alt`.
+/// This walks the stored JSON so new section shapes inherit the audit without
+/// a second list of image-bearing section kinds.
+fn image_readiness(value: &Value) -> (usize, usize) {
+    match value {
+        Value::Object(object) if object.contains_key("blob_id") => {
+            let decorative = object
+                .get("decorative")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
+            let described = object
+                .get("alt")
+                .and_then(Value::as_str)
+                .is_some_and(|alt| !alt.trim().is_empty());
+            (1, usize::from(decorative || described))
+        }
+        Value::Object(object) => object.values().fold((0, 0), |totals, child| {
+            let child = image_readiness(child);
+            (totals.0 + child.0, totals.1 + child.1)
+        }),
+        Value::Array(values) => values.iter().fold((0, 0), |totals, child| {
+            let child = image_readiness(child);
+            (totals.0 + child.0, totals.1 + child.1)
+        }),
+        _ => (0, 0),
+    }
 }
 
 fn localized_page_json(localized: &LocalizedSitePage) -> Value {

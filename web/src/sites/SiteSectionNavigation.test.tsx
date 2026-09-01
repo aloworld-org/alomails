@@ -30,9 +30,19 @@ describe("SiteSectionNavigation", () => {
     expect(
       screen.getByRole("tab", { name: strings.sitesPages }).className,
     ).toContain("min-h-11");
-    fireEvent.click(
-      screen.getByRole("tab", { name: strings.sitesLanguages }),
-    );
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      strings.sitesOverview,
+      strings.sitesPages,
+      strings.sitesNavigation,
+      strings.sitesSectionFooter,
+      strings.sitesLanguages,
+      strings.sitesPublishing,
+      strings.sitesCollaborators,
+      strings.sitesSiteSettings,
+    ]);
+    fireEvent.click(screen.getByRole("tab", { name: strings.sitesNavigation }));
+    expect(onSelect).toHaveBeenCalledWith("navigation");
+    fireEvent.click(screen.getByRole("tab", { name: strings.sitesLanguages }));
     expect(onSelect).toHaveBeenCalledWith("languages");
   });
 
