@@ -84,3 +84,28 @@ async fn an_empty_setup_plan_does_not_create_a_setup_record() {
     ));
     assert_eq!(account.project_setup(&project).await.unwrap(), None);
 }
+
+#[tokio::test]
+async fn concurrent_confirmations_create_each_resource_once() {
+    let store = common::test_store().await;
+    let account = account(&store, "concurrent").await;
+    let project = account
+        .create_task_project("Concurrent rollout", None)
+        .await
+        .unwrap();
+    let plan = ProjectSetupPlan {
+        create_files_space: true,
+        create_chat_room: true,
+        kickoff: None,
+        starter_tasks: vec!["Confirm scope".to_owned()],
+    };
+
+    let (left, right) = tokio::join!(
+        account.setup_project(&project, &plan),
+        account.setup_project(&project, &plan),
+    );
+    assert_eq!(left.unwrap(), right.unwrap());
+    assert_eq!(account.spaces().await.unwrap().len(), 1);
+    assert_eq!(account.channels().await.unwrap().len(), 1);
+    assert_eq!(account.tasks_in_project(&project).await.unwrap().len(), 1);
+}

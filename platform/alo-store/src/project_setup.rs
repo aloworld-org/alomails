@@ -74,6 +74,18 @@ impl AccountStore {
                 "the kickoff meeting must end after it starts".to_owned(),
             ));
         }
+        // Hold one transaction-scoped lock for this tenant/project while the
+        // cross-app resources are inspected and created. Each resource helper
+        // owns its own atomic transaction, so this guard serializes concurrent
+        // confirmations without coupling those app stores together. Dropping
+        // on any error rolls back and releases the lock automatically.
+        let mut setup_guard = self.pool.begin().await.map_err(StoreError::Db)?;
+        let lock_key = format!("{}:{}", self.tenant.as_str(), project.as_str());
+        sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))")
+            .bind(lock_key)
+            .execute(&mut *setup_guard)
+            .await
+            .map_err(StoreError::Db)?;
         sqlx::query(
             "INSERT INTO project_setup (tenant_id, project_id, created_by) VALUES ($1,$2,$3) \
              ON CONFLICT (tenant_id, project_id) DO NOTHING",
@@ -176,6 +188,7 @@ impl AccountStore {
                 .map_err(StoreError::Db)?;
             }
         }
+        setup_guard.commit().await.map_err(StoreError::Db)?;
         setup_row(self, project)
             .await?
             .ok_or_else(|| StoreError::Db(sqlx::Error::RowNotFound))
