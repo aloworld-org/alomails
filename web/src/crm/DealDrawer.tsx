@@ -7,7 +7,16 @@
 // board is holding: a move, an edit or a colleague's change must show the
 // STORED record, which is the same contract every CRM write holds.
 import { useCallback, useEffect, useState } from "react";
-import { FileText, Pencil, Receipt, Trash2, X } from "lucide-react";
+import {
+  BriefcaseBusiness,
+  ExternalLink,
+  FileText,
+  Pencil,
+  Receipt,
+  Trash2,
+  X,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { RecordAgentPanel, type RecordOrigin } from "../agents";
 import { RecordHistory } from "../audit";
@@ -23,7 +32,8 @@ import { moveDeal } from "./moveDeal";
 import { NextSteps } from "./NextSteps";
 import { ErrorBanner, StateChip } from "./parts";
 import { RaiseDocumentDialog } from "./RaiseDocumentDialog";
-import type { CrmDeal, CrmStage, DocumentKind } from "./types";
+import type { CrmDeal, CrmStage, DealProject, DocumentKind } from "./types";
+import { WonDealProjectDialog } from "./WonDealProjectDialog";
 import styles from "./CrmModule.module.css";
 
 interface Props {
@@ -53,15 +63,23 @@ export function DealDrawer({ dealId, stages, onClose, onChanged }: Props) {
   const api = useCrmApi();
   const dialogs = useDialogs();
   const lost = useLostReason();
+  const navigate = useNavigate();
   const [deal, setDeal] = useState<CrmDeal | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   /** `null` = closed; a kind = raising that document from this deal (B2.08). */
   const [raising, setRaising] = useState<DocumentKind | null>(null);
+  const [project, setProject] = useState<DealProject | null>(null);
+  const [creatingProject, setCreatingProject] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      setDeal(await api.deal(dealId));
+      const [storedDeal, linkedProject] = await Promise.all([
+        api.deal(dealId),
+        api.dealProject(dealId),
+      ]);
+      setDeal(storedDeal);
+      setProject(linkedProject);
       setError(null);
     } catch (err) {
       setError(crmMessage(err, strings.crmLoadFailed));
@@ -195,6 +213,15 @@ export function DealDrawer({ dealId, stages, onClose, onChanged }: Props) {
                   </button>
                 </>
               )}
+              {deal.state === "won" && project === null && (
+                <button
+                  type="button"
+                  className={styles.linkAction}
+                  onClick={() => setCreatingProject(true)}
+                >
+                  <BriefcaseBusiness size={13} /> {strings.crmCreateProject}
+                </button>
+              )}
               <button
                 type="button"
                 className={styles.linkAction}
@@ -218,6 +245,31 @@ export function DealDrawer({ dealId, stages, onClose, onChanged }: Props) {
 
       {deal !== null && (
         <div className={styles.drawerBody}>
+          {project !== null && (
+            <section className="rounded-xl border border-subtle bg-surface p-4 shadow-sm">
+              <div className="flex items-start gap-3">
+                <span className="rounded-lg bg-accent-soft p-2 text-accent">
+                  <BriefcaseBusiness size={18} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="m-0 text-xs font-semibold uppercase tracking-wide text-tertiary">
+                    {strings.crmDeliveryProject}
+                  </p>
+                  <p className="mt-1 truncate font-semibold text-primary">
+                    {project.projectName}
+                  </p>
+                </div>
+                <IconButton
+                  label={strings.crmOpenProject}
+                  icon={<ExternalLink size={17} />}
+                  onClick={() => {
+                    onClose();
+                    navigate(`/projects/${encodeURIComponent(project.projectId)}/overview`);
+                  }}
+                />
+              </div>
+            </section>
+          )}
           <ActivityLog dealId={deal.id} />
           <NextSteps dealId={deal.id} />
           <LinkedThreads dealId={deal.id} />
@@ -258,6 +310,18 @@ export function DealDrawer({ dealId, stages, onClose, onChanged }: Props) {
             // Raising a document can give a lead a customer, so the drawer
             // redraws from the server's answer rather than from what it held.
             setDeal(raised);
+            onChanged();
+          }}
+        />
+      )}
+
+      {creatingProject && deal !== null && (
+        <WonDealProjectDialog
+          deal={deal}
+          onClose={() => setCreatingProject(false)}
+          onCreated={(created) => {
+            setProject(created);
+            setCreatingProject(false);
             onChanged();
           }}
         />

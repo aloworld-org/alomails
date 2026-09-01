@@ -3441,6 +3441,16 @@ export const en = {
   // issued, nothing is sent, and no invoice number is used up.
   crmRaiseQuote: "Quote",
   crmRaiseInvoice: "Invoice",
+  crmCreateProject: "Create project",
+  crmDeliveryProject: "Delivery project",
+  crmOpenProject: "Open project",
+  crmProjectCreateTitle: "Start delivery project",
+  crmProjectCreateSubtitle:
+    "Review the project before creating it. The won opportunity and delivery work stay linked in both apps.",
+  crmProjectCreateSummary: (deal: string) => `Creating delivery work from “${deal}”.`,
+  crmProjectName: "Project name",
+  crmProjectCreateConfirm: "Create project",
+  crmProjectCreateFailed: "The project could not be created.",
   // Annotated `: string` — the catalog is `as const`, so an un-annotated
   // return of two literals types the key as *those two English words*, which
   // no translation could ever satisfy (B2.14).

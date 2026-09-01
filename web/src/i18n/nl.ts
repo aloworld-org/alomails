@@ -2240,6 +2240,16 @@ export const nl: Partial<Catalog> = {
   // factuurnummer opgebruikt.
   crmRaiseQuote: "Offerte",
   crmRaiseInvoice: "Factuur",
+  crmCreateProject: "Project maken",
+  crmDeliveryProject: "Uitvoeringsproject",
+  crmOpenProject: "Project openen",
+  crmProjectCreateTitle: "Uitvoeringsproject starten",
+  crmProjectCreateSubtitle:
+    "Controleer het project voordat u het maakt. De gewonnen kans en uitvoering blijven in beide apps gekoppeld.",
+  crmProjectCreateSummary: (deal: string) => `Uitvoering maken vanuit ‘${deal}’.`,
+  crmProjectName: "Projectnaam",
+  crmProjectCreateConfirm: "Project maken",
+  crmProjectCreateFailed: "Het project kon niet worden gemaakt.",
   crmDocumentDraft: (kind: string): string =>
     kind === "invoice" ? "conceptfactuur" : "conceptofferte",
   crmRaiseTitle: (document: string) => `Een ${document} aanmaken`,

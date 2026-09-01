@@ -20,6 +20,7 @@ mod campaign_text_golden;
 mod campaign_topic_optout_tenancy;
 mod campaign_unsubscribe_tenancy;
 mod crm_activities_tenancy;
+mod crm_deal_projects_tenancy;
 mod crm_deal_threads_tenancy;
 mod crm_deals_tenancy;
 mod crm_handoff_tenancy;

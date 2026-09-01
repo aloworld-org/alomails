@@ -109,6 +109,7 @@ pub mod crm_imports;
 pub mod crm_intents;
 pub mod crm_next_steps;
 pub mod crm_pipelines;
+pub mod crm_projects;
 pub mod crm_reports;
 pub mod crm_stages;
 pub mod crm_threads;

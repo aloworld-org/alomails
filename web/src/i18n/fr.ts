@@ -2285,6 +2285,16 @@ export const fr: Partial<Catalog> = {
   // les phrases qui l’interpolent restent grammaticales.
   crmRaiseQuote: "Devis",
   crmRaiseInvoice: "Facture",
+  crmCreateProject: "Créer un projet",
+  crmDeliveryProject: "Projet de réalisation",
+  crmOpenProject: "Ouvrir le projet",
+  crmProjectCreateTitle: "Démarrer le projet de réalisation",
+  crmProjectCreateSubtitle:
+    "Vérifiez le projet avant sa création. L’opportunité gagnée et la réalisation restent liées dans les deux applications.",
+  crmProjectCreateSummary: (deal: string) => `Création de la réalisation depuis « ${deal} » .`,
+  crmProjectName: "Nom du projet",
+  crmProjectCreateConfirm: "Créer le projet",
+  crmProjectCreateFailed: "Le projet n’a pas pu être créé.",
   crmDocumentDraft: (kind: string): string =>
     kind === "invoice" ? "brouillon de facture" : "brouillon de devis",
   crmRaiseTitle: (document: string) => `Créer un ${document}`,

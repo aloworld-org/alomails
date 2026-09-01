@@ -84,8 +84,9 @@ function stage(id: string, name: string, position: number, flags: Partial<CrmSta
 
 const NEW = stage("stg-new", "New", 1);
 const QUALIFIED = stage("stg-qual", "Qualified", 2);
+const WON = stage("stg-won", "Won", 4, { isWon: true, closed: true });
 const LOST = stage("stg-lost", "Lost", 5, { isLost: true, closed: true });
-const STAGES = [NEW, QUALIFIED, LOST];
+const STAGES = [NEW, QUALIFIED, WON, LOST];
 
 const DEAL: CrmDeal = {
   id: "deal-1",
@@ -471,7 +472,13 @@ describe("the deal drawer", () => {
   test("the deal it shows is the stored one, re-read rather than taken from the board", async () => {
     ui(`/crm/board?deal=${DEAL.id}`);
 
-    await waitFor(() => expect(reads(`/crm/deals/${DEAL.id}`).length).toBe(1));
+    await waitFor(() =>
+      expect(
+        reads(`/crm/deals/${DEAL.id}`).filter(
+          (call) => new URL(call.url).pathname.endsWith(`/crm/deals/${DEAL.id}`),
+        ).length,
+      ).toBe(1),
+    );
     expect(await screen.findByText("€25,000.00")).toBeTruthy();
     expect(screen.getByText(strings.crmStateOpen)).toBeTruthy();
   });
@@ -618,6 +625,42 @@ describe("the handoff to billing", () => {
 
     expect(screen.queryByRole("button", { name: strings.crmRaiseInvoice })).toBeNull();
     expect(screen.queryByRole("button", { name: strings.crmRaiseQuote })).toBeNull();
+  });
+});
+
+describe("the handoff to Projects", () => {
+  test("a won deal is reviewed before one linked project is created", async () => {
+    reply(`/crm/deals/${DEAL.id}`, "GET", {
+      deal: { ...DEAL, stageId: WON.id, state: "won", closed: true },
+    });
+    reply(`/crm/deals/${DEAL.id}/project`, "GET", { project: null });
+    ui(`/crm/board?deal=${DEAL.id}`);
+
+    fireEvent.click(await screen.findByRole("button", { name: strings.crmCreateProject }));
+    expect(screen.getByRole("heading", { name: strings.crmProjectCreateTitle })).toBeTruthy();
+    expect((screen.getByLabelText(strings.crmProjectName) as HTMLInputElement).value).toBe(
+      DEAL.title,
+    );
+
+    reply(`/crm/deals/${DEAL.id}/project`, "POST", {
+      project: {
+        dealId: DEAL.id,
+        projectId: "project-1",
+        projectName: DEAL.title,
+        createdBy: "u-1",
+        createdAt: "2026-09-01T10:00:00Z",
+      },
+    });
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: strings.crmProjectCreateTitle })).getByRole(
+        "button",
+        { name: strings.crmProjectCreateConfirm },
+      ),
+    );
+
+    await screen.findByText(strings.crmDeliveryProject);
+    const creation = writes().find((call) => call.url.includes(`/project`));
+    expect(creation?.body).toEqual({ name: DEAL.title });
   });
 });
 

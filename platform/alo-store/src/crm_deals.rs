@@ -707,6 +707,19 @@ impl AccountStore {
     /// [`StoreError::NotFound`] when the deal is not this tenant's;
     /// [`StoreError::Db`] on failure.
     pub async fn delete_crm_deal(&self, id: &CrmDealId) -> Result<()> {
+        let has_project: bool = sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM crm_deal_projects WHERE tenant_id = $1 AND deal_id = $2)",
+        )
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .fetch_one(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        if has_project {
+            return Err(StoreError::Conflict(
+                "this deal has a delivery project and cannot be deleted".to_owned(),
+            ));
+        }
         let done = sqlx::query("DELETE FROM crm_deals WHERE tenant_id = $1 AND id = $2")
             .bind(self.tenant.as_str())
             .bind(id.as_str())

@@ -31,6 +31,7 @@
 //! snapshots its price instead of joining to the price list: a change today
 //! must never restate work that was already recorded.
 
+use sqlx::{Postgres, Transaction};
 use time::{Date, OffsetDateTime};
 
 use crate::account::AccountStore;
@@ -197,38 +198,39 @@ pub(crate) fn normalize(input: &NewProjectClient, customer_currency: &str) -> Re
 }
 
 impl AccountStore {
-    /// Creates a team project and, when supplied, its client facts in one
-    /// transaction. A client engagement is one user intent: a failed customer
-    /// lookup or facts write must never leave an unrelated internal board
-    /// behind.
-    pub async fn create_project(
+    /// Validates optional client facts inside a caller-owned transaction.
+    pub(crate) async fn prepare_project_client_in(
         &self,
+        tx: &mut Transaction<'_, Postgres>,
+        input: &NewProjectClient,
+    ) -> Result<Normalized> {
+        let customer = sqlx::query_as::<_, (String, Option<OffsetDateTime>)>(
+            "SELECT currency, archived_at FROM billing_customers \
+             WHERE tenant_id = $1 AND id = $2",
+        )
+        .bind(self.tenant.as_str())
+        .bind(input.customer_id.as_str())
+        .fetch_optional(&mut **tx)
+        .await
+        .map_err(StoreError::Db)?
+        .ok_or(StoreError::NotFound)?;
+        if customer.1.is_some() {
+            return Err(StoreError::Validation(
+                "the customer is archived; restore it before billing work to it".to_owned(),
+            ));
+        }
+        normalize(input, &customer.0)
+    }
+
+    /// Inserts a team project and optional prepared client facts in a
+    /// caller-owned transaction.
+    pub(crate) async fn insert_project_in(
+        &self,
+        tx: &mut Transaction<'_, Postgres>,
         name: &str,
         color: Option<&str>,
-        input: Option<&NewProjectClient>,
+        client: Option<(&NewProjectClient, Normalized)>,
     ) -> Result<ProjectId> {
-        let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
-        let prepared = if let Some(input) = input {
-            let customer = sqlx::query_as::<_, (String, Option<OffsetDateTime>)>(
-                "SELECT currency, archived_at FROM billing_customers \
-                 WHERE tenant_id = $1 AND id = $2",
-            )
-            .bind(self.tenant.as_str())
-            .bind(input.customer_id.as_str())
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(StoreError::Db)?
-            .ok_or(StoreError::NotFound)?;
-            if customer.1.is_some() {
-                return Err(StoreError::Validation(
-                    "the customer is archived; restore it before billing work to it".to_owned(),
-                ));
-            }
-            Some(normalize(input, &customer.0)?)
-        } else {
-            None
-        };
-
         let id = ProjectId::generate();
         sqlx::query(
             "INSERT INTO task_projects (tenant_id, id, name, kind, owner_user_id, color) \
@@ -239,11 +241,11 @@ impl AccountStore {
         .bind(name)
         .bind(self.user.as_str())
         .bind(color)
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .map_err(StoreError::Db)?;
 
-        if let (Some(input), Some(facts)) = (input, prepared) {
+        if let Some((input, facts)) = client {
             sqlx::query(
                 "INSERT INTO project_clients (tenant_id, project_id, customer_id, currency, \
                      rate_cents, budget_minutes, budget_cents, starts_on) \
@@ -257,10 +259,34 @@ impl AccountStore {
             .bind(facts.budget_minutes)
             .bind(facts.budget_cents)
             .bind(facts.starts_on)
-            .execute(&mut *tx)
+            .execute(&mut **tx)
             .await
             .map_err(StoreError::Db)?;
         }
+        Ok(id)
+    }
+
+    /// Creates a team project and, when supplied, its client facts in one
+    /// transaction. A client engagement is one user intent: a failed customer
+    /// lookup or facts write must never leave an unrelated internal board
+    /// behind.
+    pub async fn create_project(
+        &self,
+        name: &str,
+        color: Option<&str>,
+        input: Option<&NewProjectClient>,
+    ) -> Result<ProjectId> {
+        let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
+        let prepared = match input {
+            Some(client) => Some((
+                client,
+                self.prepare_project_client_in(&mut tx, client).await?,
+            )),
+            None => None,
+        };
+        let id = self
+            .insert_project_in(&mut tx, name, color, prepared)
+            .await?;
 
         tx.commit().await.map_err(StoreError::Db)?;
         Ok(id)

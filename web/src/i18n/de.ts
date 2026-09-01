@@ -3281,6 +3281,16 @@ export const de: Partial<Catalog> = {
   crmLostReasonNotAFit: "Passt nicht",
   crmRaiseQuote: "Angebot",
   crmRaiseInvoice: "Rechnung",
+  crmCreateProject: "Projekt erstellen",
+  crmDeliveryProject: "Umsetzungsprojekt",
+  crmOpenProject: "Projekt öffnen",
+  crmProjectCreateTitle: "Umsetzungsprojekt starten",
+  crmProjectCreateSubtitle:
+    "Prüfen Sie das Projekt vor dem Erstellen. Die gewonnene Chance und die Umsetzung bleiben in beiden Apps verknüpft.",
+  crmProjectCreateSummary: (deal: string) => `Umsetzung aus „${deal}“ erstellen.`,
+  crmProjectName: "Projektname",
+  crmProjectCreateConfirm: "Projekt erstellen",
+  crmProjectCreateFailed: "Das Projekt konnte nicht erstellt werden.",
   crmDocumentDraft: (kind: string): string =>
     kind === "invoice" ? "Rechnungsentwurf" : "Angebotsentwurf",
   crmRaiseTitle: (document: string) => `${document} erstellen`,

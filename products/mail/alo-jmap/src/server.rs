@@ -23,24 +23,25 @@ use crate::{
     calendar_hours, calendar_resources, campaign_audience, campaign_consent, campaign_preview,
     campaign_record, campaign_segments, campaign_suppression, campaign_unsubscribe, carddav, chat,
     chat_agent_memory, chat_agent_routes, chat_goals, contacts, crm_activities, crm_deals,
-    crm_handoff, crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads,
-    delegates, docs, drive, filters, finance_approvals, finance_bank, finance_bank_match,
-    finance_chart, finance_expenses, finance_mileage, finance_periods, finance_receipts,
-    finance_report_aged, finance_report_balance, finance_report_pl, finance_report_vat, flagdue,
-    hr_checklists, hr_documents, hr_employees, hr_holidays, hr_leave_balances, hr_leave_policies,
-    hr_leave_requests, hr_letters, hr_org, hr_payroll, hr_recruitment, imap_import_route, insights,
-    insights_ask, insights_eval, insights_gallery, inventory_counts, inventory_locations,
-    inventory_moves, inventory_order_book, inventory_po, inventory_po_print, inventory_po_receipts,
-    inventory_po_send, inventory_reorder, inventory_scan, inventory_so, inventory_so_deliveries,
-    inventory_so_invoice, inventory_stock, inventory_supplier_prices, inventory_suppliers,
-    invite_route, meet_routes, module_access, projects_clients, projects_invoices, projects_plan,
-    projects_reports, projects_templates, projects_time, projects_updates, projects_weeks, push,
-    push_subscriptions, readiness, reset_route, schedule, scoped_roles, security, session,
-    settings, share, signup_route, site_protection, site_schedule, site_version_preview,
-    site_versions, sites, sites_attribution, sites_bookings, sites_catalogs, sites_chat,
-    sites_conversions, sites_domain_purchases, sites_heatmap, sites_knowledge, sites_orders,
-    sites_palette, sites_shop_config, sites_shop_items, sites_shop_settings, sites_templates,
-    sites_tickets, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    crm_handoff, crm_imports, crm_next_steps, crm_pipelines, crm_projects, crm_reports, crm_stages,
+    crm_threads, delegates, docs, drive, filters, finance_approvals, finance_bank,
+    finance_bank_match, finance_chart, finance_expenses, finance_mileage, finance_periods,
+    finance_receipts, finance_report_aged, finance_report_balance, finance_report_pl,
+    finance_report_vat, flagdue, hr_checklists, hr_documents, hr_employees, hr_holidays,
+    hr_leave_balances, hr_leave_policies, hr_leave_requests, hr_letters, hr_org, hr_payroll,
+    hr_recruitment, imap_import_route, insights, insights_ask, insights_eval, insights_gallery,
+    inventory_counts, inventory_locations, inventory_moves, inventory_order_book, inventory_po,
+    inventory_po_print, inventory_po_receipts, inventory_po_send, inventory_reorder,
+    inventory_scan, inventory_so, inventory_so_deliveries, inventory_so_invoice, inventory_stock,
+    inventory_supplier_prices, inventory_suppliers, invite_route, meet_routes, module_access,
+    projects_clients, projects_invoices, projects_plan, projects_reports, projects_templates,
+    projects_time, projects_updates, projects_weeks, push, push_subscriptions, readiness,
+    reset_route, schedule, scoped_roles, security, session, settings, share, signup_route,
+    site_protection, site_schedule, site_version_preview, site_versions, sites, sites_attribution,
+    sites_bookings, sites_catalogs, sites_chat, sites_conversions, sites_domain_purchases,
+    sites_heatmap, sites_knowledge, sites_orders, sites_palette, sites_shop_config,
+    sites_shop_items, sites_shop_settings, sites_templates, sites_tickets, snooze, spaces, tasks,
+    unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -1678,6 +1679,10 @@ pub fn app_with_site_boundaries(
         // nothing is sent, and no number is consumed from the gapless sequence.
         .route("/crm/deals/{id}/quote", post(crm_handoff::deal_quote))
         .route("/crm/deals/{id}/invoice", post(crm_handoff::deal_invoice))
+        .route(
+            "/crm/deals/{id}/project",
+            get(crm_projects::deal_project).post(crm_projects::create_deal_project),
+        )
         // The conversations a deal belongs to (B2.05) — the module's reason to
         // exist, and the one boundary inside the tenant that CRM has to defend:
         // a deal is tenant-wide, a mailbox is not. Suggestions PROPOSE over the
@@ -1820,6 +1825,7 @@ pub fn app_with_site_boundaries(
             put(projects_clients::set_project_client)
                 .delete(projects_clients::clear_project_client),
         )
+        .route("/projects/{id}/deal", get(crm_projects::project_deal))
         // `timer` and `time` are distinct literal segments, registered before
         // `/projects/time/{id}` so a record id can never shadow one.
         .route("/projects/timer", get(projects_time::get_timer))

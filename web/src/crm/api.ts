@@ -28,6 +28,7 @@ import type {
   DealDraft,
   DealFilter,
   DealHandoff,
+  DealProject,
   DealThread,
   PipelineReport,
   RaisedDocument,
@@ -273,6 +274,25 @@ export class CrmApi {
     handoff: DealHandoff,
   ): Promise<{ invoice: RaisedDocument; deal: CrmDeal }> {
     return this.#write(`POST`, `/crm/deals/${encodeURIComponent(dealId)}/invoice`, handoff);
+  }
+
+  /** The delivery project created from this deal, or `null` before handoff. */
+  dealProject(dealId: string): Promise<DealProject | null> {
+    return this.#read<{ project?: DealProject | null }>(
+      `/crm/deals/${encodeURIComponent(dealId)}/project`,
+    ).then((result) => result.project ?? null);
+  }
+
+  /** Explicitly confirms won-deal conversion. The server makes retries safe. */
+  createProject(
+    dealId: string,
+    draft: { name: string; color?: string; customerId?: string },
+  ): Promise<DealProject> {
+    return this.#write<{ project: DealProject }>(
+      "POST",
+      `/crm/deals/${encodeURIComponent(dealId)}/project`,
+      draft,
+    ).then((result) => result.project);
   }
 
   /**

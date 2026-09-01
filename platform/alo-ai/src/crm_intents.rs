@@ -267,6 +267,10 @@ pub const CRM_EXCLUDED: &[Excluded] = &[
         why: "The won-deal handoff raises a Billing draft; invoices are the Billing agent's to propose, a later intent set.",
     },
     Excluded {
+        route: "/crm/deals/{id}/project",
+        why: "Starting delivery from a won opportunity is reviewed and confirmed by a person in the app.",
+    },
+    Excluded {
         route: "/crm/deals/{id}/threads",
         why: "Linking a conversation to a deal is a person's decision in the app; a later intent set.",
     },

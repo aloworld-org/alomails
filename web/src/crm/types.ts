@@ -152,6 +152,15 @@ export interface DealHandoff {
   country?: string;
 }
 
+/** Durable provenance between one won opportunity and one delivery project. */
+export interface DealProject {
+  dealId: string;
+  projectId: string;
+  projectName: string;
+  createdBy: string;
+  createdAt: string;
+}
+
 /** Which billing document a deal is being turned into. */
 export type DocumentKind = "quote" | "invoice";
 
