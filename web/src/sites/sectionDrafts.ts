@@ -13,6 +13,7 @@ import type {
   FeatureItem,
   FeaturesLayout,
   HeroAlignment,
+  GalleryLayout,
   HeroAnimationSpeed,
   HeroAppearance,
   HeroContentWidth,
@@ -102,6 +103,7 @@ export interface GalleryDraft extends PresentableDraft {
   images: SectionImage[];
   /** The chosen column count, carried untouched. */
   columns?: string | undefined;
+  layout: GalleryLayout;
 }
 
 export interface TestimonialDraft {
@@ -417,6 +419,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
           blankImage,
         ),
         columns: s?.columns,
+        layout: s?.layout ?? "grid",
         presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
@@ -716,6 +719,7 @@ export function toSection(draft: SectionDraft): Section {
         heading: opt(draft.heading),
         images: pruned(draft.images, imageBlank).map(reqImage),
         columns: draft.columns,
+        layout: draft.layout,
         presentation: draft.presentation,
       };
     case "testimonials":

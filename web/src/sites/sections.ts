@@ -178,12 +178,15 @@ export interface TextImageSection extends PresentableSection {
 }
 
 /** An image gallery; at least one image. */
+export type GalleryLayout = "grid" | "masonry" | "collage" | "filmstrip" | "spotlight";
+
 export interface GallerySection extends PresentableSection {
   type: "gallery";
   heading?: string | undefined;
   images: SectionImage[];
   /** Images per row on a wide screen; absent is the fluid grid. */
   columns?: string | undefined;
+  layout?: GalleryLayout | undefined;
 }
 
 /** One customer quote. */

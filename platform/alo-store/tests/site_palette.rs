@@ -104,6 +104,7 @@ fn fixture_site() -> SeedContext {
                     "The counter at opening time",
                 )],
                 columns: None,
+                layout: None,
                 presentation: None,
             }),
             Section::Testimonials(TestimonialsSection {

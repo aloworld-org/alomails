@@ -2097,6 +2097,28 @@ function GalleryFields({
 }) {
   return (
     <>
+      <Card as="section" flat>
+        <HeroFormHeading icon={<PanelsTopLeft size={17} />}>
+          {strings.sitesGalleryLayout}
+        </HeroFormHeading>
+        <p className="mb-5 mt-2 text-sm text-secondary">
+          {strings.sitesGalleryLayoutHint}
+        </p>
+        <HeroOptionRow
+          label={strings.sitesGalleryLayout}
+          value={draft.layout}
+          columns={5}
+          visual={(layout) => <GalleryLayoutVisual layout={layout} />}
+          options={[
+            ["grid", strings.sitesGalleryLayoutGrid],
+            ["masonry", strings.sitesGalleryLayoutMasonry],
+            ["collage", strings.sitesGalleryLayoutCollage],
+            ["filmstrip", strings.sitesGalleryLayoutFilmstrip],
+            ["spotlight", strings.sitesGalleryLayoutSpotlight],
+          ]}
+          onChange={(layout) => onChange({ ...draft, layout })}
+        />
+      </Card>
       <TextField
         label={strings.sitesFieldHeading}
         value={draft.heading}
@@ -2118,6 +2140,45 @@ function GalleryFields({
         )}
       />
     </>
+  );
+}
+
+function GalleryLayoutVisual({ layout }: { layout: GalleryDraft["layout"] }) {
+  if (layout === "filmstrip") {
+    return (
+      <span
+        className="flex h-20 w-32 items-center gap-1.5 overflow-hidden rounded-lg bg-raised p-2"
+        aria-hidden="true"
+      >
+        {[0, 1, 2].map((item) => (
+          <span
+            key={item}
+            className="h-14 w-12 shrink-0 rounded-md bg-accent-soft"
+          />
+        ))}
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="grid h-20 w-32 grid-cols-3 grid-rows-2 gap-1.5 rounded-lg bg-raised p-2"
+      aria-hidden="true"
+    >
+      {[0, 1, 2, 3, 4, 5].map((item) => (
+        <span
+          key={item}
+          className={cx(
+            "rounded-md bg-accent-soft",
+            layout === "masonry" && item % 2 === 0 && "row-span-2",
+            layout === "collage" && item === 0 && "col-span-2 row-span-2",
+            layout === "collage" && (item === 3 || item === 4 || item === 5) && "hidden",
+            layout === "spotlight" && item === 0 && "col-span-3",
+            layout === "spotlight" && (item === 4 || item === 5) && "hidden",
+          )}
+        />
+      ))}
+    </span>
   );
 }
 

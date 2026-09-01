@@ -403,6 +403,7 @@ fn seed_gallery(ctx: &SeedContext) -> SectionSeed {
         heading: None,
         images,
         columns: None,
+        layout: None,
         presentation: None,
     }))
 }

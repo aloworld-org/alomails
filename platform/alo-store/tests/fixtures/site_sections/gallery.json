@@ -4,6 +4,7 @@
     {
       "type": "gallery",
       "heading": "Inside the roastery",
+      "layout": "collage",
       "images": [
         {
           "blob_id": "9hK3vQ2mR8pT1xWz4bC5dg",

@@ -651,6 +651,16 @@ pub struct TextImageSection {
 }
 
 /// An image gallery.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GalleryLayout {
+    Grid,
+    Masonry,
+    Collage,
+    Filmstrip,
+    Spotlight,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct GallerySection {
@@ -663,6 +673,8 @@ pub struct GallerySection {
     /// renders the fluid grid this section has always used.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub columns: Option<GridColumns>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout: Option<GalleryLayout>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub presentation: Option<SectionPresentation>,
 }
@@ -1684,6 +1696,7 @@ mod tests {
                 heading: Some("Inside the roastery".to_owned()),
                 images: vec![image.clone()],
                 columns: None,
+                layout: None,
                 presentation: None,
             }),
             Section::Testimonials(TestimonialsSection {
@@ -1855,6 +1868,7 @@ mod tests {
                 SiteImage::new(BlobId::new("second-blob"), ""),
             ],
             columns: None,
+            layout: None,
             presentation: None,
         });
         let ids: Vec<&str> = gallery
@@ -1894,6 +1908,7 @@ mod tests {
                 heading: None,
                 images: vec![image],
                 columns: None,
+                layout: None,
                 presentation: None,
             }),
             Section::Footer(FooterSection {
@@ -2122,6 +2137,7 @@ mod tests {
             heading: None,
             images: vec![SiteImage::new(BlobId::new("not/a/token"), "")],
             columns: None,
+            layout: None,
             presentation: None,
         })]);
         assert!(matches!(
@@ -2160,6 +2176,7 @@ mod tests {
             heading: None,
             images: vec![image],
             columns: None,
+            layout: None,
             presentation: None,
         })])
     }
@@ -2435,6 +2452,7 @@ mod tests {
                 heading: None,
                 images: vec![image.clone()],
                 columns: None,
+                layout: None,
                 presentation: None,
             }),
             Section::Team(TeamSection {
