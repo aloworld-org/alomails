@@ -15,7 +15,8 @@
 // The period is applied on submit rather than on every keystroke, so a
 // half-typed date never becomes a request.
 import { useCallback, useEffect, useState } from "react";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, CalendarRange, Download, Trophy, TrendingDown, TrendingUp } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import {
   formatAmount,
@@ -24,14 +25,13 @@ import {
   quarterOf,
   type Period,
 } from "../billing";
-import { Button, Field, Input, Spinner, Table, Td, Th, Toolbar } from "../ds";
+import { Button, DatePicker, Field, Spinner, Table, Td, Th } from "../ds";
 import { strings, useLocale } from "../i18n";
 import { saveTextFile } from "../platform/download";
 import { crmMessage, useCrmApi } from "./api";
 import { dayLabel, momentLabel } from "./format";
 import { EmptyState, ErrorBanner } from "./parts";
 import type { PipelineCurrency, PipelineReport } from "./types";
-import styles from "./CrmModule.module.css";
 
 interface Props {
   /** The board the report is about; `null` while none has been chosen. */
@@ -106,72 +106,56 @@ export function ReportView({ pipelineId, revision }: Props) {
   }
 
   return (
-    <div className={styles.page}>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          setPeriod(form);
-        }}
-      >
-        {/* `align="end"` because this row is labelled fields beside buttons: on
-            centres, the labels drag the two date fields out of line. */}
-        <Toolbar label={strings.crmReportPeriod} align="end">
-          <Field label={strings.crmReportFrom}>
-            {(control) => (
-              <Input
-                {...control}
-                type="date"
-                value={form.from}
-                onChange={(e) => setForm({ ...form, from: e.target.value })}
-                required
-              />
+    <div className="mx-auto flex w-full max-w-[112rem] flex-col gap-5 overflow-auto px-8 py-6 max-[52rem]:px-4 max-[52rem]:py-4">
+      <section className="rounded-xl border border-subtle bg-surface p-5 shadow-sm" aria-label={strings.crmReportPeriod}>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent" aria-hidden="true">
+            <CalendarRange size={19} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="m-0 text-base font-semibold text-primary">{strings.crmReportPeriod}</h2>
+            {report !== null && (
+              <p className="mb-0 mt-1 text-xs text-secondary">
+                {strings.crmReportBasis(dayLabel(report.from), dayLabel(report.to))} {strings.crmReportOpenAsOf(momentLabel(report.openAsOf))}
+              </p>
             )}
-          </Field>
-          <Field label={strings.crmReportTo}>
-            {(control) => (
-              <Input
-                {...control}
-                type="date"
-                value={form.to}
-                onChange={(e) => setForm({ ...form, to: e.target.value })}
-                required
-              />
-            )}
-          </Field>
-          <Button type="submit">{strings.crmReportShow}</Button>
-          <button
-            type="button"
-            className={styles.linkAction}
-            onClick={() => pick(quarterOf(new Date()))}
-          >
-            {strings.crmReportThisQuarter}
-          </button>
-          <button
-            type="button"
-            className={styles.linkAction}
-            onClick={() => pick(previousQuarterOf(new Date()))}
-          >
-            {strings.crmReportLastQuarter}
-          </button>
+          </div>
           {(loading || downloading) && <Spinner size={16} />}
-          <Button
-            variant="ghost"
-            onClick={() => void download()}
-            disabled={report === null || downloading}
-          >
+          <Button variant="ghost" size="sm" icon={<Download />} onClick={() => void download()} disabled={report === null || downloading}>
             {strings.crmReportDownloadCsv}
           </Button>
-        </Toolbar>
-      </form>
+        </div>
+
+        <form
+          className="mt-5 flex flex-wrap items-end gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setPeriod(form);
+          }}
+        >
+          <div className="min-w-[13rem] flex-1 max-w-[18rem]">
+            <Field label={strings.crmReportFrom}>
+              {(control) => (
+                <DatePicker {...control} value={form.from} onChange={(from) => setForm({ ...form, from })} />
+              )}
+            </Field>
+          </div>
+          <div className="min-w-[13rem] flex-1 max-w-[18rem]">
+            <Field label={strings.crmReportTo}>
+              {(control) => (
+                <DatePicker {...control} value={form.to} onChange={(to) => setForm({ ...form, to })} />
+              )}
+            </Field>
+          </div>
+          <Button type="submit" disabled={form.from === "" || form.to === ""}>{strings.crmReportShow}</Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => pick(quarterOf(new Date()))}>{strings.crmReportThisQuarter}</Button>
+            <Button variant="ghost" size="sm" onClick={() => pick(previousQuarterOf(new Date()))}>{strings.crmReportLastQuarter}</Button>
+          </div>
+        </form>
+      </section>
 
       {error !== null && <ErrorBanner message={error} />}
-
-      {report !== null && (
-        <p className={styles.reportBasis}>
-          {strings.crmReportBasis(dayLabel(report.from), dayLabel(report.to))}{" "}
-          {strings.crmReportOpenAsOf(momentLabel(report.openAsOf))}
-        </p>
-      )}
 
       {report !== null && report.currencies.length === 0 && !loading ? (
         <EmptyState
@@ -203,8 +187,25 @@ function CurrencyTables({
     // Two tables and a sentence, in their own column. Each table is its own
     // labelled, scrollable region now — the caption stays drawn, because the
     // two answer different questions and have to say which.
-    <section className="flex flex-col gap-3">
-      <Table label={strings.crmReportOpenCaption(group.currency)} showLabel>
+    <section className="rounded-xl border border-subtle bg-surface p-5 shadow-sm">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="m-0 text-xs font-semibold uppercase tracking-wide text-accent">{group.currency}</p>
+          <h2 className="mb-0 mt-1 text-lg font-semibold text-primary">{strings.crmReportOpenCaption(group.currency)}</h2>
+        </div>
+      </div>
+
+      <div className="mt-5 grid grid-cols-4 gap-3 max-xl:grid-cols-2 max-sm:grid-cols-1">
+        <ReportMetric Icon={BarChart3} label={strings.crmReportOpenTotal} value={money(group.open.valueCents)} detail={`${group.open.dealCount} ${strings.crmReportColDeals}`} />
+        <ReportMetric Icon={TrendingUp} tone="success" label={strings.crmStateWon} value={money(group.won.valueCents)} detail={`${group.won.dealCount} ${strings.crmReportColDeals}`} />
+        <ReportMetric Icon={TrendingDown} tone="danger" label={strings.crmStateLost} value={money(group.lost.valueCents)} detail={`${group.lost.dealCount} ${strings.crmReportColDeals}`} />
+        <ReportMetric Icon={Trophy} label={strings.crmReportWinRateLabel} value={group.winRateBp === null ? "—" : formatRate(group.winRateBp, locale)} detail={group.winRateBp === null ? `0 ${strings.crmReportColDeals}` : `${group.won.dealCount} / ${group.won.dealCount + group.lost.dealCount}`} />
+      </div>
+
+      <div className="mt-5 grid grid-cols-2 gap-4 max-lg:grid-cols-1">
+        <article className="overflow-hidden rounded-xl border border-subtle bg-surface">
+          <h3 className="m-0 border-b border-subtle bg-raised/35 px-4 py-3 text-sm font-semibold text-primary">{strings.crmReportOpenCaption(group.currency)}</h3>
+          <Table label={strings.crmReportOpenCaption(group.currency)} density="compact" flat>
         <thead>
           <tr>
             <Th>{strings.crmColStage}</Th>
@@ -228,9 +229,12 @@ function CurrencyTables({
             <Td numeric>{money(group.open.valueCents)}</Td>
           </tr>
         </tfoot>
-      </Table>
+          </Table>
+        </article>
 
-      <Table label={strings.crmReportClosedCaption(group.currency)} showLabel>
+        <article className="overflow-hidden rounded-xl border border-subtle bg-surface">
+          <h3 className="m-0 border-b border-subtle bg-raised/35 px-4 py-3 text-sm font-semibold text-primary">{strings.crmReportClosedCaption(group.currency)}</h3>
+          <Table label={strings.crmReportClosedCaption(group.currency)} density="compact" flat>
         <thead>
           <tr>
             <Th>{strings.crmColState}</Th>
@@ -250,10 +254,12 @@ function CurrencyTables({
             <Td numeric>{money(group.lost.valueCents)}</Td>
           </tr>
         </tbody>
-      </Table>
+          </Table>
+        </article>
+      </div>
       {/* A win rate over no closed deals is unanswered, not zero — so the
           sentence is absent rather than reading "0 %". */}
-      <p className={styles.reportBasis}>
+      <p className="mb-0 mt-4 rounded-xl border border-subtle bg-raised/35 px-4 py-3 text-sm text-secondary">
         {group.winRateBp === null
           ? strings.crmReportNoWinRate
           : strings.crmReportWinRate(
@@ -263,5 +269,19 @@ function CurrencyTables({
             )}
       </p>
     </section>
+  );
+}
+
+function ReportMetric({ Icon, label, value, detail, tone = "accent" }: { Icon: LucideIcon; label: string; value: string; detail: string; tone?: "accent" | "success" | "danger" }) {
+  const color = tone === "success" ? "bg-success/10 text-success" : tone === "danger" ? "bg-danger/10 text-danger" : "bg-accent-soft text-accent";
+  return (
+    <article className="flex min-w-0 items-center gap-3 rounded-xl border border-subtle bg-raised/25 p-4">
+      <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${color}`} aria-hidden="true"><Icon size={18} /></span>
+      <div className="min-w-0">
+        <p className="m-0 text-xs font-medium text-secondary">{label}</p>
+        <p className="mb-0 mt-1 truncate text-lg font-semibold tabular-nums text-primary">{value}</p>
+        <p className="mb-0 mt-0.5 text-xs text-tertiary">{detail}</p>
+      </div>
+    </article>
   );
 }

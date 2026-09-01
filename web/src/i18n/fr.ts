@@ -2355,6 +2355,7 @@ export const fr: Partial<Catalog> = {
     `Clôturé sur la période (${currency})`,
   crmReportColDeals: "Affaires",
   crmReportOpenTotal: "Total en cours",
+  crmReportWinRateLabel: "Taux de réussite",
   crmReportWinRate: (rate: string, won: number, closed: number) =>
     `Taux de réussite ${rate} — ${won} sur ${closed} affaires clôturées.`,
   crmReportNoWinRate:

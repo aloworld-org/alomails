@@ -727,6 +727,8 @@ describe("the report", () => {
     expect(asked.url).toContain(`pipelineId=${PIPELINE.id}`);
     expect(asked.url).toMatch(/from=\d{4}-\d{2}-\d{2}/);
     expect(asked.url).toMatch(/to=\d{4}-\d{2}-\d{2}/);
+    expect(screen.getByRole("button", { name: strings.crmReportFrom }).getAttribute("aria-haspopup")).toBe("dialog");
+    expect(screen.getByRole("button", { name: strings.crmReportTo }).getAttribute("aria-haspopup")).toBe("dialog");
 
     const open = await screen.findByRole("table", {
       name: strings.crmReportOpenCaption("EUR"),

@@ -3513,6 +3513,7 @@ export const en = {
     `Closed in the period (${currency})`,
   crmReportColDeals: "Deals",
   crmReportOpenTotal: "Open total",
+  crmReportWinRateLabel: "Win rate",
   crmReportWinRate: (rate: string, won: number, closed: number) =>
     `Win rate ${rate} — ${won} of ${closed} closed deals.`,
   crmReportNoWinRate:

@@ -2311,6 +2311,7 @@ export const nl: Partial<Catalog> = {
     `Afgesloten in de periode (${currency})`,
   crmReportColDeals: "Deals",
   crmReportOpenTotal: "Open totaal",
+  crmReportWinRateLabel: "Winstpercentage",
   crmReportWinRate: (rate: string, won: number, closed: number) =>
     `Winstpercentage ${rate} — ${won} van ${closed} afgesloten deals.`,
   crmReportNoWinRate:
