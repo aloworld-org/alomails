@@ -3349,6 +3349,7 @@ export const de: Partial<Catalog> = {
   crmReportColDeals: "Deals",
   crmReportOpenTotal: "Offen gesamt",
   crmReportWinRateLabel: "Erfolgsquote",
+  crmReportClosedDeals: "geschlossene Deals",
   crmReportWinRate: (rate: string, won: number, closed: number) =>
     `Erfolgsquote ${rate} — ${won} von ${closed} geschlossenen Deals.`,
   crmReportNoWinRate:

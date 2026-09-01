@@ -199,7 +199,7 @@ function CurrencyTables({
         <ReportMetric Icon={BarChart3} label={strings.crmReportOpenTotal} value={money(group.open.valueCents)} detail={`${group.open.dealCount} ${strings.crmReportColDeals}`} />
         <ReportMetric Icon={TrendingUp} tone="success" label={strings.crmStateWon} value={money(group.won.valueCents)} detail={`${group.won.dealCount} ${strings.crmReportColDeals}`} />
         <ReportMetric Icon={TrendingDown} tone="danger" label={strings.crmStateLost} value={money(group.lost.valueCents)} detail={`${group.lost.dealCount} ${strings.crmReportColDeals}`} />
-        <ReportMetric Icon={Trophy} label={strings.crmReportWinRateLabel} value={group.winRateBp === null ? "—" : formatRate(group.winRateBp, locale)} detail={group.winRateBp === null ? `0 ${strings.crmReportColDeals}` : `${group.won.dealCount} / ${group.won.dealCount + group.lost.dealCount}`} />
+        <ReportMetric Icon={Trophy} label={strings.crmReportWinRateLabel} value={group.winRateBp === null ? "—" : formatRate(group.winRateBp, locale)} detail={group.winRateBp === null ? `0 ${strings.crmReportClosedDeals}` : `${group.won.dealCount} ${strings.crmStateWon} · ${group.won.dealCount + group.lost.dealCount} ${strings.crmReportClosedDeals}`} />
       </div>
 
       <div className="mt-5 grid grid-cols-2 gap-4 max-lg:grid-cols-1">
@@ -257,17 +257,6 @@ function CurrencyTables({
           </Table>
         </article>
       </div>
-      {/* A win rate over no closed deals is unanswered, not zero — so the
-          sentence is absent rather than reading "0 %". */}
-      <p className="mb-0 mt-4 rounded-xl border border-subtle bg-raised/35 px-4 py-3 text-sm text-secondary">
-        {group.winRateBp === null
-          ? strings.crmReportNoWinRate
-          : strings.crmReportWinRate(
-              formatRate(group.winRateBp, locale),
-              group.won.dealCount,
-              group.won.dealCount + group.lost.dealCount,
-            )}
-      </p>
     </section>
   );
 }
@@ -275,7 +264,7 @@ function CurrencyTables({
 function ReportMetric({ Icon, label, value, detail, tone = "accent" }: { Icon: LucideIcon; label: string; value: string; detail: string; tone?: "accent" | "success" | "danger" }) {
   const color = tone === "success" ? "bg-success/10 text-success" : tone === "danger" ? "bg-danger/10 text-danger" : "bg-accent-soft text-accent";
   return (
-    <article className="flex min-w-0 items-center gap-3 rounded-xl border border-subtle bg-raised/25 p-4">
+    <article aria-label={label} className="flex min-w-0 items-center gap-3 rounded-xl border border-subtle bg-raised/25 p-4">
       <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${color}`} aria-hidden="true"><Icon size={18} /></span>
       <div className="min-w-0">
         <p className="m-0 text-xs font-medium text-secondary">{label}</p>

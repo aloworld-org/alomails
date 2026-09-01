@@ -741,8 +741,11 @@ describe("the report", () => {
     const closed = screen.getByRole("table", { name: strings.crmReportClosedCaption("EUR") });
     expect(within(closed).getByText("€9,000.00")).toBeTruthy();
     expect(within(closed).getByText("€500.00")).toBeTruthy();
-    // And the win rate is the server's basis points, read as a percentage.
-    expect(screen.getByText(strings.crmReportWinRate("50%", 1, 2))).toBeTruthy();
+    // And the win rate is the server's basis points, read as a percentage in
+    // its own metric rather than repeated in a full-width message.
+    const winRate = screen.getByRole("article", { name: strings.crmReportWinRateLabel });
+    expect(within(winRate).getByText("50%")).toBeTruthy();
+    expect(within(winRate).getByText(`1 ${strings.crmStateWon} · 2 ${strings.crmReportClosedDeals}`)).toBeTruthy();
     // The report is a read: nothing is written by looking at it.
     expect(writes()).toEqual([]);
   });
@@ -762,7 +765,10 @@ describe("the report", () => {
       },
     });
     ui("/crm/report");
-    expect(await screen.findByText(strings.crmReportNoWinRate)).toBeTruthy();
+    const winRate = await screen.findByRole("article", { name: strings.crmReportWinRateLabel });
+    expect(within(winRate).getByText("—")).toBeTruthy();
+    expect(within(winRate).getByText(`0 ${strings.crmReportClosedDeals}`)).toBeTruthy();
+    expect(screen.queryByText(strings.crmReportNoWinRate)).toBeNull();
   });
 
   test("a board with nothing on it says so", async () => {
