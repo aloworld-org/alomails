@@ -195,6 +195,10 @@ pub const PROJECTS_INTENTS: &[IntentSpec] = &[
 /// The Projects routes deliberately without a verb, each with its reason.
 pub const PROJECTS_EXCLUDED: &[Excluded] = &[
     Excluded {
+        route: "/projects/{id}/setup",
+        why: "Standing a project up — its files space, chat room, kickoff and starter tasks — is a person's reviewed choice in the app, made once when delivery begins.",
+    },
+    Excluded {
         route: "/projects/{id}/deal",
         why: "The originating opportunity is relationship context shown by the app, not a separate agent question.",
     },
