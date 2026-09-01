@@ -83,7 +83,7 @@ export function RelatedBillingDocuments({
                   className="flex min-h-11 items-center gap-3 rounded-lg border border-subtle px-3 py-2 !no-underline hover:bg-raised hover:!no-underline"
                   to={`/billing/${path}/${encodeURIComponent(document.documentId)}`}
                 >
-                  <span className="rounded-md bg-secondary p-1.5 text-secondary">
+                  <span className="rounded-md bg-accent-soft p-1.5 text-accent">
                     <FileText size={15} />
                   </span>
                   <span className="min-w-0 flex-1 truncate text-sm font-semibold text-primary">

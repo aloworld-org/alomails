@@ -20,7 +20,7 @@ import { useNavigate } from "react-router-dom";
 
 import { RecordAgentPanel, type RecordOrigin } from "../agents";
 import { RecordHistory } from "../audit";
-import { Field, IconButton, Modal, Select, useDialogs } from "../ds";
+import { Button, Field, IconButton, Modal, Select, useDialogs } from "../ds";
 import { strings } from "../i18n";
 import { ActivityLog } from "./ActivityLog";
 import { crmMessage, useCrmApi } from "./api";
@@ -35,7 +35,6 @@ import { RaiseDocumentDialog } from "./RaiseDocumentDialog";
 import { RelatedBillingDocuments } from "./RelatedBillingDocuments";
 import type { CrmDeal, CrmStage, DealProject, DocumentKind } from "./types";
 import { WonDealProjectDialog } from "./WonDealProjectDialog";
-import styles from "./CrmModule.module.css";
 
 interface Props {
   dealId: string;
@@ -142,32 +141,32 @@ export function DealDrawer({ dealId, stages, onClose, onChanged }: Props) {
         />
       }
     >
-      <header className={styles.drawerHead}>
+      <header className="shrink-0 border-b border-subtle bg-raised/35 px-6 py-5">
         {deal !== null && (
           <>
-            <div className={styles.drawerFacts}>
-              <span className={styles.drawerValue}>{dealValue(deal)}</span>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-2xl font-semibold tabular-nums text-primary">{dealValue(deal)}</span>
               <StateChip state={deal.state} />
               {deal.expectedClose !== null && (
-                <span className={styles.drawerFact}>
+                <span className="text-sm text-secondary">
                   {strings.crmExpectedClose(dayLabel(deal.expectedClose))}
                 </span>
               )}
             </div>
             {deal.companyName !== "" && (
-              <p className={styles.drawerCompany}>
+              <p className="mb-0 mt-2 text-sm text-secondary">
                 {[deal.companyName, deal.contactName, deal.contactEmail]
                   .filter((v) => v !== "")
                   .join(" · ")}
               </p>
             )}
             {deal.lostReason !== null && (
-              <p className={styles.drawerLost}>
+              <p className="mb-0 mt-2 text-sm text-danger">
                 {strings.crmLostBecause(deal.lostReason)}
               </p>
             )}
-            <div className={styles.drawerActions}>
-              <Field label={strings.crmStage}>
+            <div className="mt-5 flex flex-wrap items-end gap-3">
+              <div className="w-44 shrink-0"><Field label={strings.crmStage}>
                 {(control) => (
                   <Select
                     {...control}
@@ -190,63 +189,45 @@ export function DealDrawer({ dealId, stages, onClose, onChanged }: Props) {
                     ))}
                   </Select>
                 )}
-              </Field>
-              <span className={styles.cardSpacer} />
+              </Field></div>
+              <span className="flex-1" />
               {/* The handoff to billing (B2.08). Offered on any deal that has
                   not been lost, because quoting an open deal is how it is won —
                   and both raise a DRAFT the tenant then edits in billing. */}
               {deal.state !== "lost" && (
                 <>
-                  <button
-                    type="button"
-                    className={styles.linkAction}
-                    onClick={() => setRaising("quote")}
-                  >
-                    <FileText size={13} /> {strings.crmRaiseQuote}
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.linkAction}
-                    onClick={() => setRaising("invoice")}
-                  >
-                    <Receipt size={13} /> {strings.crmRaiseInvoice}
-                  </button>
+                  <Button variant="primary" icon={<FileText />} onClick={() => setRaising("quote")}>{strings.crmRaiseQuote}</Button>
+                  <Button variant="ghost" icon={<Receipt />} onClick={() => setRaising("invoice")}>{strings.crmRaiseInvoice}</Button>
                 </>
               )}
               {deal.state === "won" && project === null && (
-                <button
-                  type="button"
-                  className={styles.linkAction}
-                  onClick={() => setCreatingProject(true)}
-                >
-                  <BriefcaseBusiness size={13} /> {strings.crmCreateProject}
-                </button>
+                <Button variant="ghost" icon={<BriefcaseBusiness />} onClick={() => setCreatingProject(true)}>{strings.crmCreateProject}</Button>
               )}
+              <Button variant="ghost" icon={<Pencil />} onClick={() => setEditing(true)}>{strings.crmEdit}</Button>
               <button
                 type="button"
-                className={styles.linkAction}
-                onClick={() => setEditing(true)}
-              >
-                <Pencil size={13} /> {strings.crmEdit}
-              </button>
-              <button
-                type="button"
-                className={styles.linkAction}
+                className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg !px-3 text-sm font-medium text-danger transition-colors hover:bg-danger/10 focus-visible:outline-2 focus-visible:outline-danger"
                 onClick={() => void remove()}
               >
-                <Trash2 size={13} /> {strings.crmDeleteDeal}
+                <Trash2 size={16} /> {strings.crmDeleteDeal}
               </button>
             </div>
           </>
         )}
       </header>
 
-      {error !== null && <ErrorBanner message={error} />}
+      {error !== null && <div className="shrink-0 px-6 pt-4"><ErrorBanner message={error} /></div>}
 
       {deal !== null && (
-        <div className={styles.drawerBody}>
-          {project !== null && (
-            <section className="rounded-xl border border-subtle bg-surface p-4 shadow-sm">
+        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.45fr)_minmax(18rem,.75fr)] items-start gap-5 overflow-y-auto p-6 max-lg:grid-cols-1">
+          <main className="flex min-w-0 flex-col gap-5">
+            <NextSteps dealId={deal.id} />
+            <ActivityLog dealId={deal.id} />
+            <LinkedThreads dealId={deal.id} />
+          </main>
+          <aside className="flex min-w-0 flex-col gap-5">
+            {project !== null && (
+              <section className="rounded-xl border border-subtle bg-surface p-4 shadow-sm">
               <div className="flex items-start gap-3">
                 <span className="rounded-lg bg-accent-soft p-2 text-accent">
                   <BriefcaseBusiness size={18} />
@@ -268,23 +249,16 @@ export function DealDrawer({ dealId, stages, onClose, onChanged }: Props) {
                   }}
                 />
               </div>
-            </section>
-          )}
-          <RelatedBillingDocuments dealId={deal.id} revision={documentRevision} />
-          <ActivityLog dealId={deal.id} />
-          <NextSteps dealId={deal.id} />
-          <LinkedThreads dealId={deal.id} />
-          <RecordAgentPanel
-            product="crm"
-            recordKind="deal"
-            recordId={deal.id}
-            recordLabel={deal.title}
-            origin={dealOrigin(deal)}
-            onBeforeNavigate={onClose}
-          />
+              </section>
+            )}
+            <RelatedBillingDocuments dealId={deal.id} revision={documentRevision} />
+            <RecordAgentPanel product="crm" recordKind="deal" recordId={deal.id} recordLabel={deal.title} origin={dealOrigin(deal)} onBeforeNavigate={onClose} />
           {/* Who changed this deal, and when (B2.13). Last in the drawer: it is
               the question asked after the ones above, never instead of them. */}
-          <RecordHistory entityType="crm.deal" entityId={deal.id} />
+            <section className="rounded-xl border border-subtle bg-surface p-4 shadow-sm">
+              <RecordHistory entityType="crm.deal" entityId={deal.id} />
+            </section>
+          </aside>
         </div>
       )}
 

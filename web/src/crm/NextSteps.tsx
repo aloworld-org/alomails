@@ -67,15 +67,16 @@ export function NextSteps({ dealId }: { dealId: string }) {
   }
 
   return (
-    <section className={styles.panel}>
-      <h3 className={styles.panelTitle}>
-        <CheckSquare size={15} /> {strings.crmNextStepsTitle}
+    <section className="rounded-xl border border-subtle bg-surface p-5 shadow-sm">
+      <h3 className="m-0 flex items-center gap-2 text-sm font-semibold text-primary">
+        <span className="grid size-8 place-items-center rounded-lg bg-accent-soft text-accent"><CheckSquare size={16} /></span>
+        {strings.crmNextStepsTitle}
       </h3>
 
       {error !== null && <ErrorBanner message={error} />}
 
       <form
-        className={styles.composer}
+        className="mt-4 grid grid-cols-[minmax(0,1fr)_10rem_auto] items-start gap-3 max-md:grid-cols-1"
         onSubmit={(e) => {
           e.preventDefault();
           if (!busy && title.trim() !== "") void add();
@@ -102,9 +103,9 @@ export function NextSteps({ dealId }: { dealId: string }) {
       </form>
 
       {steps.length === 0 ? (
-        <p className={styles.panelEmpty}>{strings.crmNextStepsEmpty}</p>
+        <p className="mb-0 mt-4 rounded-lg bg-raised/40 px-4 py-3 text-sm text-secondary">{strings.crmNextStepsEmpty}</p>
       ) : (
-        <ul className={styles.entries} aria-label={strings.crmNextStepsTitle}>
+        <ul className={`${styles.entries} mt-4`} aria-label={strings.crmNextStepsTitle}>
           {steps.map((step) => (
             <li key={step.id} className={styles.entry}>
               <div className={styles.entryHead}>

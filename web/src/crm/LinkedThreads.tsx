@@ -85,17 +85,18 @@ export function LinkedThreads({ dealId }: { dealId: string }) {
   }
 
   return (
-    <section className={styles.panel}>
-      <h3 className={styles.panelTitle}>
-        <Link2 size={15} /> {strings.crmThreadsTitle}
+    <section className="rounded-xl border border-subtle bg-surface p-5 shadow-sm">
+      <h3 className="m-0 flex items-center gap-2 text-sm font-semibold text-primary">
+        <span className="grid size-8 place-items-center rounded-lg bg-accent-soft text-accent"><Link2 size={16} /></span>
+        {strings.crmThreadsTitle}
       </h3>
 
       {error !== null && <ErrorBanner message={error} />}
 
       {threads.length === 0 ? (
-        <p className={styles.panelEmpty}>{strings.crmThreadsEmpty}</p>
+        <p className="mb-0 mt-4 rounded-lg bg-raised/40 px-4 py-3 text-sm text-secondary">{strings.crmThreadsEmpty}</p>
       ) : (
-        <ul className={styles.entries} aria-label={strings.crmThreadsTitle}>
+        <ul className={`${styles.entries} mt-4`} aria-label={strings.crmThreadsTitle}>
           {threads.map((thread) => (
             <li key={thread.threadId} className={styles.entry}>
               <div className={styles.entryHead}>
@@ -138,7 +139,7 @@ export function LinkedThreads({ dealId }: { dealId: string }) {
         </ul>
       )}
 
-      <div className={styles.panelActions}>
+      <div className="mt-4 flex items-center gap-3">
         <Button variant="ghost" onClick={() => void suggest()} disabled={busy}>
           <Sparkles size={14} /> {strings.crmThreadSuggest}
         </Button>
@@ -147,9 +148,9 @@ export function LinkedThreads({ dealId }: { dealId: string }) {
 
       {suggestions !== null &&
         (suggestions.length === 0 ? (
-          <p className={styles.panelEmpty}>{strings.crmSuggestionsEmpty}</p>
+          <p className="mb-0 mt-4 rounded-lg bg-raised/40 px-4 py-3 text-sm text-secondary">{strings.crmSuggestionsEmpty}</p>
         ) : (
-          <ul className={styles.entries} aria-label={strings.crmThreadSuggest}>
+          <ul className={`${styles.entries} mt-4`} aria-label={strings.crmThreadSuggest}>
             {suggestions.map((candidate) => (
               <li key={candidate.threadId} className={styles.entry}>
                 <div className={styles.entryHead}>
