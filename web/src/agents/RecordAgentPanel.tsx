@@ -258,11 +258,11 @@ export function RecordAgentPanel({
     <section
       aria-label={strings.recordAgentTitle}
       data-record={`${recordKind}:${recordId}`}
-      className="flex flex-col gap-3 rounded-xl border border-subtle bg-surface p-4"
+      className="flex flex-col gap-4 rounded-xl border border-subtle bg-surface p-5 shadow-sm"
     >
-      <header className="flex items-center gap-2">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">
-          <Bot size={17} aria-hidden="true" />
+      <header className="flex items-center gap-3">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">
+          <Bot size={18} aria-hidden="true" />
         </span>
         <span className="flex min-w-0 flex-col">
           <span className="text-sm font-semibold text-primary">
@@ -276,7 +276,7 @@ export function RecordAgentPanel({
         </span>
       </header>
 
-      <p className="m-0 text-sm text-secondary">
+      <p className="m-0 rounded-xl border border-subtle bg-raised/35 px-4 py-3 text-sm text-secondary">
         {origin === null ? strings.recordAgentOriginNone : originSentence(origin)}
         {sourcePath !== null && (
           <>
@@ -293,7 +293,7 @@ export function RecordAgentPanel({
       </p>
 
       {verbs.length > 0 && agent !== null && agent !== undefined && (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           <span className="text-xs font-medium text-tertiary">
             {strings.recordAgentCanDo(agent.handle)}
           </span>
@@ -303,6 +303,7 @@ export function RecordAgentPanel({
                 key={verb.tool}
                 variant="ghost"
                 size="sm"
+                className="!px-3"
                 onClick={() => void startVerb(verb)}
                 disabled={busyVerb !== null}
               >

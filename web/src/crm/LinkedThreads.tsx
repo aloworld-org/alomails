@@ -86,15 +86,15 @@ export function LinkedThreads({ dealId }: { dealId: string }) {
 
   return (
     <section className="rounded-xl border border-subtle bg-surface p-5 shadow-sm">
-      <h3 className="m-0 flex items-center gap-2 text-sm font-semibold text-primary">
-        <span className="grid size-8 place-items-center rounded-lg bg-accent-soft text-accent"><Link2 size={16} /></span>
+      <h3 className="m-0 flex items-center gap-3 text-sm font-semibold text-primary">
+        <span className="grid size-9 place-items-center rounded-xl bg-accent-soft text-accent"><Link2 size={17} /></span>
         {strings.crmThreadsTitle}
       </h3>
 
       {error !== null && <ErrorBanner message={error} />}
 
       {threads.length === 0 ? (
-        <p className="mb-0 mt-4 rounded-lg bg-raised/40 px-4 py-3 text-sm text-secondary">{strings.crmThreadsEmpty}</p>
+        <p className="mb-0 mt-4 rounded-xl border border-subtle bg-raised/35 px-4 py-3 text-sm text-secondary">{strings.crmThreadsEmpty}</p>
       ) : (
         <ul className={`${styles.entries} mt-4`} aria-label={strings.crmThreadsTitle}>
           {threads.map((thread) => (
@@ -139,16 +139,16 @@ export function LinkedThreads({ dealId }: { dealId: string }) {
         </ul>
       )}
 
-      <div className="mt-4 flex items-center gap-3">
-        <Button variant="ghost" onClick={() => void suggest()} disabled={busy}>
-          <Sparkles size={14} /> {strings.crmThreadSuggest}
+      <div className="mt-3 flex items-center gap-3">
+        <Button variant="ghost" size="sm" icon={<Sparkles />} onClick={() => void suggest()} disabled={busy}>
+          {strings.crmThreadSuggest}
         </Button>
         {busy && <Spinner size={16} />}
       </div>
 
       {suggestions !== null &&
         (suggestions.length === 0 ? (
-          <p className="mb-0 mt-4 rounded-lg bg-raised/40 px-4 py-3 text-sm text-secondary">{strings.crmSuggestionsEmpty}</p>
+          <p className="mb-0 mt-4 rounded-xl border border-subtle bg-raised/35 px-4 py-3 text-sm text-secondary">{strings.crmSuggestionsEmpty}</p>
         ) : (
           <ul className={`${styles.entries} mt-4`} aria-label={strings.crmThreadSuggest}>
             {suggestions.map((candidate) => (

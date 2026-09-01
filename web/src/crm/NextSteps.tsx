@@ -14,7 +14,7 @@ import { useCallback, useEffect, useState } from "react";
 import { CalendarDays, CheckSquare, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-import { Button, Input } from "../ds";
+import { Button, DatePicker, Input } from "../ds";
 import { strings } from "../i18n";
 import type { Task } from "../jmap";
 import { crmMessage, useCrmApi } from "./api";
@@ -68,15 +68,15 @@ export function NextSteps({ dealId }: { dealId: string }) {
 
   return (
     <section className="rounded-xl border border-subtle bg-surface p-5 shadow-sm">
-      <h3 className="m-0 flex items-center gap-2 text-sm font-semibold text-primary">
-        <span className="grid size-8 place-items-center rounded-lg bg-accent-soft text-accent"><CheckSquare size={16} /></span>
+      <h3 className="m-0 flex items-center gap-3 text-sm font-semibold text-primary">
+        <span className="grid size-9 place-items-center rounded-xl bg-accent-soft text-accent"><CheckSquare size={17} /></span>
         {strings.crmNextStepsTitle}
       </h3>
 
       {error !== null && <ErrorBanner message={error} />}
 
       <form
-        className="mt-4 grid grid-cols-[minmax(0,1fr)_10rem_auto] items-start gap-3 max-md:grid-cols-1"
+        className="mt-4 grid grid-cols-[minmax(0,1fr)_12rem_auto] items-start gap-2.5 max-md:grid-cols-1"
         onSubmit={(e) => {
           e.preventDefault();
           if (!busy && title.trim() !== "") void add();
@@ -90,12 +90,10 @@ export function NextSteps({ dealId }: { dealId: string }) {
           placeholder={strings.crmNextStepPlaceholder}
           aria-label={strings.crmNextStepPlaceholder}
         />
-        <Input
-          className="flex-none basis-40"
-          type="date"
+        <DatePicker
           value={due}
-          onChange={(e) => setDue(e.target.value)}
-          aria-label={strings.crmNextStepDue}
+          onChange={setDue}
+          placeholder={strings.crmNextStepDue}
         />
         <Button type="submit" disabled={busy || title.trim() === ""}>
           {strings.crmNextStepAdd}
@@ -103,7 +101,7 @@ export function NextSteps({ dealId }: { dealId: string }) {
       </form>
 
       {steps.length === 0 ? (
-        <p className="mb-0 mt-4 rounded-lg bg-raised/40 px-4 py-3 text-sm text-secondary">{strings.crmNextStepsEmpty}</p>
+        <p className="mb-0 mt-4 rounded-xl border border-subtle bg-raised/35 px-4 py-3 text-sm text-secondary">{strings.crmNextStepsEmpty}</p>
       ) : (
         <ul className={`${styles.entries} mt-4`} aria-label={strings.crmNextStepsTitle}>
           {steps.map((step) => (

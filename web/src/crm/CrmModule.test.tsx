@@ -507,6 +507,9 @@ describe("the deal drawer", () => {
     await screen.findByText(STEP.title);
 
     expect(screen.getByRole("button", { name: strings.crmOpenInTasks })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: strings.crmNextStepDue }).getAttribute("aria-haspopup"),
+    ).toBe("dialog");
 
     fireEvent.change(screen.getByLabelText(strings.crmNextStepPlaceholder), {
       target: { value: "Chase the PO" },

@@ -68,21 +68,21 @@ export function ActivityLog({ dealId }: { dealId: string }) {
 
   return (
     <section className="rounded-xl border border-subtle bg-surface p-5 shadow-sm">
-      <h3 className="m-0 flex items-center gap-2 text-sm font-semibold text-primary">
-        <span className="grid size-8 place-items-center rounded-lg bg-accent-soft text-accent"><MessageSquare size={16} /></span>
+      <h3 className="m-0 flex items-center gap-3 text-sm font-semibold text-primary">
+        <span className="grid size-9 place-items-center rounded-xl bg-accent-soft text-accent"><MessageSquare size={17} /></span>
         {strings.crmActivityTitle}
       </h3>
 
       {error !== null && <ErrorBanner message={error} />}
 
       <form
-        className="mt-4 grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 max-md:grid-cols-1"
+        className="mt-4 grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2.5 max-md:grid-cols-1"
         onSubmit={(e) => {
           e.preventDefault();
           if (!busy && body.trim() !== "") void add();
         }}
       >
-        <fieldset className="flex min-h-10 overflow-hidden rounded-lg border border-default bg-raised/40 p-1">
+        <fieldset className="flex min-h-10 overflow-hidden rounded-xl border border-default bg-raised/40 p-1">
           <legend className="sr-only">{strings.crmActivityKind}</legend>
           {KINDS.map((choice) => {
             const selected = kind === choice;
@@ -104,7 +104,7 @@ export function ActivityLog({ dealId }: { dealId: string }) {
           })}
         </fieldset>
         <textarea
-          className="min-h-24 w-full resize-y rounded-xl border border-default bg-surface !px-4 py-3 text-sm leading-5 text-primary placeholder:text-tertiary focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10"
+          className="min-h-20 w-full resize-y rounded-xl border border-default bg-surface !px-4 py-3 text-sm leading-5 text-primary placeholder:text-tertiary focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10"
           value={body}
           onChange={(e) => setBody(e.target.value)}
           rows={2}
@@ -117,7 +117,7 @@ export function ActivityLog({ dealId }: { dealId: string }) {
       </form>
 
       {entries.length === 0 ? (
-        <p className="mb-0 mt-4 rounded-lg bg-raised/40 px-4 py-3 text-sm text-secondary">{strings.crmActivityEmpty}</p>
+        <p className="mb-0 mt-4 rounded-xl border border-subtle bg-raised/35 px-4 py-3 text-sm text-secondary">{strings.crmActivityEmpty}</p>
       ) : (
         <ul className={`${styles.entries} mt-4`} aria-label={strings.crmActivityTitle}>
           {entries.map((entry) => (
