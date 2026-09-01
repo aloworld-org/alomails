@@ -277,6 +277,7 @@ describe("the board", () => {
     const column = within(screen.getByRole("list", { name: "New" }));
     expect(column.getByText("40 seats — Acme GmbH")).toBeTruthy();
     expect(column.getByText("Acme GmbH")).toBeTruthy();
+    expect(column.getByRole("button", { name: /Acme GmbH/ }).className).toContain("!p-4");
     expect(column.getByText("€25,000.00")).toBeTruthy();
     expect(within(screen.getByRole("list", { name: "Qualified" })).queryByText(DEAL.title)).toBeNull();
     expect(screen.getByRole("heading", { name: strings.crmFocusTitle })).toBeTruthy();

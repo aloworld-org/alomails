@@ -83,42 +83,42 @@ export function BoardView({ stages, deals, onOpen, onMove, onAdd }: Props) {
                 <h3 className="m-0 min-w-0 flex-1 truncate text-sm font-semibold text-primary">{stage.name}</h3>
                 <span className="grid min-w-7 place-items-center rounded-full bg-surface px-2 py-1 text-xs font-medium tabular-nums text-secondary">{cards.length}</span>
               </header>
-              <div className="flex min-h-3 flex-col gap-3" role="list" aria-label={stage.name}>
+              <ul className="m-0 flex min-h-3 list-none flex-col gap-3 p-0" aria-label={stage.name}>
                 {cards.map((deal) => {
                   const attention = dealAttention(deal, new Date());
                   return (
-                    <Card
-                      as="button"
-                      key={deal.id}
-                      pad="sm"
-                      interactive
-                      className={`flex w-full flex-col gap-3 !bg-surface !text-left ${dragId === deal.id ? "opacity-40" : ""}`}
-                      role="listitem"
-                      draggable
-                      onDragStart={() => setDragId(deal.id)}
-                      onDragEnd={clearDrag}
-                      onDrop={(event) => { event.stopPropagation(); dropOnCard(stage, deal.id); }}
-                      onClick={() => onOpen(deal.id)}
-                    >
-                      <span className="flex items-start gap-2">
-                        <strong className="min-w-0 flex-1 text-sm font-semibold leading-5 text-primary">{deal.title}</strong>
-                        {attention === "overdue" && <AlertCircle size={16} className="shrink-0 text-danger" aria-label={strings.crmFocusOverdue} />}
-                        {attention === "quiet" && <Clock3 size={16} className="shrink-0 text-warning" aria-label={strings.crmFocusQuiet} />}
-                      </span>
-                      {deal.companyName !== "" && <span className="text-xs text-secondary">{deal.companyName}</span>}
-                      <span className="flex flex-wrap items-center gap-3 border-t border-subtle pt-3">
-                        <strong className="text-sm font-semibold tabular-nums text-primary">{dealValue(deal)}</strong>
-                        {deal.expectedClose !== null && (
-                          <span className="ml-auto inline-flex items-center gap-1.5 text-xs tabular-nums text-secondary">
-                            <CalendarDays size={14} aria-hidden="true" />{dayLabel(deal.expectedClose)}
-                          </span>
-                        )}
-                      </span>
-                      {deal.source !== "" && <span className="w-fit rounded-full bg-raised px-2.5 py-1 text-xs text-secondary">{deal.source}</span>}
-                    </Card>
+                    <li key={deal.id}>
+                      <Card
+                        as="button"
+                        pad="sm"
+                        interactive
+                        className={`flex w-full flex-col gap-3 !bg-surface !p-4 !text-left ${dragId === deal.id ? "opacity-40" : ""}`}
+                        draggable
+                        onDragStart={() => setDragId(deal.id)}
+                        onDragEnd={clearDrag}
+                        onDrop={(event) => { event.stopPropagation(); dropOnCard(stage, deal.id); }}
+                        onClick={() => onOpen(deal.id)}
+                      >
+                        <span className="flex items-start gap-2">
+                          <strong className="min-w-0 flex-1 text-sm font-semibold leading-5 text-primary">{deal.title}</strong>
+                          {attention === "overdue" && <AlertCircle size={16} className="shrink-0 text-danger" aria-label={strings.crmFocusOverdue} />}
+                          {attention === "quiet" && <Clock3 size={16} className="shrink-0 text-warning" aria-label={strings.crmFocusQuiet} />}
+                        </span>
+                        {deal.companyName !== "" && <span className="text-xs text-secondary">{deal.companyName}</span>}
+                        <span className="flex flex-wrap items-center gap-3 border-t border-subtle pt-3">
+                          <strong className="text-sm font-semibold tabular-nums text-primary">{dealValue(deal)}</strong>
+                          {deal.expectedClose !== null && (
+                            <span className="ml-auto inline-flex items-center gap-1.5 text-xs tabular-nums text-secondary">
+                              <CalendarDays size={14} aria-hidden="true" />{dayLabel(deal.expectedClose)}
+                            </span>
+                          )}
+                        </span>
+                        {deal.source !== "" && <span className="w-fit rounded-full bg-raised px-2.5 py-1 text-xs text-secondary">{deal.source}</span>}
+                      </Card>
+                    </li>
                   );
                 })}
-              </div>
+              </ul>
               <Button variant="ghost" block icon={<Plus />} onClick={() => onAdd(stage.id)}>{strings.crmNewDeal}</Button>
             </section>
           );
