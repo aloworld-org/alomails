@@ -1125,6 +1125,59 @@ function HeroFields({
         </div>
       </Card>
 
+      <Card as="section" flat>
+        <h3 className="m-0 text-base font-semibold text-primary">
+          {strings.sitesHeroAnimation}
+        </h3>
+        <p className="mb-5 mt-1 text-sm text-secondary">
+          {strings.sitesHeroAnimationHint}
+        </p>
+        <div className="grid gap-5">
+          <HeroOptionRow
+            label={strings.sitesHeroTextAnimation}
+            value={draft.text_animation}
+            columns={4}
+            options={[
+              ["none", strings.sitesHeroAnimationNone],
+              ["fade_up", strings.sitesHeroTextFadeUp],
+              ["word_reveal", strings.sitesHeroTextWordReveal],
+              ["slide_in", strings.sitesHeroTextSlideIn],
+            ]}
+            onChange={(text_animation) =>
+              onChange({ ...draft, text_animation })
+            }
+          />
+          <HeroOptionRow
+            label={strings.sitesHeroMediaAnimation}
+            value={draft.media_animation}
+            columns={4}
+            options={[
+              ["none", strings.sitesHeroAnimationNone],
+              ["fade_in", strings.sitesHeroMediaFadeIn],
+              ["slide_up", strings.sitesHeroMediaSlideUp],
+              ["slow_zoom", strings.sitesHeroMediaSlowZoom],
+            ]}
+            onChange={(media_animation) =>
+              onChange({ ...draft, media_animation })
+            }
+          />
+          <div className="max-w-xl">
+            <HeroOptionRow
+              label={strings.sitesHeroAnimationSpeed}
+              value={draft.animation_speed}
+              options={[
+                ["quick", strings.sitesHeroAnimationQuick],
+                ["smooth", strings.sitesHeroAnimationSmooth],
+                ["relaxed", strings.sitesHeroAnimationRelaxed],
+              ]}
+              onChange={(animation_speed) =>
+                onChange({ ...draft, animation_speed })
+              }
+            />
+          </div>
+        </div>
+      </Card>
+
       <div className="grid items-start gap-5 lg:grid-cols-2">
         <Card as="section" flat className="grid gap-4">
           <h3 className="m-0 text-base font-semibold text-primary">
@@ -1277,11 +1330,13 @@ function HeroOptionRow<T extends string>({
   label,
   value,
   options,
+  columns = 3,
   onChange,
 }: {
   label: string;
   value: T;
   options: readonly (readonly [T, string])[];
+  columns?: 3 | 4;
   onChange: (value: T) => void;
 }) {
   return (
@@ -1290,7 +1345,10 @@ function HeroOptionRow<T extends string>({
         {label}
       </legend>
       <div
-        className="grid grid-cols-3 gap-1 rounded-xl bg-raised p-1"
+        className={cx(
+          "grid gap-1 rounded-xl bg-raised p-1",
+          columns === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3",
+        )}
         role="radiogroup"
         aria-label={label}
       >

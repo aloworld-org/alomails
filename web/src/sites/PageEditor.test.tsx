@@ -793,6 +793,15 @@ describe("editing a section", () => {
     fireEvent.click(
       screen.getByRole("radio", { name: strings.sitesHeroContentWidthNarrow }),
     );
+    fireEvent.click(
+      screen.getByRole("radio", { name: strings.sitesHeroTextWordReveal }),
+    );
+    fireEvent.click(
+      screen.getByRole("radio", { name: strings.sitesHeroMediaSlowZoom }),
+    );
+    fireEvent.click(
+      screen.getByRole("radio", { name: strings.sitesHeroAnimationRelaxed }),
+    );
 
     replies = [
       {
@@ -808,6 +817,9 @@ describe("editing a section", () => {
               height: "tall",
               alignment: "left",
               content_width: "narrow",
+              text_animation: "word_reveal",
+              media_animation: "slow_zoom",
+              animation_speed: "relaxed",
             },
           ]),
         },
@@ -825,6 +837,9 @@ describe("editing a section", () => {
         height: "tall",
         alignment: "left",
         content_width: "narrow",
+        text_animation: "word_reveal",
+        media_animation: "slow_zoom",
+        animation_speed: "relaxed",
       },
     });
   });

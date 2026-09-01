@@ -80,6 +80,9 @@ fn fixture_site() -> SeedContext {
                 height: None,
                 alignment: None,
                 content_width: None,
+                text_animation: None,
+                media_animation: None,
+                animation_speed: None,
             }),
             Section::Features(FeaturesSection {
                 heading: Some("Why Nordwind".to_owned()),

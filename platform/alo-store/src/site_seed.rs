@@ -313,6 +313,9 @@ fn seed_hero(ctx: &SeedContext) -> SectionSeed {
         height: existing.and_then(|hero| hero.height),
         alignment: existing.and_then(|hero| hero.alignment),
         content_width: existing.and_then(|hero| hero.content_width),
+        text_animation: existing.and_then(|hero| hero.text_animation),
+        media_animation: existing.and_then(|hero| hero.media_animation),
+        animation_speed: existing.and_then(|hero| hero.animation_speed),
     }))
 }
 
@@ -561,8 +564,9 @@ mod tests {
     use super::*;
     use crate::id::BlobId;
     use crate::site_model::{
-        FaqItem, FaqSection, HeroLayout, PricingSection, PricingTier, SECTION_KINDS,
-        SectionsEnvelope, TeamMember, TeamSection, Testimonial, TestimonialsSection,
+        FaqItem, FaqSection, HeroAnimationSpeed, HeroLayout, HeroMediaAnimation, HeroTextAnimation,
+        PricingSection, PricingTier, SECTION_KINDS, SectionsEnvelope, TeamMember, TeamSection,
+        Testimonial, TestimonialsSection,
     };
 
     /// Keys whose values are the schema's own closed vocabulary rather than
@@ -637,6 +641,9 @@ mod tests {
                     height: None,
                     alignment: None,
                     content_width: None,
+                    text_animation: Some(HeroTextAnimation::WordReveal),
+                    media_animation: Some(HeroMediaAnimation::SlowZoom),
+                    animation_speed: Some(HeroAnimationSpeed::Smooth),
                 }),
                 Section::Testimonials(TestimonialsSection {
                     heading: Some("What the neighbourhood says".to_owned()),
@@ -880,6 +887,9 @@ mod tests {
             Some("https://media.example/roastery.webm")
         );
         assert_eq!(hero.layout, Some(HeroLayout::VideoBackground));
+        assert_eq!(hero.text_animation, Some(HeroTextAnimation::WordReveal));
+        assert_eq!(hero.media_animation, Some(HeroMediaAnimation::SlowZoom));
+        assert_eq!(hero.animation_speed, Some(HeroAnimationSpeed::Smooth));
     }
 
     /// Pictures come from the site, each blob once, in the order it uses them

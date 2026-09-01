@@ -381,6 +381,64 @@ impl HeroContentWidth {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HeroTextAnimation {
+    None,
+    FadeUp,
+    WordReveal,
+    SlideIn,
+}
+
+impl HeroTextAnimation {
+    pub const fn class(self) -> Option<&'static str> {
+        match self {
+            Self::None => None,
+            Self::FadeUp => Some("hero-text-fade-up"),
+            Self::WordReveal => Some("hero-text-word-reveal"),
+            Self::SlideIn => Some("hero-text-slide-in"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HeroMediaAnimation {
+    None,
+    FadeIn,
+    SlideUp,
+    SlowZoom,
+}
+
+impl HeroMediaAnimation {
+    pub const fn class(self) -> Option<&'static str> {
+        match self {
+            Self::None => None,
+            Self::FadeIn => Some("hero-media-fade-in"),
+            Self::SlideUp => Some("hero-media-slide-up"),
+            Self::SlowZoom => Some("hero-media-slow-zoom"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HeroAnimationSpeed {
+    Quick,
+    Smooth,
+    Relaxed,
+}
+
+impl HeroAnimationSpeed {
+    pub const fn class(self) -> &'static str {
+        match self {
+            Self::Quick => "hero-motion-quick",
+            Self::Smooth => "hero-motion-smooth",
+            Self::Relaxed => "hero-motion-relaxed",
+        }
+    }
+}
+
 /// The page's lead banner.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -415,6 +473,15 @@ pub struct HeroSection {
     /// Maximum text measure.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub content_width: Option<HeroContentWidth>,
+    /// Entrance preset for the headline, supporting text and actions.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_animation: Option<HeroTextAnimation>,
+    /// Entrance preset for the image or background video.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub media_animation: Option<HeroMediaAnimation>,
+    /// Shared pace keeps independently animated elements feeling coordinated.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub animation_speed: Option<HeroAnimationSpeed>,
 }
 
 /// One entry in a `features` grid.
@@ -1382,6 +1449,9 @@ mod tests {
                 height: Some(HeroHeight::Tall),
                 alignment: Some(HeroAlignment::Left),
                 content_width: Some(HeroContentWidth::Narrow),
+                text_animation: Some(HeroTextAnimation::WordReveal),
+                media_animation: Some(HeroMediaAnimation::SlowZoom),
+                animation_speed: Some(HeroAnimationSpeed::Relaxed),
             }),
             Section::Features(FeaturesSection {
                 heading: Some("Why Nordwind".to_owned()),
@@ -1592,6 +1662,9 @@ mod tests {
                 height: None,
                 alignment: None,
                 content_width: None,
+                text_animation: None,
+                media_animation: None,
+                animation_speed: None,
             }),
             Section::Gallery(GallerySection {
                 heading: None,
@@ -1763,6 +1836,9 @@ mod tests {
             height: None,
             alignment: None,
             content_width: None,
+            text_animation: None,
+            media_animation: None,
+            animation_speed: None,
         })]);
         assert!(matches!(
             blank_heading.validate(),
@@ -2108,6 +2184,9 @@ mod tests {
                 height: None,
                 alignment: None,
                 content_width: None,
+                text_animation: None,
+                media_animation: None,
+                animation_speed: None,
             }),
             Section::TextImage(TextImageSection {
                 heading: None,

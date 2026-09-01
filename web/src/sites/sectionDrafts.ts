@@ -12,9 +12,12 @@ import type {
   FaqItem,
   FeatureItem,
   HeroAlignment,
+  HeroAnimationSpeed,
   HeroContentWidth,
   HeroHeight,
   HeroLayout,
+  HeroMediaAnimation,
+  HeroTextAnimation,
   PricingTier,
   Section,
   SectionImage,
@@ -44,6 +47,9 @@ export interface HeroDraft {
   height: HeroHeight;
   alignment: HeroAlignment;
   content_width: HeroContentWidth;
+  text_animation: HeroTextAnimation;
+  media_animation: HeroMediaAnimation;
+  animation_speed: HeroAnimationSpeed;
 }
 
 export interface FeatureItemDraft {
@@ -323,6 +329,9 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         height: s?.height ?? "standard",
         alignment: s?.alignment ?? "center",
         content_width: s?.content_width ?? "balanced",
+        text_animation: s?.text_animation ?? "none",
+        media_animation: s?.media_animation ?? "none",
+        animation_speed: s?.animation_speed ?? "smooth",
       };
     }
     case "features": {
@@ -595,6 +604,14 @@ export function toSection(draft: SectionDraft): Section {
         height: draft.height,
         alignment: draft.alignment,
         content_width: draft.content_width,
+        text_animation:
+          draft.text_animation === "none" ? undefined : draft.text_animation,
+        media_animation:
+          draft.media_animation === "none" ? undefined : draft.media_animation,
+        animation_speed:
+          draft.text_animation === "none" && draft.media_animation === "none"
+            ? undefined
+            : draft.animation_speed,
       };
     case "features":
       return {

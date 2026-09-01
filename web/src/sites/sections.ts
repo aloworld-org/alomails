@@ -82,6 +82,9 @@ export type HeroLayout =
 export type HeroHeight = "compact" | "standard" | "tall";
 export type HeroAlignment = "left" | "center" | "right";
 export type HeroContentWidth = "narrow" | "balanced" | "wide";
+export type HeroTextAnimation = "none" | "fade_up" | "word_reveal" | "slide_in";
+export type HeroMediaAnimation = "none" | "fade_in" | "slide_up" | "slow_zoom";
+export type HeroAnimationSpeed = "quick" | "smooth" | "relaxed";
 
 export interface HeroSection {
   type: "hero";
@@ -96,6 +99,9 @@ export interface HeroSection {
   height?: HeroHeight | undefined;
   alignment?: HeroAlignment | undefined;
   content_width?: HeroContentWidth | undefined;
+  text_animation?: HeroTextAnimation | undefined;
+  media_animation?: HeroMediaAnimation | undefined;
+  animation_speed?: HeroAnimationSpeed | undefined;
 }
 
 /** One entry in a features grid. `icon` is a token the renderer may not ship
