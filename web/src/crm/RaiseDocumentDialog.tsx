@@ -149,6 +149,7 @@ export function RaiseDocumentDialog({ deal, kind, onClose, onRaised }: Props) {
         <Field
           label={strings.crmFieldVatRate}
           hint={strings.crmVatRateHint}
+          hintDisplay="tooltip"
           error={
             rate !== "" && rateBp === null ? strings.crmNotAnAmount : undefined
           }
@@ -166,7 +167,7 @@ export function RaiseDocumentDialog({ deal, kind, onClose, onRaised }: Props) {
         </Field>
       )}
       {needsCountry && (
-        <Field label={strings.crmFieldCountry} hint={strings.crmCountryHint}>
+        <Field label={strings.crmFieldCountry} hint={strings.crmCountryHint} hintDisplay="tooltip">
           {(control) => (
             <Input
               {...control}

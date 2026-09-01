@@ -57,6 +57,23 @@ describe("the select is named, and its empty option means something", () => {
     expect(screen.getByRole("alert").id).toBe(described.split(" ")[1]);
   });
 
+  test("a Field can keep long guidance in an accessible information control", () => {
+    const hint = "The country determines VAT treatment.";
+    render(
+      <Field label="Country" hint={hint} hintDisplay="tooltip">
+        {(control) => (
+          <Select {...control} defaultValue="ams">
+            {locations()}
+          </Select>
+        )}
+      </Field>,
+    );
+
+    const select = screen.getByRole("combobox", { name: "Country" });
+    expect(screen.getByRole("button", { name: hint })).toBeDefined();
+    expect(select.getAttribute("aria-describedby")).not.toBeNull();
+  });
+
   test("an unnamed select is reported in development", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     render(<Select defaultValue="ams">{locations()}</Select>);

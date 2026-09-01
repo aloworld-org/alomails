@@ -11,6 +11,7 @@
 // disagreeing on everything around it: whether the hint sat above or below,
 // whether an error replaced the hint or joined it, and whether the label was
 // bound to the control at all.
+import { Info } from "lucide-react";
 import { useId, type ReactNode } from "react";
 
 /** The hint and the error read the same, because they are the same kind of
@@ -21,6 +22,8 @@ export interface FieldProps {
   label: string;
   /** What goes in the box. Stays visible when an error is shown. */
   hint?: string | undefined;
+  /** Keep longer guidance behind an accessible information control. */
+  hintDisplay?: "below" | "tooltip" | undefined;
   /** What went wrong. Announced, and it marks the control invalid. */
   error?: string | undefined;
   /** Receives the id and invalid state to spread onto the control. */
@@ -31,7 +34,7 @@ export interface FieldProps {
   }) => ReactNode;
 }
 
-export function Field({ label, hint, error, children }: FieldProps) {
+export function Field({ label, hint, hintDisplay = "below", error, children }: FieldProps) {
   const id = useId();
   const hintId = hint === undefined ? undefined : `${id}-hint`;
   const errorId = error === undefined ? undefined : `${id}-error`;
@@ -41,9 +44,23 @@ export function Field({ label, hint, error, children }: FieldProps) {
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="font-medium text-primary" htmlFor={id}>
-        {label}
-      </label>
+      <div className="flex items-center gap-1.5">
+        <label className="font-medium text-primary" htmlFor={id}>
+          {label}
+        </label>
+        {hint !== undefined && hintDisplay === "tooltip" && (
+          <button
+            type="button"
+            className="group relative inline-flex size-6 shrink-0 cursor-help items-center justify-center rounded-full text-tertiary transition-colors hover:bg-accent-soft hover:text-accent focus-visible:bg-accent-soft focus-visible:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20"
+            aria-label={hint}
+          >
+            <Info className="size-4" aria-hidden="true" />
+            <span className="pointer-events-none absolute left-1/2 top-[calc(100%+.4rem)] z-30 hidden w-max max-w-72 -translate-x-1/2 rounded-lg bg-primary px-3 py-2 text-left text-xs font-normal leading-relaxed text-on-accent shadow-lg group-hover:block group-focus-visible:block" role="tooltip">
+              {hint}
+            </span>
+          </button>
+        )}
+      </div>
       {children({
         id,
         invalid: error !== undefined,
@@ -53,10 +70,13 @@ export function Field({ label, hint, error, children }: FieldProps) {
           questions — "what goes here" and "what went wrong" — and hiding the
           first to show the second means somebody who has just made a mistake
           loses the instruction that would prevent the next one. */}
-      {hint !== undefined && (
+      {hint !== undefined && hintDisplay === "below" && (
         <span className={`${HELP} text-secondary`} id={hintId}>
           {hint}
         </span>
+      )}
+      {hint !== undefined && hintDisplay === "tooltip" && (
+        <span className="sr-only" id={hintId}>{hint}</span>
       )}
       {error !== undefined && (
         <span className={`${HELP} text-danger`} id={errorId} role="alert">
