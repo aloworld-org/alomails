@@ -89,6 +89,33 @@ export interface SpendPolicy {
   updatedAt: string | null;
 }
 
+export type FinPeriodStatus = "open" | "closed";
+
+export interface FinPeriod {
+  id: string;
+  fromDate: string;
+  toDate: string;
+  status: FinPeriodStatus;
+  closedBy: string | null;
+  closedAt: string | null;
+  note: string;
+  createdAt: string;
+}
+
+export interface CloseCheck {
+  key: "bankReconciliation" | "expenseApprovals" | "balanceSheet" | "receivableFx" | "payableFx";
+  status: "passed" | "warning" | "blocked";
+  count: number;
+}
+
+export interface CloseReadiness {
+  on: string;
+  ready: boolean;
+  blockingCount: number;
+  warningCount: number;
+  checks: CloseCheck[];
+}
+
 export interface ExpenseApprovalOutcome {
   expense: Expense;
   approval: { count: number; required: number; complete: boolean };

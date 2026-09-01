@@ -39,6 +39,7 @@ import {
   ShieldCheck,
   WalletCards,
   TrendingUp,
+  LockKeyhole,
 } from "lucide-react";
 
 import { ModuleNavigation, moduleNavigationItemClassName } from "../ds";
@@ -53,6 +54,7 @@ import { ExpensesView } from "./ExpensesView";
 import { FinanceOverviewView } from "./FinanceOverviewView";
 import { ProjectProfitabilityView } from "./ProjectProfitabilityView";
 import { SpendControlsView } from "./SpendControlsView";
+import { CloseView } from "./CloseView";
 import { ReconcileView } from "./ReconcileView";
 import { ReportsView } from "./ReportsView";
 import type { ProjectChoice } from "./ExpenseDialog";
@@ -84,6 +86,7 @@ const TABS = [
   { path: "cash-flow", label: () => strings.financeTabCashFlow, Icon: TrendingUp, bookkeeper: true },
   { path: "profitability", label: () => strings.financeTabProfitability, Icon: BriefcaseBusiness, bookkeeper: true },
   { path: "controls", label: () => strings.financeTabControls, Icon: ShieldCheck, bookkeeper: true },
+  { path: "close", label: () => strings.financeTabClose, Icon: LockKeyhole, bookkeeper: true },
   { path: "accounts", label: () => strings.financeTabAccounts, Icon: BadgeEuro, bookkeeper: true },
   { path: "reports", label: () => strings.financeTabReports, Icon: ChartNoAxesCombined, bookkeeper: true },
 ];
@@ -166,6 +169,7 @@ export function FinanceModule() {
         <Route path="cash-flow" element={<CashFlowView />} />
         <Route path="profitability" element={<ProjectProfitabilityView />} />
         <Route path="controls" element={<SpendControlsView />} />
+        <Route path="close" element={<CloseView />} />
         {/* The chart and the four reports (B4.13c). Reports is a wildcard mount:
             it owns a second row of tabs of its own; the chart's editor is a
             dialog rather than a route. */}

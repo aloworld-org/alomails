@@ -39,6 +39,7 @@ import type {
   BankStatement,
   BankSuggestions,
   CashForecast,
+  CloseReadiness,
   Chart,
   ChartAccount,
   ConfirmedMatch,
@@ -49,6 +50,7 @@ import type {
   PendingExpense,
   PlReport,
   SpendPolicy,
+  FinPeriod,
   VatReturn,
 } from "./types";
 
@@ -351,6 +353,26 @@ export class FinanceApi {
     query.set("receivableDelay", String(options.receivableDelay ?? 0));
     query.set("payableDelay", String(options.payableDelay ?? 0));
     return this.#read<{ forecast: CashForecast }>(`/finance/forecast?${query.toString()}`).then((response) => response.forecast);
+  }
+
+  periods(): Promise<{ periods: FinPeriod[]; lockDate: string | null }> {
+    return this.#read<{ periods?: FinPeriod[]; lockDate?: string | null }>("/finance/periods").then((response) => ({ periods: response.periods ?? [], lockDate: response.lockDate ?? null }));
+  }
+
+  createPeriod(fromDate: string, toDate: string): Promise<FinPeriod> {
+    return this.#write<{ period: FinPeriod }>("POST", "/finance/periods", { fromDate, toDate }).then((response) => response.period);
+  }
+
+  closeReadiness(on: string): Promise<CloseReadiness> {
+    return this.#read<{ readiness: CloseReadiness }>(`/finance/close-readiness?on=${day(on)}`).then((response) => response.readiness);
+  }
+
+  closePeriod(id: string, note = ""): Promise<FinPeriod> {
+    return this.#write<{ period: FinPeriod }>("POST", `/finance/periods/${encodeURIComponent(id)}/close`, note === "" ? {} : { note }).then((response) => response.period);
+  }
+
+  reopenPeriod(id: string, note: string): Promise<FinPeriod> {
+    return this.#write<{ period: FinPeriod }>("POST", `/finance/periods/${encodeURIComponent(id)}/reopen`, { note }).then((response) => response.period);
   }
 
   // ---- the chart of accounts ---------------------------------------------
