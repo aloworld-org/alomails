@@ -42,11 +42,20 @@
 //! - **A handoff reaches only agents the asker can see.** The roster is the
 //!   asker's own module-gated agent list; a handle outside it is dropped with
 //!   a line the model can answer around, never resolved more widely.
-//! - **Never the same question twice.** A run that has already asked `@x`
-//!   something does not ask `@x` that again: one run put a single question to
-//!   Sales three times, which is a loop spending somebody's inference budget,
-//!   not deliberation. The refusal costs no handoff — charging for it would
-//!   punish a run twice for one mistake.
+//! - **Never the same question twice**, and a rewording is the same question.
+//!   A run that has already asked `@x` something does not ask `@x` that again:
+//!   one run put a single question to Sales three times, which is a loop
+//!   spending somebody's inference budget, not deliberation. Compared on the
+//!   content words, because folding the case was not enough — asked to confirm
+//!   one figure, a model varied only its politeness and spent its whole handoff
+//!   budget on three asks (2026-09-01). The refusal costs no handoff — charging
+//!   for it would punish a run twice for one mistake.
+//! - **A handoff may be a check** (2026-09-01): the same roster, budget, depth
+//!   and module gate, differing only in what the room is told — "I'm checking
+//!   with @finance" — and in the label the reply comes back under, so an asker
+//!   reconciling two figures can see the second is a second opinion rather than
+//!   a fresh fact. A check that disagrees is the answer, and the prompt requires
+//!   both numbers to be said.
 //!
 //! **A bound tried, shipped, measured and withdrawn** (2026-09-01), recorded
 //! because the measurement is the useful part. An agent was briefly forbidden
@@ -62,19 +71,6 @@
 //! judgement lives in the prompt (`handoff_offer` in `alo_ai::agent`), which
 //! carries it well enough alone: the Billing question that prompted the bound
 //! answers correctly without it.
-//! - **Never the same question twice.** A run that has already asked `@x`
-//!   something does not ask `@x` that again. The same run repeated one
-//!   question to Sales three times, which is not deliberation, it is a loop
-//!   spending somebody's inference budget.
-//!
-//! A bound tried and withdrawn, because it is worth knowing why: an agent was
-//! briefly forbidden to hand off before running one of its own reading tools,
-//! to stop Billing handing a Billing question to Finance. It broke seven
-//! delegation tests and they were right to break — "@billing can we fulfil the
-//! quote?" *should* reach Inventory on the first move, and a forced billing
-//! lookup first buys a wasted model call and a worse answer. Which questions an
-//! agent's own tools cover is a judgement; judgement belongs in the prompt, and
-//! only the countable things belong here.
 //!
 //! Everything runs through the **asker's** account door, exactly as the
 //! retrieval that grounds the turn already did. A read's blast radius under
@@ -132,6 +128,13 @@ const RESULT_KIND: &str = "tool result";
 /// (A5.1), so citing it names the agent that was asked.
 const DELEGATED_KIND: &str = "delegated answer";
 
+/// The source label for a reply to a **check**, so the asking model can see
+/// that this line is a second opinion on a figure it already has, not a fresh
+/// fact to paraphrase. The wording is the whole mechanism: the prompt tells it
+/// to report both numbers when they differ, and a line labelled "delegated
+/// answer" reads like agreement whatever it says.
+const CHECKED_KIND: &str = "check";
+
 /// Said when the turn used every lookup it had and still wanted another. It
 /// says which question went unanswered rather than pretending to one.
 const OUT_OF_LOOKUPS: &str = "I looked things up as far as I'm allowed to for one question and still couldn't get to an \
@@ -186,15 +189,20 @@ impl RunBudget {
 
     /// Record a question put to an agent, saying whether it is a new one.
     ///
-    /// Compared on the words, folded and trimmed: a model asked to repeat
-    /// itself rarely repeats itself byte for byte, and "What did we quote
-    /// Northstar Foods?" twice is once however it is capitalised.
+    /// Compared on the **content words**, because folding and trimming was not
+    /// enough (2026-09-01): asked to confirm one figure, a model put
+    /// "Please confirm the invoiced amount of 8,070.70 for August against the
+    /// books." and "Can you confirm the invoiced amount of 8,070.70 for August
+    /// against the books?" to the same agent as two different questions, and
+    /// the reworded asks spent the run's whole handoff budget. Politeness and
+    /// grammar are what a model varies when it rephrases; the nouns and
+    /// figures are what it does not.
+    ///
+    /// Equality of the whole set, never overlap — "invoiced in August" and
+    /// "invoiced in September" share every word but the one that matters, so a
+    /// looser rule would refuse the second question a turn genuinely needs.
     fn first_time_asking(&self, to: &str, ask: &str) -> bool {
-        let key = format!(
-            "{}: {}",
-            to.trim().to_lowercase(),
-            ask.trim().to_lowercase()
-        );
+        let key = format!("{}: {}", to.trim().to_lowercase(), content_words(ask));
         let Ok(mut asked) = self.asked.lock() else {
             // A poisoned lock must not stop a turn; the worst case is one
             // repeated question, which the handoff budget still bounds.
@@ -206,6 +214,32 @@ impl RunBudget {
         asked.push(key);
         true
     }
+}
+
+/// The words of a question that carry what it is about: lowercased, stripped
+/// of punctuation, sorted and deduplicated, with the grammar a model varies
+/// when it rephrases dropped.
+///
+/// Deliberately small. Every word not on this list is treated as meaning, so
+/// the failure mode is two rephrasings counting as two questions — the cost of
+/// the handoff budget — rather than a real second question being refused,
+/// which costs the person an answer.
+fn content_words(ask: &str) -> String {
+    const GRAMMAR: &[&str] = &[
+        "a", "about", "against", "an", "and", "any", "are", "as", "at", "be", "been", "by", "can",
+        "check", "confirm", "could", "did", "do", "does", "for", "from", "have", "has", "how", "i",
+        "if", "in", "is", "it", "its", "me", "much", "my", "of", "on", "or", "our", "please", "so",
+        "tell", "that", "the", "their", "there", "these", "this", "to", "us", "was", "we", "were",
+        "what", "when", "which", "with", "would", "you", "your",
+    ];
+    let mut words: Vec<String> = ask
+        .split(|c: char| !c.is_alphanumeric() && c != '.' && c != ',')
+        .map(|word| word.trim_matches(['.', ',']).to_lowercase())
+        .filter(|word| !word.is_empty() && !GRAMMAR.contains(&word.as_str()))
+        .collect();
+    words.sort_unstable();
+    words.dedup();
+    words.join(" ")
 }
 
 /// Count one use against `cap`, refusing at it.
@@ -420,16 +454,17 @@ fn turn_at<'a>(env: &'a RunEnv<'a>, turn: &'a Turn<'a>, depth: usize) -> TurnFut
                     let detail = run_read(env.state, env.account, &action, context).await;
                     (RESULT_KIND, action.tool.clone(), detail)
                 }
-                Step::Handoff { to, ask } => {
+                Step::Handoff { to, ask, check } => {
                     // Refused before it is spent: the model is sent back to
                     // its own records rather than charged for asking.
+                    let kind = if check { CHECKED_KIND } else { DELEGATED_KIND };
                     if let Some(refusal) = handoff_refused(env, &to, &ask) {
-                        (DELEGATED_KIND, format!("@{to}"), refusal)
+                        (kind, format!("@{to}"), refusal)
                     } else if !env.budget.take_handoff() {
-                        return Ok((finish(Step::Handoff { to, ask }), sources));
+                        return Ok((finish(Step::Handoff { to, ask, check }), sources));
                     } else {
-                        match run_handoff(env, turn, depth, &to, &ask).await {
-                            Handoff::Fold(detail) => (DELEGATED_KIND, format!("@{to}"), detail),
+                        match run_handoff(env, turn, depth, &to, &ask, check).await {
+                            Handoff::Fold(detail) => (kind, format!("@{to}"), detail),
                             // The delegate proposed, in the room, under its own
                             // id: the run is over, whatever depth this is — one
                             // pending proposal is the whole approval surface
@@ -525,6 +560,7 @@ async fn run_handoff(
     depth: usize,
     to: &str,
     ask: &str,
+    check: bool,
 ) -> Handoff {
     // Resolved against the same roster the offer was made from — the asker's
     // own module-gated agents — and against the same depth rule, so a stray
@@ -555,7 +591,13 @@ async fn run_handoff(
     // because an agent that takes part in a conversation is a participant in
     // it (ADR 0034).
     if let (Some(asking), Some(channel)) = (turn.context.agent, turn.context.channel) {
-        let line = format!("I'm asking @{}: {ask}", delegate.handle);
+        // "checking with" rather than "asking": a room watching two agents
+        // agree about money should be able to see that is what happened.
+        let line = if check {
+            format!("I'm checking with @{}: {ask}", delegate.handle)
+        } else {
+            format!("I'm asking @{}: {ask}", delegate.handle)
+        };
         join_and_say(env, channel, asking, &line).await;
     }
     match delegate_turn(
@@ -761,6 +803,9 @@ enum Step {
         to: String,
         /// The sub-question, in words that stand on their own.
         ask: String,
+        /// Whether the asker is checking a figure it already has, rather than
+        /// asking for one it lacks.
+        check: bool,
     },
 }
 
@@ -789,7 +834,7 @@ fn step(decided: AgentDecision) -> Step {
                 Step::Done(TurnResult::Propose { action, say })
             }
         }
-        AgentDecision::Delegate { to, ask } => Step::Handoff { to, ask },
+        AgentDecision::Delegate { to, ask, check } => Step::Handoff { to, ask, check },
     }
 }
 
@@ -848,6 +893,45 @@ fn truncate(text: &str) -> String {
 mod tests {
     use super::*;
 
+    /// A rephrasing is the same question. The three asks are verbatim what one
+    /// model put to @finance in a single run on 2026-09-01, one after another,
+    /// until the handoff budget was gone and the room got an error instead of
+    /// an answer.
+    #[test]
+    fn rewording_a_question_does_not_make_it_a_new_one() {
+        let budget = RunBudget::new();
+        assert!(budget.first_time_asking(
+            "finance",
+            "Please confirm that we invoiced 8070.70 EUR in August 2026."
+        ));
+        // The second names the books and an amount, so it really does say
+        // something the first did not — the bound is on rewording, not on
+        // meaning, and claiming otherwise would need the model back again.
+        assert!(budget.first_time_asking(
+            "finance",
+            "Can you confirm the invoiced amount of 8070.70 EUR for August 2026 against the books?"
+        ));
+        // The third says the second's words in a different order of politeness,
+        // and that is the one this bound exists to stop.
+        assert!(!budget.first_time_asking(
+            "finance",
+            "Please confirm the invoiced amount of 8070.70 EUR for August 2026 against the books."
+        ));
+        // The bound is on the question, not the room: the same words put to
+        // somebody else are a question that agent has not been asked.
+        assert!(budget.first_time_asking(
+            "insights",
+            "Please confirm that we invoiced 8070.70 EUR in August 2026."
+        ));
+        // …and a question that differs by the one word that matters is a
+        // different question, which is the whole reason the sets must match
+        // exactly rather than merely overlap.
+        assert!(budget.first_time_asking(
+            "finance",
+            "Please confirm that we invoiced 8070.70 EUR in September 2026."
+        ));
+    }
+
     fn action(tool: &str) -> AgentDecision {
         AgentDecision::Action {
             action: alo_ai::ProposedAction {
@@ -901,6 +985,7 @@ mod tests {
         let wanted = step(AgentDecision::Delegate {
             to: "crm".to_owned(),
             ask: "which deal is behind Q-31?".to_owned(),
+            check: false,
         });
         match finish(wanted) {
             TurnResult::Answer(text) => assert!(text.contains("ask the remaining part")),

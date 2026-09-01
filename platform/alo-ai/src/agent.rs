@@ -71,6 +71,15 @@ pub enum AgentDecision {
         to: String,
         /// The sub-question, in words that stand on their own.
         ask: String,
+        /// Whether this is a **check** of something the asker already has,
+        /// rather than a question it cannot answer itself.
+        ///
+        /// Both travel the same way and cost the same budget; the difference
+        /// is what the room is told and what the asker is expected to do with
+        /// the reply. A check that comes back different is the answer — the
+        /// asking agent must say both figures and that they disagree, which is
+        /// the one thing a confident single number cannot tell anybody.
+        check: bool,
     },
 }
 
@@ -288,11 +297,19 @@ fn delegates_block(delegates: &[PlanAgent<'_>]) -> String {
 {{\"kind\":\"delegate\",\"delegate\":{{\"to\":\"<handle>\",\"ask\":\"<the sub-question, in words that stand on their own>\"}}}}. \
 The handoff runs immediately, as the person asking, and that agent's answer comes back to you as a \
 further numbered source to cite in your own answer. You can hand off to: {roster}.\n\
-BEFORE you hand anything off, read your own tool list above. If any tool of yours could answer the \
+BEFORE you hand a QUESTION off, read your own tool list above. If any tool of yours could answer the \
 request — even partly — USE THAT TOOL INSTEAD. Handing on a question your own tools cover is always \
 wrong: nobody else can see your product's records, so the question comes back unanswered and the \
 person waits for nothing. Hand off ONLY the part that is plainly another product's, one thing at a \
-time, and only after your own tools have given you what they can."
+time, and only after your own tools have given you what they can.\n\
+A CHECK is the one exception to that rule, and it works the other way round: you check a figure your \
+own tools DID give you, by adding \"check\":true — \
+{{\"kind\":\"delegate\",\"delegate\":{{\"to\":\"<handle>\",\"ask\":\"<your figure, and what you want confirmed>\",\"check\":true}}}}. \
+Check when another product keeps its own record of the same money, stock or hours and being wrong \
+would matter — a total somebody will report, invoice against, or put in front of a board. When the \
+check comes back DIFFERENT from your figure, say BOTH numbers and say plainly that they do not \
+agree — never quietly pick one. A disagreement you report is worth more than a confident number \
+nobody verified."
     )
 }
 
@@ -451,6 +468,10 @@ pub fn parse_decision(text: &str) -> Result<AgentDecision, DecisionError> {
         to: String,
         #[serde(default)]
         ask: String,
+        /// Absent means an ordinary handoff: a model that never asks for a
+        /// check behaves exactly as it did before this field existed.
+        #[serde(default)]
+        check: bool,
     }
     #[derive(Deserialize)]
     struct Envelope {
@@ -484,7 +505,20 @@ pub fn parse_decision(text: &str) -> Result<AgentDecision, DecisionError> {
                 say: env.say.unwrap_or_default().trim().to_owned(),
             })
         }
-        "delegate" => {
+        // `"check"` is the model's own reading of the offer, and a fair one
+        // (2026-09-01). The offer names three shapes — answer, action,
+        // delegate — and then describes a fourth thing to do in capitals, so a
+        // model that decides to check writes `{"kind":"check", …}` rather than
+        // a delegate carrying `"check":true`. Observed on every live check the
+        // first build made: each was refused as "a kind nobody declared", the
+        // retry fell back to a plain handoff, and the reworded retries spent
+        // the run's whole handoff budget before the turn died unusable.
+        //
+        // Nothing widens. A check *is* a delegate — same roster, same budget,
+        // same depth bound, same module gate — so this arm reads the very
+        // payload the `delegate` arm reads, and settles only what the room is
+        // told and how the reply comes back labelled.
+        kind @ ("delegate" | "check") => {
             let handoff = env.delegate.ok_or(DecisionError::Unusable)?;
             // Models write the handle the way people do; the roster stores it
             // bare, so the `@` is stripped rather than made a resolution miss.
@@ -493,7 +527,11 @@ pub fn parse_decision(text: &str) -> Result<AgentDecision, DecisionError> {
             if to.is_empty() || ask.is_empty() {
                 return Err(DecisionError::Unusable);
             }
-            Ok(AgentDecision::Delegate { to, ask })
+            Ok(AgentDecision::Delegate {
+                to,
+                ask,
+                check: handoff.check || kind == "check",
+            })
         }
         // A `kind` that names a tool instead of a shape (2026-08-31). Asked
         // "what did we quote Northstar Foods?", gpt-4o-mini replies
@@ -547,15 +585,24 @@ fn value_of(json: &str, field: &str) -> Option<serde_json::Value> {
 
 /// Told to the model on the second and later calls of a read turn, when there
 /// is still a lookup left in the budget.
+///
+/// The check clause is not decoration. This sentence is the last and most
+/// emphatic thing the model reads, and it arrives at exactly the moment a
+/// figure exists to be checked — so without an explicit exception, "ANSWER
+/// now" forbids the check by construction, and no amount of encouragement
+/// further up the prompt gets one.
 const MORE_READS_LEFT: &str = "\n\nThe last source above is the result of a tool you just ran. \
 ANSWER the request from it now if it contains what you need — that is what you looked it up for. \
-Only run one more reading tool if the answer genuinely needs a second lookup.";
+Only run one more reading tool if the answer genuinely needs a second lookup. The one other thing \
+you may do instead of answering is CHECK the figure you just read with an agent whose product keeps \
+its own record of the same money, stock or hours, when being wrong would matter.";
 
 /// Told instead when the lookup budget is spent (ADR 0047 §2).
 const NO_READS_LEFT: &str = "\n\nThe last source above is the result of a tool you just ran, and it \
 was your LAST lookup — you may not run another reading tool for this request. ANSWER from what you \
 have; if it is not enough, say plainly what you could not find out and ask the user to narrow the \
-question. You may still propose a tool that CHANGES something.";
+question. You may still propose a tool that CHANGES something, and you may still CHECK a figure you \
+have with an agent whose product keeps its own record of it.";
 
 /// The chat messages for the second and later calls of a read turn (ADR 0047
 /// §2), where `sources` already carries the tool results as further numbered
@@ -734,7 +781,10 @@ mod tests {
             parse_decision(text).unwrap(),
             AgentDecision::Delegate {
                 to: "inventory".to_owned(),
-                ask: "is the X100 in stock?".to_owned()
+                ask: "is the X100 in stock?".to_owned(),
+                // Absent means an ordinary handoff, so every envelope written
+                // before checks existed still parses to exactly what it did.
+                check: false,
             }
         );
         let bare =
@@ -743,7 +793,34 @@ mod tests {
             parse_decision(bare).unwrap(),
             AgentDecision::Delegate { to, .. } if to == "crm"
         ));
+        // A check travels the same envelope with one more field, and the
+        // room and the sources are what treat it differently.
+        let checking = r#"{"kind":"delegate","delegate":{"to":"finance","ask":"does 8070.70 match the books?","check":true}}"#;
+        assert_eq!(
+            parse_decision(checking).unwrap(),
+            AgentDecision::Delegate {
+                to: "finance".to_owned(),
+                ask: "does 8070.70 match the books?".to_owned(),
+                check: true,
+            }
+        );
+        // …and a model that reads the offer's capitalised CHECK as a *kind*
+        // gets the check it plainly asked for. Every live check the first
+        // build made came back in this shape (2026-09-01); refusing it lost
+        // the check and the run's budget to the reworded retries that followed.
+        let as_a_kind = r#"{"kind":"check","delegate":{"to":"@finance","ask":"does 8070.70 match the books?"}}"#;
+        assert_eq!(
+            parse_decision(as_a_kind).unwrap(),
+            AgentDecision::Delegate {
+                to: "finance".to_owned(),
+                ask: "does 8070.70 match the books?".to_owned(),
+                check: true,
+            }
+        );
         assert!(parse_decision(r#"{"kind":"delegate"}"#).is_err());
+        // A check with nobody to check with is as unusable as any other
+        // handoff without a target: the shape is tolerated, never invented.
+        assert!(parse_decision(r#"{"kind":"check"}"#).is_err());
         assert!(parse_decision(r#"{"kind":"delegate","delegate":{"to":"@","ask":"x"}}"#).is_err());
         assert!(
             parse_decision(r#"{"kind":"delegate","delegate":{"to":"crm","ask":"  "}}"#).is_err()
@@ -851,8 +928,13 @@ mod tests {
         // The offer's whole point since 2026-08-31: a handoff is the last
         // resort, said where the model cannot miss it. A real model read the
         // old one-clause version and handed Billing questions to Finance.
-        assert!(user.contains("BEFORE you hand anything off, read your own tool list"));
+        assert!(user.contains("BEFORE you hand a QUESTION off, read your own tool list"));
         assert!(user.contains("USE THAT TOOL INSTEAD"));
+        // A check is offered as the one exception to that rule rather than as
+        // a paragraph arguing with it: stated the other way round, no live
+        // model ever chose one (2026-09-01).
+        assert!(user.contains("A CHECK is the one exception to that rule"));
+        assert!(user.contains("\"check\":true"));
         // …and the offer survives into the after-read call, where the folded
         // answer is what it is being asked to cite.
         let after = after_read_messages(&asked, true);

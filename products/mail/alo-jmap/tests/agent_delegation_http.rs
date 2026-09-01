@@ -166,11 +166,12 @@ fn said_by<'a>(all: &'a [Value], agent: &ChatAgentId) -> Vec<&'a Value> {
         .collect()
 }
 
-/// The handoff lines in the room, in order.
+/// The handoff lines in the room, in order — questions and checks alike,
+/// since both are one agent turning to another where the room can see it.
 fn handoff_lines(all: &[Value]) -> Vec<String> {
     all.iter()
         .filter_map(|m| m["body"].as_str())
-        .filter(|body| body.starts_with("I'm asking @"))
+        .filter(|body| body.starts_with("I'm asking @") || body.starts_with("I'm checking with @"))
         .map(str::to_owned)
         .collect()
 }
@@ -377,6 +378,67 @@ async fn the_same_question_is_not_put_to_the_same_agent_twice() {
         "{}",
         user_of(&seen, 4)
     );
+}
+
+/// **A check is a handoff that says so.** The same roster, the same budget,
+/// the same bounds — what differs is the line the room reads and the label the
+/// reply comes back under, so an asking model reconciling two figures can see
+/// that the second one is a second opinion rather than a fresh fact.
+#[tokio::test]
+async fn a_check_says_so_in_the_room_and_comes_back_labelled() {
+    let h = harness("delegcheck").await;
+    let (channel, billing) = a_room_with(&h, "billing", AgentProduct::Billing).await;
+    an_agent(&h, "finance", AgentProduct::Finance).await;
+
+    let checks = json!({
+        "kind": "delegate",
+        "delegate": {
+            "to": "finance",
+            "ask": "does 8,070.70 for August match the books?",
+            "check": true,
+        },
+    })
+    .to_string();
+    let (base, seen) = scripted_model(vec![
+        checks,
+        // The delegate's own turn, answering from its side of the house.
+        says("The books show 8,070.70 for August."),
+        // The asker reconciles the two and says they agree.
+        says("8,070.70 invoiced in August [1], and @finance confirms it against the books [2]."),
+    ])
+    .await;
+    use_model(&h, &base).await;
+
+    let all = ask_and_wait(
+        &h,
+        &channel,
+        "@billing what did we invoice in August?",
+        |all| {
+            all.iter().any(|m| {
+                m["body"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .contains("confirms it")
+            })
+        },
+    )
+    .await;
+
+    // The room is told this is a check, not a question.
+    let lines = handoff_lines(&all);
+    assert_eq!(lines.len(), 1, "{}", json!(all));
+    assert!(
+        lines[0].starts_with("I'm checking with @finance:"),
+        "the room must see a check as a check: {}",
+        lines[0]
+    );
+    // …and the reply reaches the asking model labelled as one.
+    assert!(
+        user_of(&seen, 2).contains("check"),
+        "the folded reply must be labelled a check: {}",
+        user_of(&seen, 2)
+    );
+    assert_eq!(said_by(&all, &billing).len(), 2, "{}", json!(all));
 }
 
 /// **At most four handoffs per run, refusals included.** The fifth is refused
