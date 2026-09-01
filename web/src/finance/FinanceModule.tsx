@@ -27,7 +27,18 @@
 // the access decision — every one of those routes gates itself.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
+import {
+  BadgeEuro,
+  ChartNoAxesCombined,
+  CircleGauge,
+  Landmark,
+  ListChecks,
+  ReceiptText,
+  Scale,
+  WalletCards,
+} from "lucide-react";
 
+import { ModuleNavigation, moduleNavigationItemClassName } from "../ds";
 import { strings } from "../i18n";
 import { useJmapClient } from "../jmap";
 import { useProjects } from "../projects";
@@ -35,10 +46,10 @@ import { AccountsView } from "./AccountsView";
 import { ApprovalsView } from "./ApprovalsView";
 import { BankView } from "./BankView";
 import { ExpensesView } from "./ExpensesView";
+import { FinanceOverviewView } from "./FinanceOverviewView";
 import { ReconcileView } from "./ReconcileView";
 import { ReportsView } from "./ReportsView";
 import type { ProjectChoice } from "./ExpenseDialog";
-import styles from "./FinanceModule.module.css";
 
 /**
  * Where the product surface mounts this module (`product/workplace.tsx`).
@@ -58,13 +69,14 @@ const FINANCE_ROOT = "/finance";
  *  on it, the statement it turns up on, the matching, the chart it all books
  *  to, and the four reports. `bookkeeper` marks the ones only an admin or an
  *  accountant sees. */
-const TABS: { path: string; label: () => string; bookkeeper: boolean }[] = [
-  { path: "expenses", label: () => strings.financeTabExpenses, bookkeeper: false },
-  { path: "approvals", label: () => strings.financeTabApprovals, bookkeeper: true },
-  { path: "bank", label: () => strings.financeTabBank, bookkeeper: true },
-  { path: "reconcile", label: () => strings.financeTabReconcile, bookkeeper: true },
-  { path: "accounts", label: () => strings.financeTabAccounts, bookkeeper: true },
-  { path: "reports", label: () => strings.financeTabReports, bookkeeper: true },
+const TABS = [
+  { path: "overview", label: () => strings.financeTabOverview, Icon: CircleGauge, bookkeeper: true },
+  { path: "expenses", label: () => strings.financeTabExpenses, Icon: ReceiptText, bookkeeper: false },
+  { path: "approvals", label: () => strings.financeTabApprovals, Icon: ListChecks, bookkeeper: true },
+  { path: "bank", label: () => strings.financeTabBank, Icon: Landmark, bookkeeper: true },
+  { path: "reconcile", label: () => strings.financeTabReconcile, Icon: Scale, bookkeeper: true },
+  { path: "accounts", label: () => strings.financeTabAccounts, Icon: BadgeEuro, bookkeeper: true },
+  { path: "reports", label: () => strings.financeTabReports, Icon: ChartNoAxesCombined, bookkeeper: true },
 ];
 
 export function FinanceModule() {
@@ -102,28 +114,36 @@ export function FinanceModule() {
   );
 
   return (
-    <div className={styles.finance}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>{strings.moduleFinance}</h1>
+    <div className="flex h-full min-h-0 w-full flex-col bg-app">
+      <header className="shrink-0 border-b border-subtle bg-surface px-8 pb-4 pt-6 max-sm:px-4 max-sm:pt-4">
+        <div className="flex items-center gap-3.5">
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--accent-soft)] text-accent shadow-sm ring-1 ring-inset ring-accent/10" aria-hidden="true">
+            <WalletCards className="size-5" />
+          </span>
+          <div className="min-w-0">
+            <h1 className="m-0 text-2xl font-bold tracking-tight text-primary">{strings.moduleFinance}</h1>
+            <p className="m-0 mt-1 text-sm text-secondary">{strings.financeWorkspacePurpose}</p>
+          </div>
+        </div>
         {/* Scrolls horizontally on a phone by design; the responsive e2e
             sweep exempts marked strips from its width invariant. */}
-        <nav className={styles.tabs} data-allow-overflow="">
+        <ModuleNavigation className="mt-5" label={strings.moduleFinance}>
           {TABS.filter((tab) => approver || !tab.bookkeeper).map((tab) => (
             <NavLink
               key={tab.path}
               to={`${FINANCE_ROOT}/${tab.path}`}
-              className={({ isActive }) =>
-                isActive ? `${styles.tab} ${styles.tabActive}` : styles.tab
-              }
+              className={({ isActive }) => moduleNavigationItemClassName(isActive)}
             >
+              <tab.Icon className="size-4" aria-hidden="true" />
               {tab.label()}
             </NavLink>
           ))}
-        </nav>
+        </ModuleNavigation>
       </header>
 
       <Routes>
-        <Route index element={<Navigate to={`${FINANCE_ROOT}/expenses`} replace />} />
+        <Route index element={<Navigate to={`${FINANCE_ROOT}/${approver ? "overview" : "expenses"}`} replace />} />
+        <Route path="overview" element={<FinanceOverviewView />} />
         <Route
           path="expenses"
           element={<ExpensesView projects={choices} revision={revision} />}
@@ -140,7 +160,7 @@ export function FinanceModule() {
         <Route path="accounts" element={<AccountsView />} />
         <Route path="reports/*" element={<ReportsView />} />
         {/* An unknown Finance path is a stale link, not an error page. */}
-        <Route path="*" element={<Navigate to={`${FINANCE_ROOT}/expenses`} replace />} />
+        <Route path="*" element={<Navigate to={`${FINANCE_ROOT}/${approver ? "overview" : "expenses"}`} replace />} />
       </Routes>
     </div>
   );
