@@ -358,6 +358,7 @@ fn seed_features(ctx: &SeedContext) -> SectionSeed {
         intro: None,
         items,
         columns: None,
+        presentation: None,
     }))
 }
 
@@ -382,6 +383,7 @@ fn seed_text_image(ctx: &SeedContext) -> SectionSeed {
         image,
         image_side: ImageSide::Left,
         split: None,
+        presentation: None,
     }))
 }
 
@@ -399,6 +401,7 @@ fn seed_gallery(ctx: &SeedContext) -> SectionSeed {
         heading: None,
         images,
         columns: None,
+        presentation: None,
     }))
 }
 
@@ -461,6 +464,7 @@ fn seed_cta(ctx: &SeedContext) -> SectionSeed {
             heading,
             body: None,
             button,
+            presentation: None,
         })),
         _ => SectionSeed::NeedsInput(SeedNeed::Writing),
     }
@@ -481,6 +485,7 @@ fn seed_contact_form(ctx: &SeedContext) -> SectionSeed {
         body: existing.and_then(|form| form.body.clone()),
         form_id: None,
         success_message: existing.and_then(|form| form.success_message.clone()),
+        presentation: existing.and_then(|form| form.presentation.clone()),
     }))
 }
 
@@ -491,6 +496,7 @@ fn seed_collection(ctx: &SeedContext) -> SectionSeed {
             SectionSeed::ready(Section::Collection(CollectionSection {
                 collection_id: SiteCollectionId::new(binding.id.clone()),
                 heading: short(&binding.name),
+                presentation: None,
             }))
         })
 }
@@ -503,6 +509,7 @@ fn seed_catalog(ctx: &SeedContext) -> SectionSeed {
                 catalog_id: SiteCatalogId::new(binding.id.clone()),
                 heading: short(&binding.name),
                 category: None,
+                presentation: None,
             }))
         })
 }
@@ -514,6 +521,7 @@ fn seed_booking(ctx: &SeedContext) -> SectionSeed {
             SectionSeed::ready(Section::Booking(BookingSection {
                 booking_id: SiteBookingId::new(binding.id.clone()),
                 heading: short(&binding.name),
+                presentation: None,
             }))
         })
 }
@@ -529,6 +537,7 @@ fn seed_tickets(ctx: &SeedContext) -> SectionSeed {
     SectionSeed::ready(Section::Tickets(TicketsSection {
         heading: existing.and_then(|tickets| tickets.heading.clone()),
         body: existing.and_then(|tickets| tickets.body.clone()),
+        presentation: existing.and_then(|tickets| tickets.presentation.clone()),
     }))
 }
 
@@ -543,6 +552,7 @@ fn seed_shop(ctx: &SeedContext) -> SectionSeed {
     SectionSeed::ready(Section::Shop(ShopSection {
         heading: existing.and_then(|shop| shop.heading.clone()),
         body: existing.and_then(|shop| shop.body.clone()),
+        presentation: existing.and_then(|shop| shop.presentation.clone()),
     }))
 }
 
@@ -663,6 +673,7 @@ mod tests {
                         author: "Ines Kortekaas".to_owned(),
                         role: Some("Regular since 2019".to_owned()),
                     }],
+                    presentation: None,
                 }),
                 Section::Pricing(PricingSection {
                     heading: Some("Subscriptions".to_owned()),
@@ -676,6 +687,7 @@ mod tests {
                         cta: Some(link("Subscribe", "/visit")),
                         highlighted: false,
                     }],
+                    presentation: None,
                 }),
                 Section::Team(TeamSection {
                     heading: Some("Behind the drum".to_owned()),
@@ -686,6 +698,7 @@ mod tests {
                         bio: None,
                     }],
                     columns: None,
+                    presentation: None,
                 }),
                 Section::Faq(FaqSection {
                     heading: None,
@@ -693,12 +706,14 @@ mod tests {
                         question: "Do you ship abroad?".to_owned(),
                         answer: "Anywhere in the EU, in two days.".to_owned(),
                     }],
+                    presentation: None,
                 }),
                 Section::ContactForm(ContactFormSection {
                     heading: Some("Say hello".to_owned()),
                     body: None,
                     form_id: Some("frm-existing".to_owned()),
                     success_message: Some("We answer within a day.".to_owned()),
+                    presentation: None,
                 }),
             ],
             catalog: Some(SeedBinding {

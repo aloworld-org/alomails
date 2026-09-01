@@ -21,7 +21,20 @@
           "body": "Every parcel travels by rail and bike courier, offset at the roastery.",
           "icon": "leaf"
         }
-      ]
+      ],
+      "presentation": {
+        "layout": "cards",
+        "spacing": "generous",
+        "width": "wide",
+        "alignment": "center",
+        "background": "accent_3",
+        "text": "text",
+        "button": "accent_1",
+        "button_hover": "accent_2",
+        "button_hover_text": "background",
+        "entrance": "fade_up",
+        "speed": "relaxed"
+      }
     }
   ]
 }

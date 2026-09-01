@@ -24,6 +24,7 @@ import type {
   SectionImage,
   SectionKind,
   SectionLink,
+  SectionPresentation,
   NavAppearance,
   TeamMember,
   Testimonial,
@@ -66,7 +67,11 @@ export interface FeatureItemDraft {
   icon?: string | undefined;
 }
 
-export interface FeaturesDraft {
+export interface PresentableDraft {
+  presentation: SectionPresentation;
+}
+
+export interface FeaturesDraft extends PresentableDraft {
   type: "features";
   heading: string;
   intro: string;
@@ -77,7 +82,7 @@ export interface FeaturesDraft {
   columns?: string | undefined;
 }
 
-export interface TextImageDraft {
+export interface TextImageDraft extends PresentableDraft {
   type: "text_image";
   heading: string;
   body: string;
@@ -87,7 +92,7 @@ export interface TextImageDraft {
   split?: string | undefined;
 }
 
-export interface GalleryDraft {
+export interface GalleryDraft extends PresentableDraft {
   type: "gallery";
   heading: string;
   images: SectionImage[];
@@ -101,7 +106,7 @@ export interface TestimonialDraft {
   role: string;
 }
 
-export interface TestimonialsDraft {
+export interface TestimonialsDraft extends PresentableDraft {
   type: "testimonials";
   heading: string;
   items: TestimonialDraft[];
@@ -118,7 +123,7 @@ export interface TierDraft {
   highlighted: boolean;
 }
 
-export interface PricingDraft {
+export interface PricingDraft extends PresentableDraft {
   type: "pricing";
   heading: string;
   intro: string;
@@ -132,7 +137,7 @@ export interface MemberDraft {
   bio: string;
 }
 
-export interface TeamDraft {
+export interface TeamDraft extends PresentableDraft {
   type: "team";
   heading: string;
   members: MemberDraft[];
@@ -145,20 +150,20 @@ export interface FaqItemDraft {
   answer: string;
 }
 
-export interface FaqDraft {
+export interface FaqDraft extends PresentableDraft {
   type: "faq";
   heading: string;
   items: FaqItemDraft[];
 }
 
-export interface CtaDraft {
+export interface CtaDraft extends PresentableDraft {
   type: "cta";
   heading: string;
   body: string;
   button: SectionLink;
 }
 
-export interface ContactFormDraft {
+export interface ContactFormDraft extends PresentableDraft {
   type: "contact_form";
   heading: string;
   body: string;
@@ -167,13 +172,13 @@ export interface ContactFormDraft {
   form_id?: string | undefined;
 }
 
-export interface CollectionDraft {
+export interface CollectionDraft extends PresentableDraft {
   type: "collection";
   collection_id: string;
   heading: string;
 }
 
-export interface CatalogDraft {
+export interface CatalogDraft extends PresentableDraft {
   type: "catalog";
   catalog_id: string;
   heading: string;
@@ -185,7 +190,7 @@ export interface CatalogDraft {
 /** Which of the site's booking services this section offers, and the heading
  *  above it. Nothing else: the length, the week and the questions belong to the
  *  service and are edited where the service is. */
-export interface BookingDraft {
+export interface BookingDraft extends PresentableDraft {
   type: "booking";
   booking_id: string;
   heading: string;
@@ -194,7 +199,7 @@ export interface BookingDraft {
 /** The ticket shop's door on a page: the heading and the owner's sentence
  *  above the link. The events, their prices and their seats are managed on
  *  the Tickets screen and read live — nothing of them is edited here. */
-export interface TicketsDraft {
+export interface TicketsDraft extends PresentableDraft {
   type: "tickets";
   heading: string;
   body: string;
@@ -203,7 +208,7 @@ export interface TicketsDraft {
 /** The stock shop's door on a page: the heading and the owner's sentence
  *  above the link. The shelf, its prices and its stock are managed on the
  *  Shop screen and read live — nothing of them is edited here. */
-export interface ShopDraft {
+export interface ShopDraft extends PresentableDraft {
   type: "shop";
   heading: string;
   body: string;
@@ -270,6 +275,19 @@ export type SectionDraft =
  *  enough that an empty one does not push the rest of the page off screen. A
  *  required field never starts blank. */
 export const DEFAULT_CUSTOM_CODE_HEIGHT_PX = 320;
+
+export const DEFAULT_SECTION_PRESENTATION: SectionPresentation = {
+  layout: "clean",
+  spacing: "standard",
+  width: "balanced",
+  alignment: "left",
+  background: "background",
+  text: "text",
+  button: "accent_1",
+  button_hover: "accent_2",
+  entrance: "none",
+  speed: "smooth",
+};
 
 export const blankLink = (): SectionLink => ({ label: "", href: "" });
 export const blankImage = (): SectionImage => ({ blob_id: "", alt: "" });
@@ -368,6 +386,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
           blankFeature,
         ),
         columns: s?.columns,
+        presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
     case "text_image": {
@@ -379,6 +398,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         image: draftImage(s?.image),
         image_side: s?.image_side ?? "left",
         split: s?.split,
+        presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
     case "gallery": {
@@ -391,6 +411,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
           blankImage,
         ),
         columns: s?.columns,
+        presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
     case "testimonials": {
@@ -406,6 +427,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
           })),
           blankTestimonial,
         ),
+        presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
     case "pricing": {
@@ -426,6 +448,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
           })),
           blankTier,
         ),
+        presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
     case "team": {
@@ -443,6 +466,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
           blankMember,
         ),
         columns: s?.columns,
+        presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
     case "faq": {
@@ -457,6 +481,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
           })),
           blankFaqItem,
         ),
+        presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
     case "cta": {
@@ -466,6 +491,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         heading: s?.heading ?? "",
         body: s?.body ?? "",
         button: draftLink(s?.button),
+        presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
     case "contact_form": {
@@ -476,6 +502,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         body: s?.body ?? "",
         success_message: s?.success_message ?? "",
         form_id: s?.form_id,
+        presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
     case "collection": {
@@ -484,6 +511,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         type: "collection",
         collection_id: s?.collection_id ?? "",
         heading: s?.heading ?? "",
+        presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
     case "catalog": {
@@ -493,6 +521,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         catalog_id: s?.catalog_id ?? "",
         heading: s?.heading ?? "",
         category: s?.category ?? "",
+        presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
     case "booking": {
@@ -501,6 +530,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         type: "booking",
         booking_id: s?.booking_id ?? "",
         heading: s?.heading ?? "",
+        presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
     case "tickets": {
@@ -509,6 +539,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         type: "tickets",
         heading: s?.heading ?? "",
         body: s?.body ?? "",
+        presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
     case "shop": {
@@ -517,6 +548,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         type: "shop",
         heading: s?.heading ?? "",
         body: s?.body ?? "",
+        presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
     case "transition": {
@@ -658,6 +690,7 @@ export function toSection(draft: SectionDraft): Section {
           icon: i.icon,
         })),
         columns: draft.columns,
+        presentation: draft.presentation,
       };
     case "text_image":
       return {
@@ -667,6 +700,7 @@ export function toSection(draft: SectionDraft): Section {
         image: reqImage(draft.image),
         image_side: draft.image_side,
         split: draft.split,
+        presentation: draft.presentation,
       };
     case "gallery":
       return {
@@ -674,6 +708,7 @@ export function toSection(draft: SectionDraft): Section {
         heading: opt(draft.heading),
         images: pruned(draft.images, imageBlank).map(reqImage),
         columns: draft.columns,
+        presentation: draft.presentation,
       };
     case "testimonials":
       return {
@@ -687,6 +722,7 @@ export function toSection(draft: SectionDraft): Section {
           author: req(i.author),
           role: opt(i.role),
         })),
+        presentation: draft.presentation,
       };
     case "pricing":
       return {
@@ -708,6 +744,7 @@ export function toSection(draft: SectionDraft): Section {
           cta: optLink(t.cta),
           highlighted: t.highlighted,
         })),
+        presentation: draft.presentation,
       };
     case "team":
       return {
@@ -722,6 +759,7 @@ export function toSection(draft: SectionDraft): Section {
           }),
         ),
         columns: draft.columns,
+        presentation: draft.presentation,
       };
     case "faq":
       return {
@@ -731,6 +769,7 @@ export function toSection(draft: SectionDraft): Section {
           draft.items,
           (i) => i.question.trim() === "" && i.answer.trim() === "",
         ).map((i) => ({ question: req(i.question), answer: req(i.answer) })),
+        presentation: draft.presentation,
       };
     case "cta":
       return {
@@ -738,6 +777,7 @@ export function toSection(draft: SectionDraft): Section {
         heading: req(draft.heading),
         body: opt(draft.body),
         button: reqLink(draft.button),
+        presentation: draft.presentation,
       };
     case "contact_form":
       return {
@@ -746,12 +786,14 @@ export function toSection(draft: SectionDraft): Section {
         body: opt(draft.body),
         form_id: draft.form_id,
         success_message: opt(draft.success_message),
+        presentation: draft.presentation,
       };
     case "collection":
       return {
         type: "collection",
         collection_id: req(draft.collection_id),
         heading: opt(draft.heading),
+        presentation: draft.presentation,
       };
     case "catalog":
       return {
@@ -759,24 +801,28 @@ export function toSection(draft: SectionDraft): Section {
         catalog_id: req(draft.catalog_id),
         heading: opt(draft.heading),
         category: opt(draft.category),
+        presentation: draft.presentation,
       };
     case "booking":
       return {
         type: "booking",
         booking_id: req(draft.booking_id),
         heading: opt(draft.heading),
+        presentation: draft.presentation,
       };
     case "tickets":
       return {
         type: "tickets",
         heading: opt(draft.heading),
         body: opt(draft.body),
+        presentation: draft.presentation,
       };
     case "shop":
       return {
         type: "shop",
         heading: opt(draft.heading),
         body: opt(draft.body),
+        presentation: draft.presentation,
       };
     case "transition":
       return {

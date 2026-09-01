@@ -94,6 +94,7 @@ fn fixture_site() -> SeedContext {
                     icon: Some("flame".to_owned()),
                 }],
                 columns: None,
+                presentation: None,
             }),
             Section::Gallery(GallerySection {
                 heading: None,
@@ -102,6 +103,7 @@ fn fixture_site() -> SeedContext {
                     "The counter at opening time",
                 )],
                 columns: None,
+                presentation: None,
             }),
             Section::Testimonials(TestimonialsSection {
                 heading: Some("What the neighbourhood says".to_owned()),
@@ -110,6 +112,7 @@ fn fixture_site() -> SeedContext {
                     author: "Ines Kortekaas".to_owned(),
                     role: Some("Regular since 2019".to_owned()),
                 }],
+                presentation: None,
             }),
             Section::Team(TeamSection {
                 heading: Some("Behind the drum".to_owned()),
@@ -120,6 +123,7 @@ fn fixture_site() -> SeedContext {
                     bio: None,
                 }],
                 columns: None,
+                presentation: None,
             }),
             Section::Faq(FaqSection {
                 heading: None,
@@ -127,12 +131,14 @@ fn fixture_site() -> SeedContext {
                     question: "Do you ship abroad?".to_owned(),
                     answer: "Anywhere in the EU, in two days.".to_owned(),
                 }],
+                presentation: None,
             }),
             Section::ContactForm(ContactFormSection {
                 heading: Some("Say hello".to_owned()),
                 body: None,
                 form_id: Some("frmExisting1234567890".to_owned()),
                 success_message: Some("We answer within a day.".to_owned()),
+                presentation: None,
             }),
         ],
         catalog: Some(SeedBinding {

@@ -25,6 +25,31 @@ export type ThemeColorRole =
   | "accent_4"
   | "accent_5";
 
+export type SectionLayoutStyle = "clean" | "cards" | "minimal" | "editorial";
+export type SectionSpacing = "compact" | "standard" | "generous";
+export type SectionWidth = "narrow" | "balanced" | "wide";
+export type SectionAlignment = "left" | "center";
+export type SectionEntrance = "none" | "fade_up" | "slide_in" | "scale_in" | "reveal";
+
+export interface SectionPresentation {
+  layout: SectionLayoutStyle;
+  spacing: SectionSpacing;
+  width: SectionWidth;
+  alignment: SectionAlignment;
+  background: ThemeColorRole;
+  text: ThemeColorRole;
+  button: ThemeColorRole;
+  button_text?: ThemeColorRole | undefined;
+  button_hover: ThemeColorRole;
+  button_hover_text?: ThemeColorRole | undefined;
+  entrance: SectionEntrance;
+  speed: TransitionSpeed;
+}
+
+export interface PresentableSection {
+  presentation?: SectionPresentation | undefined;
+}
+
 /** Optional navigation styling references the reusable site-theme palette. */
 export interface NavAppearance {
   background: ThemeColorRole;
@@ -126,7 +151,7 @@ export interface FeatureItem {
 }
 
 /** A grid of product/service features; at least one item. */
-export interface FeaturesSection {
+export interface FeaturesSection extends PresentableSection {
   type: "features";
   heading?: string | undefined;
   intro?: string | undefined;
@@ -136,7 +161,7 @@ export interface FeaturesSection {
 }
 
 /** A text block alongside an image. */
-export interface TextImageSection {
+export interface TextImageSection extends PresentableSection {
   type: "text_image";
   heading?: string | undefined;
   body: string;
@@ -147,7 +172,7 @@ export interface TextImageSection {
 }
 
 /** An image gallery; at least one image. */
-export interface GallerySection {
+export interface GallerySection extends PresentableSection {
   type: "gallery";
   heading?: string | undefined;
   images: SectionImage[];
@@ -163,7 +188,7 @@ export interface Testimonial {
 }
 
 /** A row of customer quotes; at least one. */
-export interface TestimonialsSection {
+export interface TestimonialsSection extends PresentableSection {
   type: "testimonials";
   heading?: string | undefined;
   items: Testimonial[];
@@ -182,7 +207,7 @@ export interface PricingTier {
 }
 
 /** A pricing table; at least one tier. */
-export interface PricingSection {
+export interface PricingSection extends PresentableSection {
   type: "pricing";
   heading?: string | undefined;
   intro?: string | undefined;
@@ -198,7 +223,7 @@ export interface TeamMember {
 }
 
 /** The people behind the business; at least one member. */
-export interface TeamSection {
+export interface TeamSection extends PresentableSection {
   type: "team";
   heading?: string | undefined;
   members: TeamMember[];
@@ -213,14 +238,14 @@ export interface FaqItem {
 }
 
 /** A frequently-asked-questions list; at least one pair. */
-export interface FaqSection {
+export interface FaqSection extends PresentableSection {
   type: "faq";
   heading?: string | undefined;
   items: FaqItem[];
 }
 
 /** A standalone call-to-action banner. */
-export interface CtaSection {
+export interface CtaSection extends PresentableSection {
   type: "cta";
   heading: string;
   body?: string | undefined;
@@ -230,7 +255,7 @@ export interface CtaSection {
 /** A contact form. `form_id` is wired by the forms slice; until then the
  *  editor preserves it untouched and the section renders without a working
  *  submit. */
-export interface ContactFormSection {
+export interface ContactFormSection extends PresentableSection {
   type: "contact_form";
   heading?: string | undefined;
   body?: string | undefined;
@@ -239,7 +264,7 @@ export interface ContactFormSection {
 }
 
 /** A live grid resolved from one connected alo Base collection. */
-export interface CollectionSection {
+export interface CollectionSection extends PresentableSection {
   type: "collection";
   collection_id: string;
   heading?: string | undefined;
@@ -250,7 +275,7 @@ export interface CollectionSection {
  *  its id, and it belongs to `catalog_id`: choosing a different catalog makes
  *  any handle from the previous one meaningless. Whether the published section
  *  carries an order form is a switch on the catalog, not on this section. */
-export interface CatalogSection {
+export interface CatalogSection extends PresentableSection {
   type: "catalog";
   catalog_id: string;
   heading?: string | undefined;
@@ -261,7 +286,7 @@ export interface CatalogSection {
  *  `booking_id` names one of the site's own booking services (S2.13a); the
  *  length, the opening hours and the questions asked are that service's and are
  *  frozen into the next publish, never copied here. */
-export interface BookingSection {
+export interface BookingSection extends PresentableSection {
   type: "booking";
   booking_id: string;
   heading?: string | undefined;
@@ -272,7 +297,7 @@ export interface BookingSection {
  *  What is on sale, its price and what is left are live state read from the
  *  price list on `/tix`, one navigation away; the events themselves are
  *  managed on the Tickets screen, never stored here. */
-export interface TicketsSection {
+export interface TicketsSection extends PresentableSection {
   type: "tickets";
   heading?: string | undefined;
   body?: string | undefined;
@@ -284,7 +309,7 @@ export interface TicketsSection {
  *  and what is on the shelf are live state read from Billing's price list and
  *  Inventory's ledger on `/shop`, one navigation away; the shelf itself is
  *  managed on the Shop screen, never stored here. */
-export interface ShopSection {
+export interface ShopSection extends PresentableSection {
   type: "shop";
   heading?: string | undefined;
   body?: string | undefined;

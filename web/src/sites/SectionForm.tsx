@@ -18,6 +18,7 @@ import {
   MousePointerClick,
   Palette,
   PanelTop,
+  PanelsTopLeft,
   Play,
   Plus,
   Sparkles,
@@ -50,6 +51,7 @@ import {
   blankMember,
   blankTestimonial,
   blankTier,
+  DEFAULT_SECTION_PRESENTATION,
   toDraft,
   toSection,
 } from "./sectionDrafts";
@@ -66,6 +68,7 @@ import type {
   HeroDraft,
   NavDraft,
   PricingDraft,
+  PresentableDraft,
   SectionDraft,
   TeamDraft,
   TestimonialsDraft,
@@ -79,6 +82,7 @@ import type {
   SectionKind,
   SectionLink,
   ThemeColorRole,
+  SectionPresentation,
 } from "./sections";
 import type {
   BrandColors,
@@ -1723,7 +1727,7 @@ function HeroOptionRow<T extends string>({
   label: string;
   value: T;
   options: readonly (readonly [T, string])[];
-  columns?: 3 | 4;
+  columns?: 3 | 4 | 5;
   visual?: (value: T) => ReactNode;
   onChange: (value: T) => void;
 }) {
@@ -1737,7 +1741,11 @@ function HeroOptionRow<T extends string>({
         className={cx(
           "grid",
           illustrated ? "gap-2" : "gap-1 rounded-xl bg-raised p-1",
-          columns === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3",
+          columns === 5
+            ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
+            : columns === 4
+              ? "grid-cols-2 sm:grid-cols-4"
+              : "grid-cols-3",
         )}
         role="radiogroup"
         aria-label={label}
@@ -2990,7 +2998,137 @@ function TransitionFields({ draft, onChange }: { draft: TransitionDraft; onChang
   );
 }
 
-export function SectionFormFields({
+function SectionStyleVisual({ style }: { style: SectionPresentation["layout"] }) {
+  return (
+    <span className={cx("grid h-16 w-28 gap-1.5 rounded-lg bg-raised p-2", style === "editorial" && "border-l-4 border-accent")} aria-hidden="true">
+      <span className="h-2 w-3/5 rounded-full bg-primary/70" />
+      <span className={cx("grid grid-cols-2 gap-1", style === "minimal" && "opacity-55")}>
+        {[0, 1].map((item) => (
+          <span key={item} className={cx("rounded-md bg-accent-soft", style === "cards" && "border border-accent/30 shadow-sm", style === "clean" ? "h-8" : "h-7")} />
+        ))}
+      </span>
+    </span>
+  );
+}
+
+function SectionEntranceVisual({ entrance }: { entrance: SectionPresentation["entrance"] }) {
+  return (
+    <span className="relative block h-12 w-20 overflow-hidden" aria-hidden="true">
+      <span className="absolute inset-x-1 top-1 h-2 rounded-full bg-secondary/15" />
+      <span className={cx(
+        "absolute inset-x-1 bottom-1 h-6 rounded-md border border-accent/30 bg-accent-soft",
+        entrance === "fade_up" && "translate-y-1 opacity-60",
+        entrance === "slide_in" && "translate-x-2 opacity-70",
+        entrance === "scale_in" && "scale-90 opacity-70",
+        entrance === "reveal" && "[clip-path:inset(0_0_35%_0)]",
+      )} />
+    </span>
+  );
+}
+
+function PresentationFields({
+  draft,
+  onChange,
+}: {
+  draft: SectionDraft & PresentableDraft;
+  onChange: Change;
+}) {
+  const { siteId = "" } = useParams();
+  const api = useSitesApi();
+  const workspaceBrand = readBrandKit();
+  const [brandColors, setBrandColors] = useState<BrandColors | null>(null);
+  useEffect(() => {
+    if (siteId === "") return;
+    let current = true;
+    void Promise.all([api.site(siteId), api.themePresets()]).then(([site, presets]) => {
+      if (!current) return;
+      const preset = presets.find((item) => item.id === (site.theme.preset ?? presets[0]?.id));
+      if (preset !== undefined) setBrandColors(themeColors(preset, site.theme.colors));
+    }).catch(() => undefined);
+    return () => { current = false; };
+  }, [api, siteId]);
+
+  const colors = brandColors ?? HERO_FALLBACK_COLORS;
+  const colorOptions = [
+    { value: "background", label: strings.sitesThemeBackgroundColor, swatch: colors.background },
+    { value: "text", label: strings.sitesThemeTextColor, swatch: colors.text },
+    { value: "border", label: strings.sitesThemeBorderColor, swatch: colors.border },
+    { value: "accent_1", label: strings.sitesThemeAccentColor(1), swatch: colors.accent_1 },
+    ...(workspaceBrand.secondary === null ? [] : [{ value: "accent_2", label: strings.sitesThemeAccentColor(2), swatch: colors.accent_2 }]),
+    ...workspaceBrand.supporting.map((color, index) => ({
+      value: `accent_${index + 3}`,
+      label: color.name,
+      swatch: colors[`accent_${index + 3}` as keyof BrandColors],
+    })),
+  ];
+  const p = draft.presentation;
+  const update = (presentation: SectionPresentation) =>
+    onChange({ ...draft, presentation } as SectionDraft);
+  const hasButtons = ["pricing", "cta", "contact_form", "catalog", "booking", "tickets", "shop"].includes(draft.type);
+
+  return (
+    <div className="mt-5 grid gap-5">
+      <Card as="section" flat>
+        <HeroFormHeading icon={<PanelsTopLeft size={17} />}>
+          {strings.sitesSectionDesign}
+        </HeroFormHeading>
+        <p className="mb-5 mt-2 text-sm text-secondary">{strings.sitesSectionDesignHint}</p>
+        <HeroOptionRow
+          label={strings.sitesSectionLayoutStyle}
+          value={p.layout}
+          columns={4}
+          visual={(layout) => <SectionStyleVisual style={layout} />}
+          options={[
+            ["clean", strings.sitesSectionLayoutClean],
+            ["cards", strings.sitesSectionLayoutCards],
+            ["minimal", strings.sitesSectionLayoutMinimal],
+            ["editorial", strings.sitesSectionLayoutEditorial],
+          ]}
+          onChange={(layout) => update({ ...p, layout })}
+        />
+        <div className="mt-5 grid gap-5 lg:grid-cols-3">
+          <HeroOptionRow label={strings.sitesSectionSpacing} value={p.spacing} visual={(value) => <HeroControlVisual group="height" value={value === "generous" ? "tall" : value} />} options={[["compact", strings.sitesHeroHeightCompact], ["standard", strings.sitesHeroHeightStandard], ["generous", strings.sitesSectionSpacingGenerous]]} onChange={(spacing) => update({ ...p, spacing })} />
+          <HeroOptionRow label={strings.sitesHeroContentWidth} value={p.width} visual={(value) => <HeroControlVisual group="width" value={value} />} options={[["narrow", strings.sitesHeroContentWidthNarrow], ["balanced", strings.sitesHeroContentWidthBalanced], ["wide", strings.sitesHeroContentWidthWide]]} onChange={(width) => update({ ...p, width })} />
+          <HeroOptionRow label={strings.sitesHeroAlignment} value={p.alignment} visual={(value) => <HeroControlVisual group="alignment" value={value} />} options={[["left", strings.sitesHeroAlignmentLeft], ["center", strings.sitesHeroAlignmentCenter]]} onChange={(alignment) => update({ ...p, alignment })} />
+        </div>
+      </Card>
+
+      <Card as="section" flat>
+        <HeroFormHeading icon={<Palette size={17} />}>{strings.sitesHeroColors}</HeroFormHeading>
+        <p className="mb-5 mt-2 text-sm text-secondary">{strings.sitesSectionColorsHint}</p>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <HeroColorSwatches label={strings.sitesSectionBackground} value={p.background} options={colorOptions} onChange={(background) => update({ ...p, background: background as ThemeColorRole })} />
+          <HeroColorSwatches label={strings.sitesSectionText} value={p.text} options={colorOptions} onChange={(text) => update({ ...p, text: text as ThemeColorRole })} />
+        </div>
+        {hasButtons && (
+          <div className="mt-5 grid gap-5 rounded-xl border border-subtle bg-raised p-4 sm:grid-cols-2 lg:grid-cols-4">
+            <HeroColorSwatches label={strings.sitesHeroPrimaryButtonColor} value={p.button} options={colorOptions} onChange={(button) => update({ ...p, button: button as ThemeColorRole })} />
+            <HeroColorSwatches label={strings.sitesHeroPrimaryButtonText} value={p.button_text ?? "auto"} options={colorOptions} automatic onChange={(button_text) => update({ ...p, button_text: button_text === "auto" ? undefined : button_text as ThemeColorRole })} />
+            <HeroColorSwatches label={strings.sitesHeroHoverBackground} value={p.button_hover} options={colorOptions} onChange={(button_hover) => update({ ...p, button_hover: button_hover as ThemeColorRole })} />
+            <HeroColorSwatches label={strings.sitesHeroHoverText} value={p.button_hover_text ?? "auto"} options={colorOptions} automatic onChange={(button_hover_text) => update({ ...p, button_hover_text: button_hover_text === "auto" ? undefined : button_hover_text as ThemeColorRole })} />
+          </div>
+        )}
+      </Card>
+
+      <Card as="section" flat>
+        <HeroFormHeading icon={<Sparkles size={17} />}>{strings.sitesHeroAnimation}</HeroFormHeading>
+        <p className="mb-5 mt-2 text-sm text-secondary">{strings.sitesSectionAnimationHint}</p>
+        <HeroOptionRow
+          label={strings.sitesSectionEntrance}
+          value={p.entrance}
+          columns={5}
+          visual={(entrance) => <SectionEntranceVisual entrance={entrance} />}
+          options={[["none", strings.sitesHeroAnimationNone], ["fade_up", strings.sitesHeroTextFadeUp], ["slide_in", strings.sitesHeroTextSlideIn], ["scale_in", strings.sitesTransitionScale], ["reveal", strings.sitesTransitionReveal]]}
+          onChange={(entrance) => update({ ...p, entrance })}
+        />
+        {p.entrance !== "none" && <div className="mt-5 max-w-xl"><HeroOptionRow label={strings.sitesHeroAnimationSpeed} value={p.speed} visual={(speed) => <HeroControlVisual group="pace" value={speed} />} options={[["quick", strings.sitesHeroAnimationQuick], ["smooth", strings.sitesHeroAnimationSmooth], ["relaxed", strings.sitesHeroAnimationRelaxed]]} onChange={(speed) => update({ ...p, speed })} /></div>}
+        <div className="mt-4 flex justify-end"><Button variant="ghost" size="sm" onClick={() => update(DEFAULT_SECTION_PRESENTATION)}>{strings.sitesSectionUseDefaults}</Button></div>
+      </Card>
+    </div>
+  );
+}
+
+function SectionSpecificFields({
   draft,
   onChange,
   currentPage,
@@ -3051,6 +3189,23 @@ export function SectionFormFields({
     case "footer":
       return <FooterFields draft={draft} onChange={onChange} />;
   }
+}
+
+export function SectionFormFields(props: {
+  draft: SectionDraft;
+  onChange: Change;
+  currentPage?: SitePage | undefined;
+  currentSections: Section[];
+}) {
+  const { draft, onChange } = props;
+  return (
+    <>
+      <SectionSpecificFields {...props} />
+      {"presentation" in draft && (
+        <PresentationFields draft={draft as SectionDraft & PresentableDraft} onChange={onChange} />
+      )}
+    </>
+  );
 }
 
 // ---- the dialog -------------------------------------------------------------

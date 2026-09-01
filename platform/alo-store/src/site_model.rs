@@ -278,6 +278,70 @@ pub enum ThemeColorRole {
     Accent5,
 }
 
+/// Shared, responsive presentation choices available to every content block.
+/// They store design intent and named theme roles—never raw CSS—so the same
+/// section remains branded, accessible and portable across templates.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SectionLayoutStyle {
+    Clean,
+    Cards,
+    Minimal,
+    Editorial,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SectionSpacing {
+    Compact,
+    Standard,
+    Generous,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SectionWidth {
+    Narrow,
+    Balanced,
+    Wide,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SectionAlignment {
+    Left,
+    Center,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SectionEntrance {
+    None,
+    FadeUp,
+    SlideIn,
+    ScaleIn,
+    Reveal,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SectionPresentation {
+    pub layout: SectionLayoutStyle,
+    pub spacing: SectionSpacing,
+    pub width: SectionWidth,
+    pub alignment: SectionAlignment,
+    pub background: ThemeColorRole,
+    pub text: ThemeColorRole,
+    pub button: ThemeColorRole,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub button_text: Option<ThemeColorRole>,
+    pub button_hover: ThemeColorRole,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub button_hover_text: Option<ThemeColorRole>,
+    pub entrance: SectionEntrance,
+    pub speed: TransitionSpeed,
+}
+
 /// Theme roles used by the navigation surface and its link states.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -537,6 +601,8 @@ pub struct FeaturesSection {
     /// the fluid grid this section has always used.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub columns: Option<GridColumns>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub presentation: Option<SectionPresentation>,
 }
 
 /// A text block alongside an image.
@@ -556,6 +622,8 @@ pub struct TextImageSection {
     /// by side ([`crate::site_layout`]); absent means equal columns.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub split: Option<ColumnSplit>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub presentation: Option<SectionPresentation>,
 }
 
 /// An image gallery.
@@ -571,6 +639,8 @@ pub struct GallerySection {
     /// renders the fluid grid this section has always used.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub columns: Option<GridColumns>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub presentation: Option<SectionPresentation>,
 }
 
 /// One customer quote.
@@ -595,6 +665,8 @@ pub struct TestimonialsSection {
     pub heading: Option<String>,
     /// The quotes; at least one.
     pub items: Vec<Testimonial>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub presentation: Option<SectionPresentation>,
 }
 
 /// One pricing tier. `price` is a **display string** ("€9/mo", "Sur mesure"),
@@ -635,6 +707,8 @@ pub struct PricingSection {
     pub intro: Option<String>,
     /// The tiers; at least one.
     pub tiers: Vec<PricingTier>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub presentation: Option<SectionPresentation>,
 }
 
 /// One person on a `team` section.
@@ -667,6 +741,8 @@ pub struct TeamSection {
     /// renders the fluid grid this section has always used.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub columns: Option<GridColumns>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub presentation: Option<SectionPresentation>,
 }
 
 /// One question/answer pair.
@@ -688,6 +764,8 @@ pub struct FaqSection {
     pub heading: Option<String>,
     /// The Q/A pairs; at least one.
     pub items: Vec<FaqItem>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub presentation: Option<SectionPresentation>,
 }
 
 /// A standalone call-to-action banner.
@@ -701,6 +779,8 @@ pub struct CtaSection {
     pub body: Option<String>,
     /// The action button.
     pub button: Link,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub presentation: Option<SectionPresentation>,
 }
 
 /// A contact form. The form itself (fields, submissions) is a separate store
@@ -721,6 +801,8 @@ pub struct ContactFormSection {
     /// Message shown after a successful submit.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub success_message: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub presentation: Option<SectionPresentation>,
 }
 
 /// The page footer.
@@ -743,6 +825,8 @@ pub struct CollectionSection {
     pub collection_id: SiteCollectionId,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub heading: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub presentation: Option<SectionPresentation>,
 }
 
 /// A catalog of what the site offers — dishes, rooms, services, courses —
@@ -759,6 +843,8 @@ pub struct CatalogSection {
     /// Handle of the single category to show; absent shows every category.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub category: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub presentation: Option<SectionPresentation>,
 }
 
 /// Something a visitor may book, frozen from the tenant's own
@@ -773,6 +859,8 @@ pub struct BookingSection {
     pub booking_id: SiteBookingId,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub heading: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub presentation: Option<SectionPresentation>,
 }
 
 /// The door to the site's ticket shop (ADR 0041, item S3.04f). The section
@@ -790,6 +878,8 @@ pub struct TicketsSection {
     /// come).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub body: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub presentation: Option<SectionPresentation>,
 }
 
 /// The door to the site's stock shop (ADR 0041, item S3.05a3) — the
@@ -807,6 +897,8 @@ pub struct ShopSection {
     /// buy here).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub body: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub presentation: Option<SectionPresentation>,
 }
 
 /// A motion boundary between two content sections. It owns no visible copy:
@@ -1552,6 +1644,7 @@ mod tests {
                     icon: Some("flame".to_owned()),
                 }],
                 columns: None,
+                presentation: None,
             }),
             Section::TextImage(TextImageSection {
                 heading: Some("The roastery".to_owned()),
@@ -1559,11 +1652,13 @@ mod tests {
                 image: image.clone(),
                 image_side: ImageSide::Left,
                 split: None,
+                presentation: None,
             }),
             Section::Gallery(GallerySection {
                 heading: Some("Inside the roastery".to_owned()),
                 images: vec![image.clone()],
                 columns: None,
+                presentation: None,
             }),
             Section::Testimonials(TestimonialsSection {
                 heading: Some("What cafés say".to_owned()),
@@ -1572,6 +1667,7 @@ mod tests {
                     author: "Mara Lindqvist".to_owned(),
                     role: Some("Head barista, Kaffebaren".to_owned()),
                 }],
+                presentation: None,
             }),
             Section::Pricing(PricingSection {
                 heading: Some("Subscriptions".to_owned()),
@@ -1585,6 +1681,7 @@ mod tests {
                     cta: Some(link("Start weekly", "/subscribe/weekly")),
                     highlighted: true,
                 }],
+                presentation: None,
             }),
             Section::Team(TeamSection {
                 heading: Some("The roasters".to_owned()),
@@ -1595,6 +1692,7 @@ mod tests {
                     bio: Some("Twenty years at the drum.".to_owned()),
                 }],
                 columns: None,
+                presentation: None,
             }),
             Section::Faq(FaqSection {
                 heading: Some("Questions".to_owned()),
@@ -1602,38 +1700,46 @@ mod tests {
                     question: "How fresh is the coffee?".to_owned(),
                     answer: "It ships the day it is roasted.".to_owned(),
                 }],
+                presentation: None,
             }),
             Section::Cta(CtaSection {
                 heading: "Taste the difference".to_owned(),
                 body: Some("First bag ships free.".to_owned()),
                 button: link("Order now", "/order"),
+                presentation: None,
             }),
             Section::ContactForm(ContactFormSection {
                 heading: Some("Wholesale enquiries".to_owned()),
                 body: Some("We answer within one business day.".to_owned()),
                 form_id: Some("f4K9sL2wN7qR5tYx8vB1cA".to_owned()),
                 success_message: Some("Thanks — talk soon.".to_owned()),
+                presentation: None,
             }),
             Section::Collection(CollectionSection {
                 collection_id: SiteCollectionId::new("seasonal-roasts"),
                 heading: Some("Seasonal roasts".to_owned()),
+                presentation: None,
             }),
             Section::Catalog(CatalogSection {
                 catalog_id: SiteCatalogId::new("house-menu"),
                 heading: Some("On the counter".to_owned()),
                 category: Some("espresso".to_owned()),
+                presentation: None,
             }),
             Section::Booking(BookingSection {
                 booking_id: SiteBookingId::new("tasting-table"),
                 heading: Some("Book the tasting table".to_owned()),
+                presentation: None,
             }),
             Section::Tickets(TicketsSection {
                 heading: Some("Cupping evenings".to_owned()),
                 body: Some("Six seats around the roaster, once a month.".to_owned()),
+                presentation: None,
             }),
             Section::Shop(ShopSection {
                 heading: Some("The roastery shop".to_owned()),
                 body: Some("Beans and brew gear, shipped from the roastery.".to_owned()),
+                presentation: None,
             }),
             Section::CustomCode(CustomCodeSection {
                 heading: Some("Roast timer".to_owned()),
@@ -1723,6 +1829,7 @@ mod tests {
                 SiteImage::new(BlobId::new("second-blob"), ""),
             ],
             columns: None,
+            presentation: None,
         });
         let ids: Vec<&str> = gallery
             .image_blob_ids()
@@ -1761,6 +1868,7 @@ mod tests {
                 heading: None,
                 images: vec![image],
                 columns: None,
+                presentation: None,
             }),
             Section::Footer(FooterSection {
                 text: None,
@@ -1947,6 +2055,7 @@ mod tests {
                 label: "Go".to_owned(),
                 href: "/go".to_owned(),
             },
+            presentation: None,
         })]);
         assert!(matches!(
             over_cap.validate(),
@@ -1956,6 +2065,7 @@ mod tests {
         let empty_items = envelope(vec![Section::Faq(FaqSection {
             heading: None,
             items: vec![],
+            presentation: None,
         })]);
         assert!(matches!(
             empty_items.validate(),
@@ -1970,6 +2080,7 @@ mod tests {
                     label: "Go".to_owned(),
                     href: "/go".to_owned(),
                 },
+                presentation: None,
             });
             MAX_SECTIONS_PER_PAGE + 1
         ]);
@@ -1985,6 +2096,7 @@ mod tests {
             heading: None,
             images: vec![SiteImage::new(BlobId::new("not/a/token"), "")],
             columns: None,
+            presentation: None,
         })]);
         assert!(matches!(
             bad_blob.validate(),
@@ -2003,6 +2115,7 @@ mod tests {
                 icon: Some("Flame!".to_owned()),
             }],
             columns: None,
+            presentation: None,
         })]);
         assert!(matches!(
             bad_icon.validate(),
@@ -2020,6 +2133,7 @@ mod tests {
             heading: None,
             images: vec![image],
             columns: None,
+            presentation: None,
         })])
     }
 
@@ -2287,11 +2401,13 @@ mod tests {
                 image: image.clone(),
                 image_side: ImageSide::Left,
                 split: None,
+                presentation: None,
             }),
             Section::Gallery(GallerySection {
                 heading: None,
                 images: vec![image.clone()],
                 columns: None,
+                presentation: None,
             }),
             Section::Team(TeamSection {
                 heading: None,
@@ -2302,6 +2418,7 @@ mod tests {
                     bio: None,
                 }],
                 columns: None,
+                presentation: None,
             }),
         ]);
         before.validate().unwrap();
