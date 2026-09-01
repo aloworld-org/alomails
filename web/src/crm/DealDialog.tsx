@@ -13,7 +13,7 @@ import { useState } from "react";
 import { Handshake } from "lucide-react";
 
 import { hundredthsToInput, parseHundredths } from "../billing";
-import { Field, Input } from "../ds";
+import { DatePicker, Field, Input } from "../ds";
 import { strings } from "../i18n";
 import { crmMessage, useCrmApi } from "./api";
 import { DialogFrame } from "./parts";
@@ -127,7 +127,7 @@ export function DealDialog({
         )}
       </Field>
 
-      <Field label={strings.crmFieldCompany} hint={strings.crmCompanyHint}>
+      <Field label={strings.crmFieldCompany} hint={strings.crmCompanyHint} hintDisplay="tooltip">
         {(control) => (
           <Input
             {...control}
@@ -150,6 +150,7 @@ export function DealDialog({
         <Field
           label={strings.crmFieldContactEmail}
           hint={strings.crmContactEmailHint}
+          hintDisplay="tooltip"
         >
           {(control) => (
             <Input
@@ -166,6 +167,7 @@ export function DealDialog({
         <Field
           label={strings.crmFieldValue}
           hint={strings.crmValueHint}
+          hintDisplay="tooltip"
           error={valueError ? strings.crmNotAnAmount : undefined}
         >
           {(control) => (
@@ -177,7 +179,7 @@ export function DealDialog({
             />
           )}
         </Field>
-        <Field label={strings.crmFieldCurrency} hint={strings.crmCurrencyHint}>
+        <Field label={strings.crmFieldCurrency} hint={strings.crmCurrencyHint} hintDisplay="tooltip">
           {(control) => (
             <Input
               {...control}
@@ -193,15 +195,15 @@ export function DealDialog({
       <div className={styles.row}>
         <Field label={strings.crmFieldExpectedClose}>
           {(control) => (
-            <Input
+            <DatePicker
               {...control}
-              type="date"
               value={expectedClose}
-              onChange={(e) => setExpectedClose(e.target.value)}
+              onChange={setExpectedClose}
+              placeholder={strings.crmFieldExpectedClose}
             />
           )}
         </Field>
-        <Field label={strings.crmFieldSource} hint={strings.crmSourceHint}>
+        <Field label={strings.crmFieldSource} hint={strings.crmSourceHint} hintDisplay="tooltip">
           {(control) => (
             <Input
               {...control}

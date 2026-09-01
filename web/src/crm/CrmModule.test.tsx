@@ -390,6 +390,28 @@ describe("the list", () => {
 });
 
 describe("the deal drawer", () => {
+  test("keeps edit guidance in information controls and uses the branded calendar", async () => {
+    ui(`/crm/board?deal=${DEAL.id}`);
+    fireEvent.click(await screen.findByRole("button", { name: strings.crmEdit }));
+
+    expect(await screen.findByRole("heading", { name: strings.crmEditDeal })).toBeTruthy();
+    for (const hint of [
+      strings.crmCompanyHint,
+      strings.crmContactEmailHint,
+      strings.crmValueHint,
+      strings.crmCurrencyHint,
+      strings.crmSourceHint,
+    ]) {
+      expect(screen.getByRole("button", { name: hint })).toBeTruthy();
+    }
+
+    const calendar = screen.getByRole("button", { name: strings.crmFieldExpectedClose });
+    expect(calendar.getAttribute("aria-haspopup")).toBe("dialog");
+    const dialogsBeforeOpen = screen.getAllByRole("dialog").length;
+    fireEvent.click(calendar);
+    expect(screen.getAllByRole("dialog")).toHaveLength(dialogsBeforeOpen + 1);
+  });
+
   test("moves stage from the visible branded stage choices", async () => {
     ui(`/crm/board?deal=${DEAL.id}`);
     await screen.findByText(strings.crmActivityEmpty);
