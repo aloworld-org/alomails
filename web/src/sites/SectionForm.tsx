@@ -12,14 +12,17 @@ import {
   ChevronDown,
   ChevronUp,
   ChevronRight,
+  Image as ImageIcon,
   Link2,
   MoreHorizontal,
+  MousePointerClick,
   PanelTop,
   Play,
   Plus,
   Sparkles,
   Settings2,
   Trash2,
+  Type,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -338,15 +341,23 @@ function LinkFields({
   legend,
   value,
   onChange,
+  bare = false,
 }: {
   legend?: string;
   value: SectionLink;
   onChange: (patch: Partial<SectionLink>) => void;
+  bare?: boolean;
 }) {
   return (
-    <fieldset className={styles.subGroup}>
+    <fieldset className={bare ? "m-0 min-w-0 border-0 p-0" : styles.subGroup}>
       {legend !== undefined && (
-        <legend className={styles.subLegend}>{legend}</legend>
+        <legend
+          className={
+            bare ? "mb-3 text-sm font-semibold text-primary" : styles.subLegend
+          }
+        >
+          {legend}
+        </legend>
       )}
       <div className={styles.fieldRow}>
         <Field label={strings.sitesFieldLinkLabel}>
@@ -1196,59 +1207,63 @@ function HeroFields({
         </div>
       </Card>
 
-      <div className="grid items-start gap-5 lg:grid-cols-2">
-        <Card as="section" flat className="grid gap-4">
-          <h3 className="m-0 text-base font-semibold text-primary">
-            {strings.sitesHeroContent}
-          </h3>
-          <TextField
-            label={strings.sitesFieldHeading}
-            value={draft.heading}
-            onChange={(heading) => onChange({ ...draft, heading })}
-            autoFocus
-            copyPointer="/heading"
-          />
-          <TextField
-            label={strings.sitesFieldSubheading}
-            value={draft.subheading}
-            onChange={(subheading) => onChange({ ...draft, subheading })}
-            copyPointer="/subheading"
-          />
-        </Card>
-        <Card as="section" flat>
-          <h3 className="mb-4 mt-0 text-base font-semibold text-primary">
-            {strings.sitesHeroMedia}
-          </h3>
-          {draft.layout === "video_background" && (
-            <div className="mb-5 grid gap-2 border-b border-subtle pb-5">
-              <TextField
-                label={strings.sitesHeroVideoUrl}
-                value={draft.video_url}
-                onChange={(video_url) => onChange({ ...draft, video_url })}
-                hint={strings.sitesHeroVideoUrlHint}
-                mono
-              />
-              <p className="m-0 text-sm text-secondary">
-                {strings.sitesHeroVideoFallbackHint}
-              </p>
-            </div>
-          )}
-          <ImageFields
-            value={draft.image}
-            pointer="/image"
-            onChange={(patch) =>
-              onChange({ ...draft, image: { ...draft.image, ...patch } })
-            }
-          />
-        </Card>
-      </div>
+      <Card as="section" flat>
+        <div className="grid items-start gap-8 lg:grid-cols-2">
+          <div className="grid gap-4">
+            <HeroFormHeading icon={<Type size={17} />}>
+              {strings.sitesHeroContent}
+            </HeroFormHeading>
+            <TextField
+              label={strings.sitesFieldHeading}
+              value={draft.heading}
+              onChange={(heading) => onChange({ ...draft, heading })}
+              autoFocus
+              copyPointer="/heading"
+            />
+            <TextField
+              label={strings.sitesFieldSubheading}
+              value={draft.subheading}
+              onChange={(subheading) => onChange({ ...draft, subheading })}
+              copyPointer="/subheading"
+            />
+          </div>
+          <div className="grid gap-4">
+            <HeroFormHeading icon={<ImageIcon size={17} />}>
+              {strings.sitesHeroMedia}
+            </HeroFormHeading>
+            {draft.layout === "video_background" && (
+              <div className="grid gap-2">
+                <TextField
+                  label={strings.sitesHeroVideoUrl}
+                  value={draft.video_url}
+                  onChange={(video_url) => onChange({ ...draft, video_url })}
+                  hint={strings.sitesHeroVideoUrlHint}
+                  mono
+                />
+                <p className="m-0 text-sm text-secondary">
+                  {strings.sitesHeroVideoFallbackHint}
+                </p>
+              </div>
+            )}
+            <ImageFields
+              bare
+              value={draft.image}
+              pointer="/image"
+              onChange={(patch) =>
+                onChange({ ...draft, image: { ...draft.image, ...patch } })
+              }
+            />
+          </div>
+        </div>
+      </Card>
 
       <Card as="section" flat>
-        <h3 className="mb-4 mt-0 text-base font-semibold text-primary">
+        <HeroFormHeading icon={<MousePointerClick size={17} />}>
           {strings.sitesHeroActions}
-        </h3>
-        <div className="grid gap-4 lg:grid-cols-2">
+        </HeroFormHeading>
+        <div className="mt-5 grid gap-6 lg:grid-cols-2">
           <LinkFields
+            bare
             legend={strings.sitesFieldPrimaryButton}
             value={draft.primary_cta}
             onChange={(patch) =>
@@ -1259,6 +1274,7 @@ function HeroFields({
             }
           />
           <LinkFields
+            bare
             legend={strings.sitesFieldSecondaryButton}
             value={draft.secondary_cta}
             onChange={(patch) =>
@@ -1270,6 +1286,26 @@ function HeroFields({
           />
         </div>
       </Card>
+    </div>
+  );
+}
+
+function HeroFormHeading({
+  icon,
+  children,
+}: {
+  icon: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <span
+        className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent"
+        aria-hidden="true"
+      >
+        {icon}
+      </span>
+      <h3 className="m-0 text-base font-semibold text-primary">{children}</h3>
     </div>
   );
 }

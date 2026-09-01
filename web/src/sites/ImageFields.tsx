@@ -137,11 +137,13 @@ export function ImageFields({
   value,
   onChange,
   pointer,
+  bare = false,
 }: {
   legend?: string;
   value: SectionImage;
   onChange: (patch: Partial<SectionImage>) => void;
   pointer?: string | undefined;
+  bare?: boolean;
 }) {
   const jmap = useJmapClient();
   const { siteId = "" } = useParams();
@@ -170,8 +172,12 @@ export function ImageFields({
   }
 
   return (
-    <fieldset className={styles.subGroup}>
-      {legend !== undefined && <legend className={styles.subLegend}>{legend}</legend>}
+    <fieldset className={bare ? "m-0 grid min-w-0 gap-4 border-0 p-0" : styles.subGroup}>
+      {legend !== undefined && (
+        <legend className={bare ? "mb-3 text-sm font-semibold text-primary" : styles.subLegend}>
+          {legend}
+        </legend>
+      )}
       <Field label={strings.sitesFieldImageId} hint={strings.sitesImageIdHint}>
         <div className={styles.uploadRow}>
           <input

@@ -84,6 +84,10 @@ const photo = (over: Partial<SectionImage> = {}): SectionImage => ({
 const heroWith = (image: SectionImage): Section => ({
   type: "hero",
   heading: "Fresh bread daily",
+  layout: "centered",
+  height: "standard",
+  alignment: "center",
+  content_width: "balanced",
   image,
 });
 
