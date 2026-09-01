@@ -47,9 +47,9 @@ import type { CrmStage } from "./types";
  *  ("everything I own that is still open, by value"), then the report, which is
  *  the only screen here that shows a total. */
 const TABS = [
-  { path: "board", label: () => strings.crmBoard, Icon: KanbanSquare },
-  { path: "list", label: () => strings.crmList, Icon: List },
-  { path: "report", label: () => strings.crmReport, Icon: BarChart3 },
+  { path: "/crm/board", label: () => strings.crmBoard, Icon: KanbanSquare },
+  { path: "/crm/list", label: () => strings.crmList, Icon: List },
+  { path: "/crm/report", label: () => strings.crmReport, Icon: BarChart3 },
 ] as const;
 
 export function CrmModule() {
@@ -140,7 +140,7 @@ export function CrmModule() {
         />
       ) : (
         <Routes>
-          <Route index element={<Navigate to="board" replace />} />
+          <Route index element={<Navigate to="/crm/board" replace />} />
           <Route
             path="board"
             element={
@@ -177,7 +177,7 @@ export function CrmModule() {
             }
           />
           {/* An unknown CRM path is a stale link, not an error page. */}
-          <Route path="*" element={<Navigate to="board" replace />} />
+          <Route path="*" element={<Navigate to="/crm/board" replace />} />
         </Routes>
       )}
 

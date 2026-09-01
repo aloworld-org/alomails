@@ -265,6 +265,21 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("the board", () => {
+  test("uses canonical tab URLs that cannot append the current route", async () => {
+    ui("/crm/board");
+
+    const boardLink = await screen.findByRole("link", { name: strings.crmBoard });
+    expect(boardLink.getAttribute("href")).toBe("/crm/board");
+    expect(screen.getByRole("link", { name: strings.crmList }).getAttribute("href")).toBe("/crm/list");
+    expect(screen.getByRole("link", { name: strings.crmReport }).getAttribute("href")).toBe("/crm/report");
+  });
+
+  test("repairs a stale nested board URL instead of redirecting in a loop", async () => {
+    ui("/crm/board/board/board");
+
+    expect(await screen.findByText(strings.crmFocusTitle)).toBeTruthy();
+  });
+
   test("is the columns the server sent, with the deal's own stored value", async () => {
     ui("/crm/board");
 
