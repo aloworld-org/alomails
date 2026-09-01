@@ -36,8 +36,8 @@ const TRIGGER =
  *  overlay layer, because a date picker opens inside dialogs that are already
  *  on it. */
 const POPOVER =
-  "absolute top-full mt-1.5 left-0 z-60 w-[264px] p-3 " +
-  "bg-surface border border-default rounded-lg shadow-lg";
+  "absolute top-full mt-2 left-0 z-60 w-[304px] p-4 " +
+  "bg-surface border border-subtle rounded-2xl shadow-xl";
 
 /** A day cell. The state below carries the ink, the weight and the hover, all
  *  three of which the stylesheet resolved by source order: `.dayOther`, then
@@ -46,7 +46,7 @@ const POPOVER =
  *  reason — in utilities a `hover:` would outrank the plain fill instead, so
  *  the selected day simply carries no hover at all. */
 const DAY =
-  "aspect-square flex items-center justify-center rounded-full " +
+  "aspect-square flex items-center justify-center rounded-xl " +
   "text-sm tabular-nums " +
   "transition-[background-color,color] duration-[var(--duration-fast)] " +
   "ease-standard";
@@ -56,7 +56,8 @@ const DAY =
  *  is an opacity, which nothing below overrode, so a selected day borrowed
  *  from the next month is drawn at 55% in both builds. */
 function dayState(selected: boolean, today: boolean, other: boolean): string {
-  if (selected) return "bg-accent text-on-accent font-semibold";
+  if (selected)
+    return "bg-accent text-on-accent font-semibold shadow-sm ring-2 ring-accent/15 ring-offset-1 ring-offset-surface";
   return cx(
     "hover:bg-raised",
     today ? "text-accent font-bold" : other ? "text-tertiary" : "text-primary",
@@ -214,7 +215,7 @@ export function DatePicker({
 
       {open && (
         <div className={POPOVER} role="dialog">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-semibold text-primary capitalize">
               {monthLabel}
             </span>
@@ -244,7 +245,7 @@ export function DatePicker({
             </div>
           </div>
 
-          <div className="grid grid-cols-7 mb-1">
+          <div className="grid grid-cols-7 mb-2">
             {weekdays.map((w, i) => (
               <span
                 key={i}
@@ -257,7 +258,7 @@ export function DatePicker({
               </span>
             ))}
           </div>
-          <div className="grid grid-cols-7 gap-0.5">
+          <div className="grid grid-cols-7 gap-1">
             {days.map((d, i) => {
               const isOther = d.getMonth() !== month;
               const isToday = sameDay(d, today);
@@ -282,7 +283,7 @@ export function DatePicker({
             })}
           </div>
 
-          <div className="flex items-center justify-between mt-2 pt-2 border-t border-subtle">
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-subtle">
             <button
               type="button"
               className={FOOT_BUTTON}
