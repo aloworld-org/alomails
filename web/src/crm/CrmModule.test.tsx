@@ -745,7 +745,9 @@ describe("the report", () => {
     fireEvent.click(range);
     expect(screen.getByRole("button", { name: new RegExp(`^${strings.crmReportFrom} `) })).toBeTruthy();
     expect(screen.getByRole("button", { name: new RegExp(`^${strings.crmReportTo} `) })).toBeTruthy();
-    expect(screen.getAllByRole("button", { pressed: true })).toHaveLength(2);
+    const endpoints = screen.getAllByRole("button", { pressed: true });
+    expect(endpoints).toHaveLength(2);
+    expect(endpoints.map((button) => button.getAttribute("data-range-state")).sort()).toEqual(["end", "start"]);
     expect(screen.getByRole("button", { name: strings.crmReportApply })).toBeTruthy();
 
     const open = await screen.findByRole("table", {

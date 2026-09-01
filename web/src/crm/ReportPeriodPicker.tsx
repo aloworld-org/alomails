@@ -91,11 +91,11 @@ export function ReportPeriodPicker({ value, onApply }: { value: Period; onApply:
           <div className="p-5">
             <h3 className="m-0 text-base font-semibold text-primary">{strings.crmReportCustom}</h3>
             <div className="mt-4 grid grid-cols-2 gap-3">
-              <button type="button" className={`rounded-xl border p-3 text-left transition-colors ${choosing === "from" ? "border-accent bg-accent-soft" : "border-default bg-surface hover:border-strong"}`} onClick={() => setChoosing("from")}>
+              <button type="button" className={`rounded-xl border !p-3 text-left transition-colors ${choosing === "from" ? "!border-accent !bg-accent-soft" : "!border-default !bg-surface hover:!border-strong"}`} onClick={() => setChoosing("from")}>
                 <span className="block text-xs font-medium text-secondary">{strings.crmReportFrom}</span>
                 <span className="mt-1 block text-sm font-semibold text-primary">{format(draft.from)}</span>
               </button>
-              <button type="button" className={`rounded-xl border p-3 text-left transition-colors ${choosing === "to" ? "border-accent bg-accent-soft" : "border-default bg-surface hover:border-strong"}`} onClick={() => setChoosing("to")}>
+              <button type="button" className={`rounded-xl border !p-3 text-left transition-colors ${choosing === "to" ? "!border-accent !bg-accent-soft" : "!border-default !bg-surface hover:!border-strong"}`} onClick={() => setChoosing("to")}>
                 <span className="block text-xs font-medium text-secondary">{strings.crmReportTo}</span>
                 <span className="mt-1 block text-sm font-semibold text-primary">{format(draft.to)}</span>
               </button>
@@ -152,7 +152,7 @@ function RangeCalendar({ anchor, period, locale, onPrevious, onNext, onPick }: {
                 const day = ymd(date);
                 const endpoint = day === period.from || day === period.to;
                 const inRange = day > period.from && day < period.to;
-                return <button key={day} type="button" aria-pressed={endpoint} aria-label={new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(date)} className={`grid aspect-square min-h-9 place-items-center text-sm tabular-nums transition-colors ${endpoint ? "rounded-lg bg-accent font-semibold text-on-accent shadow-sm" : inRange ? "rounded-none bg-accent-soft text-primary hover:bg-accent-soft" : "rounded-lg text-primary hover:bg-raised"}`} onClick={() => onPick(day)}>{date.getDate()}</button>;
+                return <button key={day} type="button" data-range-state={endpoint ? (day === period.from ? "start" : "end") : inRange ? "inside" : "outside"} aria-pressed={endpoint} aria-label={new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(date)} className={`grid aspect-square min-h-9 place-items-center !p-0 text-sm tabular-nums transition-colors ${endpoint ? "rounded-full !bg-accent font-semibold !text-on-accent shadow-sm ring-2 ring-accent/20 ring-offset-1" : inRange ? "rounded-none !bg-accent-soft !text-primary hover:!bg-accent-soft" : "rounded-lg !bg-transparent !text-primary hover:!bg-raised"}`} onClick={() => onPick(day)}>{date.getDate()}</button>;
               })}
             </div>
           </div>
