@@ -2140,6 +2140,7 @@ export const nl: Partial<Catalog> = {
   // alo CRM (B2). Een „deal” heet in het Nederlandse zakenleven ook zo; hij
   // schuift per „fase” over een „bord” en sluit gewonnen of verloren.
   moduleCrm: "Verkoop",
+  crmWorkspaceSubtitle: "Breng kansen van het eerste gesprek naar een overtuigende afsluiting.",
   crmFocusEyebrow: "Dagelijkse focus",
   crmFocusTitle: "Pijplijn in één oogopslag",
   crmFocusHint: "Begin met de kansen die een beslissing of opvolging nodig hebben.",

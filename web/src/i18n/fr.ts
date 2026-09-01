@@ -2183,6 +2183,7 @@ export const fr: Partial<Catalog> = {
   // (deal) avance par « étapes » (stages) sur un « tableau » (board), et se
   // clôt gagnée ou perdue. « Pipeline » est passé dans l’usage : il reste.
   moduleCrm: "Ventes",
+  crmWorkspaceSubtitle: "Faites progresser chaque opportunité du premier échange à la signature.",
   crmFocusEyebrow: "Priorités du jour",
   crmFocusTitle: "État du pipeline",
   crmFocusHint: "Commencez par les opportunités qui exigent une décision ou une relance.",

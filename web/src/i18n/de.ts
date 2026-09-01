@@ -63,6 +63,7 @@ export const de: Partial<Catalog> = {
   moduleAi: "KI fragen",
   moduleSearch: "Suche",
   moduleCrm: "Vertrieb",
+  crmWorkspaceSubtitle: "Führen Sie Chancen vom ersten Gespräch bis zum sicheren Abschluss.",
   crmFocusEyebrow: "Tagesfokus",
   crmFocusTitle: "Pipeline-Überblick",
   crmFocusHint: "Beginnen Sie mit Chancen, die eine Entscheidung oder Nachverfolgung benötigen.",

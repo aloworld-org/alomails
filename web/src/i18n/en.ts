@@ -3341,6 +3341,7 @@ export const en = {
   // opportunities, what each is worth, what was said about it, what happens
   // next, and the conversation it came from.
   moduleCrm: "Sales",
+  crmWorkspaceSubtitle: "Move opportunities from first conversation to a confident close.",
   crmFocusEyebrow: "Daily focus",
   crmFocusTitle: "Pipeline pulse",
   crmFocusHint: "Start with the opportunities that need a decision or a follow-up.",

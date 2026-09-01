@@ -12,7 +12,7 @@
 // `useCrmData`). One `revision` counter ties them together: an edit made in the
 // drawer bumps it, and whichever view is on screen re-reads.
 import { useState } from "react";
-import { Handshake } from "lucide-react";
+import { BarChart3, Handshake, KanbanSquare, List, Plus } from "lucide-react";
 import {
   NavLink,
   Navigate,
@@ -21,7 +21,13 @@ import {
   useSearchParams,
 } from "react-router-dom";
 
-import { Select, Spinner } from "../ds";
+import {
+  Button,
+  ModuleNavigation,
+  Select,
+  Spinner,
+  moduleNavigationItemClassName,
+} from "../ds";
 import { strings } from "../i18n";
 import { crmMessage, useCrmApi } from "./api";
 import { BoardView } from "./BoardView";
@@ -35,16 +41,15 @@ import { ReportView } from "./ReportView";
 import { SalesFocusPanel } from "./SalesFocusPanel";
 import { useBoardContext, useDealList } from "./useCrmData";
 import type { CrmStage } from "./types";
-import styles from "./CrmModule.module.css";
 
 /** The tabs: the board first — it is what a sales team opens CRM to look at —
  *  then the same deals as a list, for the questions a board cannot answer
  *  ("everything I own that is still open, by value"), then the report, which is
  *  the only screen here that shows a total. */
 const TABS = [
-  { path: "board", label: () => strings.crmBoard },
-  { path: "list", label: () => strings.crmList },
-  { path: "report", label: () => strings.crmReport },
+  { path: "board", label: () => strings.crmBoard, Icon: KanbanSquare },
+  { path: "list", label: () => strings.crmList, Icon: List },
+  { path: "report", label: () => strings.crmReport, Icon: BarChart3 },
 ] as const;
 
 export function CrmModule() {
@@ -87,36 +92,40 @@ export function CrmModule() {
   const banner = error ?? board.error ?? deals.error;
 
   return (
-    <div className={styles.crm}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>{strings.moduleCrm}</h1>
-        {board.pipelines.length > 1 && (
-          <Select
-            value={board.pipelineId ?? ""}
-            onChange={(e) => board.selectPipeline(e.target.value)}
-            aria-label={strings.crmPipeline}
+    <div className="relative flex h-full min-h-0 w-full flex-col bg-app">
+      <header className="shrink-0 border-b border-subtle bg-surface px-8 pb-5 pt-6 max-sm:px-4">
+        <div className="flex flex-wrap items-start gap-5">
+          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent" aria-hidden="true">
+            <Handshake size={21} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h1 className="m-0 text-2xl font-semibold tracking-tight text-primary">{strings.moduleCrm}</h1>
+            <p className="mb-0 mt-1 text-sm text-secondary">{strings.crmWorkspaceSubtitle}</p>
+          </div>
+          {board.pipelines.length > 1 && (
+            <Select value={board.pipelineId ?? ""} onChange={(event) => board.selectPipeline(event.target.value)} aria-label={strings.crmPipeline}>
+              {board.pipelines.map((pipeline) => <option key={pipeline.id} value={pipeline.id}>{pipeline.name}</option>)}
+            </Select>
+          )}
+          <Button
+            variant="primary"
+            icon={<Plus />}
+            disabled={board.pipelineId === null || board.stages.length === 0}
+            onClick={() => setCreatingIn(board.stages[0]?.id ?? null)}
           >
-            {board.pipelines.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
+            {strings.crmNewDeal}
+          </Button>
+        </div>
+        <div className="mt-5 flex items-center gap-3">
+          <ModuleNavigation label={strings.moduleCrm} className="flex-1">
+            {TABS.map(({ path, label, Icon }) => (
+              <NavLink key={path} to={path} className={({ isActive }) => moduleNavigationItemClassName(isActive)}>
+                <Icon aria-hidden="true" />{label()}
+              </NavLink>
             ))}
-          </Select>
-        )}
-        <nav className={styles.tabs}>
-          {TABS.map((t) => (
-            <NavLink
-              key={t.path}
-              to={t.path}
-              className={({ isActive }) =>
-                isActive ? `${styles.tab} ${styles.tabActive}` : styles.tab
-              }
-            >
-              {t.label()}
-            </NavLink>
-          ))}
-        </nav>
-        {(board.loading || deals.loading) && <Spinner size={16} />}
+          </ModuleNavigation>
+          {(board.loading || deals.loading) && <Spinner size={16} />}
+        </div>
       </header>
 
       {banner !== null && banner !== undefined && (
@@ -135,7 +144,7 @@ export function CrmModule() {
           <Route
             path="board"
             element={
-              <div className={styles.boardWorkspace}>
+              <div className="mx-auto flex min-h-0 w-full max-w-[112rem] flex-1 flex-col gap-5 overflow-auto px-8 py-6 max-[52rem]:px-4 max-[52rem]:py-4">
                 <SalesFocusPanel deals={deals.deals} onOpen={openDeal} />
                 <BoardView
                   stages={board.stages}
