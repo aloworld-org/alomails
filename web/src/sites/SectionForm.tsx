@@ -2414,6 +2414,19 @@ function PricingFields({
   );
 }
 
+function TeamLayoutVisual({ layout }: { layout: TeamDraft["layout"] }) {
+  return (
+    <span className={cx("grid h-20 w-32 gap-1.5 overflow-hidden rounded-lg bg-raised p-2", layout === "roster" || layout === "compact" ? "grid-cols-1" : "grid-cols-3")} aria-hidden="true">
+      {[0, 1, 2].map((item) => (
+        <span key={item} className={cx("grid place-items-center gap-1 rounded-md", layout === "cards" && "border border-default bg-surface p-1", layout === "spotlight" && item === 0 && "col-span-3 grid-cols-[2rem_1fr] justify-items-start", (layout === "roster" || layout === "compact") && "grid-cols-[2rem_1fr] justify-items-start")}>
+          <span className={cx("size-6 rounded-md bg-accent-soft", layout === "compact" && "rounded-full")} />
+          <span className="grid w-full gap-1"><span className="h-1.5 rounded-full bg-primary/70" /><span className="h-1 w-2/3 rounded-full bg-accent/60" /></span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function TeamFields({
   draft,
   onChange,
@@ -2423,6 +2436,18 @@ function TeamFields({
 }) {
   return (
     <>
+      <Card as="section" flat>
+        <HeroFormHeading icon={<PanelsTopLeft size={17} />}>{strings.sitesTeamLayout}</HeroFormHeading>
+        <p className="mb-5 mt-2 text-sm text-secondary">{strings.sitesTeamLayoutHint}</p>
+        <HeroOptionRow
+          label={strings.sitesTeamLayout}
+          value={draft.layout}
+          columns={5}
+          visual={(layout) => <TeamLayoutVisual layout={layout} />}
+          options={[["portraits", strings.sitesTeamLayoutPortraits], ["cards", strings.sitesTeamLayoutCards], ["roster", strings.sitesTeamLayoutRoster], ["spotlight", strings.sitesTeamLayoutSpotlight], ["compact", strings.sitesTeamLayoutCompact]]}
+          onChange={(layout) => onChange({ ...draft, layout })}
+        />
+      </Card>
       <TextField
         label={strings.sitesFieldHeading}
         value={draft.heading}

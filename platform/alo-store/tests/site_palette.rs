@@ -126,6 +126,7 @@ fn fixture_site() -> SeedContext {
                     bio: None,
                 }],
                 columns: None,
+                layout: None,
                 presentation: None,
             }),
             Section::Faq(FaqSection {

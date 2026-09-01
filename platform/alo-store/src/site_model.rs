@@ -789,6 +789,16 @@ pub struct TeamMember {
 }
 
 /// The people behind the business.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TeamLayout {
+    Portraits,
+    Cards,
+    Roster,
+    Spotlight,
+    Compact,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TeamSection {
@@ -801,6 +811,8 @@ pub struct TeamSection {
     /// renders the fluid grid this section has always used.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub columns: Option<GridColumns>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout: Option<TeamLayout>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub presentation: Option<SectionPresentation>,
 }
@@ -1757,6 +1769,7 @@ mod tests {
                     bio: Some("Twenty years at the drum.".to_owned()),
                 }],
                 columns: None,
+                layout: None,
                 presentation: None,
             }),
             Section::Faq(FaqSection {
@@ -2490,6 +2503,7 @@ mod tests {
                     bio: None,
                 }],
                 columns: None,
+                layout: None,
                 presentation: None,
             }),
         ]);

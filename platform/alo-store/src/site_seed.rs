@@ -703,6 +703,7 @@ mod tests {
                         bio: None,
                     }],
                     columns: None,
+                    layout: None,
                     presentation: None,
                 }),
                 Section::Faq(FaqSection {

@@ -243,12 +243,15 @@ export interface TeamMember {
 }
 
 /** The people behind the business; at least one member. */
+export type TeamLayout = "portraits" | "cards" | "roster" | "spotlight" | "compact";
+
 export interface TeamSection extends PresentableSection {
   type: "team";
   heading?: string | undefined;
   members: TeamMember[];
   /** People per row on a wide screen; absent is the fluid grid. */
   columns?: string | undefined;
+  layout?: TeamLayout | undefined;
 }
 
 /** One question/answer pair. */

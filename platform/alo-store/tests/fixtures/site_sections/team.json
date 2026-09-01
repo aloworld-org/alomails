@@ -4,6 +4,7 @@
     {
       "type": "team",
       "heading": "The roasters",
+      "layout": "spotlight",
       "members": [
         {
           "name": "Jonas Meer",

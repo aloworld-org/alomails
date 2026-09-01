@@ -30,6 +30,7 @@ import type {
   SectionPresentation,
   NavAppearance,
   TeamMember,
+  TeamLayout,
   Testimonial,
   TextImageLayout,
   TestimonialsLayout,
@@ -153,6 +154,7 @@ export interface TeamDraft extends PresentableDraft {
   members: MemberDraft[];
   /** The chosen column count, carried untouched. */
   columns?: string | undefined;
+  layout: TeamLayout;
 }
 
 export interface FaqItemDraft {
@@ -481,6 +483,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
           blankMember,
         ),
         columns: s?.columns,
+        layout: s?.layout ?? "portraits",
         presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
@@ -779,6 +782,7 @@ export function toSection(draft: SectionDraft): Section {
           }),
         ),
         columns: draft.columns,
+        layout: draft.layout,
         presentation: draft.presentation,
       };
     case "faq":
