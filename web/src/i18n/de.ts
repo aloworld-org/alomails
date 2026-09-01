@@ -4319,6 +4319,15 @@ export const de: Partial<Catalog> = {
   // Der Abgleich-Bildschirm.
   financeBankStatement: "Kontoauszug",
   financeBankAllStatements: "Alles noch nicht Zugeordnete",
+  financeBankSearch: "Banktransaktionen suchen",
+  financeBankSearchPlaceholder: "Zahler, IBAN oder Referenz suchen…",
+  financeBankConfidence: "Vertrauen in den Vorschlag",
+  financeBankAllConfidence: "Alle Vertrauensstufen",
+  financeBankReviewSuggested: "Vorgeschlagen — prüfen",
+  financeBankNoSuggestion: "Kein Vorschlag",
+  financeBankSelectSuggested: "Alle vorgeschlagenen Zuordnungen auswählen",
+  financeBankSelectLine: (name: string) => `Transaktion von ${name} auswählen`,
+  financeBankConfirmSelected: (count: number) => `${count} ausgewählte bestätigen`,
   financeBankToMatchTitle: (count: number) =>
     count === 1
       ? "1 Transaktion zuzuordnen"

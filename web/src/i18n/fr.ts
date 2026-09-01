@@ -4794,6 +4794,15 @@ export const fr: Partial<Catalog> = {
   // L’écran de rapprochement.
   financeBankStatement: "Relevé",
   financeBankAllStatements: "Tout ce qui n’est pas encore rapproché",
+  financeBankSearch: "Rechercher des transactions bancaires",
+  financeBankSearchPlaceholder: "Rechercher un payeur, un IBAN ou une référence…",
+  financeBankConfidence: "Fiabilité de la suggestion",
+  financeBankAllConfidence: "Tous les niveaux de fiabilité",
+  financeBankReviewSuggested: "Suggéré — à vérifier",
+  financeBankNoSuggestion: "Aucune suggestion",
+  financeBankSelectSuggested: "Sélectionner tous les rapprochements suggérés",
+  financeBankSelectLine: (name: string) => `Sélectionner la transaction de ${name}`,
+  financeBankConfirmSelected: (count: number) => `Confirmer ${count} sélectionnés`,
   financeBankToMatchTitle: (count: number) =>
     count === 1
       ? "1 opération à rapprocher"

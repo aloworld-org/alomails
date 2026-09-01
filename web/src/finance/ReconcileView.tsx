@@ -19,13 +19,15 @@
 // owes and what may be attributed to it are the server's, and the amount sent
 // with a confirm is the line's own `amountCents` — compared under the row locks
 // rather than believed, so a screen a colleague changed under us is a refusal.
-import { useCallback, useEffect, useState } from "react";
-import { CheckCheck } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { CheckCheck, Search, Sparkles } from "lucide-react";
 
 import type { BillingInvoiceSummary } from "../billing";
 import {
   Badge,
   Button,
+  Checkbox,
+  Input,
   Select,
   Spinner,
   Table,
@@ -77,6 +79,9 @@ export function ReconcileView({
   const dialogs = useDialogs();
   const [statements, setStatements] = useState<BankStatement[]>([]);
   const [statement, setStatement] = useState("");
+  const [query, setQuery] = useState("");
+  const [confidence, setConfidence] = useState("all");
+  const [selected, setSelected] = useState<string[]>([]);
   const [pile, setPile] = useState<Pile>(NOTHING);
   const [picking, setPicking] = useState<BankLine | null>(null);
   const [pickError, setPickError] = useState<string | null>(null);
@@ -128,6 +133,7 @@ export function ReconcileView({
         ]);
         if (live) {
           setPile({ suggestions, settled, setAside });
+          setSelected([]);
           setError(null);
         }
       } catch (err) {
@@ -226,6 +232,35 @@ export function ReconcileView({
   }
 
   const { suggestions, settled, setAside } = pile;
+  const visible = useMemo(() => suggestions.lines.filter((entry) => {
+    const needle = query.trim().toLocaleLowerCase();
+    const haystack = [entry.line.counterpartyName, entry.line.counterpartyIban, entry.line.remittance, entry.line.bankRef].filter(Boolean).join(" ").toLocaleLowerCase();
+    const bestScore = entry.exact.length > 0 ? 100 : (entry.likely[0]?.score ?? 0);
+    const matchesConfidence = confidence === "all" || (confidence === "certain" && bestScore >= 90) || (confidence === "review" && bestScore > 0 && bestScore < 90) || (confidence === "none" && bestScore === 0);
+    return matchesConfidence && (needle === "" || haystack.includes(needle));
+  }), [confidence, query, suggestions.lines]);
+
+  const selectable = useMemo(() => visible.filter((entry) => entry.exact[0] !== undefined || entry.likely[0] !== undefined), [visible]);
+
+  async function confirmSelected() {
+    setBusy("bulk");
+    setError(null);
+    try {
+      for (const entry of selectable.filter((candidate) => selected.includes(candidate.line.id))) {
+        const exact = entry.exact[0];
+        const likely = entry.likely[0];
+        const candidate = exact ?? likely;
+        if (candidate === undefined) continue;
+        await api.matchBankLine(entry.line.id, candidate.invoiceId, entry.line.amountCents, exact === undefined ? likely?.ruleId ?? null : null);
+      }
+      reload();
+    } catch (err) {
+      setError(financeMessage(err, strings.financeBankMatchFailed));
+      reload();
+    } finally {
+      setBusy(null);
+    }
+  }
 
   if (
     loading &&
@@ -259,7 +294,20 @@ export function ReconcileView({
             ))}
           </Select>
         </label>
+        <label className="relative min-w-[15rem] flex-1 max-w-sm">
+          <span className="sr-only">{strings.financeBankSearch}</span>
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-tertiary" aria-hidden="true" />
+          <Input className="w-full pl-9" value={query} placeholder={strings.financeBankSearchPlaceholder} onChange={(event) => setQuery(event.target.value)} />
+        </label>
+        <Select value={confidence} aria-label={strings.financeBankConfidence} onChange={(event) => setConfidence(event.target.value)}>
+          <option value="all">{strings.financeBankAllConfidence}</option>
+          <option value="certain">{strings.financeBankCertain}</option>
+          <option value="review">{strings.financeBankReviewSuggested}</option>
+          <option value="none">{strings.financeBankNoSuggestion}</option>
+        </Select>
         <ToolbarSpacer />
+        {selectable.length > 0 && <Checkbox checked={selected.length === selectable.length} label={strings.financeBankSelectSuggested} onChange={(checked) => setSelected(checked ? selectable.map((entry) => entry.line.id) : [])} disabled={busy !== null} />}
+        {selected.length > 0 && <Button size="sm" disabled={busy !== null} onClick={() => void confirmSelected()}><Sparkles className="size-4" />{strings.financeBankConfirmSelected(selected.length)}</Button>}
         {loading && <Spinner size={16} />}
       </Toolbar>
 
@@ -282,9 +330,10 @@ export function ReconcileView({
           />
         ) : (
           <ul className={styles.lineList}>
-            {suggestions.lines.map((entry) => (
+            {visible.map((entry) => (
               <li key={entry.line.id} className={styles.lineCard}>
                 <div className={styles.lineFacts}>
+                  {(entry.exact[0] !== undefined || entry.likely[0] !== undefined) && <Checkbox checked={selected.includes(entry.line.id)} label={strings.financeBankSelectLine(entry.line.counterpartyName ?? strings.financeBankNoCounterparty)} onChange={(checked) => setSelected((current) => checked ? [...current, entry.line.id] : current.filter((id) => id !== entry.line.id))} disabled={busy !== null} />}
                   <span className={styles.lineDay}>
                     {dayLabel(entry.line.bookedOn, "—")}
                   </span>

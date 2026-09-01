@@ -5811,6 +5811,15 @@ export const en = {
   // The reconciliation screen.
   financeBankStatement: "Statement",
   financeBankAllStatements: "Everything not yet matched",
+  financeBankSearch: "Search bank transactions",
+  financeBankSearchPlaceholder: "Search payer, IBAN or reference…",
+  financeBankConfidence: "Suggestion confidence",
+  financeBankAllConfidence: "All confidence levels",
+  financeBankReviewSuggested: "Suggested — review",
+  financeBankNoSuggestion: "No suggestion",
+  financeBankSelectSuggested: "Select all suggested matches",
+  financeBankSelectLine: (name: string) => `Select transaction from ${name}`,
+  financeBankConfirmSelected: (count: number) => `Confirm ${count} selected`,
   financeBankToMatchTitle: (count: number) =>
     count === 1 ? "1 transaction to match" : `${count} transactions to match`,
   financeBankAllMatchedTitle: "Nothing left to match",

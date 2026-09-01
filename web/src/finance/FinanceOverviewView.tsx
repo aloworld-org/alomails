@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, BanknoteArrowDown, CircleAlert, Landmark, ReceiptText } from "lucide-react";
+import { ArrowRight, CircleAlert, HandCoins, Landmark, ReceiptText } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { Card, Spinner } from "../ds";
@@ -59,7 +59,7 @@ export function FinanceOverviewView() {
 
           <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label={strings.financeOverviewTitle}>
             <Metric Icon={CircleAlert} label={strings.financePendingApprovals} value={String(data.pending.length)} detail={strings.financeNeedsDecision} to="/finance/approvals" />
-            <Metric Icon={BanknoteArrowDown} label={strings.financeToReimburse} value={String(data.reimbursable.length)} detail={strings.financeReadyToPay} to="/finance/approvals" />
+            <Metric Icon={HandCoins} label={strings.financeToReimburse} value={String(data.reimbursable.length)} detail={strings.financeReadyToPay} to="/finance/approvals" />
             <Metric Icon={Landmark} label={strings.financeUnreconciled} value={String(data.unmatched.length)} detail={strings.financeBankItems} to="/finance/reconcile" />
             <Metric Icon={ReceiptText} label={strings.financeReceivables} value={amountLabel(data.receivables.buckets.totalCents, data.receivables.currency)} detail={strings.financeOpenDocuments(data.receivables.documentCount)} to="/finance/reports/aged-receivable" />
           </section>
@@ -69,7 +69,7 @@ export function FinanceOverviewView() {
               <div className="border-b border-subtle px-5 py-4"><h3 className="m-0 text-base font-semibold text-primary">{strings.financeNeedsAttention}</h3><p className="m-0 mt-1 text-sm text-secondary">{strings.financeNeedsAttentionHint}</p></div>
               <div className="divide-y divide-subtle">
                 <AttentionRow Icon={CircleAlert} title={strings.financePendingApprovals} count={data.pending.length} to="/finance/approvals" />
-                <AttentionRow Icon={BanknoteArrowDown} title={strings.financeToReimburse} count={data.reimbursable.length} to="/finance/approvals" />
+                <AttentionRow Icon={HandCoins} title={strings.financeToReimburse} count={data.reimbursable.length} to="/finance/approvals" />
                 <AttentionRow Icon={Landmark} title={strings.financeUnreconciled} count={data.unmatched.length} to="/finance/reconcile" />
               </div>
             </Card>

@@ -384,4 +384,30 @@ describe("matching what arrived", () => {
     ui("/finance/reconcile");
     expect(await screen.findByText(strings.financeBankCapped)).toBeTruthy();
   });
+
+  test("suggested matches can be reviewed and confirmed together", async () => {
+    suggestions = {
+      lines: [
+        {
+          line: LINE,
+          exact: [{ invoiceId: "inv-7", number: "INV-2026-00007", amountCents: 130_700, daysAfterIssue: 4 }],
+          likely: [],
+        },
+        {
+          line: { ...LINE, id: "bl-2", counterpartyName: "Northstar Foods", remittance: "Invoice 12" },
+          exact: [],
+          likely: [{ invoiceId: "inv-12", number: "INV-2026-00012", amountCents: 130_700, outstandingCents: 130_700, customerId: "cus-2", daysAfterIssue: 2, score: 55, evidence: [{ kind: "wholeAmount" }, { kind: "nearDue", days: 2 }], ruleId: "rule-2" }],
+        },
+      ],
+      numbersCapped: false,
+      ledgerCapped: false,
+    };
+    ui("/finance/reconcile");
+
+    fireEvent.click(await screen.findByRole("checkbox", { name: strings.financeBankSelectSuggested }));
+    fireEvent.click(screen.getByRole("button", { name: strings.financeBankConfirmSelected(2) }));
+
+    await waitFor(() => expect(calls.filter((call) => call.url.includes("/match"))).toHaveLength(2));
+    expect(calls.find((call) => call.url.includes("bl-2/match"))?.body).toMatchObject({ ruleId: "rule-2" });
+  });
 });

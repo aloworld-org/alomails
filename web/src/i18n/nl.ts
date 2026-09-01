@@ -4744,6 +4744,15 @@ export const nl: Partial<Catalog> = {
   // Het afletterscherm.
   financeBankStatement: "Afschrift",
   financeBankAllStatements: "Alles wat nog niet afgeletterd is",
+  financeBankSearch: "Banktransacties zoeken",
+  financeBankSearchPlaceholder: "Zoek betaler, IBAN of referentie…",
+  financeBankConfidence: "Betrouwbaarheid van voorstel",
+  financeBankAllConfidence: "Alle betrouwbaarheidsniveaus",
+  financeBankReviewSuggested: "Voorgesteld — beoordelen",
+  financeBankNoSuggestion: "Geen voorstel",
+  financeBankSelectSuggested: "Alle voorgestelde matches selecteren",
+  financeBankSelectLine: (name: string) => `Transactie van ${name} selecteren`,
+  financeBankConfirmSelected: (count: number) => `${count} geselecteerde bevestigen`,
   financeBankToMatchTitle: (count: number) =>
     count === 1
       ? "1 transactie af te letteren"
