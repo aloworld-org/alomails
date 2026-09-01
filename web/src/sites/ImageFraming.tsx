@@ -11,6 +11,7 @@
 // and it never touches anything but `crop` and `focal`.
 import { useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
+import { Crosshair, Maximize2 } from "lucide-react";
 
 import { strings } from "../i18n";
 import { Button } from "../ds";
@@ -31,6 +32,7 @@ import {
   toPercent,
 } from "./imageGeometry";
 import type { CropEdge } from "./imageGeometry";
+import { InformationTip } from "./parts";
 import type { ImageCrop, SectionImage } from "./sections";
 import styles from "./SitesModule.module.css";
 
@@ -169,10 +171,22 @@ export function ImageFraming({
     toPercent(crop.y_bp),
   );
   const focalLabel = strings.sitesImageFocalAt(toPercent(focal.x_bp), toPercent(focal.y_bp));
+  const stateLabel = `${isFullFrame(crop) ? strings.sitesImageWholePictureState : frameLabel}${
+    focalSet ? ` · ${focalLabel}` : ""
+  }`;
 
   return (
     <div className={styles.framing}>
-      <p className={styles.hint}>{strings.sitesImageFrameHint}</p>
+      <div className={styles.framingHeader}>
+        <div>
+          <h4>{strings.sitesImageFraming}</h4>
+          <p aria-live="polite">{stateLabel}</p>
+        </div>
+        <InformationTip
+          label={strings.sitesImageFraming}
+          hint={`${strings.sitesImageFrameHint} ${strings.sitesImageFocalHint}`}
+        />
+      </div>
       {url === null ? (
         <p className={styles.hint} role="status">
           {strings.sitesImageNoPreview}
@@ -242,27 +256,28 @@ export function ImageFraming({
             ["y_bp", strings.sitesImageFrameTop],
           ] as [CropEdge, string][]
         ).map(([edge, label]) => (
-          <div key={edge} className={styles.framingNumber}>
-            <label>
-              <span>{label}</span>
+          <label key={edge} className={styles.framingNumber}>
+            <span>{label}</span>
+            <span className={styles.framingNumberControl}>
               <input
                 className={styles.input}
                 type="number"
                 min={0}
                 max={100}
+                aria-label={label}
                 value={toPercent(crop[edge])}
                 onChange={(event) => apply(setCropEdge(crop, edge, event.target.valueAsNumber))}
               />
-            </label>
-            <span aria-hidden="true">%</span>
-          </div>
+              <span aria-hidden="true">%</span>
+            </span>
+          </label>
         ))}
       </div>
-      <p className={styles.hint}>{strings.sitesImageFocalHint}</p>
       <div className={styles.framingActions}>
         <Button
           variant="ghost"
           size="sm"
+          icon={<Maximize2 />}
           disabled={isFullFrame(crop) && !focalSet}
           onClick={() => onChange({ crop: undefined, focal: undefined })}
         >
@@ -271,16 +286,13 @@ export function ImageFraming({
         <Button
           variant="ghost"
           size="sm"
+          icon={<Crosshair />}
           disabled={!focalSet}
           onClick={() => apply(crop, centerOf(crop), false)}
         >
           {strings.sitesImageCentreFocal}
         </Button>
       </div>
-      <p className={styles.framingReadout} aria-live="polite">
-        {isFullFrame(crop) ? strings.sitesImageWholePictureState : frameLabel}
-        {focalSet ? ` · ${focalLabel}` : ""}
-      </p>
     </div>
   );
 }

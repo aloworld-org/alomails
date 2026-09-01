@@ -6231,6 +6231,7 @@ export const de: Partial<Catalog> = {
   sitesImageDecorative: "Dekorativ — Screenreader überspringen es",
   sitesImageDecorativeHint:
     "Nur für Bilder, die selbst nichts mitteilen, etwa ein Hintergrundmuster.",
+  sitesImageFraming: "Zuschnitt und Fokuspunkt",
   sitesImageFrameHint:
     "Ziehen Sie auf dem Bild, um zu wählen, was sichtbar bleibt. Mit der Tastatur: Pfeiltasten verschieben den Rahmen, Umschalt mit den Pfeiltasten ändert seine Größe.",
   sitesImageFocalHint:

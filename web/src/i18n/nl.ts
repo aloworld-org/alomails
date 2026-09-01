@@ -4242,6 +4242,7 @@ export const nl: Partial<Catalog> = {
   sitesImageDecorative: "Decoratief — schermlezers slaan de afbeelding over",
   sitesImageDecorativeHint:
     "Alleen voor afbeeldingen die zelf geen informatie dragen, zoals een achtergrondpatroon.",
+  sitesImageFraming: "Uitsnede en focuspunt",
   sitesImageFrameHint:
     "Sleep over de afbeelding om te kiezen wat zichtbaar blijft. Met het toetsenbord: pijltoetsen verplaatsen het kader, shift met de pijltoetsen maakt het groter of kleiner.",
   sitesImageFocalHint:

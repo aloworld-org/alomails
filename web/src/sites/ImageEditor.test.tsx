@@ -287,6 +287,10 @@ describe("describing a picture", () => {
       [strings.sitesFieldImageId, strings.sitesImageIdHint],
       [strings.sitesFieldImageAlt, strings.sitesImageAltHint],
       [strings.sitesImageDecorative, strings.sitesImageDecorativeHint],
+      [
+        strings.sitesImageFraming,
+        `${strings.sitesImageFrameHint} ${strings.sitesImageFocalHint}`,
+      ],
     ]) {
       expect(screen.getByRole("note", { name: `${label}: ${hint}` })).toBeTruthy();
     }

@@ -2257,22 +2257,47 @@
 .framing {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-4);
+}
+.framingHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.framingHeader > div {
+  min-width: 0;
+}
+.framingHeader h4,
+.framingHeader p {
+  margin: 0;
+}
+.framingHeader h4 {
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+.framingHeader p {
+  margin-top: var(--space-1);
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
 }
 .framingSurface {
   position: relative;
-  align-self: flex-start;
+  width: 100%;
   max-width: 100%;
   overflow: hidden;
-  border-radius: var(--radius-md);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
   background: var(--bg-sunken);
   touch-action: none;
   cursor: crosshair;
 }
 .framingImage {
   display: block;
-  max-width: 100%;
-  max-height: var(--content-height-md);
+  width: 100%;
+  height: auto;
   /* The picture is scenery for the control drawn on top of it. */
   user-select: none;
   -webkit-user-drag: none;
@@ -2334,30 +2359,42 @@
   box-shadow: var(--focus-ring);
 }
 .framingNumbers {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
 }
-.framingNumber,
-.framingNumber label {
+.framingNumber {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}
+.framingNumberControl {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
-  font-size: var(--text-sm);
+  gap: var(--space-2);
   color: var(--text-secondary);
 }
 .framingNumber input {
-  width: var(--space-16);
+  width: 100%;
+  min-width: 0;
+  text-align: center;
 }
 .framingActions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-2);
 }
-.framingReadout {
-  margin: 0;
-  color: var(--text-tertiary);
-  font-size: var(--text-xs);
+.framingActions > button {
+  width: 100%;
+}
+@media (max-width: 36rem) {
+  .framingNumbers,
+  .framingActions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .collectionPageHint {

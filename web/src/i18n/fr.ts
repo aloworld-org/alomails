@@ -4285,6 +4285,7 @@ export const fr: Partial<Catalog> = {
   sitesImageDecorative: "Décorative — les lecteurs d’écran l’ignorent",
   sitesImageDecorativeHint:
     "Uniquement pour les images qui n’apportent aucune information par elles-mêmes, comme un motif de fond.",
+  sitesImageFraming: "Recadrage et point focal",
   sitesImageFrameHint:
     "Faites glisser sur l’image pour choisir ce qui reste visible. Au clavier : les flèches déplacent le cadre, majuscule et flèches le redimensionnent.",
   sitesImageFocalHint:

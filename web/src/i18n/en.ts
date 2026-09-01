@@ -4213,6 +4213,7 @@ export const en = {
   sitesImageDecorativeHint:
     "Only for pictures that carry no information of their own, such as a background pattern.",
   // Sites — framing a picture (crop + focal point).
+  sitesImageFraming: "Crop and focal point",
   sitesImageFrameHint:
     "Drag on the picture to choose what stays visible. With the keyboard: arrow keys move the frame, shift with the arrow keys resizes it.",
   sitesImageFocalHint:
