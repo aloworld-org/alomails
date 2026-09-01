@@ -29,6 +29,7 @@ import type {
   DealFilter,
   DealHandoff,
   DealProject,
+  MailOpportunityDraft,
   DealThread,
   PipelineReport,
   RaisedDocument,
@@ -127,6 +128,14 @@ export class CrmApi {
    *  the column's flags — closing is a move. */
   createDeal(draft: DealDraft): Promise<CrmDeal> {
     return this.#write<{ deal: CrmDeal }>("POST", "/crm/deals", draft).then((r) => r.deal);
+  }
+
+  /** Raises an opportunity from Mail with its source conversation linked in
+   * the same server transaction. */
+  createDealFromMail(draft: MailOpportunityDraft): Promise<CrmDeal> {
+    return this.#write<{ deal: CrmDeal }>("POST", "/crm/deals", draft).then(
+      (result) => result.deal,
+    );
   }
 
   /** Edits a deal. Absent fields keep their stored value; `null` clears a

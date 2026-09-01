@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 
 import { strings } from "../../i18n";
@@ -77,6 +77,7 @@ function props(onEditDraft: () => void, onSendDraft: () => void) {
     canSnooze: false,
     onSetFlagDue: noop,
     onCreateTask: noop,
+    onCreateOpportunity: noop,
     onSuggestTasks: noop,
     onCompose: noop,
   };
@@ -93,5 +94,20 @@ describe("ReadingPane", () => {
     expect(edit).toHaveBeenCalledTimes(1);
     expect(send).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("button", { name: strings.reply })).toBeNull();
+  });
+
+  test("offers a reviewed Sales opportunity handoff from the conversation", () => {
+    const createOpportunity = vi.fn();
+    const preparedProps = props(vi.fn(), vi.fn());
+    render(<ReadingPane {...preparedProps} onCreateOpportunity={createOpportunity} />);
+
+    const actionGroups = screen.getAllByRole("group", {
+      name: strings.conversationActions,
+    });
+    const actions = within(actionGroups[actionGroups.length - 1] as HTMLElement);
+    const menus = actions.getAllByRole("button", { name: strings.moreActions });
+    fireEvent.click(menus[menus.length - 1] as HTMLElement);
+    fireEvent.click(screen.getByRole("menuitem", { name: strings.crmCreateOpportunity }));
+    expect(createOpportunity).toHaveBeenCalledTimes(1);
   });
 });

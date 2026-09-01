@@ -13,6 +13,7 @@ import {
   Download,
   FolderInput,
   Forward,
+  Handshake,
   Inbox,
   ListChecks,
   MailOpen,
@@ -135,6 +136,8 @@ interface ReadingPaneProps {
   /** Create a task from this message (direct — no AI), carrying its source
    *  link so the task shows "From an email" and can jump back (ADR 0024). */
   onCreateTask: () => void;
+  /** Review and create a Sales opportunity with this conversation linked. */
+  onCreateOpportunity: () => void;
   /** Ask the AI to suggest tasks from this email; they land in the Suggestions
    *  inbox to accept/dismiss, never straight on the board (ADR 0023/0024). The
    *  action is offered only when the pane's own `aiEnabled` is true. */
@@ -172,6 +175,7 @@ export function ReadingPane({
   canSnooze,
   onSetFlagDue,
   onCreateTask,
+  onCreateOpportunity,
   onSuggestTasks,
   onCompose,
 }: ReadingPaneProps) {
@@ -397,6 +401,12 @@ export function ReadingPane({
         ]
       : []),
     { key: "task", label: strings.createTask, icon: <ListChecks />, onClick: onCreateTask },
+    {
+      key: "opportunity",
+      label: strings.crmCreateOpportunity,
+      icon: <Handshake />,
+      onClick: onCreateOpportunity,
+    },
     ...(aiEnabled
       ? [
           {

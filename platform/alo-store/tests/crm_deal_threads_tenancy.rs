@@ -23,8 +23,8 @@ use crate::common;
 use alo_store::crm_deal_threads::DEAL_THREADS_MAX;
 use alo_store::crm_thread_match::MatchReason;
 use alo_store::{
-    AccountStore, CrmDealId, CrmStageId, MailboxId, NewCustomer, NewDeal, Page, PipelineSeed,
-    StageSeed, Store, StoreError, TenantId, ThreadId, UserId,
+    AccountStore, CrmDealId, CrmStageId, DealFilter, MailboxId, NewCustomer, NewDeal, Page,
+    PipelineSeed, StageSeed, Store, StoreError, TenantId, ThreadId, UserId,
 };
 
 /// Asserts a result is the clean not-found denial — never data, never an
@@ -125,6 +125,92 @@ async fn conversation(
     );
     let message = acc.ingest(inbox, raw.as_bytes()).await.unwrap();
     acc.message(&message).await.unwrap().thread_id
+}
+
+#[tokio::test]
+async fn creating_from_mail_commits_the_deal_and_thread_link_together() {
+    let store = common::test_store().await;
+    let (account, _, _, inbox) = tenant_with_user(&store, "mail-create").await;
+    let boards = account.crm_pipelines_or_seed(&sales_seed()).await.unwrap();
+    let pipeline = boards[0].id.clone();
+    let stage = account.crm_stages(&pipeline, false).await.unwrap()[0]
+        .id
+        .clone();
+    let thread = conversation(
+        &account,
+        &inbox,
+        "mail-create",
+        "Ada <ada@acme.test>",
+        "mail-create@crmt.test",
+        "New website",
+    )
+    .await;
+
+    let deal = account
+        .create_crm_deal_from_thread(
+            &pipeline,
+            &stage,
+            &NewDeal {
+                title: "New website".to_owned(),
+                contact_name: "Ada".to_owned(),
+                contact_email: "ada@acme.test".to_owned(),
+                source: "Email".to_owned(),
+                ..Default::default()
+            },
+            &thread,
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(
+        account.crm_deal(&deal).await.unwrap().unwrap().source,
+        "Email"
+    );
+    let links = account.crm_deal_threads(&deal).await.unwrap();
+    assert_eq!(links.len(), 1);
+    assert_eq!(links[0].thread_id, thread);
+}
+
+#[tokio::test]
+async fn creating_from_an_unreadable_thread_writes_no_deal() {
+    let store = common::test_store().await;
+    let (owner, _, _, owner_inbox) = tenant_with_user(&store, "mail-owner").await;
+    let (caller, _, _, _) = tenant_with_user(&store, "mail-caller").await;
+    let foreign_thread = conversation(
+        &owner,
+        &owner_inbox,
+        "foreign-create",
+        "Ada <ada@acme.test>",
+        "mail-owner@crmt.test",
+        "Private lead",
+    )
+    .await;
+    let boards = caller.crm_pipelines_or_seed(&sales_seed()).await.unwrap();
+    let pipeline = boards[0].id.clone();
+    let stage = caller.crm_stages(&pipeline, false).await.unwrap()[0]
+        .id
+        .clone();
+
+    assert_not_found(
+        caller
+            .create_crm_deal_from_thread(
+                &pipeline,
+                &stage,
+                &NewDeal {
+                    title: "Must not exist".to_owned(),
+                    ..Default::default()
+                },
+                &foreign_thread,
+            )
+            .await,
+    );
+    assert!(
+        caller
+            .crm_deals(&DealFilter::default())
+            .await
+            .unwrap()
+            .is_empty()
+    );
 }
 
 #[tokio::test]

@@ -31,9 +31,10 @@
 use time::OffsetDateTime;
 
 use crate::account::AccountStore;
+use crate::crm_deals::NewDeal;
 use crate::crm_thread_match::{MatchReason, match_message, targets};
 use crate::error::{Result, StoreError};
-use crate::id::{CrmDealId, ThreadId};
+use crate::id::{CrmDealId, CrmPipelineId, CrmStageId, ThreadId};
 
 /// The most conversations one deal may carry.
 ///
@@ -108,6 +109,51 @@ struct Candidate {
 }
 
 impl AccountStore {
+    /// Creates an opportunity and links the source conversation in one
+    /// transaction. The thread is checked through the acting user's mailbox
+    /// before any deal row is written.
+    pub async fn create_crm_deal_from_thread(
+        &self,
+        pipeline: &CrmPipelineId,
+        stage: &CrmStageId,
+        input: &NewDeal,
+        thread: &ThreadId,
+    ) -> Result<CrmDealId> {
+        let normalized = self.normalize_deal(input).await?;
+        let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
+        let holds: bool = sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM messages \
+             WHERE tenant_id = $1 AND user_id = $2 AND thread_id = $3)",
+        )
+        .bind(self.tenant.as_str())
+        .bind(self.user.as_str())
+        .bind(thread.as_str())
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(StoreError::Db)?;
+        if !holds {
+            return Err(StoreError::NotFound);
+        }
+
+        self.share_crm_pipeline(&mut tx, pipeline).await?;
+        let deal = self
+            .insert_crm_deal_in(&mut tx, pipeline, stage, &normalized)
+            .await?;
+        sqlx::query(
+            "INSERT INTO crm_deal_threads (tenant_id, deal_id, thread_id, linked_by) \
+             VALUES ($1, $2, $3, $4)",
+        )
+        .bind(self.tenant.as_str())
+        .bind(deal.as_str())
+        .bind(thread.as_str())
+        .bind(self.user.as_str())
+        .execute(&mut *tx)
+        .await
+        .map_err(StoreError::Db)?;
+        tx.commit().await.map_err(StoreError::Db)?;
+        Ok(deal)
+    }
+
     /// Links a conversation to a deal, on the confirmation of a user who can
     /// already see it.
     ///

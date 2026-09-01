@@ -12,6 +12,7 @@ import { ModuleSidebar, ResizeHandle, cx, usePanelWidth, useIsMobile, useDialogs
 import { KEYWORD_FLAGGED, useJmapClient } from "../jmap";
 import type { Category, EmailAddress, EmailFull, SharedMailbox } from "../jmap";
 import { useAuth } from "../auth";
+import { CreateOpportunityFromMailDialog } from "../crm/CreateOpportunityFromMailDialog";
 import { useCategories, useEmailHeaders, useFlagged, useMailboxTrees, useThread } from "./state/useMail";
 import { mailErrorReason, senderName } from "./format";
 import type { ThreadRow } from "./threads";
@@ -45,6 +46,14 @@ function parseMailto(mailto: string): {
   };
 }
 
+/** The correspondent a Mail → Sales handoff should prefill. Sent mail uses
+ * its first recipient; received mail uses its sender. */
+function opportunityContact(message: EmailFull, ownEmail: string | undefined): EmailAddress | null {
+  const sender = message.from?.[0] ?? null;
+  if (sender?.email.toLowerCase() !== ownEmail?.toLowerCase()) return sender;
+  return message.to?.[0] ?? null;
+}
+
 export function MailModule() {
   const client = useJmapClient();
   const { confirm } = useDialogs();
@@ -76,6 +85,7 @@ export function MailModule() {
   const [flags, setFlags] = useState<ReadonlyMap<string, boolean>>(new Map());
   const [toast, setToast] = useState<string | null>(null);
   const [compose, setCompose] = useState<ComposeContext | null>(null);
+  const [opportunitySource, setOpportunitySource] = useState<EmailFull | null>(null);
   // The user's signature + tenant footer, inserted into new/reply drafts.
   const [mailSettings, setMailSettings] = useState<{ signature: string; orgFooter: string }>({
     signature: "",
@@ -974,6 +984,7 @@ export function MailModule() {
         canSnooze={!flaggedView}
         onSetFlagDue={setFlagDue}
         onCreateTask={() => void createTaskFromMessage()}
+        onCreateOpportunity={() => latest !== undefined && setOpportunitySource(latest)}
         onSuggestTasks={() => void suggestTasksFromMessage()}
         onCompose={startCompose}
       />
@@ -990,6 +1001,19 @@ export function MailModule() {
           onClose={() => setCompose(null)}
           onQueueSend={queueSend}
           onScheduleSend={scheduleSend}
+        />
+      )}
+      {opportunitySource !== null && (
+        <CreateOpportunityFromMailDialog
+          threadId={opportunitySource.threadId}
+          subject={opportunitySource.subject?.trim() || strings.mailNoSubject}
+          senderName={opportunityContact(opportunitySource, identity?.email)?.name?.trim() ?? ""}
+          senderEmail={opportunityContact(opportunitySource, identity?.email)?.email ?? ""}
+          onClose={() => setOpportunitySource(null)}
+          onCreated={() => {
+            setOpportunitySource(null);
+            setToast(strings.crmOpportunityCreated);
+          }}
         />
       )}
       {pendingSend !== null && (

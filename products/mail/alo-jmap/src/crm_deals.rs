@@ -22,6 +22,7 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 
 use alo_store::AccountStore;
+use alo_store::ThreadId;
 use alo_store::crm_deals::{Deal, DealFilter, DealState, NewDeal, StageEvent, StageMove};
 use alo_store::{BillingCustomerId, ContactId, CrmDealId, CrmPipelineId, CrmStageId};
 
@@ -131,6 +132,10 @@ struct DealBody {
     owner_user_id: Option<Option<String>>,
     #[serde(default)]
     source: Option<String>,
+    /// The Mail conversation this opportunity is raised from. Create-only;
+    /// when stated, deal and link are committed together.
+    #[serde(default)]
+    thread_id: Option<String>,
 }
 
 impl DealBody {
@@ -304,16 +309,20 @@ pub async fn create_deal(
     let req: DealBody = parse_body(&body)?;
     let pipeline = required_id(req.pipeline_id.as_deref(), "pipelineId")?;
     let stage = required_id(req.stage_id.as_deref(), "stageId")?;
+    let thread = stated(req.thread_id.as_deref()).map(|value| ThreadId::new(value.to_owned()));
     let input = req.apply(NewDeal::default())?;
-    let id = account
-        .acc
-        .create_crm_deal(
-            &CrmPipelineId::new(pipeline),
-            &CrmStageId::new(stage),
-            &input,
-        )
-        .await
-        .map_err(map_store_err)?;
+    let pipeline = CrmPipelineId::new(pipeline);
+    let stage = CrmStageId::new(stage);
+    let id = match thread {
+        Some(thread) => {
+            account
+                .acc
+                .create_crm_deal_from_thread(&pipeline, &stage, &input, &thread)
+                .await
+        }
+        None => account.acc.create_crm_deal(&pipeline, &stage, &input).await,
+    }
+    .map_err(map_store_err)?;
     let deal = load(&account.acc, &id).await?;
     Ok(Json(json!({ "deal": deal_json(&deal) })))
 }

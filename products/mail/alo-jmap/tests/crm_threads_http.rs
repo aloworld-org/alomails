@@ -118,6 +118,101 @@ async fn inbox(h: &Harness) -> MailboxId {
 // ---- the arc -----------------------------------------------------------------
 
 #[tokio::test]
+async fn mail_creates_and_links_an_opportunity_as_one_http_operation() {
+    let h = harness("crmthr-create").await;
+    let mailbox = inbox(&h).await;
+    let thread = conversation(
+        &h.acc,
+        &mailbox,
+        "create",
+        "Ada <ada@acme.test>",
+        &h.email,
+        "Acme renewal",
+    )
+    .await;
+
+    let (_, pipelines) = get(&h.app, &h.token, "/crm/pipelines").await;
+    let pipeline = pipelines["pipelines"][0]["id"].as_str().unwrap();
+    let (_, stages) = get(
+        &h.app,
+        &h.token,
+        &format!("/crm/pipelines/{pipeline}/stages"),
+    )
+    .await;
+    let stage = stages["stages"][0]["id"].as_str().unwrap();
+
+    let (status, body) = post(
+        &h.app,
+        &h.token,
+        "/crm/deals",
+        json!({
+            "pipelineId": pipeline,
+            "stageId": stage,
+            "threadId": thread,
+            "title": "Acme renewal",
+            "contactName": "Ada",
+            "contactEmail": "ada@acme.test",
+            "source": "Email",
+        }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let deal = body["deal"]["id"].as_str().unwrap();
+
+    let (status, linked) = get(&h.app, &h.token, &format!("/crm/deals/{deal}/threads")).await;
+    assert_eq!(status, StatusCode::OK, "{linked}");
+    assert_eq!(linked["threads"][0]["threadId"], thread);
+    assert_eq!(linked["threads"][0]["subject"], "Acme renewal");
+}
+
+#[tokio::test]
+async fn mail_cannot_create_an_opportunity_from_another_tenants_thread() {
+    let owner = harness("crmthr-create-owner").await;
+    let caller = harness("crmthr-create-caller").await;
+    let owner_mailbox = inbox(&owner).await;
+    let foreign_thread = conversation(
+        &owner.acc,
+        &owner_mailbox,
+        "foreign-create",
+        "Ada <ada@acme.test>",
+        &owner.email,
+        "Private renewal",
+    )
+    .await;
+
+    let (_, pipelines) = get(&caller.app, &caller.token, "/crm/pipelines").await;
+    let pipeline = pipelines["pipelines"][0]["id"].as_str().unwrap();
+    let (_, stages) = get(
+        &caller.app,
+        &caller.token,
+        &format!("/crm/pipelines/{pipeline}/stages"),
+    )
+    .await;
+    let stage = stages["stages"][0]["id"].as_str().unwrap();
+    let (_, before) = get(&caller.app, &caller.token, "/crm/deals").await;
+
+    let (status, body) = post(
+        &caller.app,
+        &caller.token,
+        "/crm/deals",
+        json!({
+            "pipelineId": pipeline,
+            "stageId": stage,
+            "threadId": foreign_thread,
+            "title": "Must not exist",
+        }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
+
+    let (_, after) = get(&caller.app, &caller.token, "/crm/deals").await;
+    assert_eq!(
+        after["deals"], before["deals"],
+        "the failed handoff wrote a deal"
+    );
+}
+
+#[tokio::test]
 async fn a_conversation_is_linked_read_and_unlinked() {
     let h = harness("crmthr-arc").await;
     let deal = deal_with_contact(&h, "ada@acme.test").await;

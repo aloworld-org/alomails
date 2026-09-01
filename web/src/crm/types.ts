@@ -94,6 +94,14 @@ export interface DealDraft {
   source?: string;
 }
 
+/** A new opportunity raised from Mail. The server commits the deal and source
+ * conversation link as one operation. */
+export interface MailOpportunityDraft extends DealDraft {
+  pipelineId: string;
+  stageId: string;
+  threadId: string;
+}
+
 /** One entry of a deal's log. Written once: a correction is another note. */
 export interface DealActivity {
   id: string;
