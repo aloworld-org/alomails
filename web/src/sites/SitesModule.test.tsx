@@ -91,6 +91,7 @@ const fakeJmap = vi.hoisted(() => ({
   driveCreateDoc: vi.fn(),
   driveTrashNode: vi.fn(),
   driveUploadBlob: vi.fn(),
+  uploadFile: vi.fn(),
 }));
 
 vi.mock("../jmap/useJmapClient", () => ({
@@ -179,6 +180,7 @@ beforeEach(() => {
   fakeJmap.driveCreateDoc.mockReset();
   fakeJmap.driveTrashNode.mockReset();
   fakeJmap.driveUploadBlob.mockReset();
+  fakeJmap.uploadFile.mockReset();
   fakeJmap.driveTrashNode.mockResolvedValue(undefined);
 });
 
@@ -617,6 +619,11 @@ describe("creating a site", () => {
   }
 
   test("a description generates a private draft and opens its Home page", async () => {
+    fakeJmap.uploadFile.mockResolvedValueOnce({
+      blobId: "home-hero-blob",
+      type: "image/png",
+      size: 4,
+    });
     replies = [
       {
         match: (url, method) =>
@@ -678,11 +685,29 @@ describe("creating a site", () => {
     );
     if (heroTile === null) throw new Error("no hero tile in the palette");
     fireEvent.click(heroTile);
-    expect(
-      screen.getByRole("dialog", {
-        name: strings.sitesAddSectionTitle(strings.sitesSectionHero),
+    const dialog = screen.getByRole("dialog", {
+      name: strings.sitesAddSectionTitle(strings.sitesSectionHero),
+    });
+    const imageInput = dialog.querySelector('input[type="file"]');
+    if (!(imageInput instanceof HTMLInputElement)) {
+      throw new Error("hero form has no image upload");
+    }
+    const image = new File(["hero"], "welcome.png", { type: "image/png" });
+    fireEvent.change(imageInput, { target: { files: [image] } });
+    await waitFor(() => expect(fakeJmap.uploadFile).toHaveBeenCalledWith(image));
+    await waitFor(() =>
+      expect(
+        calls.find(
+          (call) =>
+            call.method === "POST" &&
+            call.url.endsWith(
+              "/sites/site-generated/pages/page-generated/images",
+            ),
+        ),
+      ).toMatchObject({
+        body: { blobId: "home-hero-blob", filename: "welcome.png" },
       }),
-    ).toBeTruthy();
+    );
     expect(
       calls.find((call) => call.url.endsWith("/sites/generate"))?.body,
     ).toEqual({

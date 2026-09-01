@@ -2450,6 +2450,145 @@ async fn upload(h: &Harness, content_type: &str, bytes: Vec<u8>) -> String {
     body["blobId"].as_str().expect("blob id").to_owned()
 }
 
+#[tokio::test]
+async fn page_image_uploads_are_kept_in_source_linked_drive_folders() {
+    let h = harness("sites-image-drive").await;
+    let site = created_id(
+        "site",
+        post(
+            &h.app,
+            &h.token,
+            "/sites",
+            json!({ "name": "Nordlicht Studio", "subdomain": sub("drive", &h) }),
+        )
+        .await,
+    );
+    let page = created_id(
+        "page",
+        post(
+            &h.app,
+            &h.token,
+            &format!("/sites/{site}/pages"),
+            json!({ "title": "Home", "home": true }),
+        )
+        .await,
+    );
+    let first_blob = upload(&h, "image/png", vec![1, 2, 3]).await;
+    let attach = format!("/sites/{site}/pages/{page}/images");
+    let (status, body) = post(
+        &h.app,
+        &h.token,
+        &attach,
+        json!({ "blobId": first_blob, "filename": "hero.png" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "attach failed: {body}");
+
+    let root = h
+        .acc
+        .drive_list(&DriveLocation::Personal, None)
+        .await
+        .unwrap();
+    let website = root
+        .iter()
+        .find(|node| {
+            node.source_kind.as_deref() == Some("site")
+                && node.source_id.as_deref() == Some(site.as_str())
+        })
+        .expect("website folder");
+    assert_eq!(website.kind, "folder");
+    assert_eq!(website.name, "Nordlicht Studio");
+    let website_id = website.id.clone();
+
+    let pages = h
+        .acc
+        .drive_list(&DriveLocation::Personal, Some(&website_id))
+        .await
+        .unwrap();
+    let page_folder = pages
+        .iter()
+        .find(|node| {
+            node.source_kind.as_deref() == Some("site_page")
+                && node.source_id.as_deref() == Some(page.as_str())
+        })
+        .expect("page folder");
+    assert_eq!(page_folder.name, "Home");
+    let page_folder_id = page_folder.id.clone();
+    let files = h
+        .acc
+        .drive_list(&DriveLocation::Personal, Some(&page_folder_id))
+        .await
+        .unwrap();
+    assert_eq!(files.len(), 1);
+    assert_eq!(files[0].name, "hero.png");
+    assert_eq!(files[0].blob_id.as_deref(), Some(first_blob.as_str()));
+    assert_eq!(files[0].content_type.as_deref(), Some("image/png"));
+
+    // Rename both owners, then upload again. Source ids keep one tree and its
+    // visible folder names follow the website instead of leaving stale copies.
+    assert_eq!(
+        put(
+            &h.app,
+            &h.token,
+            &format!("/sites/{site}"),
+            json!({ "name": "Nordlicht Atelier" }),
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        put(
+            &h.app,
+            &h.token,
+            &format!("/sites/{site}/pages/{page}"),
+            json!({ "title": "Welcome" }),
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    let second_blob = upload(&h, "image/jpeg", vec![4, 5]).await;
+    assert_eq!(
+        post(
+            &h.app,
+            &h.token,
+            &attach,
+            json!({ "blobId": second_blob, "filename": "portrait.jpg" }),
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+
+    let root = h
+        .acc
+        .drive_list(&DriveLocation::Personal, None)
+        .await
+        .unwrap();
+    let matching_websites = root
+        .iter()
+        .filter(|node| node.source_id.as_deref() == Some(site.as_str()))
+        .collect::<Vec<_>>();
+    assert_eq!(matching_websites.len(), 1);
+    assert_eq!(matching_websites[0].id, website_id);
+    assert_eq!(matching_websites[0].name, "Nordlicht Atelier");
+    let pages = h
+        .acc
+        .drive_list(&DriveLocation::Personal, Some(&website_id))
+        .await
+        .unwrap();
+    assert_eq!(pages.len(), 1);
+    assert_eq!(pages[0].id, page_folder_id);
+    assert_eq!(pages[0].name, "Welcome");
+    let files = h
+        .acc
+        .drive_list(&DriveLocation::Personal, Some(&page_folder_id))
+        .await
+        .unwrap();
+    assert_eq!(files.len(), 2);
+}
+
 /// The framing control needs the SOURCE pixels, not the rendered preview's
 /// `data:` URIs — so the edit surface serves one image blob at a time, and
 /// serves it only to the tenant that owns it. Everything that does not

@@ -146,7 +146,8 @@ export function ImageFields({
   bare?: boolean;
 }) {
   const jmap = useJmapClient();
-  const { siteId = "" } = useParams();
+  const api = useSitesApi();
+  const { siteId = "", pageId = "" } = useParams();
   const fileInput = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -154,21 +155,20 @@ export function ImageFields({
   const chosen = value.blob_id.trim() !== "";
   const decorative = value.decorative === true;
 
-  function upload(file: File) {
+  async function upload(file: File) {
     setUploading(true);
     setUploadError(null);
-    jmap.driveUploadBlob(null, null, file).then(
-      ({ blobId }) => {
-        // A new picture is not the old one: its frame would be a rectangle of
-        // a different photograph, so framing starts over.
-        onChange({ blob_id: blobId, crop: undefined, focal: undefined });
-        setUploading(false);
-      },
-      () => {
-        setUploadError(strings.sitesUploadFailed);
-        setUploading(false);
-      },
-    );
+    try {
+      const { blobId } = await jmap.uploadFile(file);
+      await api.attachPageImage(siteId, pageId, { blobId, filename: file.name });
+      // A new picture is not the old one: its frame would be a rectangle of
+      // a different photograph, so framing starts over.
+      onChange({ blob_id: blobId, crop: undefined, focal: undefined });
+    } catch {
+      setUploadError(strings.sitesUploadFailed);
+    } finally {
+      setUploading(false);
+    }
   }
 
   return (
@@ -200,7 +200,7 @@ export function ImageFields({
             onChange={(e) => {
               const file = e.target.files?.[0];
               e.target.value = "";
-              if (file !== undefined) upload(file);
+              if (file !== undefined) void upload(file);
             }}
           />
           <Button

@@ -397,6 +397,42 @@ impl AccountStore {
         Ok(node)
     }
 
+    /// Creates a folder owned by another product surface. The source pair is
+    /// stable even when the user-facing name changes, so callers can find and
+    /// rename their folder instead of creating a second tree.
+    pub async fn drive_create_source_folder(
+        &self,
+        loc: &DriveLocation,
+        parent: Option<&DriveNodeId>,
+        name: &str,
+        source_kind: &str,
+        source_id: &str,
+    ) -> Result<DriveNodeId> {
+        let (kind, id) = self.loc_parts(loc);
+        self.require_location_write(&kind, &id).await?;
+        self.check_parent(&kind, &id, parent).await?;
+        let node = DriveNodeId::generate();
+        sqlx::query(
+            "INSERT INTO drive_nodes \
+               (tenant_id, id, location_kind, location_id, parent_id, kind, name, \
+                source_kind, source_id, created_by) \
+             VALUES ($1, $2, $3, $4, $5, 'folder', $6, $7, $8, $9)",
+        )
+        .bind(self.tenant.as_str())
+        .bind(node.as_str())
+        .bind(&kind)
+        .bind(&id)
+        .bind(parent.map(DriveNodeId::as_str))
+        .bind(name)
+        .bind(source_kind)
+        .bind(source_id)
+        .bind(self.user.as_str())
+        .execute(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(node)
+    }
+
     /// Creates a file/document node referencing an already-uploaded blob, and
     /// records it as version 1.
     ///

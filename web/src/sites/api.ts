@@ -1099,6 +1099,19 @@ export class SitesApi {
     return this.#write<SitePage>("POST", `/sites/${encodeURIComponent(siteId)}/pages`, draft);
   }
 
+  /** Keeps an uploaded page image in the website's page folder in Drive. */
+  attachPageImage(
+    siteId: string,
+    pageId: string,
+    image: { blobId: string; filename: string },
+  ): Promise<{ id: string }> {
+    return this.#write<{ id: string }>(
+      "POST",
+      `${this.#pagePath(siteId, pageId)}/images`,
+      image,
+    );
+  }
+
   /** Proposes a guarded, reviewable operation set and writes nothing. */
   proposePageEdit(
     siteId: string,

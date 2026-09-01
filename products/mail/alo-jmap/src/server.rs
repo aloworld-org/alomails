@@ -767,6 +767,10 @@ pub fn app_with_site_boundaries(
         )
         .route("/sites/{id}/pages/{pid}/home", post(sites::set_home_page))
         .route(
+            "/sites/{id}/pages/{pid}/images",
+            post(sites::attach_page_image),
+        )
+        .route(
             "/sites/{id}/passwords",
             get(site_protection::list_page_passwords),
         )

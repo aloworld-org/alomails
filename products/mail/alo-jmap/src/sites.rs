@@ -46,12 +46,12 @@ use alo_sites::render::{
 };
 use alo_sites::stylesheet::stylesheet;
 use alo_store::{
-    BaseFieldId, BaseTableId, BlobId, DriveNodeId, LocalizedSitePage, NewGeneratedSite,
-    NewGeneratedSitePage, NewSitePost, Section, SectionsEnvelope, Site, SiteAnalyticsDimension,
-    SiteCatalogSnapshot, SiteCollection, SiteCollectionFieldMapping, SiteCollectionId,
-    SiteCollectionInput, SiteCollectionItem, SiteCollectionSnapshot, SiteDomain, SiteDomainStatus,
-    SiteEditorInviteOutcome, SiteFormId, SiteFormSubmissionId, SiteId, SitePage, SitePageId,
-    SitePost, SitePostId, SitePostUpdate, SiteTheme, SiteTranslationPageContent,
+    BaseFieldId, BaseTableId, BlobId, DriveLocation, DriveNodeId, LocalizedSitePage, NewDriveFile,
+    NewGeneratedSite, NewGeneratedSitePage, NewSitePost, Section, SectionsEnvelope, Site,
+    SiteAnalyticsDimension, SiteCatalogSnapshot, SiteCollection, SiteCollectionFieldMapping,
+    SiteCollectionId, SiteCollectionInput, SiteCollectionItem, SiteCollectionSnapshot, SiteDomain,
+    SiteDomainStatus, SiteEditorInviteOutcome, SiteFormId, SiteFormSubmissionId, SiteId, SitePage,
+    SitePageId, SitePost, SitePostId, SitePostUpdate, SiteTheme, SiteTranslationPageContent,
     SiteTranslationPageWrite, SiteTranslationPostContent, SiteTranslationPostWrite, StoreError,
     UserId, normalize_site_domain, site_theme::THEME_PRESETS,
 };
@@ -2444,6 +2444,113 @@ pub async fn get_site_image(
         image.bytes,
     )
         .into_response())
+}
+
+#[derive(Deserialize)]
+struct PageImageBody {
+    #[serde(rename = "blobId")]
+    blob_id: String,
+    filename: String,
+}
+
+/// Finds the Drive folder owned by a Sites record, keeping its visible name
+/// current, or creates it on the first upload.
+async fn site_drive_folder(
+    account: &Account,
+    parent: Option<&DriveNodeId>,
+    name: &str,
+    source_kind: &str,
+    source_id: &str,
+) -> Result<DriveNodeId, Problem> {
+    let location = DriveLocation::Personal;
+    let nodes = account
+        .acc
+        .drive_list(&location, parent)
+        .await
+        .map_err(crate::drive::map_err)?;
+    if let Some(folder) = nodes.into_iter().find(|node| {
+        node.kind == "folder"
+            && node.source_kind.as_deref() == Some(source_kind)
+            && node.source_id.as_deref() == Some(source_id)
+    }) {
+        if folder.name != name {
+            account
+                .acc
+                .drive_rename(&folder.id, name)
+                .await
+                .map_err(crate::drive::map_err)?;
+        }
+        return Ok(folder.id);
+    }
+    account
+        .acc
+        .drive_create_source_folder(&location, parent, name, source_kind, source_id)
+        .await
+        .map_err(crate::drive::map_err)
+}
+
+/// `POST /sites/:id/pages/:pid/images` registers an uploaded image in the
+/// caller's Drive as `Website / Page / file`. The folders are source-linked,
+/// so later uploads reuse them and site/page renames do not split the tree.
+pub async fn attach_page_image(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, pid)): Path<(String, String)>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: PageImageBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let filename = req.filename.trim();
+    if filename.is_empty() || req.blob_id.trim().is_empty() {
+        return Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "filename and blobId are required",
+        ));
+    }
+
+    let sid = SiteId::new(id);
+    let page_id = SitePageId::new(pid);
+    let site = require_site(&account, &sid).await?;
+    let page = account
+        .acc
+        .site_page(&sid, &page_id)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such page"))?;
+    let blob_id = BlobId::new(req.blob_id.trim().to_owned());
+    let image = account
+        .acc
+        .site_image(&blob_id)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such image"))?;
+
+    let website_folder =
+        site_drive_folder(&account, None, site.name.trim(), "site", sid.as_str()).await?;
+    let page_folder = site_drive_folder(
+        &account,
+        Some(&website_folder),
+        page.title.trim(),
+        "site_page",
+        page_id.as_str(),
+    )
+    .await?;
+    let size = i64::try_from(image.bytes.len()).map_err(|_| Problem::server_error())?;
+    let file = NewDriveFile {
+        name: filename.to_owned(),
+        blob_id: blob_id.as_str().to_owned(),
+        size,
+        content_type: Some(image.content_type.to_owned()),
+        kind: Some("file".to_owned()),
+        source_kind: Some("site_page_image".to_owned()),
+        source_id: Some(blob_id.as_str().to_owned()),
+    };
+    let drive_id = account
+        .acc
+        .drive_create_file(&DriveLocation::Personal, Some(&page_folder), &file)
+        .await
+        .map_err(crate::drive::map_err)?;
+    Ok(Json(json!({ "id": drive_id.as_str() })))
 }
 
 /// `GET /sites/:id/pages/:pid/preview` → the DRAFT page as one complete,
