@@ -384,6 +384,7 @@ fn seed_text_image(ctx: &SeedContext) -> SectionSeed {
         image,
         image_side: ImageSide::Left,
         split: None,
+        layout: None,
         presentation: None,
     }))
 }

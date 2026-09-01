@@ -164,6 +164,8 @@ export interface FeaturesSection extends PresentableSection {
 }
 
 /** A text block alongside an image. */
+export type TextImageLayout = "split" | "overlap" | "framed" | "editorial" | "full_bleed";
+
 export interface TextImageSection extends PresentableSection {
   type: "text_image";
   heading?: string | undefined;
@@ -172,6 +174,7 @@ export interface TextImageSection extends PresentableSection {
   image_side: "left" | "right";
   /** How the row is divided between image and text; absent is equal columns. */
   split?: string | undefined;
+  layout?: TextImageLayout | undefined;
 }
 
 /** An image gallery; at least one image. */

@@ -9,7 +9,8 @@
         "blob_id": "9hK3vQ2mR8pT1xWz4bC5dg",
         "alt": "The restored Probat roasting drum"
       },
-      "image_side": "right"
+      "image_side": "right",
+      "layout": "overlap"
     }
   ]
 }

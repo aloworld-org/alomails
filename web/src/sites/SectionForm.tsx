@@ -2015,6 +2015,24 @@ function FeaturesFields({
   );
 }
 
+function TextImageLayoutVisual({ layout }: { layout: TextImageDraft["layout"] }) {
+  return (
+    <span className={cx("grid h-20 w-32 grid-cols-2 items-center gap-1.5 overflow-hidden rounded-lg bg-raised p-2", layout === "full_bleed" && "p-0")} aria-hidden="true">
+      <span className={cx(
+        "h-14 rounded-md bg-accent-soft",
+        layout === "overlap" && "z-10 translate-x-2",
+        layout === "framed" && "border-4 border-surface ring-1 ring-default",
+        layout === "full_bleed" && "h-full rounded-none",
+      )} />
+      <span className={cx("grid gap-1.5", layout === "overlap" && "z-20 -translate-x-2 rounded-md bg-surface p-2 shadow-sm")}>
+        <span className={cx("h-2 rounded-full bg-primary/70", layout === "editorial" && "h-3")} />
+        <span className="h-1.5 rounded-full bg-secondary/25" />
+        <span className="h-1.5 w-2/3 rounded-full bg-accent/60" />
+      </span>
+    </span>
+  );
+}
+
 function TextImageFields({
   draft,
   onChange,
@@ -2024,6 +2042,27 @@ function TextImageFields({
 }) {
   return (
     <>
+      <Card as="section" flat>
+        <HeroFormHeading icon={<PanelsTopLeft size={17} />}>{strings.sitesTextImageLayout}</HeroFormHeading>
+        <p className="mb-5 mt-2 text-sm text-secondary">{strings.sitesTextImageLayoutHint}</p>
+        <HeroOptionRow
+          label={strings.sitesTextImageLayout}
+          value={draft.layout}
+          columns={5}
+          visual={(layout) => <TextImageLayoutVisual layout={layout} />}
+          options={[["split", strings.sitesTextImageLayoutSplit], ["overlap", strings.sitesTextImageLayoutOverlap], ["framed", strings.sitesTextImageLayoutFramed], ["editorial", strings.sitesTextImageLayoutEditorial], ["full_bleed", strings.sitesTextImageLayoutFullBleed]]}
+          onChange={(layout) => onChange({ ...draft, layout })}
+        />
+        <div className="mt-5 max-w-md">
+          <HeroOptionRow
+            label={strings.sitesFieldImageSide}
+            value={draft.image_side}
+            visual={(side) => <HeroControlVisual group="alignment" value={side} />}
+            options={[["left", strings.sitesSideLeft], ["right", strings.sitesSideRight]]}
+            onChange={(image_side) => onChange({ ...draft, image_side })}
+          />
+        </div>
+      </Card>
       <TextField
         label={strings.sitesFieldHeading}
         value={draft.heading}
@@ -2045,21 +2084,6 @@ function TextImageFields({
           onChange({ ...draft, image: { ...draft.image, ...patch } })
         }
       />
-      <Field label={strings.sitesFieldImageSide}>
-        <select
-          className={styles.input}
-          value={draft.image_side}
-          onChange={(e) =>
-            onChange({
-              ...draft,
-              image_side: e.target.value === "right" ? "right" : "left",
-            })
-          }
-        >
-          <option value="left">{strings.sitesSideLeft}</option>
-          <option value="right">{strings.sitesSideRight}</option>
-        </select>
-      </Field>
     </>
   );
 }

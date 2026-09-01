@@ -29,6 +29,7 @@ import type {
   NavAppearance,
   TeamMember,
   Testimonial,
+  TextImageLayout,
   TransitionDirection,
   TransitionEffect,
   TransitionSpeed,
@@ -92,6 +93,7 @@ export interface TextImageDraft extends PresentableDraft {
   image_side: "left" | "right";
   /** The chosen split, carried untouched (see [`FeaturesDraft`]). */
   split?: string | undefined;
+  layout: TextImageLayout;
 }
 
 export interface GalleryDraft extends PresentableDraft {
@@ -401,6 +403,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         image: draftImage(s?.image),
         image_side: s?.image_side ?? "left",
         split: s?.split,
+        layout: s?.layout ?? "split",
         presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
@@ -704,6 +707,7 @@ export function toSection(draft: SectionDraft): Section {
         image: reqImage(draft.image),
         image_side: draft.image_side,
         split: draft.split,
+        layout: draft.layout,
         presentation: draft.presentation,
       };
     case "gallery":

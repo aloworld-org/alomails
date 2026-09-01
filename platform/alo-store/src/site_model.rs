@@ -618,6 +618,16 @@ pub struct FeaturesSection {
 }
 
 /// A text block alongside an image.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TextImageLayout {
+    Split,
+    Overlap,
+    Framed,
+    Editorial,
+    FullBleed,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TextImageSection {
@@ -634,6 +644,8 @@ pub struct TextImageSection {
     /// by side ([`crate::site_layout`]); absent means equal columns.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub split: Option<ColumnSplit>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout: Option<TextImageLayout>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub presentation: Option<SectionPresentation>,
 }
@@ -1665,6 +1677,7 @@ mod tests {
                 image: image.clone(),
                 image_side: ImageSide::Left,
                 split: None,
+                layout: None,
                 presentation: None,
             }),
             Section::Gallery(GallerySection {
@@ -2415,6 +2428,7 @@ mod tests {
                 image: image.clone(),
                 image_side: ImageSide::Left,
                 split: None,
+                layout: None,
                 presentation: None,
             }),
             Section::Gallery(GallerySection {
