@@ -743,8 +743,9 @@ describe("the report", () => {
     const range = screen.getByRole("button", { name: new RegExp(strings.crmReportThisQuarter) });
     expect(range.getAttribute("aria-haspopup")).toBe("dialog");
     fireEvent.click(range);
-    expect(screen.getByRole("button", { name: strings.crmReportFrom }).getAttribute("aria-haspopup")).toBe("dialog");
-    expect(screen.getByRole("button", { name: strings.crmReportTo }).getAttribute("aria-haspopup")).toBe("dialog");
+    expect(screen.getByRole("button", { name: new RegExp(`^${strings.crmReportFrom} `) })).toBeTruthy();
+    expect(screen.getByRole("button", { name: new RegExp(`^${strings.crmReportTo} `) })).toBeTruthy();
+    expect(screen.getAllByRole("button", { pressed: true })).toHaveLength(2);
     expect(screen.getByRole("button", { name: strings.crmReportApply })).toBeTruthy();
 
     const open = await screen.findByRole("table", {
