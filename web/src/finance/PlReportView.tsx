@@ -23,6 +23,7 @@ import {
   useCsvDownload,
 } from "./reportParts";
 import type { PlLine, PlReport } from "./types";
+import { LedgerDialog } from "./LedgerDialog";
 import styles from "./FinanceModule.module.css";
 
 export function PlReportView() {
@@ -33,6 +34,7 @@ export function PlReportView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const csv = useCsvDownload();
+  const [ledgerLine,setLedgerLine]=useState<PlLine|null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -121,6 +123,7 @@ export function PlReportView() {
                 totalCents={report.incomeCents}
                 previousCents={report.previousIncomeCents}
                 totalLabel={strings.financeReportIncomeTotal}
+                onOpen={setLedgerLine}
               />
               <Section
                 title={strings.financeReportExpense}
@@ -129,6 +132,7 @@ export function PlReportView() {
                 totalCents={report.expenseCents}
                 previousCents={report.previousExpenseCents}
                 totalLabel={strings.financeReportExpenseTotal}
+                onOpen={setLedgerLine}
               />
             </tbody>
             <tfoot>
@@ -146,8 +150,9 @@ export function PlReportView() {
                 </Td>
               </tr>
             </tfoot>
-          </Table>
+      </Table>
         )}
+      {ledgerLine&&report&&<LedgerDialog accountId={ledgerLine.accountId} name={ledgerLine.name} currency={report.currency} from={period.from} to={period.to} onClose={()=>setLedgerLine(null)}/>}
     </div>
   );
 }
@@ -162,6 +167,7 @@ function Section({
   totalCents,
   previousCents,
   totalLabel,
+  onOpen,
 }: {
   title: string;
   lines: PlLine[];
@@ -169,6 +175,7 @@ function Section({
   totalCents: number;
   previousCents: number;
   totalLabel: string;
+  onOpen: (line: PlLine) => void;
 }) {
   return (
     <>
@@ -176,7 +183,7 @@ function Section({
       {lines.map((line) => (
         <tr key={line.accountId}>
           <Td>{line.code}</Td>
-          <Td>{line.name}</Td>
+          <Td><button type="button" className="font-medium text-primary underline decoration-subtle underline-offset-4 hover:text-accent" onClick={()=>onOpen(line)}>{line.name}</button></Td>
           <Td numeric>{amountLabel(line.amountCents, currency)}</Td>
           <Td numeric>{amountLabel(line.previousCents, currency)}</Td>
         </tr>

@@ -553,6 +553,10 @@ opaque_id!(
     /// B4.10). Closing it is what shuts the journal to entries dated inside it.
     FinPeriodId
 );
+opaque_id!(
+    /// One scheduled delivery of a tenant's Finance report.
+    FinReportScheduleId
+);
 
 opaque_id!(
     /// A supplier — a company a tenant buys from (alo Inventory, ADR 0035,

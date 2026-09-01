@@ -235,6 +235,7 @@ DELETE /crm/stages/{id} -> crm.stage.delete
 DELETE /finance/accounts/{id} -> finance.account.delete
 DELETE /finance/expenses/{id} -> finance.expense.delete
 DELETE /finance/mileage/{id} -> finance.mileage.delete
+DELETE /finance/report-schedules/{id} -> finance.report_schedule.delete
 DELETE /hr/applicants/{id} -> hr.applicant.delete
 DELETE /hr/checklist-templates/{id} -> hr.checklist_template.delete
 DELETE /hr/employees/{id}/documents/{document_id} -> hr.employee.document.delete
@@ -337,6 +338,7 @@ POST /finance/mileage -> finance.mileage.create
 POST /finance/periods -> finance.period.create
 POST /finance/periods/{id}/close -> finance.period.close
 POST /finance/periods/{id}/reopen -> finance.period.reopen
+POST /finance/report-schedules -> finance.report_schedule.create
 POST /hr/applicants/{id}/move -> hr.applicant.move
 POST /hr/applicants/{id}/notes -> hr.applicant.note.create
 POST /hr/checklist-templates -> hr.checklist_template.create
@@ -397,6 +399,7 @@ PUT /billing/fx/rates -> billing.fx.rates.update
 PUT /billing/invoices/{id}/design -> billing.invoice.design.update
 PUT /billing/quotes/{id}/design -> billing.quote.design.update
 PUT /finance/mileage/rates -> finance.mileage.rates.update
+PUT /finance/spend-policy -> finance.spend_policy.update
 PUT /hr/holiday-calendars -> hr.holiday_calendar.update
 PUT /inventory/counts/{id}/lines/{product_id} -> inventory.count.line.update
 PUT /inventory/suppliers/{id}/products/{product_id} -> inventory.supplier.product.update

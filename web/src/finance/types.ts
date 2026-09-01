@@ -116,6 +116,14 @@ export interface CloseReadiness {
   checks: CloseCheck[];
 }
 
+export type FinanceReportKind = "pl" | "balance" | "aged_receivable" | "aged_payable" | "vat";
+export type FinanceReportCadence = "weekly" | "monthly" | "quarterly";
+export interface FinanceReportSchedule {
+  id: string; report: FinanceReportKind; cadence: FinanceReportCadence; format: "csv";
+  recipient: string; active: boolean; nextRunDate: string; lastRunAt: string | null;
+  createdBy: string; createdAt: string; updatedAt: string;
+}
+
 export interface ExpenseApprovalOutcome {
   expense: Expense;
   approval: { count: number; required: number; complete: boolean };
@@ -456,6 +464,9 @@ export interface PlLine {
   previousCents: number;
   postings: number;
 }
+
+export interface LedgerLine { id:string; entryId:string; date:string; kind:string; entryMemo:string; memo:string; currency:string; amountCents:number; baseCents:number; runningCents:number; projectId:string|null }
+export interface AccountLedger { accountId:string; openingCents:number; closingCents:number; truncated:boolean; lines:LedgerLine[] }
 
 /** What the business earned and spent between two days, and the comparative
  *  period the **server** chose — never one the browser derived. */

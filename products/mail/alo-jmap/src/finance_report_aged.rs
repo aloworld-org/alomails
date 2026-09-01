@@ -182,7 +182,7 @@ const BLANK: &str = "";
 
 /// The whole report as one CSV table: each party's documents, then that party's
 /// bands, and one total row at the end.
-fn report_csv(report: &AgedReport) -> String {
+pub(crate) fn report_csv(report: &AgedReport) -> String {
     let on = iso_date(report.on);
     let side = report.side.as_str();
     let mut out = csv::row(&COLUMNS);

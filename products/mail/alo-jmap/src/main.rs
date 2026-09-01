@@ -423,6 +423,7 @@ async fn run(addr: SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
                 tick.tick().await;
                 alo_jmap::submission::run_due_scheduled(&state).await;
                 alo_jmap::agent_instructions::run_due(&state).await;
+                alo_jmap::finance_report_worker::run_due(&state.store).await;
             }
         });
     }

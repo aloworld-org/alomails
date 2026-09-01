@@ -133,6 +133,7 @@ pub mod fin_periods;
 pub mod fin_pl;
 pub mod fin_receipt;
 pub mod fin_receipt_read;
+pub mod fin_report_schedules;
 pub mod fin_rules;
 pub mod fin_vat_return;
 pub mod hr_absences;
@@ -505,6 +506,7 @@ pub use fin_receipt::{
     RECEIPT_LINES_MAX, ReceiptExtractor, ReceiptInput, default_extractor,
 };
 pub use fin_receipt_read::{MAX_RECEIPT_BYTES, ReceiptReading};
+pub use fin_report_schedules::{DueFinReportSchedule, FinReportSchedule};
 pub use fin_rules::{
     InvoiceAccounts, PaymentAccounts, credit_note_entry, credit_note_original, invoice_issue_entry,
     payment_settle_entry, payment_settlement_role, settlement_needs_exchange_account,

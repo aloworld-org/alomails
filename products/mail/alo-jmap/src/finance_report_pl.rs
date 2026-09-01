@@ -88,7 +88,7 @@ const COLUMNS: [&str; 10] = [
 /// Both periods are repeated on every row on purpose — a row lifted out of the
 /// file into another sheet still says which days it covers — and the total rows
 /// carry no account, because they are not one.
-fn report_csv(report: &ProfitAndLoss) -> String {
+pub(crate) fn report_csv(report: &ProfitAndLoss) -> String {
     let from = iso_date(report.from);
     let to = iso_date(report.to);
     let previous_from = iso_date(report.previous_from);

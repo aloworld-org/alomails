@@ -29,6 +29,7 @@ import { API_BASE } from "../platform/runtime";
 import { RestError, problemDetail, restMessage } from "../platform/rest";
 import type {
   AccountDraft,
+  AccountLedger,
   AgedReport,
   AgedSide,
   BalanceSheet,
@@ -51,6 +52,9 @@ import type {
   PlReport,
   SpendPolicy,
   FinPeriod,
+  FinanceReportCadence,
+  FinanceReportKind,
+  FinanceReportSchedule,
   VatReturn,
 } from "./types";
 
@@ -375,6 +379,18 @@ export class FinanceApi {
     return this.#write<{ period: FinPeriod }>("POST", `/finance/periods/${encodeURIComponent(id)}/reopen`, { note }).then((response) => response.period);
   }
 
+  reportSchedules(): Promise<FinanceReportSchedule[]> {
+    return this.#read<{ schedules?: FinanceReportSchedule[] }>("/finance/report-schedules").then((response) => response.schedules ?? []);
+  }
+
+  createReportSchedule(input: { report: FinanceReportKind; cadence: FinanceReportCadence; recipient: string; nextRunDate: string }): Promise<FinanceReportSchedule> {
+    return this.#write<{ schedule: FinanceReportSchedule }>("POST", "/finance/report-schedules", input).then((response) => response.schedule);
+  }
+
+  async deleteReportSchedule(id: string): Promise<void> {
+    await this.#discard(`/finance/report-schedules/${encodeURIComponent(id)}`);
+  }
+
   // ---- the chart of accounts ---------------------------------------------
   //
   // **Admin or accountant**, reads included: the chart says what the company
@@ -404,6 +420,11 @@ export class FinanceApi {
       seeded: r.seeded === true,
       currency: r.currency ?? null,
     }));
+  }
+
+  accountLedger(accountId: string, from?: string, to?: string): Promise<AccountLedger> {
+    const query=new URLSearchParams(); if(from)query.set("from",from);if(to)query.set("to",to);
+    return this.#read<{ledger:AccountLedger}>(`/finance/accounts/${encodeURIComponent(accountId)}/ledger?${query.toString()}`).then(response=>response.ledger);
   }
 
   /** Adds the tenant's own line to their own chart. */

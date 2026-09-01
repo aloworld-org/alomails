@@ -104,7 +104,7 @@ const COLUMNS: [&str; 7] = [
 /// what unit it is in — and the `unrated` rows are written even when they are
 /// zero, because their absence would read as "the question does not arise" when
 /// what it means is "the answer is none".
-fn report_csv(report: &VatReturn) -> String {
+pub(crate) fn report_csv(report: &VatReturn) -> String {
     let from = iso_date(report.from);
     let to = iso_date(report.to);
     let mut out = csv::row(&COLUMNS);

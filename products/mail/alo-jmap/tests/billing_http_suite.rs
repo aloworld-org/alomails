@@ -28,4 +28,5 @@ mod fin_aged_http;
 mod fin_balance_http;
 mod fin_chart_http;
 mod fin_report_http;
+mod fin_report_schedules_http;
 mod fin_vat_http;

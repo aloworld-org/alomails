@@ -104,7 +104,7 @@ const COLUMNS: [&str; 6] = [
 /// The whole sheet as one CSV table, in the order an accountant reads it: what
 /// is owned, then what is owed, then equity, then the result, then the two
 /// figures that prove it balances.
-fn report_csv(sheet: &BalanceSheet) -> String {
+pub(crate) fn report_csv(sheet: &BalanceSheet) -> String {
     let on = iso_date(sheet.on);
     let mut out = csv::row(&COLUMNS);
     let mut write = |kind: &str, code: &str, name: &str, cents: i64| {

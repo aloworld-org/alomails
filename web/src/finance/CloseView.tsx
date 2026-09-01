@@ -63,7 +63,7 @@ export function CloseView() {
   }
 
   async function reopen(period: FinPeriod) {
-    const reason = window.prompt(strings.financeReopenReason);
+    const reason = await dialogs.prompt({ title: strings.financeReopenPeriod, message: strings.financeReopenReason, confirmLabel: strings.financeReopenPeriod });
     if (reason === null || reason.trim() === "") return;
     setBusy(period.id); setError(null);
     try { await api.reopenPeriod(period.id, reason.trim()); await load(); }
