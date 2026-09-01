@@ -382,6 +382,7 @@ describe("the deal drawer", () => {
     ui(`/crm/board?deal=${DEAL.id}`);
 
     expect(await screen.findByText(NOTE.body)).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: DEAL.title }).getAttribute("aria-modal")).toBe("true");
     const log = within(screen.getByRole("list", { name: strings.crmActivityTitle }));
     // The entry is dated when it HAPPENED, and says what kind it was.
     expect(log.getByText(strings.crmKindCall)).toBeTruthy();

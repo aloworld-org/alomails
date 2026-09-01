@@ -20,7 +20,7 @@ import { useNavigate } from "react-router-dom";
 
 import { RecordAgentPanel, type RecordOrigin } from "../agents";
 import { RecordHistory } from "../audit";
-import { Field, IconButton, Select, useDialogs } from "../ds";
+import { Field, IconButton, Modal, Select, useDialogs } from "../ds";
 import { strings } from "../i18n";
 import { ActivityLog } from "./ActivityLog";
 import { crmMessage, useCrmApi } from "./api";
@@ -128,23 +128,21 @@ export function DealDrawer({ dealId, stages, onClose, onChanged }: Props) {
   }
 
   return (
-    <aside
-      className={styles.drawer}
-      role="dialog"
-      aria-modal="false"
-      aria-label={strings.crmDeal}
+    <Modal
+      title={deal?.title ?? strings.crmDeal}
+      onClose={onClose}
+      wide="extra"
+      tall="page"
+      icon={<BriefcaseBusiness size={18} />}
+      actions={
+        <IconButton
+          label={strings.crmClose}
+          icon={<X size={18} />}
+          onClick={onClose}
+        />
+      }
     >
       <header className={styles.drawerHead}>
-        <div className={styles.drawerTitleRow}>
-          <h2 className={styles.drawerTitle}>
-            {deal?.title ?? strings.crmDeal}
-          </h2>
-          <IconButton
-            label={strings.crmClose}
-            icon={<X size={18} />}
-            onClick={onClose}
-          />
-        </div>
         {deal !== null && (
           <>
             <div className={styles.drawerFacts}>
@@ -332,6 +330,6 @@ export function DealDrawer({ dealId, stages, onClose, onChanged }: Props) {
       )}
 
       {lost.dialog}
-    </aside>
+    </Modal>
   );
 }
