@@ -1095,6 +1095,9 @@ function HeroFields({
           <HeroOptionRow
             label={strings.sitesHeroHeight}
             value={draft.height}
+            visual={(option) => (
+              <HeroControlVisual group="height" value={option} />
+            )}
             options={[
               ["compact", strings.sitesHeroHeightCompact],
               ["standard", strings.sitesHeroHeightStandard],
@@ -1105,6 +1108,9 @@ function HeroFields({
           <HeroOptionRow
             label={strings.sitesHeroAlignment}
             value={draft.alignment}
+            visual={(option) => (
+              <HeroControlVisual group="alignment" value={option} />
+            )}
             options={[
               ["left", strings.sitesHeroAlignmentLeft],
               ["center", strings.sitesHeroAlignmentCenter],
@@ -1115,6 +1121,9 @@ function HeroFields({
           <HeroOptionRow
             label={strings.sitesHeroContentWidth}
             value={draft.content_width}
+            visual={(option) => (
+              <HeroControlVisual group="width" value={option} />
+            )}
             options={[
               ["narrow", strings.sitesHeroContentWidthNarrow],
               ["balanced", strings.sitesHeroContentWidthBalanced],
@@ -1137,6 +1146,9 @@ function HeroFields({
             label={strings.sitesHeroTextAnimation}
             value={draft.text_animation}
             columns={4}
+            visual={(option) => (
+              <HeroControlVisual group="text" value={option} />
+            )}
             options={[
               ["none", strings.sitesHeroAnimationNone],
               ["fade_up", strings.sitesHeroTextFadeUp],
@@ -1151,6 +1163,9 @@ function HeroFields({
             label={strings.sitesHeroMediaAnimation}
             value={draft.media_animation}
             columns={4}
+            visual={(option) => (
+              <HeroControlVisual group="media" value={option} />
+            )}
             options={[
               ["none", strings.sitesHeroAnimationNone],
               ["fade_in", strings.sitesHeroMediaFadeIn],
@@ -1165,6 +1180,9 @@ function HeroFields({
             <HeroOptionRow
               label={strings.sitesHeroAnimationSpeed}
               value={draft.animation_speed}
+              visual={(option) => (
+                <HeroControlVisual group="pace" value={option} />
+              )}
               options={[
                 ["quick", strings.sitesHeroAnimationQuick],
                 ["smooth", strings.sitesHeroAnimationSmooth],
@@ -1331,14 +1349,17 @@ function HeroOptionRow<T extends string>({
   value,
   options,
   columns = 3,
+  visual,
   onChange,
 }: {
   label: string;
   value: T;
   options: readonly (readonly [T, string])[];
   columns?: 3 | 4;
+  visual?: (value: T) => ReactNode;
   onChange: (value: T) => void;
 }) {
+  const illustrated = visual !== undefined;
   return (
     <fieldset>
       <legend className="mb-2 text-sm font-semibold text-primary">
@@ -1346,7 +1367,8 @@ function HeroOptionRow<T extends string>({
       </legend>
       <div
         className={cx(
-          "grid gap-1 rounded-xl bg-raised p-1",
+          "grid",
+          illustrated ? "gap-2" : "gap-1 rounded-xl bg-raised p-1",
           columns === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3",
         )}
         role="radiogroup"
@@ -1361,21 +1383,177 @@ function HeroOptionRow<T extends string>({
               role="radio"
               aria-checked={selected}
               className={cx(
-                "min-h-11 min-w-0 rounded-lg !px-2 text-sm font-medium transition-[background-color,color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
-                selected
-                  ? "bg-surface text-accent shadow-sm"
-                  : "text-secondary hover:bg-surface/60 hover:text-primary",
+                "min-w-0 text-sm font-medium transition-[background-color,border-color,color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
+                illustrated
+                  ? "relative flex min-h-28 flex-col items-center justify-between rounded-xl !border !border-default !p-4"
+                  : "min-h-11 rounded-lg !px-2",
+                selected && illustrated
+                  ? "!border-accent bg-accent-soft/50 text-primary shadow-sm"
+                  : selected
+                    ? "bg-surface text-accent shadow-sm"
+                    : illustrated
+                      ? "bg-surface text-secondary hover:!border-accent/40 hover:bg-accent-soft/20"
+                      : "text-secondary hover:bg-surface/60 hover:text-primary",
               )}
               onClick={() => onChange(option)}
             >
-              <span className="block whitespace-normal leading-tight">
+              {visual?.(option)}
+              <span
+                className={cx(
+                  "block whitespace-normal leading-tight",
+                  illustrated && "mt-3 min-h-8 text-center",
+                )}
+              >
                 {optionLabel}
               </span>
+              {selected && illustrated && (
+                <span className="absolute right-5 top-5 grid size-5 place-items-center rounded-full bg-accent text-on-accent shadow-sm ring-2 ring-surface">
+                  <Check className="size-3" aria-hidden="true" />
+                </span>
+              )}
             </button>
           );
         })}
       </div>
     </fieldset>
+  );
+}
+
+function HeroControlVisual({
+  group,
+  value,
+}: {
+  group: "height" | "alignment" | "width" | "text" | "media" | "pace";
+  value: string;
+}) {
+  if (group === "height") {
+    const height =
+      value === "compact" ? "h-3" : value === "tall" ? "h-9" : "h-6";
+    return (
+      <span
+        className="flex h-12 items-end"
+        data-hero-control-visual={`${group}:${value}`}
+        aria-hidden="true"
+      >
+        <span className="flex h-11 w-16 items-end rounded-lg border border-default bg-raised p-1.5">
+          <span
+            className={cx(
+              "block w-full rounded-md border border-accent/40 bg-accent-soft",
+              height,
+            )}
+          />
+        </span>
+      </span>
+    );
+  }
+
+  if (group === "alignment") {
+    const alignment =
+      value === "left"
+        ? "items-start"
+        : value === "right"
+          ? "items-end"
+          : "items-center";
+    return (
+      <span
+        className={cx(
+          "flex h-12 w-16 flex-col justify-center gap-1.5",
+          alignment,
+        )}
+        data-hero-control-visual={`${group}:${value}`}
+        aria-hidden="true"
+      >
+        <span className="h-1.5 w-14 rounded-full bg-primary/70" />
+        <span className="h-1.5 w-11 rounded-full bg-secondary/30" />
+        <span className="h-1.5 w-8 rounded-full bg-accent" />
+      </span>
+    );
+  }
+
+  if (group === "width") {
+    const width =
+      value === "narrow" ? "w-8" : value === "wide" ? "w-16" : "w-12";
+    return (
+      <span
+        className="flex h-12 w-16 flex-col items-center justify-center gap-1.5"
+        data-hero-control-visual={`${group}:${value}`}
+        aria-hidden="true"
+      >
+        <span className={cx("h-1.5 rounded-full bg-primary/70", width)} />
+        <span className={cx("h-1.5 rounded-full bg-secondary/30", width)} />
+        <span className={cx("h-1.5 rounded-full bg-accent/70", width)} />
+      </span>
+    );
+  }
+
+  if (group === "text") {
+    return (
+      <span
+        className="flex h-12 w-20 items-center justify-center gap-1.5 overflow-hidden"
+        data-hero-control-visual={`${group}:${value}`}
+        aria-hidden="true"
+      >
+        {[0, 1, 2].map((index) => (
+          <span
+            key={index}
+            className={cx(
+              "h-5 rounded-md bg-primary/65",
+              index === 0 ? "w-5" : index === 1 ? "w-6" : "w-4",
+              value === "fade_up" && index === 0 && "translate-y-2 opacity-25",
+              value === "fade_up" && index === 1 && "translate-y-1 opacity-55",
+              value === "word_reveal" && index === 0 && "opacity-25",
+              value === "word_reveal" && index === 1 && "opacity-55",
+              value === "word_reveal" && index === 2 && "bg-accent",
+              value === "slide_in" &&
+                index === 0 &&
+                "-translate-x-4 opacity-25",
+              value === "slide_in" &&
+                index === 1 &&
+                "-translate-x-2 opacity-55",
+            )}
+          />
+        ))}
+      </span>
+    );
+  }
+
+  if (group === "media") {
+    return (
+      <span
+        className="relative flex h-12 w-20 items-center justify-center overflow-hidden rounded-lg border border-default bg-raised"
+        data-hero-control-visual={`${group}:${value}`}
+        aria-hidden="true"
+      >
+        {value === "slide_up" && (
+          <span className="absolute top-1 size-8 rounded-md border border-accent/30 bg-accent-soft/30" />
+        )}
+        <span
+          className={cx(
+            "size-9 rounded-md border border-accent/40 bg-accent-soft",
+            value === "fade_in" && "opacity-45",
+            value === "slide_up" && "translate-y-2",
+            value === "slow_zoom" && "scale-110 shadow-sm",
+          )}
+        >
+          <span className="mx-auto mt-2 block size-2 rounded-full bg-accent/70" />
+          <span className="mx-auto mt-1 block h-1.5 w-6 rounded-full bg-primary/25" />
+        </span>
+      </span>
+    );
+  }
+
+  const gap =
+    value === "quick" ? "gap-1" : value === "relaxed" ? "gap-4" : "gap-2.5";
+  return (
+    <span
+      className={cx("flex h-12 items-center justify-center", gap)}
+      data-hero-control-visual={`${group}:${value}`}
+      aria-hidden="true"
+    >
+      <span className="size-2.5 rounded-full bg-accent/25" />
+      <span className="size-2.5 rounded-full bg-accent/55" />
+      <span className="size-2.5 rounded-full bg-accent" />
+    </span>
   );
 }
 

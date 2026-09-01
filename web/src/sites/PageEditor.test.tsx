@@ -781,6 +781,10 @@ describe("editing a section", () => {
     await screen.findByText(strings.sitesSectionHero);
     fireEvent.click(sectionControls("edit")[0]!);
 
+    expect(document.querySelectorAll("[data-hero-control-visual]").length).toBe(
+      20,
+    );
+
     fireEvent.click(
       screen.getByRole("radio", { name: strings.sitesHeroLayoutSplitRight }),
     );
