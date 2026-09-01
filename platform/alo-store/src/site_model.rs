@@ -809,6 +809,56 @@ pub struct ShopSection {
     pub body: Option<String>,
 }
 
+/// A motion boundary between two content sections. It owns no visible copy:
+/// the renderer applies its preset to the next section as it enters and,
+/// optionally, leaves the viewport. Reduced-motion visitors always get the
+/// still document order.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TransitionEffect {
+    Fade,
+    Slide,
+    Scale,
+    Reveal,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TransitionDirection {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TransitionSpeed {
+    Quick,
+    Smooth,
+    Relaxed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TransitionTrigger {
+    Early,
+    Balanced,
+    Late,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TransitionSection {
+    pub effect: TransitionEffect,
+    pub direction: TransitionDirection,
+    pub speed: TransitionSpeed,
+    pub trigger: TransitionTrigger,
+    /// When true the next section reverses as it leaves the viewport.
+    #[serde(default)]
+    pub animate_out: bool,
+}
+
 /// One section of a page — the closed v1 vocabulary. The wire tag is the
 /// `type` prop (`{"type": "hero", …}`); unknown tags and unknown props are
 /// rejected on write.
@@ -848,6 +898,8 @@ pub enum Section {
     Tickets(TicketsSection),
     /// The door to the site's live stock shop (`/shop`).
     Shop(ShopSection),
+    /// Scroll motion applied to the next content section.
+    Transition(TransitionSection),
     /// The tenant's own HTML/CSS/JS, published inside a sandboxed frame.
     CustomCode(CustomCodeSection),
     /// Page footer.
@@ -878,6 +930,7 @@ pub const SECTION_KINDS: &[&str] = &[
     "booking",
     "tickets",
     "shop",
+    "transition",
     "custom_code",
     "footer",
 ];
@@ -902,6 +955,7 @@ impl Section {
             Section::Booking(_) => "booking",
             Section::Tickets(_) => "tickets",
             Section::Shop(_) => "shop",
+            Section::Transition(_) => "transition",
             Section::CustomCode(_) => "custom_code",
             Section::Footer(_) => "footer",
         }
@@ -931,6 +985,7 @@ impl Section {
             | Section::Booking(_)
             | Section::Tickets(_)
             | Section::Shop(_)
+            | Section::Transition(_)
             // A custom-code block owns no tenant blob: it has no network, so
             // the only image it can show is one carried inline in its markup.
             | Section::CustomCode(_)
@@ -1076,6 +1131,7 @@ impl Section {
                 check_opt_short(kind, "heading", s.heading.as_deref())?;
                 check_opt_long(kind, "body", s.body.as_deref())
             }
+            Section::Transition(_) => Ok(()),
             // The block's own rules — byte caps, the capability/script pairing,
             // and everything that would break the frame's document — live with
             // the sandbox contract they belong to.

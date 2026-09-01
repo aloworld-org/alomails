@@ -97,6 +97,18 @@
     }
   },
   {
+    "kind": "transition",
+    "ready": true,
+    "section": {
+      "animate_out": false,
+      "direction": "up",
+      "effect": "fade",
+      "speed": "smooth",
+      "trigger": "balanced",
+      "type": "transition"
+    }
+  },
+  {
     "kind": "custom_code",
     "needs": "code",
     "ready": false

@@ -72,6 +72,7 @@ import type {
   TextImageDraft,
   ShopDraft,
   TicketsDraft,
+  TransitionDraft,
 } from "./sectionDrafts";
 import type {
   Section,
@@ -2881,6 +2882,114 @@ function FooterFields({
   );
 }
 
+function TransitionVisual({
+  effect,
+}: {
+  effect: TransitionDraft["effect"];
+}) {
+  return (
+    <span className="relative block h-14 w-24 overflow-hidden rounded-lg bg-raised" aria-hidden="true">
+      <span className="absolute inset-x-2 top-2 h-3 rounded bg-secondary/15" />
+      <span
+        className={cx(
+          "absolute inset-x-2 bottom-2 h-5 rounded border border-accent/30 bg-accent-soft",
+          effect === "fade" && "opacity-60",
+          effect === "slide" && "translate-x-2",
+          effect === "scale" && "scale-90",
+          effect === "reveal" && "[clip-path:inset(0_35%_0_0)]",
+        )}
+      />
+      <span className="absolute left-1/2 top-1/2 h-4 w-px -translate-x-1/2 -translate-y-1/2 bg-accent" />
+    </span>
+  );
+}
+
+function TransitionDirectionVisual({ direction }: { direction: TransitionDraft["direction"] }) {
+  const rotation =
+    direction === "down" ? "rotate-180" : direction === "left" ? "-rotate-90" : direction === "right" ? "rotate-90" : "";
+  return (
+    <span className={cx("grid h-12 w-12 place-items-center text-accent", rotation)} aria-hidden="true">
+      <span className="text-2xl leading-none">↑</span>
+    </span>
+  );
+}
+
+function TransitionFields({ draft, onChange }: { draft: TransitionDraft; onChange: Change }) {
+  return (
+    <div className="grid gap-5">
+      <Card as="section" flat>
+        <HeroFormHeading icon={<Sparkles size={17} />}>
+          {strings.sitesTransitionStyle}
+        </HeroFormHeading>
+        <p className="mb-5 mt-2 text-sm text-secondary">{strings.sitesTransitionStyleHint}</p>
+        <HeroOptionRow
+          label={strings.sitesTransitionStyle}
+          value={draft.effect}
+          columns={4}
+          visual={(effect) => <TransitionVisual effect={effect} />}
+          options={[
+            ["fade", strings.sitesTransitionFade],
+            ["slide", strings.sitesTransitionSlide],
+            ["scale", strings.sitesTransitionScale],
+            ["reveal", strings.sitesTransitionReveal],
+          ]}
+          onChange={(effect) => onChange({ ...draft, effect })}
+        />
+      </Card>
+
+      <Card as="section" flat>
+        <h3 className="m-0 text-base font-semibold text-primary">{strings.sitesTransitionTiming}</h3>
+        <div className="mt-5 grid gap-5 lg:grid-cols-2">
+          {draft.effect === "slide" && (
+            <HeroOptionRow
+              label={strings.sitesTransitionDirection}
+              value={draft.direction}
+              columns={4}
+              visual={(direction) => <TransitionDirectionVisual direction={direction} />}
+              options={[
+                ["up", strings.sitesTransitionUp],
+                ["down", strings.sitesTransitionDown],
+                ["left", strings.sitesTransitionLeft],
+                ["right", strings.sitesTransitionRight],
+              ]}
+              onChange={(direction) => onChange({ ...draft, direction })}
+            />
+          )}
+          <HeroOptionRow
+            label={strings.sitesHeroAnimationSpeed}
+            value={draft.speed}
+            visual={(speed) => <HeroControlVisual group="pace" value={speed} />}
+            options={[
+              ["quick", strings.sitesHeroAnimationQuick],
+              ["smooth", strings.sitesHeroAnimationSmooth],
+              ["relaxed", strings.sitesHeroAnimationRelaxed],
+            ]}
+            onChange={(speed) => onChange({ ...draft, speed })}
+          />
+          <HeroOptionRow
+            label={strings.sitesTransitionTrigger}
+            value={draft.trigger}
+            options={[
+              ["early", strings.sitesTransitionEarly],
+              ["balanced", strings.sitesTransitionBalanced],
+              ["late", strings.sitesTransitionLate],
+            ]}
+            onChange={(trigger) => onChange({ ...draft, trigger })}
+          />
+        </div>
+        <div className="mt-5 rounded-xl border border-subtle bg-raised p-4">
+          <CheckField
+            label={strings.sitesTransitionAnimateOut}
+            checked={draft.animate_out}
+            onChange={(animate_out) => onChange({ ...draft, animate_out })}
+          />
+          <p className="mb-0 mt-2 text-xs text-secondary">{strings.sitesTransitionAnimateOutHint}</p>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 export function SectionFormFields({
   draft,
   onChange,
@@ -2932,6 +3041,8 @@ export function SectionFormFields({
       return <TicketsFields draft={draft} onChange={onChange} />;
     case "shop":
       return <ShopFields draft={draft} onChange={onChange} />;
+    case "transition":
+      return <TransitionFields draft={draft} onChange={onChange} />;
     case "custom_code":
       // No copy tools anywhere in this form: the assistant refuses to write
       // or change code by name (`alo-ai`'s sites module), so offering the
@@ -3008,7 +3119,7 @@ export function SectionFormDialog({
       busy={busy}
       canSubmit={canSubmit(draft)}
       submitLabel={strings.sitesSaveSection}
-      wide={kind === "nav" || kind === "hero"}
+      wide={kind === "nav" || kind === "hero" || kind === "transition"}
       onClose={onClose}
       onSubmit={() => onSave(toSection(draft))}
     >

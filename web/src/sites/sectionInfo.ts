@@ -41,6 +41,8 @@ export function kindLabel(kind: SectionKind): string {
       return strings.sitesSectionTickets;
     case "shop":
       return strings.sitesSectionShop;
+    case "transition":
+      return strings.sitesSectionTransition;
     case "custom_code":
       return strings.sitesSectionCustomCode;
     case "footer":
@@ -83,6 +85,8 @@ export function kindDescription(kind: SectionKind): string {
       return strings.sitesSectionTicketsDesc;
     case "shop":
       return strings.sitesSectionShopDesc;
+    case "transition":
+      return strings.sitesSectionTransitionDesc;
     case "custom_code":
       return strings.sitesSectionCustomCodeDesc;
     case "footer":
@@ -144,6 +148,8 @@ export function sectionSummary(section: Section): string {
         section.heading ??
         (section.body === undefined ? strings.sitesSectionShop : clip(section.body))
       );
+    case "transition":
+      return strings.sitesTransitionSummary;
     case "custom_code":
       // The frame's accessible name is what a visitor is told this block is,
       // so it is also the honest line for the card when there is no heading.

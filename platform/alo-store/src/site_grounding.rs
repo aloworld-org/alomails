@@ -422,6 +422,7 @@ pub fn section_text(section: &Section) -> Vec<String> {
             push_opt(out, section.heading.as_deref());
             push_opt(out, section.body.as_deref());
         }
+        Section::Transition(_) => {}
         Section::CustomCode(section) => {
             // Code is not prose: the heading and accessible title only.
             push_opt(out, section.heading.as_deref());

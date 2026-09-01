@@ -263,6 +263,15 @@ pub fn seed_section(kind: &str, ctx: &SeedContext) -> Option<SectionSeed> {
         "booking" => seed_booking(ctx),
         "tickets" => seed_tickets(ctx),
         "shop" => seed_shop(ctx),
+        "transition" => SectionSeed::Ready(Box::new(Section::Transition(
+            crate::site_model::TransitionSection {
+                effect: crate::site_model::TransitionEffect::Fade,
+                direction: crate::site_model::TransitionDirection::Up,
+                speed: crate::site_model::TransitionSpeed::Smooth,
+                trigger: crate::site_model::TransitionTrigger::Balanced,
+                animate_out: false,
+            },
+        ))),
         // A code block is the one section whose content is not writing but
         // behaviour. Nothing in a website's copy tells us what script the
         // owner meant, and guessing one would put bytes on their page that

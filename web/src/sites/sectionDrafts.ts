@@ -27,6 +27,10 @@ import type {
   NavAppearance,
   TeamMember,
   Testimonial,
+  TransitionDirection,
+  TransitionEffect,
+  TransitionSpeed,
+  TransitionTrigger,
 } from "./sections";
 
 export interface NavDraft {
@@ -205,6 +209,15 @@ export interface ShopDraft {
   body: string;
 }
 
+export interface TransitionDraft {
+  type: "transition";
+  effect: TransitionEffect;
+  direction: TransitionDirection;
+  speed: TransitionSpeed;
+  trigger: TransitionTrigger;
+  animate_out: boolean;
+}
+
 /** A custom-code block while it is being written. The script is held even
  *  while the capability that runs it is switched off, so turning the switch
  *  back on does not cost the code that was typed — but a saved block never
@@ -249,6 +262,7 @@ export type SectionDraft =
   | BookingDraft
   | TicketsDraft
   | ShopDraft
+  | TransitionDraft
   | CustomCodeDraft
   | FooterDraft;
 
@@ -505,6 +519,17 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         body: s?.body ?? "",
       };
     }
+    case "transition": {
+      const s = from as (Section & { type: "transition" }) | undefined;
+      return {
+        type: "transition",
+        effect: s?.effect ?? "fade",
+        direction: s?.direction ?? "up",
+        speed: s?.speed ?? "smooth",
+        trigger: s?.trigger ?? "balanced",
+        animate_out: s?.animate_out ?? false,
+      };
+    }
     case "custom_code": {
       const s = from as (Section & { type: "custom_code" }) | undefined;
       return {
@@ -752,6 +777,15 @@ export function toSection(draft: SectionDraft): Section {
         type: "shop",
         heading: opt(draft.heading),
         body: opt(draft.body),
+      };
+    case "transition":
+      return {
+        type: "transition",
+        effect: draft.effect,
+        direction: draft.direction,
+        speed: draft.speed,
+        trigger: draft.trigger,
+        animate_out: draft.animate_out,
       };
     case "custom_code": {
       // A script is stored only together with the capability that runs it:

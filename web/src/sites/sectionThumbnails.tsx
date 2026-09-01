@@ -216,6 +216,14 @@ export function sectionThumbnail(kind: SectionKind): ReactNode {
           <rect x="30" y="13" width="4" height="14" rx="2" opacity="0.45" />
         </>
       );
+    case "transition":
+      return (
+        <>
+          <rect x="4" y="5" width="56" height="9" rx="3" opacity="0.22" />
+          <path d="M32 16 V28 M27 23 L32 28 L37 23" fill="none" stroke="currentColor" strokeWidth="2" />
+          <rect x="4" y="30" width="56" height="7" rx="3" opacity="0.65" />
+        </>
+      );
     case "footer":
       return (
         <>

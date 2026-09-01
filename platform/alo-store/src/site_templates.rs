@@ -361,6 +361,7 @@ fn check_section_content(section: &Section) -> Result<(), String> {
         // live Billing and Inventory state.
         | Section::Tickets(_)
         | Section::Shop(_)
+        | Section::Transition(_)
         | Section::Footer(_) => Ok(()),
     }
 }
@@ -404,6 +405,7 @@ fn section_hrefs(section: &Section) -> Vec<&str> {
         // hrefs.
         | Section::Tickets(_)
         | Section::Shop(_)
+        | Section::Transition(_)
         | Section::CustomCode(_) => Vec::new(),
     }
 }

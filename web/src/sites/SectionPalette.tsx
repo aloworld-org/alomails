@@ -165,7 +165,7 @@ export function SectionPalette({
     {
       id: "advanced",
       label: strings.sitesPaletteCategoryAdvanced,
-      kinds: ["custom_code"],
+      kinds: ["transition", "custom_code"],
       icon: <Settings2 size="var(--icon-size-inline)" />,
     },
   ];

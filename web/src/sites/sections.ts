@@ -290,6 +290,21 @@ export interface ShopSection {
   body?: string | undefined;
 }
 
+export type TransitionEffect = "fade" | "slide" | "scale" | "reveal";
+export type TransitionDirection = "up" | "down" | "left" | "right";
+export type TransitionSpeed = "quick" | "smooth" | "relaxed";
+export type TransitionTrigger = "early" | "balanced" | "late";
+
+/** A content-free motion boundary that animates the following section. */
+export interface TransitionSection {
+  type: "transition";
+  effect: TransitionEffect;
+  direction: TransitionDirection;
+  speed: TransitionSpeed;
+  trigger: TransitionTrigger;
+  animate_out: boolean;
+}
+
 /** What the sandboxed frame around a custom-code block may do. Every field is
  *  default-deny, and the set is deliberately small: neither capability opens a
  *  network, and none of them ever will (`site_custom_code.rs`). Absent on the
@@ -348,6 +363,7 @@ export type Section =
   | BookingSection
   | TicketsSection
   | ShopSection
+  | TransitionSection
   | CustomCodeSection
   | FooterSection;
 
@@ -372,6 +388,7 @@ export const SECTION_KINDS: readonly SectionKind[] = [
   "booking",
   "tickets",
   "shop",
+  "transition",
   "custom_code",
   "footer",
 ];
