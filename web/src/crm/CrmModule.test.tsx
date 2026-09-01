@@ -375,6 +375,17 @@ describe("the list", () => {
 });
 
 describe("the deal drawer", () => {
+  test("moves stage from the visible branded stage choices", async () => {
+    ui(`/crm/board?deal=${DEAL.id}`);
+    await screen.findByText(strings.crmActivityEmpty);
+
+    reply("/crm/deals/deal-1/stage", "POST", { deal: { ...DEAL, stageId: QUALIFIED.id } });
+    fireEvent.click(await screen.findByRole("radio", { name: QUALIFIED.name }));
+
+    await waitFor(() => expect(writes().length).toBe(1));
+    expect(writes()[0]?.body).toEqual({ stageId: QUALIFIED.id });
+  });
+
   test("shows the log, the next steps, and only opens the conversations this reader holds", async () => {
     reply("/activities", "GET", { activities: [NOTE] });
     reply("/next-steps", "GET", { nextSteps: [STEP] });

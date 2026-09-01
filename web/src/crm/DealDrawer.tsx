@@ -20,7 +20,7 @@ import { useNavigate } from "react-router-dom";
 
 import { RecordAgentPanel, type RecordOrigin } from "../agents";
 import { RecordHistory } from "../audit";
-import { Button, Field, IconButton, Modal, Select, useDialogs } from "../ds";
+import { Button, IconButton, Modal, useDialogs } from "../ds";
 import { strings } from "../i18n";
 import { ActivityLog } from "./ActivityLog";
 import { crmMessage, useCrmApi } from "./api";
@@ -166,30 +166,36 @@ export function DealDrawer({ dealId, stages, onClose, onChanged }: Props) {
               </p>
             )}
             <div className="mt-5 flex flex-wrap items-end gap-3">
-              <div className="w-44 shrink-0"><Field label={strings.crmStage}>
-                {(control) => (
-                  <Select
-                    {...control}
-                    value={deal.stageId}
-                    onChange={(e) => void move(e.target.value)}
-                  >
-                    {/* A closed deal can sit in a column that has since been
-                        archived. Say so rather than let the select fall back to
-                        its first option, which would show the wrong column and
-                        turn an idle click into a move. */}
-                    {!stages.some((s) => s.id === deal.stageId) && (
-                      <option value={deal.stageId}>
-                        {strings.crmStageArchived}
-                      </option>
-                    )}
-                    {stages.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </Select>
-                )}
-              </Field></div>
+              <fieldset className="w-full">
+                <legend className="mb-2 text-sm font-semibold text-primary">{strings.crmStage}</legend>
+                <div className="flex flex-wrap gap-2">
+                  {!stages.some((stage) => stage.id === deal.stageId) && (
+                    <span className="inline-flex min-h-10 items-center rounded-lg border border-default bg-raised px-4 text-sm font-medium text-secondary">
+                      {strings.crmStageArchived}
+                    </span>
+                  )}
+                  {stages.map((stage) => {
+                    const selected = stage.id === deal.stageId;
+                    const dot = stage.isWon ? "bg-success" : stage.isLost ? "bg-danger" : "bg-accent";
+                    return (
+                      <label key={stage.id} className="cursor-pointer">
+                        <input
+                          className="peer sr-only"
+                          type="radio"
+                          name={`deal-stage-${deal.id}`}
+                          value={stage.id}
+                          checked={selected}
+                          onChange={() => void move(stage.id)}
+                        />
+                        <span className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-default bg-surface px-4 text-sm font-medium text-secondary transition-colors hover:border-accent/40 hover:bg-raised hover:text-primary peer-checked:border-accent peer-checked:bg-accent-soft peer-checked:text-accent peer-checked:shadow-sm peer-focus-visible:outline-2 peer-focus-visible:outline-accent peer-focus-visible:outline-offset-2">
+                          <span className={`size-2 rounded-full ${dot}`} aria-hidden="true" />
+                          {stage.name}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </fieldset>
               <span className="flex-1" />
               {/* The handoff to billing (B2.08). Offered on any deal that has
                   not been lost, because quoting an open deal is how it is won —
