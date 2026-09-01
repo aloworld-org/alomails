@@ -16,6 +16,7 @@ import {
   Link2,
   MoreHorizontal,
   MousePointerClick,
+  Palette,
   PanelTop,
   Play,
   Plus,
@@ -448,6 +449,25 @@ const NAV_DEFAULT_ROLES = {
   hover: "accent_1",
 } as const;
 
+const HERO_DEFAULT_ROLES = {
+  background: "background",
+  primary_button: "accent_1",
+  primary_button_hover: "accent_2",
+  secondary_button: "accent_3",
+  secondary_button_hover: "accent_1",
+} as const;
+
+const HERO_FALLBACK_COLORS: BrandColors = {
+  background: "#ffffff",
+  text: "#17212b",
+  border: "#dde3e9",
+  accent_1: "#1d4ed8",
+  accent_2: "#4c5866",
+  accent_3: "#f2f5f8",
+  accent_4: "#17212b",
+  accent_5: "#ffffff",
+};
+
 function themeColors(preset: ThemePreset, custom?: BrandColors): BrandColors {
   return (
     custom ?? {
@@ -465,6 +485,68 @@ function themeColors(preset: ThemePreset, custom?: BrandColors): BrandColors {
 
 function roleColor(colors: BrandColors, role: ThemeColorRole): string {
   return colors[role];
+}
+
+function HeroColorSwatches({
+  label,
+  value,
+  options,
+  automatic = false,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: Array<{ value: string; label: string; swatch?: string | undefined }>;
+  automatic?: boolean;
+  onChange: (value: string) => void;
+}) {
+  const choices = automatic
+    ? [{ value: "auto", label: strings.sitesHeroAutomaticContrast }, ...options]
+    : options;
+  return (
+    <div className="grid gap-2">
+      <span className="text-sm font-semibold text-primary">{label}</span>
+      <div className="flex min-h-11 flex-wrap items-center gap-2" role="radiogroup" aria-label={label}>
+        {choices.map((option) => {
+          const selected = option.value === value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              aria-label={`${label}: ${option.label}`}
+              title={option.label}
+              className={cx(
+                "relative grid size-9 place-items-center rounded-full !border bg-surface !p-0 shadow-sm transition-[border-color,box-shadow,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
+                selected
+                  ? "!border-accent ring-2 ring-accent/20"
+                  : "!border-default hover:scale-105 hover:!border-accent/50",
+              )}
+              onClick={() => onChange(option.value)}
+            >
+              <span
+                className="size-6 rounded-full border border-black/10"
+                style={{
+                  background:
+                    option.value === "auto"
+                      ? "linear-gradient(135deg,#17212b 0 50%,#ffffff 50% 100%)"
+                      : option.swatch,
+                }}
+                aria-hidden="true"
+              />
+              {selected && (
+                <Check
+                  className="absolute -right-1 -top-1 size-4 rounded-full bg-accent p-0.5 text-on-accent"
+                  aria-hidden="true"
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function sectionTargets(page: SitePage, sections: Section[]) {
@@ -594,16 +676,17 @@ function NavFields({
     })),
   ];
   const appearanceOptions = [
-    { value: "background", label: strings.sitesThemeBackgroundColor },
-    { value: "text", label: strings.sitesThemeTextColor },
-    { value: "border", label: strings.sitesThemeBorderColor },
-    { value: "accent_1", label: strings.sitesThemeAccentColor(1) },
+    { value: "background", label: strings.sitesThemeBackgroundColor, swatch: brandColors?.background },
+    { value: "text", label: strings.sitesThemeTextColor, swatch: brandColors?.text },
+    { value: "border", label: strings.sitesThemeBorderColor, swatch: brandColors?.border },
+    { value: "accent_1", label: strings.sitesThemeAccentColor(1), swatch: brandColors?.accent_1 },
     ...(workspaceBrand.secondary === null
       ? []
-      : [{ value: "accent_2", label: strings.sitesThemeAccentColor(2) }]),
+      : [{ value: "accent_2", label: strings.sitesThemeAccentColor(2), swatch: brandColors?.accent_2 }]),
     ...workspaceBrand.supporting.map((color, index) => ({
       value: `accent_${index + 3}`,
       label: color.name,
+      swatch: brandColors?.[`accent_${index + 3}` as keyof BrandColors],
     })),
   ];
   const reorder = (from: number, to: number) => {
@@ -1041,6 +1124,72 @@ function HeroFields({
   draft: HeroDraft;
   onChange: Change;
 }) {
+  const { siteId = "" } = useParams();
+  const api = useSitesApi();
+  const workspaceBrand = readBrandKit();
+  const [brandColors, setBrandColors] = useState<BrandColors | null>(null);
+  useEffect(() => {
+    if (siteId === "") return;
+    let current = true;
+    void Promise.all([api.site(siteId), api.themePresets()])
+      .then(([site, presets]) => {
+        if (!current) return;
+        const preset = presets.find(
+          (item) => item.id === (site.theme.preset ?? presets[0]?.id),
+        );
+        if (preset !== undefined)
+          setBrandColors(themeColors(preset, site.theme.colors));
+      })
+      .catch(() => undefined);
+    return () => {
+      current = false;
+    };
+  }, [api, siteId]);
+
+  const visibleColors = brandColors ?? HERO_FALLBACK_COLORS;
+  const colorOptions = [
+    { value: "background", label: strings.sitesThemeBackgroundColor, swatch: visibleColors.background },
+    { value: "text", label: strings.sitesThemeTextColor, swatch: visibleColors.text },
+    { value: "border", label: strings.sitesThemeBorderColor, swatch: visibleColors.border },
+    { value: "accent_1", label: strings.sitesThemeAccentColor(1), swatch: visibleColors.accent_1 },
+    ...(workspaceBrand.secondary === null
+      ? []
+      : [{ value: "accent_2", label: strings.sitesThemeAccentColor(2), swatch: visibleColors.accent_2 }]),
+    ...workspaceBrand.supporting.map((color, index) => ({
+      value: `accent_${index + 3}`,
+      label: color.name,
+      swatch: visibleColors[`accent_${index + 3}` as keyof BrandColors],
+    })),
+  ];
+  const selectedColors = draft.appearance ?? HERO_DEFAULT_ROLES;
+  const explicitTextRole = (
+    property:
+      | "primary_button_text"
+      | "primary_button_hover_text"
+      | "secondary_button_text"
+      | "secondary_button_hover_text",
+  ) => draft.appearance?.[property] ?? "auto";
+  const readable =
+    brandColors === null ||
+    ([
+      [selectedColors.primary_button, draft.appearance?.primary_button_text],
+      [
+        selectedColors.primary_button_hover,
+        draft.appearance?.primary_button_hover_text,
+      ],
+      [selectedColors.secondary_button, draft.appearance?.secondary_button_text],
+      [
+        selectedColors.secondary_button_hover,
+        draft.appearance?.secondary_button_hover_text,
+      ],
+    ] as const).every(
+      ([background, text]) =>
+        text === undefined ||
+        (contrastRatio(
+          roleColor(brandColors, background),
+          roleColor(brandColors, text),
+        ) ?? 0) >= 4.5,
+    );
   const layouts = [
     { value: "centered", label: strings.sitesHeroLayoutCentered },
     { value: "split_right", label: strings.sitesHeroLayoutSplitRight },
@@ -1143,6 +1292,184 @@ function HeroFields({
             onChange={(content_width) => onChange({ ...draft, content_width })}
           />
         </div>
+      </Card>
+
+      <Card as="section" flat>
+        <HeroFormHeading icon={<Palette size={17} />}>
+          {strings.sitesHeroColors}
+        </HeroFormHeading>
+        <p className="mb-5 mt-2 text-sm text-secondary">
+          {strings.sitesHeroColorsHint}
+        </p>
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]">
+          <HeroColorSwatches
+            label={strings.sitesHeroBackgroundColor}
+            value={selectedColors.background}
+            options={colorOptions}
+            onChange={(value) =>
+              onChange({
+                ...draft,
+                appearance: {
+                  ...(draft.appearance ?? HERO_DEFAULT_ROLES),
+                  background: value as ThemeColorRole,
+                },
+              })
+            }
+          />
+          <div className="grid gap-2">
+            <span className="text-sm font-semibold text-primary">
+              {strings.sitesHeroButtonLayout}
+            </span>
+            <div
+              className="grid grid-cols-3 gap-2"
+              role="radiogroup"
+              aria-label={strings.sitesHeroButtonLayout}
+            >
+              {(
+                [
+                  [0, strings.sitesHeroNoButtons],
+                  [1, strings.sitesHeroOneButton],
+                  [2, strings.sitesHeroTwoButtons],
+                ] as const
+              ).map(([count, label]) => (
+                <button
+                  key={count}
+                  type="button"
+                  role="radio"
+                  aria-checked={draft.button_count === count}
+                  aria-label={label}
+                  className={cx(
+                    "grid min-h-16 place-items-center gap-1.5 rounded-xl !border !px-3 !py-2 text-xs font-semibold transition-[border-color,background-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
+                    draft.button_count === count
+                      ? "!border-accent bg-accent-soft/50 text-accent shadow-sm"
+                      : "!border-default bg-surface text-secondary hover:!border-accent/40",
+                  )}
+                  onClick={() => onChange({ ...draft, button_count: count })}
+                >
+                  <span className="flex h-4 items-center justify-center gap-1" aria-hidden="true">
+                    {Array.from({ length: count }, (_, index) => (
+                      <span
+                        key={index}
+                        className={cx(
+                          "h-2.5 rounded-full",
+                          index === 0 ? "w-8 bg-accent" : "w-6 border border-accent",
+                        )}
+                      />
+                    ))}
+                    {count === 0 && <span className="h-px w-8 bg-border" />}
+                  </span>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        {draft.button_count > 0 && (
+          <div className="mt-5 grid gap-4 lg:grid-cols-2">
+          {(
+            [
+              [
+                strings.sitesHeroPrimaryButtonColor,
+                "primary_button",
+                "primary_button_text",
+                "primary_button_hover",
+                "primary_button_hover_text",
+                true,
+              ],
+              [
+                strings.sitesHeroSecondaryButtonColor,
+                "secondary_button",
+                "secondary_button_text",
+                "secondary_button_hover",
+                "secondary_button_hover_text",
+                draft.button_count === 2,
+              ],
+            ] as const
+          ).filter(([, , , , , visible]) => visible)
+          .map(([title, color, text, hover, hoverText]) => (
+            <section key={title} className="rounded-xl border border-subtle bg-surface p-4">
+              <h4 className="m-0 text-sm font-semibold text-primary">{title}</h4>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <HeroColorSwatches
+                    label={`${title}: ${strings.sitesNavBackground}`}
+                    value={selectedColors[color]}
+                    options={colorOptions}
+                    onChange={(value) =>
+                      onChange({
+                        ...draft,
+                        appearance: {
+                          ...(draft.appearance ?? HERO_DEFAULT_ROLES),
+                          [color]: value as ThemeColorRole,
+                        },
+                      })
+                    }
+                  />
+                <HeroColorSwatches
+                    label={`${title}: ${strings.sitesNavText}`}
+                    value={explicitTextRole(text)}
+                    options={colorOptions}
+                    automatic
+                    onChange={(value) =>
+                      onChange({
+                        ...draft,
+                        appearance: {
+                          ...(draft.appearance ?? HERO_DEFAULT_ROLES),
+                          [text]: value === "auto" ? undefined : (value as ThemeColorRole),
+                        },
+                      })
+                    }
+                  />
+                <HeroColorSwatches
+                    label={`${title}: ${strings.sitesHeroHoverBackground}`}
+                    value={selectedColors[hover]}
+                    options={colorOptions}
+                    onChange={(value) =>
+                      onChange({
+                        ...draft,
+                        appearance: {
+                          ...(draft.appearance ?? HERO_DEFAULT_ROLES),
+                          [hover]: value as ThemeColorRole,
+                        },
+                      })
+                    }
+                  />
+                <HeroColorSwatches
+                    label={`${title}: ${strings.sitesHeroHoverText}`}
+                    value={explicitTextRole(hoverText)}
+                    options={colorOptions}
+                    automatic
+                    onChange={(value) =>
+                      onChange({
+                        ...draft,
+                        appearance: {
+                          ...(draft.appearance ?? HERO_DEFAULT_ROLES),
+                          [hoverText]:
+                            value === "auto" ? undefined : (value as ThemeColorRole),
+                        },
+                      })
+                    }
+                  />
+              </div>
+            </section>
+          ))}
+          </div>
+        )}
+        {draft.button_count > 0 && !readable && (
+          <p className="mb-0 mt-4 text-sm text-danger" role="status">
+            {strings.sitesHeroButtonContrastWarning}
+          </p>
+        )}
+        {draft.appearance !== undefined && (
+          <div className="mt-4 flex justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onChange({ ...draft, appearance: undefined })}
+            >
+              {strings.sitesHeroUseThemeColors}
+            </Button>
+          </div>
+        )}
       </Card>
 
       <Card as="section" flat>
@@ -1257,35 +1584,39 @@ function HeroFields({
         </div>
       </Card>
 
-      <Card as="section" flat>
-        <HeroFormHeading icon={<MousePointerClick size={17} />}>
-          {strings.sitesHeroActions}
-        </HeroFormHeading>
-        <div className="mt-5 grid gap-6 lg:grid-cols-2">
-          <LinkFields
-            bare
-            legend={strings.sitesFieldPrimaryButton}
-            value={draft.primary_cta}
-            onChange={(patch) =>
-              onChange({
-                ...draft,
-                primary_cta: { ...draft.primary_cta, ...patch },
-              })
-            }
-          />
-          <LinkFields
-            bare
-            legend={strings.sitesFieldSecondaryButton}
-            value={draft.secondary_cta}
-            onChange={(patch) =>
-              onChange({
-                ...draft,
-                secondary_cta: { ...draft.secondary_cta, ...patch },
-              })
-            }
-          />
-        </div>
-      </Card>
+      {draft.button_count > 0 && (
+        <Card as="section" flat>
+          <HeroFormHeading icon={<MousePointerClick size={17} />}>
+            {strings.sitesHeroActions}
+          </HeroFormHeading>
+          <div className="mt-5 grid gap-6 lg:grid-cols-2">
+            <LinkFields
+              bare
+              legend={strings.sitesFieldPrimaryButton}
+              value={draft.primary_cta}
+              onChange={(patch) =>
+                onChange({
+                  ...draft,
+                  primary_cta: { ...draft.primary_cta, ...patch },
+                })
+              }
+            />
+            {draft.button_count === 2 && (
+              <LinkFields
+                bare
+                legend={strings.sitesFieldSecondaryButton}
+                value={draft.secondary_cta}
+                onChange={(patch) =>
+                  onChange({
+                    ...draft,
+                    secondary_cta: { ...draft.secondary_cta, ...patch },
+                  })
+                }
+              />
+            )}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

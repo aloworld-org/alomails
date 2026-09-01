@@ -32,6 +32,18 @@ export interface NavAppearance {
   hover: ThemeColorRole;
 }
 
+export interface HeroAppearance {
+  background: ThemeColorRole;
+  primary_button: ThemeColorRole;
+  primary_button_text?: ThemeColorRole | undefined;
+  primary_button_hover: ThemeColorRole;
+  primary_button_hover_text?: ThemeColorRole | undefined;
+  secondary_button: ThemeColorRole;
+  secondary_button_text?: ThemeColorRole | undefined;
+  secondary_button_hover: ThemeColorRole;
+  secondary_button_hover_text?: ThemeColorRole | undefined;
+}
+
 /** The visible rectangle of a source image, in basis points (ten-thousandths)
  *  of its width and height from the top-left corner. Absent means the whole
  *  image. */
@@ -95,6 +107,7 @@ export interface HeroSection {
   video_url?: string | undefined;
   primary_cta?: SectionLink | undefined;
   secondary_cta?: SectionLink | undefined;
+  appearance?: HeroAppearance | undefined;
   layout?: HeroLayout | undefined;
   height?: HeroHeight | undefined;
   alignment?: HeroAlignment | undefined;

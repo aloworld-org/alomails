@@ -806,6 +806,43 @@ describe("editing a section", () => {
     fireEvent.click(
       screen.getByRole("radio", { name: strings.sitesHeroAnimationRelaxed }),
     );
+    const primaryColorName = `${strings.sitesHeroPrimaryButtonColor}: ${strings.sitesNavBackground}: ${strings.sitesThemeAccentColor(1)}`;
+    const secondaryColorName = `${strings.sitesHeroSecondaryButtonColor}: ${strings.sitesNavBackground}: ${strings.sitesThemeAccentColor(1)}`;
+    expect(screen.queryByRole("radio", { name: primaryColorName })).toBeNull();
+    fireEvent.click(
+      screen.getByRole("radio", { name: strings.sitesHeroOneButton }),
+    );
+    expect(screen.getByRole("radio", { name: primaryColorName })).toBeTruthy();
+    expect(screen.queryByRole("radio", { name: secondaryColorName })).toBeNull();
+    fireEvent.click(
+      screen.getByRole("radio", { name: strings.sitesHeroTwoButtons }),
+    );
+    expect(screen.getByRole("radio", { name: secondaryColorName })).toBeTruthy();
+    const chooseColor = (control: string, option: string) => {
+      fireEvent.click(
+        screen.getByRole("radio", { name: `${control}: ${option}` }),
+      );
+    };
+    chooseColor(
+      strings.sitesHeroBackgroundColor,
+      strings.sitesThemeTextColor,
+    );
+    chooseColor(
+      `${strings.sitesHeroPrimaryButtonColor}: ${strings.sitesNavText}`,
+      strings.sitesThemeTextColor,
+    );
+    chooseColor(
+      `${strings.sitesHeroPrimaryButtonColor}: ${strings.sitesHeroHoverText}`,
+      strings.sitesThemeBackgroundColor,
+    );
+    chooseColor(
+      `${strings.sitesHeroSecondaryButtonColor}: ${strings.sitesNavText}`,
+      strings.sitesThemeBorderColor,
+    );
+    chooseColor(
+      `${strings.sitesHeroSecondaryButtonColor}: ${strings.sitesHeroHoverText}`,
+      strings.sitesThemeTextColor,
+    );
 
     replies = [
       {
@@ -844,6 +881,17 @@ describe("editing a section", () => {
         text_animation: "word_reveal",
         media_animation: "slow_zoom",
         animation_speed: "relaxed",
+        appearance: {
+          background: "text",
+          primary_button: "accent_1",
+          primary_button_text: "text",
+          primary_button_hover: "accent_2",
+          primary_button_hover_text: "background",
+          secondary_button: "accent_3",
+          secondary_button_text: "border",
+          secondary_button_hover: "accent_1",
+          secondary_button_hover_text: "text",
+        },
       },
     });
   });

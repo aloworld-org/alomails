@@ -13,6 +13,7 @@ import type {
   FeatureItem,
   HeroAlignment,
   HeroAnimationSpeed,
+  HeroAppearance,
   HeroContentWidth,
   HeroHeight,
   HeroLayout,
@@ -43,6 +44,8 @@ export interface HeroDraft {
   video_url: string;
   primary_cta: SectionLink;
   secondary_cta: SectionLink;
+  button_count: 0 | 1 | 2;
+  appearance?: HeroAppearance | undefined;
   layout: HeroLayout;
   height: HeroHeight;
   alignment: HeroAlignment;
@@ -325,6 +328,8 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         video_url: s?.video_url ?? "",
         primary_cta: draftLink(s?.primary_cta),
         secondary_cta: draftLink(s?.secondary_cta),
+        button_count: s?.secondary_cta !== undefined ? 2 : s?.primary_cta !== undefined ? 1 : 0,
+        appearance: s?.appearance,
         layout: s?.layout ?? "centered",
         height: s?.height ?? "standard",
         alignment: s?.alignment ?? "center",
@@ -598,8 +603,9 @@ export function toSection(draft: SectionDraft): Section {
         subheading: opt(draft.subheading),
         image: optImage(draft.image),
         video_url: opt(draft.video_url),
-        primary_cta: optLink(draft.primary_cta),
-        secondary_cta: optLink(draft.secondary_cta),
+        primary_cta: draft.button_count >= 1 ? optLink(draft.primary_cta) : undefined,
+        secondary_cta: draft.button_count === 2 ? optLink(draft.secondary_cta) : undefined,
+        appearance: draft.appearance,
         layout: draft.layout,
         height: draft.height,
         alignment: draft.alignment,

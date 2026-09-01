@@ -7,6 +7,8 @@ import { useDismiss } from "./useDismiss";
 export interface ChoiceOption {
   value: string;
   label: string;
+  /** Optional visual sample, used by palette-backed choices. */
+  swatch?: string | undefined;
   disabled?: boolean;
 }
 
@@ -96,6 +98,13 @@ export function ChoicePicker({
           }
         }}
       >
+        {selected?.swatch !== undefined && (
+          <span
+            className="size-4 shrink-0 rounded-full border border-default shadow-sm"
+            style={{ backgroundColor: selected.swatch }}
+            aria-hidden="true"
+          />
+        )}
         <span className={cx("min-w-0 flex-1 truncate", selected === undefined && "text-tertiary")}>
           {selected?.label ?? placeholder}
         </span>
@@ -140,6 +149,13 @@ export function ChoicePicker({
                 }}
                 onClick={() => choose(option)}
               >
+                {option.swatch !== undefined && (
+                  <span
+                    className="size-5 shrink-0 rounded-full border border-default shadow-sm"
+                    style={{ backgroundColor: option.swatch }}
+                    aria-hidden="true"
+                  />
+                )}
                 <span className="min-w-0 flex-1 truncate">{option.label}</span>
                 {isSelected && <Check className="size-4 shrink-0" aria-hidden="true" />}
               </button>

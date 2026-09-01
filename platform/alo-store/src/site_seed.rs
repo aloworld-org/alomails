@@ -309,6 +309,7 @@ fn seed_hero(ctx: &SeedContext) -> SectionSeed {
             .and_then(|hero| hero.primary_cta.clone())
             .or_else(|| ctx.away_link()),
         secondary_cta: None,
+        appearance: existing.and_then(|hero| hero.appearance.clone()),
         layout: existing.and_then(|hero| hero.layout),
         height: existing.and_then(|hero| hero.height),
         alignment: existing.and_then(|hero| hero.alignment),
@@ -637,6 +638,7 @@ mod tests {
                     video_url: Some("https://media.example/roastery.webm".to_owned()),
                     primary_cta: Some(link("Visit us", "/visit")),
                     secondary_cta: None,
+                    appearance: None,
                     layout: Some(HeroLayout::VideoBackground),
                     height: None,
                     alignment: None,

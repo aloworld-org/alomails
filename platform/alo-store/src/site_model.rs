@@ -287,6 +287,26 @@ pub struct NavAppearance {
     pub hover: ThemeColorRole,
 }
 
+/// Theme roles scoped to one hero. Button foregrounds are derived by the
+/// renderer, so authors choose brand intent without creating unreadable text.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct HeroAppearance {
+    pub background: ThemeColorRole,
+    pub primary_button: ThemeColorRole,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub primary_button_text: Option<ThemeColorRole>,
+    pub primary_button_hover: ThemeColorRole,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub primary_button_hover_text: Option<ThemeColorRole>,
+    pub secondary_button: ThemeColorRole,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub secondary_button_text: Option<ThemeColorRole>,
+    pub secondary_button_hover: ThemeColorRole,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub secondary_button_hover_text: Option<ThemeColorRole>,
+}
+
 /// Top navigation bar. The logo comes from the site's theme, not from here.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -461,6 +481,9 @@ pub struct HeroSection {
     /// Secondary, quieter call-to-action.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub secondary_cta: Option<Link>,
+    /// Optional scoped palette; absent preserves the site's default hero.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub appearance: Option<HeroAppearance>,
     /// Named responsive composition; absent preserves the original hero.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub layout: Option<HeroLayout>,
@@ -1445,6 +1468,17 @@ mod tests {
                 video_url: Some("https://media.example/roastery.webm".to_owned()),
                 primary_cta: Some(link("Shop roasts", "/shop")),
                 secondary_cta: Some(link("Our story", "/about")),
+                appearance: Some(HeroAppearance {
+                    background: ThemeColorRole::Accent3,
+                    primary_button: ThemeColorRole::Accent1,
+                    primary_button_text: Some(ThemeColorRole::Background),
+                    primary_button_hover: ThemeColorRole::Accent2,
+                    primary_button_hover_text: Some(ThemeColorRole::Text),
+                    secondary_button: ThemeColorRole::Accent4,
+                    secondary_button_text: Some(ThemeColorRole::Accent4),
+                    secondary_button_hover: ThemeColorRole::Accent5,
+                    secondary_button_hover_text: None,
+                }),
                 layout: Some(HeroLayout::SplitRight),
                 height: Some(HeroHeight::Tall),
                 alignment: Some(HeroAlignment::Left),
@@ -1658,6 +1692,7 @@ mod tests {
                 video_url: None,
                 primary_cta: None,
                 secondary_cta: None,
+                appearance: None,
                 layout: None,
                 height: None,
                 alignment: None,
@@ -1832,6 +1867,7 @@ mod tests {
             video_url: None,
             primary_cta: None,
             secondary_cta: None,
+            appearance: None,
             layout: None,
             height: None,
             alignment: None,
@@ -2180,6 +2216,7 @@ mod tests {
                 video_url: None,
                 primary_cta: None,
                 secondary_cta: None,
+                appearance: None,
                 layout: None,
                 height: None,
                 alignment: None,

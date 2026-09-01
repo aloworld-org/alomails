@@ -76,6 +76,7 @@ fn fixture_site() -> SeedContext {
                 video_url: None,
                 primary_cta: Some(link("Visit us", "/visit")),
                 secondary_cta: None,
+                appearance: None,
                 layout: None,
                 height: None,
                 alignment: None,
