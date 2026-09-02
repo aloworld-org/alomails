@@ -502,6 +502,7 @@ fn seed_collection(ctx: &SeedContext) -> SectionSeed {
             SectionSeed::ready(Section::Collection(CollectionSection {
                 collection_id: SiteCollectionId::new(binding.id.clone()),
                 heading: short(&binding.name),
+                layout: None,
                 presentation: None,
             }))
         })

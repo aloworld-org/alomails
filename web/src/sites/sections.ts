@@ -296,10 +296,12 @@ export interface ContactFormSection extends PresentableSection {
 export type ContactFormLayout = "simple" | "split" | "card" | "panel" | "minimal";
 
 /** A live grid resolved from one connected alo Base collection. */
+export type CollectionLayout = "grid" | "masonry" | "list" | "editorial" | "carousel";
 export interface CollectionSection extends PresentableSection {
   type: "collection";
   collection_id: string;
   heading?: string | undefined;
+  layout?: CollectionLayout | undefined;
 }
 
 /** What the site offers — dishes, rooms, services, courses — frozen from the

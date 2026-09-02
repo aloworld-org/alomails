@@ -6342,6 +6342,13 @@ export const fr: Partial<Catalog> = {
   sitesSectionCollection: "Collection",
   sitesSectionCollectionDesc:
     "Une grille réutilisable de lignes provenant d'alo Base.",
+  sitesCollectionLayout: "Disposition de la collection",
+  sitesCollectionLayoutHint: "Choisissez comment parcourir les enregistrements connectés.",
+  sitesCollectionLayoutGrid: "Grille de cartes",
+  sitesCollectionLayoutMasonry: "Mosaïque",
+  sitesCollectionLayoutList: "Liste détaillée",
+  sitesCollectionLayoutEditorial: "Éditorial",
+  sitesCollectionLayoutCarousel: "Carrousel",
   sitesCollectionSectionHeading: "Titre de la section",
   sitesCollectionSectionChoose: "Collection à afficher",
   sitesCollectionSectionNoConnections:

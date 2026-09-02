@@ -2681,6 +2681,14 @@ function ContactFormFields({
   );
 }
 
+function CollectionLayoutVisual({ layout }: { layout: CollectionDraft["layout"] }) {
+  return (
+    <span className={cx("grid h-20 w-32 gap-1.5 overflow-hidden rounded-lg bg-raised p-2", layout === "grid" || layout === "editorial" ? "grid-cols-2" : "grid-cols-1", layout === "carousel" && "grid-flow-col grid-cols-[repeat(3,3rem)]", layout === "masonry" && "grid-cols-3")} aria-hidden="true">
+      {[0, 1, 2, 3].map((item) => <span key={item} className={cx("grid content-end rounded-md border border-default bg-surface p-1", layout === "masonry" && item % 2 === 0 && "row-span-2", layout === "list" && "grid-cols-[2rem_1fr] items-center gap-1", layout === "editorial" && "rounded-none border-x-0 border-b-0 bg-transparent")}><span className="h-1.5 rounded-full bg-primary/70" /></span>)}
+    </span>
+  );
+}
+
 function CollectionFields({
   draft,
   onChange,
@@ -2728,6 +2736,11 @@ function CollectionFields({
 
   return (
     <>
+      <Card as="section" flat>
+        <HeroFormHeading icon={<PanelsTopLeft size={17} />}>{strings.sitesCollectionLayout}</HeroFormHeading>
+        <p className="mb-5 mt-2 text-sm text-secondary">{strings.sitesCollectionLayoutHint}</p>
+        <HeroOptionRow label={strings.sitesCollectionLayout} value={draft.layout} columns={5} visual={(layout) => <CollectionLayoutVisual layout={layout} />} options={[["grid", strings.sitesCollectionLayoutGrid], ["masonry", strings.sitesCollectionLayoutMasonry], ["list", strings.sitesCollectionLayoutList], ["editorial", strings.sitesCollectionLayoutEditorial], ["carousel", strings.sitesCollectionLayoutCarousel]]} onChange={(layout) => onChange({ ...draft, layout })} />
+      </Card>
       <TextField
         label={strings.sitesCollectionSectionHeading}
         value={draft.heading}

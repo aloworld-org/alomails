@@ -7688,6 +7688,13 @@ export const de: Partial<Catalog> = {
   sitesSectionCollection: "Sammlung",
   sitesSectionCollectionDesc:
     "Ein wiederverwendbares Raster aus Zeilen von alo Base.",
+  sitesCollectionLayout: "Sammlungs-Layout",
+  sitesCollectionLayoutHint: "Wähle, wie Besucher verbundene Datensätze durchsehen.",
+  sitesCollectionLayoutGrid: "Kartenraster",
+  sitesCollectionLayoutMasonry: "Masonry",
+  sitesCollectionLayoutList: "Detaillierte Liste",
+  sitesCollectionLayoutEditorial: "Editorial",
+  sitesCollectionLayoutCarousel: "Karussell",
   sitesCollectionSectionHeading: "Überschrift des Abschnitts",
   sitesCollectionSectionChoose: "Welche Sammlung gezeigt wird",
   sitesCollectionSectionNoConnections:

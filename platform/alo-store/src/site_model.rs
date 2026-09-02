@@ -929,12 +929,24 @@ pub struct FooterSection {
 /// A reusable card collection whose rows are frozen from alo Base at
 /// publish time. The section stores only the stable binding id and optional
 /// presentation heading; public rendering never reads the live Base.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CollectionLayout {
+    Grid,
+    Masonry,
+    List,
+    Editorial,
+    Carousel,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CollectionSection {
     pub collection_id: SiteCollectionId,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub heading: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout: Option<CollectionLayout>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub presentation: Option<SectionPresentation>,
 }
@@ -1838,6 +1850,7 @@ mod tests {
             Section::Collection(CollectionSection {
                 collection_id: SiteCollectionId::new("seasonal-roasts"),
                 heading: Some("Seasonal roasts".to_owned()),
+                layout: None,
                 presentation: None,
             }),
             Section::Catalog(CatalogSection {

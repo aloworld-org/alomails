@@ -4,7 +4,8 @@
     {
       "type": "collection",
       "collection_id": "seasonal-roasts",
-      "heading": "Seasonal roasts"
+      "heading": "Seasonal roasts",
+      "layout": "editorial"
     }
   ]
 }

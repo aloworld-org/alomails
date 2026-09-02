@@ -6275,6 +6275,13 @@ export const nl: Partial<Catalog> = {
   sitesCollectionPreviewLinked: "Opent een link",
   sitesSectionCollection: "Collectie",
   sitesSectionCollectionDesc: "Een herbruikbaar raster met rijen uit alo Base.",
+  sitesCollectionLayout: "Collectie-indeling",
+  sitesCollectionLayoutHint: "Kies hoe bezoekers de gekoppelde records bekijken.",
+  sitesCollectionLayoutGrid: "Kaartraster",
+  sitesCollectionLayoutMasonry: "Masonry",
+  sitesCollectionLayoutList: "Gedetailleerde lijst",
+  sitesCollectionLayoutEditorial: "Redactioneel",
+  sitesCollectionLayoutCarousel: "Carrousel",
   sitesCollectionSectionHeading: "Sectiekop",
   sitesCollectionSectionChoose: "Te tonen collectie",
   sitesCollectionSectionNoConnections:

@@ -7449,6 +7449,13 @@ export const en = {
   sitesCollectionPreviewLinked: "Opens a link",
   sitesSectionCollection: "Collection",
   sitesSectionCollectionDesc: "A reusable grid of rows from alo Base.",
+  sitesCollectionLayout: "Collection layout",
+  sitesCollectionLayoutHint: "Choose how visitors browse the connected records.",
+  sitesCollectionLayoutGrid: "Card grid",
+  sitesCollectionLayoutMasonry: "Masonry",
+  sitesCollectionLayoutList: "Detailed list",
+  sitesCollectionLayoutEditorial: "Editorial",
+  sitesCollectionLayoutCarousel: "Carousel",
   sitesCollectionSectionHeading: "Section heading",
   sitesCollectionSectionChoose: "Collection to show",
   sitesCollectionSectionNoConnections:

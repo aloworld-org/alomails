@@ -11,6 +11,7 @@
 import type {
   CtaLayout,
   ContactFormLayout,
+  CollectionLayout,
   FaqItem,
   FaqLayout,
   FeatureItem,
@@ -195,6 +196,7 @@ export interface CollectionDraft extends PresentableDraft {
   type: "collection";
   collection_id: string;
   heading: string;
+  layout: CollectionLayout;
 }
 
 export interface CatalogDraft extends PresentableDraft {
@@ -540,6 +542,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         type: "collection",
         collection_id: s?.collection_id ?? "",
         heading: s?.heading ?? "",
+        layout: s?.layout ?? "grid",
         presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
@@ -833,6 +836,7 @@ export function toSection(draft: SectionDraft): Section {
         type: "collection",
         collection_id: req(draft.collection_id),
         heading: opt(draft.heading),
+        layout: draft.layout,
         presentation: draft.presentation,
       };
     case "catalog":
