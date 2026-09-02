@@ -17,6 +17,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { strings } from "../i18n";
 import { SitesModule } from "./SitesModule";
+import { DEFAULT_SECTION_PRESENTATION } from "./sectionDrafts";
 import { SECTIONS_SCHEMA_VERSION, SECTION_KINDS } from "./sections";
 import type { Section, SectionsEnvelope } from "./sections";
 
@@ -613,6 +614,8 @@ describe("adding a section", () => {
     expect(lastWrite()!.body).toEqual({
       section: {
         type: "faq",
+        layout: "accordion",
+        presentation: DEFAULT_SECTION_PRESENTATION,
         items: [
           { question: "When?", answer: "Every day." },
           { question: "Where?", answer: "At the harbour." },
@@ -948,7 +951,7 @@ describe("editing a section", () => {
     });
   });
 
-  test("props the form does not offer (form_id) survive an edit untouched", async () => {
+  test("server-owned form_id survives an edit alongside presentation controls", async () => {
     replies = [pageReply([CONTACT])];
     ui();
     await screen.findByText(strings.sitesSectionContactForm);
@@ -972,7 +975,13 @@ describe("editing a section", () => {
 
     await waitFor(() => expect(lastWrite()).toBeTruthy());
     expect(lastWrite()!.body).toEqual({
-      section: { type: "contact_form", heading: "Talk to us", form_id: "f-1" },
+      section: {
+        type: "contact_form",
+        heading: "Talk to us",
+        form_id: "f-1",
+        layout: "simple",
+        presentation: DEFAULT_SECTION_PRESENTATION,
+      },
     });
   });
 
