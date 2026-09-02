@@ -17,6 +17,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { strings } from "../i18n";
 import { SitesModule } from "./SitesModule";
+import { DEFAULT_SECTION_PRESENTATION } from "./sectionDrafts";
 import { SECTIONS_SCHEMA_VERSION } from "./sections";
 import type { Section, SectionsEnvelope } from "./sections";
 
@@ -210,6 +211,7 @@ describe("writing a custom-code block", () => {
         css: "p { font-weight: 700; }",
         capabilities: { scripts: false, inline_images: false },
         height_px: 180,
+        presentation: DEFAULT_SECTION_PRESENTATION,
       },
       index: 0,
     });
@@ -258,6 +260,7 @@ describe("writing a custom-code block", () => {
         js: "let n = 0;",
         capabilities: { scripts: true, inline_images: false },
         height_px: 320,
+        presentation: DEFAULT_SECTION_PRESENTATION,
       },
       index: 0,
     });
@@ -300,6 +303,7 @@ describe("writing a custom-code block", () => {
         css: "#left { font-size: 3rem; }",
         capabilities: { scripts: false, inline_images: false },
         height_px: 220,
+        presentation: DEFAULT_SECTION_PRESENTATION,
       },
     });
   });
