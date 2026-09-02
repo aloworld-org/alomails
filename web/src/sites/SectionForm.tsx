@@ -3188,6 +3188,12 @@ function TicketsFields({
  *  this form links to rather than duplicating. A site with an empty shelf is
  *  told so here — a visitor must never be the one to discover an empty
  *  shop. */
+function ShopLayoutVisual({ layout }: { layout: ShopDraft["layout"] }) {
+  return (
+    <span className={cx("grid h-20 w-32 items-center gap-2 overflow-hidden rounded-lg bg-raised p-3", (layout === "split" || layout === "compact") && "grid-cols-[1fr_auto]", layout === "banner" && "w-full rounded-none bg-accent-soft", layout === "centered" && "justify-items-center text-center", layout === "storefront" && "border border-default bg-surface shadow-sm")} aria-hidden="true"><span className="grid w-full gap-1"><span className="h-2 rounded-full bg-primary/70" /><span className="h-1.5 w-2/3 rounded-full bg-accent/50" /></span><span className="h-3 w-9 rounded-full bg-accent" /></span>
+  );
+}
+
 function ShopFields({
   draft,
   onChange,
@@ -3219,6 +3225,7 @@ function ShopFields({
 
   return (
     <>
+      <Card as="section" flat><HeroFormHeading icon={<PanelsTopLeft size={17} />}>{strings.sitesShopLayout}</HeroFormHeading><p className="mb-5 mt-2 text-sm text-secondary">{strings.sitesShopLayoutHint}</p><HeroOptionRow label={strings.sitesShopLayout} value={draft.layout} columns={5} visual={(layout) => <ShopLayoutVisual layout={layout} />} options={[["storefront", strings.sitesShopLayoutStorefront], ["centered", strings.sitesShopLayoutCentered], ["split", strings.sitesShopLayoutSplit], ["banner", strings.sitesShopLayoutBanner], ["compact", strings.sitesShopLayoutCompact]]} onChange={(layout) => onChange({ ...draft, layout })} /></Card>
       <TextField
         label={strings.sitesShopSectionHeading}
         value={draft.heading}

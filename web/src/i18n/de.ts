@@ -7472,6 +7472,13 @@ export const de: Partial<Catalog> = {
   sitesSectionShop: "Shop",
   sitesSectionShopDesc:
     "Die Tür zu Ihrem Shop. Was im Verkauf ist, Preise und Bestand bleiben aktuell.",
+  sitesShopLayout: "Shop-Layout",
+  sitesShopLayoutHint: "Wähle, wie prominent der Live-Shop vorgestellt wird.",
+  sitesShopLayoutStorefront: "Shop-Karte",
+  sitesShopLayoutCentered: "Zentriert",
+  sitesShopLayoutSplit: "Geteilt",
+  sitesShopLayoutBanner: "Shop-Banner",
+  sitesShopLayoutCompact: "Kompakt",
   sitesShopSectionHeading: "Überschrift darüber",
   sitesShopSectionBody: "Ihre eigenen Worte über dem Link",
   sitesShopSectionNoItems: "Noch ist nichts im Shop",

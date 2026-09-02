@@ -6131,6 +6131,13 @@ export const fr: Partial<Catalog> = {
   sitesSectionShop: "Boutique",
   sitesSectionShopDesc:
     "La porte de votre boutique. Articles, prix et stock restent en direct.",
+  sitesShopLayout: "Disposition de la boutique",
+  sitesShopLayoutHint: "Choisissez l’importance de l’introduction de la boutique en direct.",
+  sitesShopLayoutStorefront: "Carte boutique",
+  sitesShopLayoutCentered: "Centré",
+  sitesShopLayoutSplit: "Séparé",
+  sitesShopLayoutBanner: "Bannière boutique",
+  sitesShopLayoutCompact: "Compact",
   sitesShopSectionHeading: "Titre au-dessus",
   sitesShopSectionBody: "Vos propres mots au-dessus du lien",
   sitesShopSectionNoItems: "Rien n'est encore en boutique",

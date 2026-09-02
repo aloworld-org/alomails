@@ -7242,6 +7242,13 @@ export const en = {
   sitesSectionShop: "Shop",
   sitesSectionShopDesc:
     "The door to your shop. What is on sale, prices and stock stay live.",
+  sitesShopLayout: "Shop layout",
+  sitesShopLayoutHint: "Choose how prominently the live storefront is introduced.",
+  sitesShopLayoutStorefront: "Storefront card",
+  sitesShopLayoutCentered: "Centered",
+  sitesShopLayoutSplit: "Split",
+  sitesShopLayoutBanner: "Shop banner",
+  sitesShopLayoutCompact: "Compact",
   sitesShopSectionHeading: "Heading above it",
   sitesShopSectionBody: "Your own words above the link",
   sitesShopSectionNoItems: "Nothing is in the shop yet",

@@ -562,6 +562,7 @@ fn seed_shop(ctx: &SeedContext) -> SectionSeed {
     SectionSeed::ready(Section::Shop(ShopSection {
         heading: existing.and_then(|shop| shop.heading.clone()),
         body: existing.and_then(|shop| shop.body.clone()),
+        layout: existing.and_then(|shop| shop.layout),
         presentation: existing.and_then(|shop| shop.presentation.clone()),
     }))
 }

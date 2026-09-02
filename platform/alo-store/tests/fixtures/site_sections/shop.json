@@ -4,7 +4,8 @@
     {
       "type": "shop",
       "heading": "The roastery shop",
-      "body": "Beans and brew gear, shipped from the roastery."
+      "body": "Beans and brew gear, shipped from the roastery.",
+      "layout": "storefront"
     }
   ]
 }

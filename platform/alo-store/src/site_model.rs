@@ -1046,6 +1046,16 @@ pub struct TicketsSection {
 /// left are the owning seams' live answers served on `/shop`, one navigation
 /// away. A published page is cached bytes, and a price or a shelf count must
 /// never be.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ShopLayout {
+    Storefront,
+    Centered,
+    Split,
+    Banner,
+    Compact,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ShopSection {
@@ -1055,6 +1065,8 @@ pub struct ShopSection {
     /// buy here).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub body: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout: Option<ShopLayout>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub presentation: Option<SectionPresentation>,
 }
@@ -1911,6 +1923,7 @@ mod tests {
             Section::Shop(ShopSection {
                 heading: Some("The roastery shop".to_owned()),
                 body: Some("Beans and brew gear, shipped from the roastery.".to_owned()),
+                layout: None,
                 presentation: None,
             }),
             Section::CustomCode(CustomCodeSection {

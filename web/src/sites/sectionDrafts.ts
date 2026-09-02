@@ -45,6 +45,7 @@ import type {
   TransitionSpeed,
   TransitionTrigger,
   TicketsLayout,
+  ShopLayout,
 } from "./sections";
 
 export interface NavDraft {
@@ -239,6 +240,7 @@ export interface ShopDraft extends PresentableDraft {
   type: "shop";
   heading: string;
   body: string;
+  layout: ShopLayout;
 }
 
 export interface TransitionDraft {
@@ -589,6 +591,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         type: "shop",
         heading: s?.heading ?? "",
         body: s?.body ?? "",
+        layout: s?.layout ?? "storefront",
         presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
@@ -878,6 +881,7 @@ export function toSection(draft: SectionDraft): Section {
         type: "shop",
         heading: opt(draft.heading),
         body: opt(draft.body),
+        layout: draft.layout,
         presentation: draft.presentation,
       };
     case "transition":

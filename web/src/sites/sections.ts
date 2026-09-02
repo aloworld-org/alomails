@@ -353,7 +353,9 @@ export interface ShopSection extends PresentableSection {
   type: "shop";
   heading?: string | undefined;
   body?: string | undefined;
+  layout?: ShopLayout | undefined;
 }
+export type ShopLayout = "storefront" | "centered" | "split" | "banner" | "compact";
 
 export type TransitionEffect = "fade" | "slide" | "scale" | "reveal";
 export type TransitionDirection = "up" | "down" | "left" | "right";

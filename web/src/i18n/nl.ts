@@ -6066,6 +6066,13 @@ export const nl: Partial<Catalog> = {
   sitesSectionShop: "Winkel",
   sitesSectionShopDesc:
     "De deur naar uw winkel. Aanbod, prijzen en voorraad blijven live.",
+  sitesShopLayout: "Winkelindeling",
+  sitesShopLayoutHint: "Kies hoe opvallend de live winkel wordt geïntroduceerd.",
+  sitesShopLayoutStorefront: "Winkelkaart",
+  sitesShopLayoutCentered: "Gecentreerd",
+  sitesShopLayoutSplit: "Gesplitst",
+  sitesShopLayoutBanner: "Winkelbanner",
+  sitesShopLayoutCompact: "Compact",
   sitesShopSectionHeading: "Kop erboven",
   sitesShopSectionBody: "Uw eigen woorden boven de link",
   sitesShopSectionNoItems: "Er ligt nog niets in de winkel",
