@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { strings } from "../i18n";
 import { SitesModule } from "./SitesModule";
 import { SectionFormDialog } from "./SectionForm";
+import { DEFAULT_SECTION_PRESENTATION } from "./sectionDrafts";
 import { suggestFieldKey, timeMinutes, timeValue, windowLabel } from "./bookingSchedule";
 import type { SiteBooking } from "./types";
 
@@ -353,6 +354,12 @@ describe("offering a booking on a page", () => {
     expect(await screen.findByText(strings.sitesBookingSectionOff)).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: strings.sitesSaveSection }));
-    expect(onSave).toHaveBeenCalledWith({ type: "booking", booking_id: "book-2" });
+    expect(onSave).toHaveBeenCalledWith({
+      type: "booking",
+      booking_id: "book-2",
+      heading: undefined,
+      layout: "card",
+      presentation: DEFAULT_SECTION_PRESENTATION,
+    });
   });
 });
