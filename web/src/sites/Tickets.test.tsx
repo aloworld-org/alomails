@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { strings } from "../i18n";
 import { SitesModule } from "./SitesModule";
 import { SectionFormDialog } from "./SectionForm";
+import { DEFAULT_SECTION_PRESENTATION } from "./sectionDrafts";
 import type { SiteTicketEvent } from "./types";
 
 interface Call {
@@ -360,7 +361,15 @@ describe("the tickets page section", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: strings.sitesSaveSection }));
 
-    expect(saved).toEqual([{ type: "tickets", heading: "Evenings at the press" }]);
+    expect(saved).toEqual([
+      {
+        type: "tickets",
+        heading: "Evenings at the press",
+        body: undefined,
+        layout: "card",
+        presentation: DEFAULT_SECTION_PRESENTATION,
+      },
+    ]);
   });
 
   test("a site with nothing on sale is told so in the form, with the way there", async () => {
