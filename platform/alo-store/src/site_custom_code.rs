@@ -159,6 +159,10 @@ pub struct CustomCodeSection {
     /// sides), so the height is authored rather than discovered — an honest
     /// constraint of the isolation, not an oversight.
     pub height_px: u16,
+    /// Page-owned presentation around the isolated frame. These choices never
+    /// cross the sandbox boundary or alter the tenant's code.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub presentation: Option<crate::site_model::SectionPresentation>,
 }
 
 fn is_default_capabilities(capabilities: &CustomCodeCapabilities) -> bool {
@@ -397,6 +401,7 @@ mod tests {
                 inline_images: false,
             },
             height_px: 240,
+            presentation: None,
         }
     }
 

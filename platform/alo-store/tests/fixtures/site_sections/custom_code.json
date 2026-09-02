@@ -9,7 +9,19 @@
       "css": "#left { font-size: 3rem; font-variant-numeric: tabular-nums; }",
       "js": "const el = document.getElementById('left'); document.getElementById('go').addEventListener('click', () => { el.textContent = '11:59'; });",
       "capabilities": { "scripts": true, "inline_images": false },
-      "height_px": 220
+      "height_px": 220,
+      "presentation": {
+        "layout": "editorial",
+        "spacing": "standard",
+        "width": "wide",
+        "alignment": "left",
+        "background": "background",
+        "text": "text",
+        "button": "accent_1",
+        "button_hover": "accent_2",
+        "entrance": "fade_up",
+        "speed": "smooth"
+      }
     }
   ]
 }

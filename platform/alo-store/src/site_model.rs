@@ -1937,6 +1937,7 @@ mod tests {
                     inline_images: true,
                 },
                 height_px: 220,
+                presentation: None,
             }),
             Section::Footer(FooterSection {
                 text: Some("© Nordwind Coffee Roasters".to_owned()),

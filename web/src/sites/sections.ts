@@ -391,7 +391,7 @@ export interface CustomCodeCapabilities {
  *  `Content-Security-Policy`, its `<style>` and `<script>`) is assembled by the
  *  renderer, never here. `height_px` is authored because a frame with an opaque
  *  origin cannot be measured from the page around it. */
-export interface CustomCodeSection {
+export interface CustomCodeSection extends PresentableSection {
   type: "custom_code";
   /** Rendered by the PAGE, above the frame, in the site's own type. */
   heading?: string | undefined;

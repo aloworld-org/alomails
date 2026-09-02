@@ -257,7 +257,7 @@ export interface TransitionDraft {
  *  back on does not cost the code that was typed — but a saved block never
  *  carries a script it is not allowed to run: `toSection` sends the two
  *  together or neither, which is the biconditional the server checks. */
-export interface CustomCodeDraft {
+export interface CustomCodeDraft extends PresentableDraft {
   type: "custom_code";
   heading: string;
   title: string;
@@ -618,6 +618,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         scripts: s?.capabilities?.scripts ?? false,
         inline_images: s?.capabilities?.inline_images ?? false,
         height: String(s?.height_px ?? DEFAULT_CUSTOM_CODE_HEIGHT_PX),
+        presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
     case "footer": {
@@ -910,6 +911,7 @@ export function toSection(draft: SectionDraft): Section {
           inline_images: draft.inline_images,
         },
         height_px: heightPx(draft.height),
+        presentation: draft.presentation,
       };
     }
     case "footer":
