@@ -46,6 +46,7 @@ import type {
   TransitionTrigger,
   TicketsLayout,
   ShopLayout,
+  FooterLayout,
 } from "./sections";
 
 export interface NavDraft {
@@ -272,10 +273,11 @@ export interface CustomCodeDraft extends PresentableDraft {
   height: string;
 }
 
-export interface FooterDraft {
+export interface FooterDraft extends PresentableDraft {
   type: "footer";
   text: string;
   links: SectionLink[];
+  layout: FooterLayout;
 }
 
 /** One section as the form edits it. */
@@ -627,6 +629,8 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         type: "footer",
         text: s?.text ?? "",
         links: seeded(s?.links ?? [], blankLink),
+        layout: s?.layout ?? "simple",
+        presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
   }
@@ -919,6 +923,8 @@ export function toSection(draft: SectionDraft): Section {
         type: "footer",
         text: opt(draft.text),
         links: pruned(draft.links, linkBlank).map(reqLink),
+        layout: draft.layout,
+        presentation: draft.presentation,
       };
   }
 }

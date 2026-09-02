@@ -406,11 +406,13 @@ export interface CustomCodeSection extends PresentableSection {
 }
 
 /** The page footer. */
-export interface FooterSection {
+export interface FooterSection extends PresentableSection {
   type: "footer";
   text?: string | undefined;
   links: SectionLink[];
+  layout?: FooterLayout | undefined;
 }
+export type FooterLayout = "simple" | "centered" | "split" | "stacked" | "minimal";
 
 /** One section of a page — the closed v1 vocabulary. */
 export type Section =

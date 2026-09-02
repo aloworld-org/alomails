@@ -3261,6 +3261,12 @@ function ShopFields({
   );
 }
 
+function FooterLayoutVisual({ layout }: { layout: FooterDraft["layout"] }) {
+  return (
+    <span className={cx("grid h-20 w-32 gap-2 overflow-hidden rounded-lg bg-raised p-3", layout === "split" && "grid-cols-2 items-center", layout === "centered" && "justify-items-center text-center", layout === "stacked" && "grid-rows-2", layout === "minimal" && "h-12 self-center")} aria-hidden="true"><span className="flex w-full flex-wrap gap-1"><span className="h-1.5 w-8 rounded-full bg-primary/70" /><span className="h-1.5 w-6 rounded-full bg-primary/40" /></span><span className={cx("h-1.5 w-2/3 rounded-full bg-accent/60", layout === "split" && "justify-self-end")} /></span>
+  );
+}
+
 function FooterFields({
   draft,
   onChange,
@@ -3270,6 +3276,11 @@ function FooterFields({
 }) {
   return (
     <>
+      <Card as="section" flat>
+        <HeroFormHeading icon={<PanelsTopLeft size={17} />}>{strings.sitesFooterLayout}</HeroFormHeading>
+        <p className="mb-5 mt-2 text-sm text-secondary">{strings.sitesFooterLayoutHint}</p>
+        <HeroOptionRow label={strings.sitesFooterLayout} value={draft.layout} columns={5} visual={(layout) => <FooterLayoutVisual layout={layout} />} options={[["simple", strings.sitesFooterLayoutSimple], ["centered", strings.sitesFooterLayoutCentered], ["split", strings.sitesFooterLayoutSplit], ["stacked", strings.sitesFooterLayoutStacked], ["minimal", strings.sitesFooterLayoutMinimal]]} onChange={(layout) => onChange({ ...draft, layout })} />
+      </Card>
       <TextField
         label={strings.sitesFieldFooterText}
         value={draft.text}

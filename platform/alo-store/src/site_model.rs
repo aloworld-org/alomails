@@ -916,6 +916,16 @@ pub struct ContactFormSection {
 }
 
 /// The page footer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FooterLayout {
+    Simple,
+    Centered,
+    Split,
+    Stacked,
+    Minimal,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FooterSection {
@@ -924,6 +934,10 @@ pub struct FooterSection {
     pub text: Option<String>,
     /// Footer links (imprint, privacy, socials). May be empty.
     pub links: Vec<Link>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout: Option<FooterLayout>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub presentation: Option<SectionPresentation>,
 }
 
 /// A reusable card collection whose rows are frozen from alo Base at
@@ -1942,6 +1956,8 @@ mod tests {
             Section::Footer(FooterSection {
                 text: Some("© Nordwind Coffee Roasters".to_owned()),
                 links: vec![link("Imprint", "/imprint"), link("Privacy", "/privacy")],
+                layout: None,
+                presentation: None,
             }),
         ]
     }
@@ -2061,6 +2077,8 @@ mod tests {
             Section::Footer(FooterSection {
                 text: None,
                 links: vec![],
+                layout: None,
+                presentation: None,
             }),
         ]);
         before.validate().unwrap();

@@ -4187,6 +4187,13 @@ export const nl: Partial<Catalog> = {
   sitesContactLayoutMinimal: "Minimaal",
   sitesSectionFooter: "Voettekst",
   sitesSectionFooterDesc: "De regel onderaan de pagina.",
+  sitesFooterLayout: "Voettekstindeling",
+  sitesFooterLayoutHint: "Kies hoe links en de voettekst elke pagina afsluiten.",
+  sitesFooterLayoutSimple: "Eenvoudig",
+  sitesFooterLayoutCentered: "Gecentreerd",
+  sitesFooterLayoutSplit: "Gesplitst",
+  sitesFooterLayoutStacked: "Linkkolommen",
+  sitesFooterLayoutMinimal: "Minimaal",
   sitesCountLinks: (count: number) =>
     count === 1 ? "1 link" : `${count} links`,
   sitesNavPinned: "Vast bovenaan",

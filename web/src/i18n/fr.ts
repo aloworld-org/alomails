@@ -4232,6 +4232,13 @@ export const fr: Partial<Catalog> = {
   sitesContactLayoutMinimal: "Minimal",
   sitesSectionFooter: "Pied de page",
   sitesSectionFooterDesc: "La ligne au bas de la page.",
+  sitesFooterLayout: "Disposition du pied de page",
+  sitesFooterLayoutHint: "Choisissez comment les liens et la ligne finale clôturent chaque page.",
+  sitesFooterLayoutSimple: "Simple",
+  sitesFooterLayoutCentered: "Centré",
+  sitesFooterLayoutSplit: "Séparé",
+  sitesFooterLayoutStacked: "Colonnes de liens",
+  sitesFooterLayoutMinimal: "Minimal",
   sitesCountLinks: (count: number) =>
     count === 1 ? "1 lien" : `${count} liens`,
   sitesNavPinned: "Épinglée en haut",

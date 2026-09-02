@@ -4161,6 +4161,13 @@ export const en = {
   sitesContactLayoutMinimal: "Minimal",
   sitesSectionFooter: "Footer",
   sitesSectionFooterDesc: "The line at the bottom of the page.",
+  sitesFooterLayout: "Footer layout",
+  sitesFooterLayoutHint: "Choose how links and the footer line close every page.",
+  sitesFooterLayoutSimple: "Simple",
+  sitesFooterLayoutCentered: "Centered",
+  sitesFooterLayoutSplit: "Split",
+  sitesFooterLayoutStacked: "Link columns",
+  sitesFooterLayoutMinimal: "Minimal",
   sitesCountLinks: (count: number) =>
     count === 1 ? "1 link" : `${count} links`,
   sitesNavPinned: "Pinned to the top",

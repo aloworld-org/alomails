@@ -581,6 +581,8 @@ fn seed_footer(ctx: &SeedContext) -> SectionSeed {
     SectionSeed::ready(Section::Footer(FooterSection {
         text: existing.and_then(|footer| footer.text.clone()),
         links,
+        layout: existing.and_then(|footer| footer.layout),
+        presentation: existing.and_then(|footer| footer.presentation.clone()),
     }))
 }
 

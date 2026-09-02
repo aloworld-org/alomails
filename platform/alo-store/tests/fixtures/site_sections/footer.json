@@ -9,7 +9,20 @@
         { "label": "Privacy", "href": "/privacy" },
         { "label": "Instagram", "href": "https://instagram.com/nordwindcoffee" },
         { "label": "hello@nordwind.example", "href": "mailto:hello@nordwind.example" }
-      ]
+      ],
+      "layout": "split",
+      "presentation": {
+        "layout": "clean",
+        "spacing": "standard",
+        "width": "wide",
+        "alignment": "left",
+        "background": "text",
+        "text": "background",
+        "button": "accent_1",
+        "button_hover": "accent_2",
+        "entrance": "fade_up",
+        "speed": "smooth"
+      }
     }
   ]
 }

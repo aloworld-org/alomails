@@ -6176,6 +6176,13 @@ export const de: Partial<Catalog> = {
   sitesContactLayoutMinimal: "Minimal",
   sitesSectionFooter: "Fußzeile",
   sitesSectionFooterDesc: "Die Zeile ganz unten auf der Seite.",
+  sitesFooterLayout: "Fußzeilen-Layout",
+  sitesFooterLayoutHint: "Wähle, wie Links und Fußzeile jede Seite abschließen.",
+  sitesFooterLayoutSimple: "Einfach",
+  sitesFooterLayoutCentered: "Zentriert",
+  sitesFooterLayoutSplit: "Geteilt",
+  sitesFooterLayoutStacked: "Linkspalten",
+  sitesFooterLayoutMinimal: "Minimal",
   sitesCountLinks: (count: number) =>
     count === 1 ? "1 Link" : `${count} Links`,
   sitesNavPinned: "Oben angeheftet",
