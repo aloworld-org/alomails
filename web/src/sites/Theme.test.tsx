@@ -16,6 +16,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { strings } from "../i18n";
+import { DialogProvider } from "../ds";
 import { SitesModule } from "./SitesModule";
 import type { ThemePreset } from "./types";
 
@@ -86,8 +87,9 @@ const driveUploadBlob = vi.fn(async () => ({
   blobId: "blob-9",
   size: 3,
 }));
+const uploadFile = vi.fn(async () => ({ blobId: "blob-9" }));
 vi.mock("../jmap", () => ({
-  useJmapClient: () => ({ driveUploadBlob }),
+  useJmapClient: () => ({ driveUploadBlob, uploadFile }),
 }));
 
 const PRESETS: ThemePreset[] = [
@@ -211,11 +213,13 @@ function pageReply(): Reply {
 
 function ui(path: string) {
   return render(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route path="/sites/*" element={<SitesModule />} />
-      </Routes>
-    </MemoryRouter>,
+    <DialogProvider>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/sites/*" element={<SitesModule />} />
+        </Routes>
+      </MemoryRouter>
+    </DialogProvider>,
   );
 }
 
@@ -241,6 +245,7 @@ beforeEach(() => {
   replies = [readinessReply(), presetsReply()];
   fakeFetch.mockClear();
   driveUploadBlob.mockClear();
+  uploadFile.mockClear();
 });
 
 afterEach(cleanup);
@@ -402,7 +407,7 @@ describe("section image upload", () => {
       target: { files: [file] },
     });
     await waitFor(() => {
-      expect(driveUploadBlob).toHaveBeenCalledWith(null, null, file);
+      expect(uploadFile).toHaveBeenCalledWith(file);
       expect(screen.getByDisplayValue("blob-9")).toBeTruthy();
     });
     replies.push({
