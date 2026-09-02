@@ -135,6 +135,7 @@ fn fixture_site() -> SeedContext {
                     question: "Do you ship abroad?".to_owned(),
                     answer: "Anywhere in the EU, in two days.".to_owned(),
                 }],
+                layout: None,
                 presentation: None,
             }),
             Section::ContactForm(ContactFormSection {

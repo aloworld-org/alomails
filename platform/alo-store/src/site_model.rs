@@ -828,6 +828,16 @@ pub struct FaqItem {
 }
 
 /// A frequently-asked-questions list.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FaqLayout {
+    Accordion,
+    Divided,
+    Cards,
+    TwoColumn,
+    Editorial,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FaqSection {
@@ -836,6 +846,8 @@ pub struct FaqSection {
     pub heading: Option<String>,
     /// The Q/A pairs; at least one.
     pub items: Vec<FaqItem>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout: Option<FaqLayout>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub presentation: Option<SectionPresentation>,
 }
@@ -1778,6 +1790,7 @@ mod tests {
                     question: "How fresh is the coffee?".to_owned(),
                     answer: "It ships the day it is roasted.".to_owned(),
                 }],
+                layout: None,
                 presentation: None,
             }),
             Section::Cta(CtaSection {
@@ -2145,6 +2158,7 @@ mod tests {
         let empty_items = envelope(vec![Section::Faq(FaqSection {
             heading: None,
             items: vec![],
+            layout: None,
             presentation: None,
         })]);
         assert!(matches!(

@@ -2495,9 +2495,61 @@ function TeamFields({
   );
 }
 
+function FaqLayoutVisual({ layout }: { layout: FaqDraft["layout"] }) {
+  return (
+    <span
+      className={cx(
+        "grid h-20 w-32 gap-1.5 overflow-hidden rounded-lg bg-raised p-2",
+        layout === "two_column" || layout === "cards"
+          ? "grid-cols-2"
+          : "grid-cols-1",
+        layout === "editorial" && "bg-transparent px-1",
+      )}
+      aria-hidden="true"
+    >
+      {[0, 1, 2, 3].map((item) => (
+        <span
+          key={item}
+          className={cx(
+            "grid grid-cols-[1fr_auto] items-center gap-1 rounded-md border border-default bg-surface px-2",
+            layout === "divided" && "rounded-none border-x-0 border-b-0 bg-transparent",
+            layout === "cards" && "grid-cols-1 p-1.5",
+            layout === "editorial" && "rounded-none border-x-0 border-b-0 bg-transparent",
+          )}
+        >
+          <span className="h-1.5 rounded-full bg-primary/70" />
+          {layout !== "cards" && <span className="size-1.5 rounded-full bg-accent" />}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function FaqFields({ draft, onChange }: { draft: FaqDraft; onChange: Change }) {
   return (
     <>
+      <Card as="section" flat>
+        <HeroFormHeading icon={<PanelsTopLeft size={17} />}>
+          {strings.sitesFaqLayout}
+        </HeroFormHeading>
+        <p className="mb-5 mt-2 text-sm text-secondary">
+          {strings.sitesFaqLayoutHint}
+        </p>
+        <HeroOptionRow
+          label={strings.sitesFaqLayout}
+          value={draft.layout}
+          columns={5}
+          visual={(layout) => <FaqLayoutVisual layout={layout} />}
+          options={[
+            ["accordion", strings.sitesFaqLayoutAccordion],
+            ["divided", strings.sitesFaqLayoutDivided],
+            ["cards", strings.sitesFaqLayoutCards],
+            ["two_column", strings.sitesFaqLayoutTwoColumn],
+            ["editorial", strings.sitesFaqLayoutEditorial],
+          ]}
+          onChange={(layout) => onChange({ ...draft, layout })}
+        />
+      </Card>
       <TextField
         label={strings.sitesFieldHeading}
         value={draft.heading}

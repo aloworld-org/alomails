@@ -10,6 +10,7 @@
 // sentence names the broken rule.
 import type {
   FaqItem,
+  FaqLayout,
   FeatureItem,
   FeaturesLayout,
   HeroAlignment,
@@ -166,6 +167,7 @@ export interface FaqDraft extends PresentableDraft {
   type: "faq";
   heading: string;
   items: FaqItemDraft[];
+  layout: FaqLayout;
 }
 
 export interface CtaDraft extends PresentableDraft {
@@ -499,6 +501,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
           })),
           blankFaqItem,
         ),
+        layout: s?.layout ?? "accordion",
         presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
@@ -793,6 +796,7 @@ export function toSection(draft: SectionDraft): Section {
           draft.items,
           (i) => i.question.trim() === "" && i.answer.trim() === "",
         ).map((i) => ({ question: req(i.question), answer: req(i.answer) })),
+        layout: draft.layout,
         presentation: draft.presentation,
       };
     case "cta":

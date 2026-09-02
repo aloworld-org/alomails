@@ -4,6 +4,7 @@
     {
       "type": "faq",
       "heading": "Questions",
+      "layout": "two_column",
       "items": [
         {
           "question": "How fresh is the coffee when it arrives?",

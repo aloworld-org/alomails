@@ -261,10 +261,13 @@ export interface FaqItem {
 }
 
 /** A frequently-asked-questions list; at least one pair. */
+export type FaqLayout = "accordion" | "divided" | "cards" | "two_column" | "editorial";
+
 export interface FaqSection extends PresentableSection {
   type: "faq";
   heading?: string | undefined;
   items: FaqItem[];
+  layout?: FaqLayout | undefined;
 }
 
 /** A standalone call-to-action banner. */
