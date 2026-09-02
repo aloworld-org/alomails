@@ -4152,6 +4152,13 @@ export const en = {
   sitesCtaLayoutTwoActions: "Two actions",
   sitesSectionContactForm: "Contact form",
   sitesSectionContactFormDesc: "Let visitors write to you.",
+  sitesContactLayout: "Contact form layout",
+  sitesContactLayoutHint: "Choose how the introduction and form share the page.",
+  sitesContactLayoutSimple: "Simple",
+  sitesContactLayoutSplit: "Split",
+  sitesContactLayoutCard: "Form card",
+  sitesContactLayoutPanel: "Soft panel",
+  sitesContactLayoutMinimal: "Minimal",
   sitesSectionFooter: "Footer",
   sitesSectionFooterDesc: "The line at the bottom of the page.",
   sitesCountLinks: (count: number) =>

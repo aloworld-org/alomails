@@ -143,6 +143,7 @@ fn fixture_site() -> SeedContext {
                 body: None,
                 form_id: Some("frmExisting1234567890".to_owned()),
                 success_message: Some("We answer within a day.".to_owned()),
+                layout: None,
                 presentation: None,
             }),
         ],

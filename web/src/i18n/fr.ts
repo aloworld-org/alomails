@@ -4223,6 +4223,13 @@ export const fr: Partial<Catalog> = {
   sitesCtaLayoutTwoActions: "Deux actions",
   sitesSectionContactForm: "Formulaire de contact",
   sitesSectionContactFormDesc: "Permettez aux visiteurs de vous écrire.",
+  sitesContactLayout: "Disposition du formulaire",
+  sitesContactLayoutHint: "Choisissez comment l’introduction et le formulaire partagent la page.",
+  sitesContactLayoutSimple: "Simple",
+  sitesContactLayoutSplit: "Séparé",
+  sitesContactLayoutCard: "Carte formulaire",
+  sitesContactLayoutPanel: "Panneau doux",
+  sitesContactLayoutMinimal: "Minimal",
   sitesSectionFooter: "Pied de page",
   sitesSectionFooterDesc: "La ligne au bas de la page.",
   sitesCountLinks: (count: number) =>

@@ -10,6 +10,7 @@
 // sentence names the broken rule.
 import type {
   CtaLayout,
+  ContactFormLayout,
   FaqItem,
   FaqLayout,
   FeatureItem,
@@ -187,6 +188,7 @@ export interface ContactFormDraft extends PresentableDraft {
   success_message: string;
   /** Not offered by the form until the forms slice; preserved as stored. */
   form_id?: string | undefined;
+  layout: ContactFormLayout;
 }
 
 export interface CollectionDraft extends PresentableDraft {
@@ -528,6 +530,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         body: s?.body ?? "",
         success_message: s?.success_message ?? "",
         form_id: s?.form_id,
+        layout: s?.layout ?? "simple",
         presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
@@ -822,6 +825,7 @@ export function toSection(draft: SectionDraft): Section {
         body: opt(draft.body),
         form_id: draft.form_id,
         success_message: opt(draft.success_message),
+        layout: draft.layout,
         presentation: draft.presentation,
       };
     case "collection":

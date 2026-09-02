@@ -4178,6 +4178,13 @@ export const nl: Partial<Catalog> = {
   sitesCtaLayoutTwoActions: "Twee acties",
   sitesSectionContactForm: "Contactformulier",
   sitesSectionContactFormDesc: "Laat bezoekers u schrijven.",
+  sitesContactLayout: "Indeling contactformulier",
+  sitesContactLayoutHint: "Kies hoe de introductie en het formulier de pagina delen.",
+  sitesContactLayoutSimple: "Eenvoudig",
+  sitesContactLayoutSplit: "Gesplitst",
+  sitesContactLayoutCard: "Formulierkaart",
+  sitesContactLayoutPanel: "Zacht paneel",
+  sitesContactLayoutMinimal: "Minimaal",
   sitesSectionFooter: "Voettekst",
   sitesSectionFooterDesc: "De regel onderaan de pagina.",
   sitesCountLinks: (count: number) =>

@@ -2631,6 +2631,18 @@ function CtaFields({ draft, onChange }: { draft: CtaDraft; onChange: Change }) {
   );
 }
 
+function ContactFormLayoutVisual({ layout }: { layout: ContactFormDraft["layout"] }) {
+  return (
+    <span className={cx("grid h-20 w-32 gap-2 overflow-hidden rounded-lg bg-raised p-2.5", layout === "split" && "grid-cols-[.7fr_1.3fr]", layout === "panel" && "bg-accent-soft p-3", layout === "card" && "place-items-center")} aria-hidden="true">
+      {layout === "split" && <span className="grid content-start gap-1 pt-2"><span className="h-2 rounded-full bg-primary/70" /><span className="h-1.5 w-2/3 rounded-full bg-accent/50" /></span>}
+      <span className={cx("grid w-full gap-1.5", layout === "card" && "w-20 rounded-md border border-default bg-surface p-2 shadow-sm")}>
+        {[0, 1, 2].map((item) => <span key={item} className={cx("h-2 rounded-sm border border-default bg-surface", layout === "minimal" && "rounded-none border-x-0 border-t-0 bg-transparent")} />)}
+        <span className="h-2.5 w-8 rounded-full bg-accent" />
+      </span>
+    </span>
+  );
+}
+
 function ContactFormFields({
   draft,
   onChange,
@@ -2640,6 +2652,11 @@ function ContactFormFields({
 }) {
   return (
     <>
+      <Card as="section" flat>
+        <HeroFormHeading icon={<PanelsTopLeft size={17} />}>{strings.sitesContactLayout}</HeroFormHeading>
+        <p className="mb-5 mt-2 text-sm text-secondary">{strings.sitesContactLayoutHint}</p>
+        <HeroOptionRow label={strings.sitesContactLayout} value={draft.layout} columns={5} visual={(layout) => <ContactFormLayoutVisual layout={layout} />} options={[["simple", strings.sitesContactLayoutSimple], ["split", strings.sitesContactLayoutSplit], ["card", strings.sitesContactLayoutCard], ["panel", strings.sitesContactLayoutPanel], ["minimal", strings.sitesContactLayoutMinimal]]} onChange={(layout) => onChange({ ...draft, layout })} />
+      </Card>
       <TextField
         label={strings.sitesFieldHeading}
         value={draft.heading}

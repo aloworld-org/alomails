@@ -883,6 +883,16 @@ pub struct CtaSection {
 
 /// A contact form. The form itself (fields, submissions) is a separate store
 /// object; this section points at it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ContactFormLayout {
+    Simple,
+    Split,
+    Card,
+    Panel,
+    Minimal,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ContactFormSection {
@@ -899,6 +909,8 @@ pub struct ContactFormSection {
     /// Message shown after a successful submit.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub success_message: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout: Option<ContactFormLayout>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub presentation: Option<SectionPresentation>,
 }
@@ -1820,6 +1832,7 @@ mod tests {
                 body: Some("We answer within one business day.".to_owned()),
                 form_id: Some("f4K9sL2wN7qR5tYx8vB1cA".to_owned()),
                 success_message: Some("Thanks — talk soon.".to_owned()),
+                layout: None,
                 presentation: None,
             }),
             Section::Collection(CollectionSection {

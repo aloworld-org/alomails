@@ -6167,6 +6167,13 @@ export const de: Partial<Catalog> = {
   sitesCtaLayoutTwoActions: "Zwei Aktionen",
   sitesSectionContactForm: "Kontaktformular",
   sitesSectionContactFormDesc: "Besucher können Ihnen schreiben.",
+  sitesContactLayout: "Kontaktformular-Layout",
+  sitesContactLayoutHint: "Wähle, wie Einführung und Formular die Seite teilen.",
+  sitesContactLayoutSimple: "Einfach",
+  sitesContactLayoutSplit: "Geteilt",
+  sitesContactLayoutCard: "Formularkarte",
+  sitesContactLayoutPanel: "Sanftes Panel",
+  sitesContactLayoutMinimal: "Minimal",
   sitesSectionFooter: "Fußzeile",
   sitesSectionFooterDesc: "Die Zeile ganz unten auf der Seite.",
   sitesCountLinks: (count: number) =>

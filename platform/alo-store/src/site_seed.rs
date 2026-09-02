@@ -490,6 +490,7 @@ fn seed_contact_form(ctx: &SeedContext) -> SectionSeed {
         body: existing.and_then(|form| form.body.clone()),
         form_id: None,
         success_message: existing.and_then(|form| form.success_message.clone()),
+        layout: existing.and_then(|form| form.layout),
         presentation: existing.and_then(|form| form.presentation.clone()),
     }))
 }
@@ -722,6 +723,7 @@ mod tests {
                     body: None,
                     form_id: Some("frm-existing".to_owned()),
                     success_message: Some("We answer within a day.".to_owned()),
+                    layout: None,
                     presentation: None,
                 }),
             ],

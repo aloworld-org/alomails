@@ -291,7 +291,9 @@ export interface ContactFormSection extends PresentableSection {
   body?: string | undefined;
   form_id?: string | undefined;
   success_message?: string | undefined;
+  layout?: ContactFormLayout | undefined;
 }
+export type ContactFormLayout = "simple" | "split" | "card" | "panel" | "minimal";
 
 /** A live grid resolved from one connected alo Base collection. */
 export interface CollectionSection extends PresentableSection {
