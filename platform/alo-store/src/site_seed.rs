@@ -546,6 +546,7 @@ fn seed_tickets(ctx: &SeedContext) -> SectionSeed {
     SectionSeed::ready(Section::Tickets(TicketsSection {
         heading: existing.and_then(|tickets| tickets.heading.clone()),
         body: existing.and_then(|tickets| tickets.body.clone()),
+        layout: existing.and_then(|tickets| tickets.layout),
         presentation: existing.and_then(|tickets| tickets.presentation.clone()),
     }))
 }

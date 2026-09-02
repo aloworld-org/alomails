@@ -1015,6 +1015,16 @@ pub struct BookingSection {
 /// state read from the Billing seam on `/tix`, one navigation away, exactly
 /// as a booking section defers its free times: a published page is cached
 /// bytes, and a price or a seat count must never be.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TicketsLayout {
+    Card,
+    Centered,
+    Split,
+    Banner,
+    Compact,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TicketsSection {
@@ -1024,6 +1034,8 @@ pub struct TicketsSection {
     /// come).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub body: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout: Option<TicketsLayout>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub presentation: Option<SectionPresentation>,
 }
@@ -1893,6 +1905,7 @@ mod tests {
             Section::Tickets(TicketsSection {
                 heading: Some("Cupping evenings".to_owned()),
                 body: Some("Six seats around the roaster, once a month.".to_owned()),
+                layout: None,
                 presentation: None,
             }),
             Section::Shop(ShopSection {

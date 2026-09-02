@@ -5996,6 +5996,13 @@ export const nl: Partial<Catalog> = {
   sitesSectionTickets: "Tickets",
   sitesSectionTicketsDesc:
     "De deur naar je ticketshop. Aanbod, prijzen en plaatsen blijven live.",
+  sitesTicketsLayout: "Ticketindeling",
+  sitesTicketsLayoutHint: "Kies hoe opvallend de live ticketshop wordt geïntroduceerd.",
+  sitesTicketsLayoutCard: "Ticketkaart",
+  sitesTicketsLayoutCentered: "Gecentreerd",
+  sitesTicketsLayoutSplit: "Gesplitst",
+  sitesTicketsLayoutBanner: "Evenementbanner",
+  sitesTicketsLayoutCompact: "Compact",
   sitesTicketSectionHeading: "Kop erboven",
   sitesTicketSectionBody: "Je eigen woorden boven de link",
   sitesTicketSectionNoEvents: "Er staat nog niets te koop",

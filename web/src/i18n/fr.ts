@@ -6061,6 +6061,13 @@ export const fr: Partial<Catalog> = {
   sitesSectionTickets: "Billets",
   sitesSectionTicketsDesc:
     "La porte de votre billetterie. L'offre, les prix et les places restent en direct.",
+  sitesTicketsLayout: "Disposition des billets",
+  sitesTicketsLayoutHint: "Choisissez l’importance de l’introduction de la billetterie en direct.",
+  sitesTicketsLayoutCard: "Carte de billet",
+  sitesTicketsLayoutCentered: "Centré",
+  sitesTicketsLayoutSplit: "Séparé",
+  sitesTicketsLayoutBanner: "Bannière d’événement",
+  sitesTicketsLayoutCompact: "Compact",
   sitesTicketSectionHeading: "Titre au-dessus",
   sitesTicketSectionBody: "Vos propres mots au-dessus du lien",
   sitesTicketSectionNoEvents: "Rien n'est encore en vente",

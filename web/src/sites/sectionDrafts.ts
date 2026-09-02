@@ -44,6 +44,7 @@ import type {
   TransitionEffect,
   TransitionSpeed,
   TransitionTrigger,
+  TicketsLayout,
 } from "./sections";
 
 export interface NavDraft {
@@ -228,6 +229,7 @@ export interface TicketsDraft extends PresentableDraft {
   type: "tickets";
   heading: string;
   body: string;
+  layout: TicketsLayout;
 }
 
 /** The stock shop's door on a page: the heading and the owner's sentence
@@ -577,6 +579,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         type: "tickets",
         heading: s?.heading ?? "",
         body: s?.body ?? "",
+        layout: s?.layout ?? "card",
         presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
@@ -867,6 +870,7 @@ export function toSection(draft: SectionDraft): Section {
         type: "tickets",
         heading: opt(draft.heading),
         body: opt(draft.body),
+        layout: draft.layout,
         presentation: draft.presentation,
       };
     case "shop":

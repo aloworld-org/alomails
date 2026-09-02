@@ -3109,6 +3109,12 @@ function BookingFields({
  *  the Tickets screen, which this form links to rather than duplicating. A
  *  site with nothing on sale yet is told so here — a visitor must never be
  *  the one to discover an empty shop. */
+function TicketsLayoutVisual({ layout }: { layout: TicketsDraft["layout"] }) {
+  return (
+    <span className={cx("grid h-20 w-32 items-center gap-2 overflow-hidden rounded-lg bg-raised p-3", (layout === "split" || layout === "compact") && "grid-cols-[1fr_auto]", layout === "banner" && "w-full rounded-none bg-accent-soft", layout === "centered" && "justify-items-center text-center")} aria-hidden="true"><span className="grid w-full gap-1"><span className="h-2 rounded-full bg-primary/70" /><span className="h-1.5 w-2/3 rounded-full bg-accent/50" /></span><span className="h-3 w-9 rounded-full bg-accent" /></span>
+  );
+}
+
 function TicketsFields({
   draft,
   onChange,
@@ -3140,6 +3146,7 @@ function TicketsFields({
 
   return (
     <>
+      <Card as="section" flat><HeroFormHeading icon={<PanelsTopLeft size={17} />}>{strings.sitesTicketsLayout}</HeroFormHeading><p className="mb-5 mt-2 text-sm text-secondary">{strings.sitesTicketsLayoutHint}</p><HeroOptionRow label={strings.sitesTicketsLayout} value={draft.layout} columns={5} visual={(layout) => <TicketsLayoutVisual layout={layout} />} options={[["card", strings.sitesTicketsLayoutCard], ["centered", strings.sitesTicketsLayoutCentered], ["split", strings.sitesTicketsLayoutSplit], ["banner", strings.sitesTicketsLayoutBanner], ["compact", strings.sitesTicketsLayoutCompact]]} onChange={(layout) => onChange({ ...draft, layout })} /></Card>
       <TextField
         label={strings.sitesTicketSectionHeading}
         value={draft.heading}

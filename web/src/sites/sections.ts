@@ -339,7 +339,9 @@ export interface TicketsSection extends PresentableSection {
   type: "tickets";
   heading?: string | undefined;
   body?: string | undefined;
+  layout?: TicketsLayout | undefined;
 }
+export type TicketsLayout = "card" | "centered" | "split" | "banner" | "compact";
 
 /** The door to the site's stock shop — the tickets trade made again for
  *  goods on a shelf. Presentation only: an optional heading and an optional

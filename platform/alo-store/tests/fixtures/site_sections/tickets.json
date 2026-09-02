@@ -4,7 +4,8 @@
     {
       "type": "tickets",
       "heading": "Cupping evenings",
-      "body": "Six seats around the roaster, once a month."
+      "body": "Six seats around the roaster, once a month.",
+      "layout": "banner"
     }
   ]
 }

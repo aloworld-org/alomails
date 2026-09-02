@@ -7401,6 +7401,13 @@ export const de: Partial<Catalog> = {
   sitesSectionTickets: "Tickets",
   sitesSectionTicketsDesc:
     "Die Tür zu Ihrem Ticketshop. Was im Verkauf ist, Preise und Plätze bleiben aktuell.",
+  sitesTicketsLayout: "Ticket-Layout",
+  sitesTicketsLayoutHint: "Wähle, wie prominent der Live-Ticketshop vorgestellt wird.",
+  sitesTicketsLayoutCard: "Ticketkarte",
+  sitesTicketsLayoutCentered: "Zentriert",
+  sitesTicketsLayoutSplit: "Geteilt",
+  sitesTicketsLayoutBanner: "Event-Banner",
+  sitesTicketsLayoutCompact: "Kompakt",
   sitesTicketSectionHeading: "Überschrift darüber",
   sitesTicketSectionBody: "Ihre eigenen Worte über dem Link",
   sitesTicketSectionNoEvents: "Noch ist nichts im Verkauf",

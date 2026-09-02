@@ -7170,6 +7170,13 @@ export const en = {
   sitesSectionTickets: "Tickets",
   sitesSectionTicketsDesc:
     "The door to your ticket shop. What is on sale, prices and seats stay live.",
+  sitesTicketsLayout: "Tickets layout",
+  sitesTicketsLayoutHint: "Choose how prominently the live ticket shop is introduced.",
+  sitesTicketsLayoutCard: "Ticket card",
+  sitesTicketsLayoutCentered: "Centered",
+  sitesTicketsLayoutSplit: "Split",
+  sitesTicketsLayoutBanner: "Event banner",
+  sitesTicketsLayoutCompact: "Compact",
   sitesTicketSectionHeading: "Heading above it",
   sitesTicketSectionBody: "Your own words above the link",
   sitesTicketSectionNoEvents: "Nothing is on sale yet",
