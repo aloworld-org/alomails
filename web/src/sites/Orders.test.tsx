@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { strings } from "../i18n";
 import { OrdersView } from "./OrdersView";
 import { SectionFormDialog } from "./SectionForm";
+import { DEFAULT_SECTION_PRESENTATION } from "./sectionDrafts";
 import type { SiteCatalog, SiteCatalogDetail, SiteDetail, SiteOrder } from "./types";
 
 const mocks = vi.hoisted(() => ({
@@ -26,6 +27,7 @@ const mocks = vi.hoisted(() => ({
   ordersCsv: vi.fn(),
   catalogs: vi.fn(),
   catalog: vi.fn(),
+  themePresets: vi.fn(),
 }));
 
 vi.mock("./api", async (importOriginal) => {
@@ -83,6 +85,7 @@ beforeEach(() => {
   for (const mock of Object.values(mocks)) mock.mockReset();
   saved.file.mockReset();
   mocks.site.mockResolvedValue(SITE);
+  mocks.themePresets.mockResolvedValue([]);
 });
 
 afterEach(cleanup);
@@ -281,6 +284,8 @@ describe("the catalog section", () => {
       catalog_id: "catalog-1",
       heading: "Order for Saturday",
       category: "breads",
+      layout: "grid",
+      presentation: DEFAULT_SECTION_PRESENTATION,
     });
   });
 
@@ -307,6 +312,8 @@ describe("the catalog section", () => {
       catalog_id: "catalog-2",
       heading: undefined,
       category: undefined,
+      layout: "grid",
+      presentation: DEFAULT_SECTION_PRESENTATION,
     });
   });
 });
