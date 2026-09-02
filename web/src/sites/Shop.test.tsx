@@ -17,6 +17,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { strings } from "../i18n";
 import { SitesModule } from "./SitesModule";
 import { SectionFormDialog } from "./SectionForm";
+import { DEFAULT_SECTION_PRESENTATION } from "./sectionDrafts";
 import { formatPrice } from "./catalogPricing";
 import type { SiteShopItemRow } from "./types";
 
@@ -411,7 +412,15 @@ describe("the shop page section", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: strings.sitesSaveSection }));
 
-    expect(saved).toEqual([{ type: "shop", heading: "From the press shop" }]);
+    expect(saved).toEqual([
+      {
+        type: "shop",
+        heading: "From the press shop",
+        body: undefined,
+        layout: "storefront",
+        presentation: DEFAULT_SECTION_PRESENTATION,
+      },
+    ]);
   });
 
   test("a site with an empty shelf is told so in the form, with the way there", async () => {
