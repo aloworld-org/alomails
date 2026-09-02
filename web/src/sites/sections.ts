@@ -271,11 +271,15 @@ export interface FaqSection extends PresentableSection {
 }
 
 /** A standalone call-to-action banner. */
+export type CtaLayout = "centered" | "split" | "banner" | "card" | "two_actions";
+
 export interface CtaSection extends PresentableSection {
   type: "cta";
   heading: string;
   body?: string | undefined;
   button: SectionLink;
+  secondary_button?: SectionLink | undefined;
+  layout?: CtaLayout | undefined;
 }
 
 /** A contact form. `form_id` is wired by the forms slice; until then the

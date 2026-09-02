@@ -853,6 +853,16 @@ pub struct FaqSection {
 }
 
 /// A standalone call-to-action banner.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CtaLayout {
+    Centered,
+    Split,
+    Banner,
+    Card,
+    TwoActions,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CtaSection {
@@ -863,6 +873,10 @@ pub struct CtaSection {
     pub body: Option<String>,
     /// The action button.
     pub button: Link,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub secondary_button: Option<Link>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout: Option<CtaLayout>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub presentation: Option<SectionPresentation>,
 }
@@ -1797,6 +1811,8 @@ mod tests {
                 heading: "Taste the difference".to_owned(),
                 body: Some("First bag ships free.".to_owned()),
                 button: link("Order now", "/order"),
+                secondary_button: None,
+                layout: None,
                 presentation: None,
             }),
             Section::ContactForm(ContactFormSection {
@@ -2148,6 +2164,8 @@ mod tests {
                 label: "Go".to_owned(),
                 href: "/go".to_owned(),
             },
+            secondary_button: None,
+            layout: None,
             presentation: None,
         })]);
         assert!(matches!(
@@ -2174,6 +2192,8 @@ mod tests {
                     label: "Go".to_owned(),
                     href: "/go".to_owned(),
                 },
+                secondary_button: None,
+                layout: None,
                 presentation: None,
             });
             MAX_SECTIONS_PER_PAGE + 1

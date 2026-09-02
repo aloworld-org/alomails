@@ -9,6 +9,7 @@
 // No validation happens here: the server rules on every save and its 422
 // sentence names the broken rule.
 import type {
+  CtaLayout,
   FaqItem,
   FaqLayout,
   FeatureItem,
@@ -175,6 +176,8 @@ export interface CtaDraft extends PresentableDraft {
   heading: string;
   body: string;
   button: SectionLink;
+  secondary_button: SectionLink;
+  layout: CtaLayout;
 }
 
 export interface ContactFormDraft extends PresentableDraft {
@@ -512,6 +515,8 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         heading: s?.heading ?? "",
         body: s?.body ?? "",
         button: draftLink(s?.button),
+        secondary_button: draftLink(s?.secondary_button),
+        layout: s?.layout ?? "centered",
         presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
@@ -805,6 +810,9 @@ export function toSection(draft: SectionDraft): Section {
         heading: req(draft.heading),
         body: opt(draft.body),
         button: reqLink(draft.button),
+        secondary_button:
+          draft.layout === "two_actions" ? optLink(draft.secondary_button) : undefined,
+        layout: draft.layout,
         presentation: draft.presentation,
       };
     case "contact_form":

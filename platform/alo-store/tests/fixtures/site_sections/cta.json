@@ -5,7 +5,9 @@
       "type": "cta",
       "heading": "Taste the difference fresh makes",
       "body": "Your first bag ships free — roasted the morning it leaves.",
-      "button": { "label": "Order now", "href": "/order" }
+      "button": { "label": "Order now", "href": "/order" },
+      "secondary_button": { "label": "See subscriptions", "href": "/subscriptions" },
+      "layout": "two_actions"
     }
   ]
 }

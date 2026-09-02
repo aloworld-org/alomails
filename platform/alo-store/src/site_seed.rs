@@ -467,6 +467,8 @@ fn seed_cta(ctx: &SeedContext) -> SectionSeed {
             heading,
             body: None,
             button,
+            secondary_button: None,
+            layout: None,
             presentation: None,
         })),
         _ => SectionSeed::NeedsInput(SeedNeed::Writing),

@@ -2583,9 +2583,23 @@ function FaqFields({ draft, onChange }: { draft: FaqDraft; onChange: Change }) {
   );
 }
 
+function CtaLayoutVisual({ layout }: { layout: CtaDraft["layout"] }) {
+  return (
+    <span className={cx("grid h-20 w-32 items-center gap-2 overflow-hidden rounded-lg bg-accent-soft p-3", layout === "split" && "grid-cols-[1fr_auto]", layout === "banner" && "rounded-none", layout === "card" && "m-1 h-16 w-28 shadow-sm")} aria-hidden="true">
+      <span className="grid gap-1"><span className="h-2 rounded-full bg-primary/75" /><span className="h-1.5 w-2/3 rounded-full bg-primary/25" /></span>
+      <span className={cx("flex gap-1", layout !== "split" && "justify-center")}><span className="h-3 w-8 rounded-full bg-accent" />{layout === "two_actions" && <span className="h-3 w-8 rounded-full border border-accent" />}</span>
+    </span>
+  );
+}
+
 function CtaFields({ draft, onChange }: { draft: CtaDraft; onChange: Change }) {
   return (
     <>
+      <Card as="section" flat>
+        <HeroFormHeading icon={<PanelsTopLeft size={17} />}>{strings.sitesCtaLayout}</HeroFormHeading>
+        <p className="mb-5 mt-2 text-sm text-secondary">{strings.sitesCtaLayoutHint}</p>
+        <HeroOptionRow label={strings.sitesCtaLayout} value={draft.layout} columns={5} visual={(layout) => <CtaLayoutVisual layout={layout} />} options={[["centered", strings.sitesCtaLayoutCentered], ["split", strings.sitesCtaLayoutSplit], ["banner", strings.sitesCtaLayoutBanner], ["card", strings.sitesCtaLayoutCard], ["two_actions", strings.sitesCtaLayoutTwoActions]]} onChange={(layout) => onChange({ ...draft, layout })} />
+      </Card>
       <TextField
         label={strings.sitesFieldHeading}
         value={draft.heading}
@@ -2606,6 +2620,13 @@ function CtaFields({ draft, onChange }: { draft: CtaDraft; onChange: Change }) {
           onChange({ ...draft, button: { ...draft.button, ...patch } })
         }
       />
+      {draft.layout === "two_actions" && (
+        <LinkFields
+          legend={strings.sitesFieldSecondaryButton}
+          value={draft.secondary_button}
+          onChange={(patch) => onChange({ ...draft, secondary_button: { ...draft.secondary_button, ...patch } })}
+        />
+      )}
     </>
   );
 }
