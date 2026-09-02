@@ -23,7 +23,7 @@ import { saveBlob } from "../drive/parts";
 import { AgentInstructionsPanel } from "../agents";
 import { RoomPeople } from "./RoomPeople";
 import { useJmapClient } from "../jmap/useJmapClient";
-import { useDismiss, useIsMobile } from "../ds";
+import { MODAL_BACKDROP_CLASS, useDismiss, useIsMobile } from "../ds";
 import { ChatError, chatMessage, useChatApi } from "./api";
 import type { Attachment, Message } from "./types";
 import { useMeetApi } from "../meet/api";
@@ -387,7 +387,7 @@ export function ChatModule() {
       </section>
 
       {inMeeting !== null && (
-        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay text-sm text-on-accent">{strings.chatLoading}</div>}><MeetRoom
+        <Suspense fallback={<div className={`fixed inset-0 z-50 flex items-center justify-center bg-overlay text-sm text-on-accent ${MODAL_BACKDROP_CLASS}`}>{strings.chatLoading}</div>}><MeetRoom
           meetingId={inMeeting}
           onLeft={() => {
             setInMeeting(null);
@@ -426,7 +426,7 @@ export function ChatModule() {
       )}
 
       {picking && (
-        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay text-sm text-on-accent">{strings.chatLoading}</div>}><FilePicker
+        <Suspense fallback={<div className={`fixed inset-0 z-50 flex items-center justify-center bg-overlay text-sm text-on-accent ${MODAL_BACKDROP_CLASS}`}>{strings.chatLoading}</div>}><FilePicker
           max={CHAT_ATTACHMENTS_MAX}
           onClose={() => setPicking(false)}
           onPick={mergePicked}

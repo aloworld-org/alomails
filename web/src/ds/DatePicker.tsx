@@ -15,6 +15,7 @@ import {
 
 import { getLocale, strings } from "../i18n";
 import { cx } from "./cx";
+import { MODAL_BACKDROP_CLASS } from "./modalBackdrop";
 
 /** The trigger reads as a field, because that is what it stands in for — and
  *  after the D1.55 wave check it measures like one too. It had been 44px tall
@@ -218,7 +219,7 @@ export function DatePicker({
       {open && (
         <>
           <div
-            className="fixed inset-0 z-50 hidden bg-overlay max-sm:block"
+            className={`fixed inset-0 z-50 hidden bg-overlay max-sm:block ${MODAL_BACKDROP_CLASS}`}
             aria-hidden="true"
             onClick={() => setOpen(false)}
           />
