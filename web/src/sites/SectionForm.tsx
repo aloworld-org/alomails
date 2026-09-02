@@ -573,6 +573,61 @@ function sectionTargets(page: SitePage, sections: Section[]) {
   });
 }
 
+function NavLayoutVisual({ layout }: { layout: NavDraft["layout"] }) {
+  const centered = layout === "centered";
+  const compact = layout === "compact";
+  const minimal = layout === "minimal";
+  return (
+    <span
+      className={cx(
+        "flex w-full rounded-lg bg-raised px-3",
+        centered ? "flex-col items-center gap-2 py-3" : "items-center gap-2",
+        compact ? "py-2" : "py-3",
+      )}
+      aria-hidden="true"
+    >
+      <span className="size-3 shrink-0 rounded-full bg-accent" />
+      <span
+        className={cx(
+          "flex items-center gap-1.5",
+          centered ? "justify-center" : "min-w-0 flex-1",
+        )}
+      >
+        <span className="h-1.5 w-8 rounded-full bg-primary/70" />
+        {!minimal && (
+          <span className="h-1.5 w-5 rounded-full bg-secondary/35" />
+        )}
+        {layout === "wide" && (
+          <span className="h-1.5 w-5 rounded-full bg-secondary/35" />
+        )}
+      </span>
+      {!minimal && !centered && (
+        <span className="h-4 w-8 rounded-md bg-accent" />
+      )}
+    </span>
+  );
+}
+
+function NavBehaviorVisual({ behavior }: { behavior: NavDraft["behavior"] }) {
+  return (
+    <span className="relative flex h-12 w-full overflow-hidden rounded-lg bg-raised p-2" aria-hidden="true">
+      <span
+        className={cx(
+          "absolute left-2 right-2 top-2 flex h-3 items-center gap-1 rounded bg-surface px-1 shadow-sm",
+          behavior === "auto_hide" && "-translate-y-4 opacity-40",
+        )}
+      >
+        <span className="size-1.5 rounded-full bg-accent" />
+        <span className="h-1 w-6 rounded-full bg-primary/60" />
+      </span>
+      <span className="mt-auto h-1.5 w-3/4 rounded-full bg-secondary/20" />
+      {behavior === "sticky" && (
+        <span className="absolute right-2 top-1.5 size-2 rounded-full border border-accent" />
+      )}
+    </span>
+  );
+}
+
 function NavFields({
   draft,
   onChange,
@@ -985,6 +1040,44 @@ function NavFields({
 
       {settingsOpen && (
         <>
+          <section className="rounded-xl border border-subtle bg-surface p-4">
+            <h4 className="m-0 text-sm font-semibold text-primary">
+              {strings.sitesNavLayout}
+            </h4>
+            <p className="mb-4 mt-1 text-sm text-secondary">
+              {strings.sitesNavLayoutHint}
+            </p>
+            <HeroOptionRow
+              label={strings.sitesNavLayout}
+              value={draft.layout}
+              columns={5}
+              visual={(layout) => <NavLayoutVisual layout={layout} />}
+              options={[
+                ["standard", strings.sitesNavLayoutStandard],
+                ["centered", strings.sitesNavLayoutCentered],
+                ["wide", strings.sitesNavLayoutWide],
+                ["compact", strings.sitesNavLayoutCompact],
+                ["minimal", strings.sitesNavLayoutMinimal],
+              ]}
+              onChange={(layout) => onChange({ ...draft, layout })}
+            />
+            <div className="mt-5">
+              <HeroOptionRow
+                label={strings.sitesNavBehavior}
+                value={draft.behavior}
+                visual={(behavior) => (
+                  <NavBehaviorVisual behavior={behavior} />
+                )}
+                options={[
+                  ["static", strings.sitesNavBehaviorStatic],
+                  ["sticky", strings.sitesNavBehaviorSticky],
+                  ["auto_hide", strings.sitesNavBehaviorAutoHide],
+                ]}
+                onChange={(behavior) => onChange({ ...draft, behavior })}
+              />
+            </div>
+          </section>
+
           <section className="overflow-hidden rounded-xl border border-subtle bg-surface">
             <button
               type="button"

@@ -296,6 +296,8 @@ fn seed_nav(ctx: &SeedContext) -> SectionSeed {
         links,
         cta: existing.and_then(|nav| nav.cta.clone()),
         appearance: existing.and_then(|nav| nav.appearance.clone()),
+        layout: existing.and_then(|nav| nav.layout),
+        behavior: existing.and_then(|nav| nav.behavior),
     }))
 }
 

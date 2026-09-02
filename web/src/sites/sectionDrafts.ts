@@ -35,6 +35,8 @@ import type {
   SectionLink,
   SectionPresentation,
   NavAppearance,
+  NavLayout,
+  NavBehavior,
   TeamMember,
   TeamLayout,
   Testimonial,
@@ -54,6 +56,8 @@ export interface NavDraft {
   links: SectionLink[];
   cta: SectionLink;
   appearance?: NavAppearance | undefined;
+  layout: NavLayout;
+  behavior: NavBehavior;
 }
 
 export interface HeroDraft {
@@ -379,6 +383,8 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         links: seeded(s?.links ?? [], blankLink),
         cta: draftLink(s?.cta),
         appearance: s?.appearance,
+        layout: s?.layout ?? "standard",
+        behavior: s?.behavior ?? "static",
       };
     }
     case "hero": {
@@ -701,6 +707,8 @@ export function toSection(draft: SectionDraft): Section {
         links: pruned(draft.links, linkBlank).map(reqLink),
         cta: optLink(draft.cta),
         appearance: draft.appearance,
+        layout: draft.layout,
+        behavior: draft.behavior,
       };
     case "hero":
       return {

@@ -9,7 +9,9 @@
         { "label": "Wholesale", "href": "/wholesale" },
         { "label": "Contact", "href": "#contact" }
       ],
-      "cta": { "label": "Order beans", "href": "/order" }
+      "cta": { "label": "Order beans", "href": "/order" },
+      "layout": "wide",
+      "behavior": "sticky"
     }
   ]
 }

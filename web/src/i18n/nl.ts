@@ -4207,6 +4207,18 @@ export const nl: Partial<Catalog> = {
   sitesNavSettingsTab: "Instellingen",
   sitesNavSettingsHint:
     "Beheer menulinks, de primaire actie en het uiterlijk op één plek.",
+  sitesNavLayout: "Navigatie-indeling",
+  sitesNavLayoutHint:
+    "Kies hoe het merk, de links en de primaire actie de kop delen.",
+  sitesNavLayoutStandard: "Standaard",
+  sitesNavLayoutCentered: "Gecentreerd",
+  sitesNavLayoutWide: "Breed",
+  sitesNavLayoutCompact: "Compact",
+  sitesNavLayoutMinimal: "Minimaal",
+  sitesNavBehavior: "Scrollgedrag",
+  sitesNavBehaviorStatic: "Scrollt met pagina",
+  sitesNavBehaviorSticky: "Blijft zichtbaar",
+  sitesNavBehaviorAutoHide: "Verbergt tijdens scrollen",
   sitesNavMenuLinksHint:
     "Voeg de belangrijkste pagina’s toe. De volgorde hier is de volgorde in de kop.",
   sitesNavAddPages: "Sitepagina’s toevoegen",

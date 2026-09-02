@@ -68,6 +68,8 @@ fn fixture_site() -> SeedContext {
                 links: vec![link("Home", "/"), link("Visit us", "/visit")],
                 cta: Some(link("Order beans", "/visit")),
                 appearance: None,
+                layout: None,
+                behavior: None,
             }),
             Section::Hero(HeroSection {
                 heading: "Coffee roasted the morning it ships".to_owned(),

@@ -372,6 +372,24 @@ pub struct HeroAppearance {
 }
 
 /// Top navigation bar. The logo comes from the site's theme, not from here.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NavLayout {
+    Standard,
+    Centered,
+    Wide,
+    Compact,
+    Minimal,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NavBehavior {
+    Static,
+    Sticky,
+    AutoHide,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct NavSection {
@@ -383,6 +401,10 @@ pub struct NavSection {
     /// Optional scoped palette; absent keeps every colour from the site theme.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub appearance: Option<NavAppearance>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout: Option<NavLayout>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub behavior: Option<NavBehavior>,
 }
 
 /// The hero's visual composition. These are deliberately named layouts, not
@@ -1792,6 +1814,8 @@ mod tests {
                 links: vec![link("Home", "/"), link("Pricing", "/pricing")],
                 cta: Some(link("Order beans", "/order")),
                 appearance: None,
+                layout: None,
+                behavior: None,
             }),
             Section::Hero(HeroSection {
                 heading: "Coffee roasted the morning it ships".to_owned(),
@@ -2050,6 +2074,8 @@ mod tests {
                 links: vec![],
                 cta: None,
                 appearance: None,
+                layout: None,
+                behavior: None,
             }),
             Section::Hero(HeroSection {
                 heading: "Hello".to_owned(),

@@ -4252,6 +4252,18 @@ export const fr: Partial<Catalog> = {
   sitesNavSettingsTab: "Paramètres",
   sitesNavSettingsHint:
     "Gérez les liens du menu, l’action principale et l’apparence au même endroit.",
+  sitesNavLayout: "Disposition de la navigation",
+  sitesNavLayoutHint:
+    "Choisissez comment la marque, les liens et l’action principale partagent l’en-tête.",
+  sitesNavLayoutStandard: "Standard",
+  sitesNavLayoutCentered: "Centré",
+  sitesNavLayoutWide: "Large",
+  sitesNavLayoutCompact: "Compact",
+  sitesNavLayoutMinimal: "Minimal",
+  sitesNavBehavior: "Comportement au défilement",
+  sitesNavBehaviorStatic: "Défile avec la page",
+  sitesNavBehaviorSticky: "Reste visible",
+  sitesNavBehaviorAutoHide: "Se masque au défilement",
   sitesNavMenuLinksHint:
     "Ajoutez les pages les plus utiles. Leur ordre ici sera celui de l’en-tête.",
   sitesNavAddPages: "Ajouter les pages du site",

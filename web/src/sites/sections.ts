@@ -106,7 +106,11 @@ export interface NavSection {
   links: SectionLink[];
   cta?: SectionLink | undefined;
   appearance?: NavAppearance | undefined;
+  layout?: NavLayout | undefined;
+  behavior?: NavBehavior | undefined;
 }
+export type NavLayout = "standard" | "centered" | "wide" | "compact" | "minimal";
+export type NavBehavior = "static" | "sticky" | "auto_hide";
 
 /** The page's lead banner. */
 export type HeroLayout =

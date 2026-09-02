@@ -4181,6 +4181,18 @@ export const en = {
   sitesNavSettingsTab: "Settings",
   sitesNavSettingsHint:
     "Manage menu links, the primary action, and appearance in one place.",
+  sitesNavLayout: "Navigation layout",
+  sitesNavLayoutHint:
+    "Choose how the brand, links, and primary action share the header.",
+  sitesNavLayoutStandard: "Standard",
+  sitesNavLayoutCentered: "Centered",
+  sitesNavLayoutWide: "Wide",
+  sitesNavLayoutCompact: "Compact",
+  sitesNavLayoutMinimal: "Minimal",
+  sitesNavBehavior: "Scroll behavior",
+  sitesNavBehaviorStatic: "Scrolls with page",
+  sitesNavBehaviorSticky: "Stays visible",
+  sitesNavBehaviorAutoHide: "Hides while scrolling",
   sitesNavMenuLinksHint:
     "Add the pages visitors need most. Their order here is their order in the header.",
   sitesNavAddPages: "Add site pages",

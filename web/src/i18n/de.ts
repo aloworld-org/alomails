@@ -6196,6 +6196,18 @@ export const de: Partial<Catalog> = {
   sitesNavSettingsTab: "Einstellungen",
   sitesNavSettingsHint:
     "Menülinks, primäre Aktion und Erscheinungsbild zentral verwalten.",
+  sitesNavLayout: "Navigations-Layout",
+  sitesNavLayoutHint:
+    "Wähle, wie Marke, Links und Hauptaktion die Kopfzeile teilen.",
+  sitesNavLayoutStandard: "Standard",
+  sitesNavLayoutCentered: "Zentriert",
+  sitesNavLayoutWide: "Breit",
+  sitesNavLayoutCompact: "Kompakt",
+  sitesNavLayoutMinimal: "Minimal",
+  sitesNavBehavior: "Scrollverhalten",
+  sitesNavBehaviorStatic: "Scrollt mit der Seite",
+  sitesNavBehaviorSticky: "Bleibt sichtbar",
+  sitesNavBehaviorAutoHide: "Beim Scrollen ausblenden",
   sitesNavMenuLinksHint:
     "Fügen Sie die wichtigsten Seiten hinzu. Die Reihenfolge hier entspricht der Reihenfolge in der Kopfzeile.",
   sitesNavAddPages: "Siteseiten hinzufügen",
