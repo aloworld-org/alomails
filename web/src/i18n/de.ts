@@ -7375,6 +7375,13 @@ export const de: Partial<Catalog> = {
   sitesSectionBooking: "Buchung",
   sitesSectionBookingDesc:
     "Lassen Sie Besucher eine Zeit bei Ihnen buchen, direkt in Ihren Kalender.",
+  sitesBookingLayout: "Buchungs-Layout",
+  sitesBookingLayoutHint: "Wähle, wie Servicedetails und Datumsauswahl zusammenwirken.",
+  sitesBookingLayoutCard: "Buchungskarte",
+  sitesBookingLayoutSplit: "Geteilt",
+  sitesBookingLayoutCentered: "Zentriert",
+  sitesBookingLayoutPanel: "Feature-Panel",
+  sitesBookingLayoutCompact: "Kompakt",
   sitesBookingSectionHeading: "Überschrift darüber",
   sitesBookingSectionChoose: "Was hier gebucht werden kann",
   sitesBookingSectionNoServices: "Diese Website hat noch nichts zu buchen",

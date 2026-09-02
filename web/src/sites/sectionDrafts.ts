@@ -13,6 +13,7 @@ import type {
   ContactFormLayout,
   CollectionLayout,
   CatalogLayout,
+  BookingLayout,
   FaqItem,
   FaqLayout,
   FeatureItem,
@@ -217,6 +218,7 @@ export interface BookingDraft extends PresentableDraft {
   type: "booking";
   booking_id: string;
   heading: string;
+  layout: BookingLayout;
 }
 
 /** The ticket shop's door on a page: the heading and the owner's sentence
@@ -565,6 +567,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         type: "booking",
         booking_id: s?.booking_id ?? "",
         heading: s?.heading ?? "",
+        layout: s?.layout ?? "card",
         presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
@@ -856,6 +859,7 @@ export function toSection(draft: SectionDraft): Section {
         type: "booking",
         booking_id: req(draft.booking_id),
         heading: opt(draft.heading),
+        layout: draft.layout,
         presentation: draft.presentation,
       };
     case "tickets":

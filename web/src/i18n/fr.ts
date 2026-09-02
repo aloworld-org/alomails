@@ -6035,6 +6035,13 @@ export const fr: Partial<Catalog> = {
   sitesSectionBooking: "Réservation",
   sitesSectionBookingDesc:
     "Laissez les visiteurs réserver un créneau chez vous, directement dans votre agenda.",
+  sitesBookingLayout: "Disposition de la réservation",
+  sitesBookingLayoutHint: "Choisissez comment les détails et l’action de date fonctionnent ensemble.",
+  sitesBookingLayoutCard: "Carte de réservation",
+  sitesBookingLayoutSplit: "Séparé",
+  sitesBookingLayoutCentered: "Centré",
+  sitesBookingLayoutPanel: "Panneau vedette",
+  sitesBookingLayoutCompact: "Compact",
   sitesBookingSectionHeading: "Titre au-dessus",
   sitesBookingSectionChoose: "Ce qui se réserve ici",
   sitesBookingSectionNoServices: "Ce site n’a encore rien à réserver",

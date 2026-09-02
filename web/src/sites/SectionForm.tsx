@@ -2982,6 +2982,15 @@ function CatalogFields({
  *  which this form links to rather than duplicating. Two states are said out
  *  loud because a visitor would otherwise be the one to discover them: a site
  *  with no service yet, and a service that is switched off. */
+function BookingLayoutVisual({ layout }: { layout: BookingDraft["layout"] }) {
+  return (
+    <span className={cx("grid h-20 w-32 gap-2 overflow-hidden rounded-lg bg-raised p-2.5", (layout === "split" || layout === "compact") && "grid-cols-[1fr_.8fr]", layout === "panel" && "border-2 border-accent-soft bg-surface p-3", layout === "centered" && "justify-items-center text-center")} aria-hidden="true">
+      <span className="grid w-full content-center gap-1"><span className="h-2 rounded-full bg-primary/70" /><span className="h-1.5 w-2/3 rounded-full bg-accent/50" /></span>
+      <span className="grid w-full content-center gap-1.5"><span className="h-3 rounded-sm border border-default bg-surface" /><span className="h-2.5 w-8 rounded-full bg-accent" /></span>
+    </span>
+  );
+}
+
 function BookingFields({
   draft,
   onChange,
@@ -3030,6 +3039,11 @@ function BookingFields({
   const chosen = bookings.find((booking) => booking.id === draft.booking_id);
   return (
     <>
+      <Card as="section" flat>
+        <HeroFormHeading icon={<PanelsTopLeft size={17} />}>{strings.sitesBookingLayout}</HeroFormHeading>
+        <p className="mb-5 mt-2 text-sm text-secondary">{strings.sitesBookingLayoutHint}</p>
+        <HeroOptionRow label={strings.sitesBookingLayout} value={draft.layout} columns={5} visual={(layout) => <BookingLayoutVisual layout={layout} />} options={[["card", strings.sitesBookingLayoutCard], ["split", strings.sitesBookingLayoutSplit], ["centered", strings.sitesBookingLayoutCentered], ["panel", strings.sitesBookingLayoutPanel], ["compact", strings.sitesBookingLayoutCompact]]} onChange={(layout) => onChange({ ...draft, layout })} />
+      </Card>
       <TextField
         label={strings.sitesBookingSectionHeading}
         value={draft.heading}

@@ -326,7 +326,9 @@ export interface BookingSection extends PresentableSection {
   type: "booking";
   booking_id: string;
   heading?: string | undefined;
+  layout?: BookingLayout | undefined;
 }
+export type BookingLayout = "card" | "split" | "centered" | "panel" | "compact";
 
 /** The door to the site's ticket shop. Presentation only — an optional
  *  heading and an optional line of the owner's own words above the link.

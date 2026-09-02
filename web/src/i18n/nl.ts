@@ -5970,6 +5970,13 @@ export const nl: Partial<Catalog> = {
   sitesSectionBooking: "Reservering",
   sitesSectionBookingDesc:
     "Laat bezoekers een tijdstip bij u vastleggen, rechtstreeks in uw agenda.",
+  sitesBookingLayout: "Boekingsindeling",
+  sitesBookingLayoutHint: "Kies hoe servicedetails en de datumactie samenwerken.",
+  sitesBookingLayoutCard: "Boekingskaart",
+  sitesBookingLayoutSplit: "Gesplitst",
+  sitesBookingLayoutCentered: "Gecentreerd",
+  sitesBookingLayoutPanel: "Uitgelicht paneel",
+  sitesBookingLayoutCompact: "Compact",
   sitesBookingSectionHeading: "Kop erboven",
   sitesBookingSectionChoose: "Wat hier gereserveerd kan worden",
   sitesBookingSectionNoServices: "Deze site heeft nog niets te reserveren",

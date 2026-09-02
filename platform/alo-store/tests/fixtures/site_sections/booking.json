@@ -4,7 +4,8 @@
     {
       "type": "booking",
       "booking_id": "b7Q2mL9xR4tV6yZ1aC3dE5",
-      "heading": "Book a consultation"
+      "heading": "Book a consultation",
+      "layout": "split"
     }
   ]
 }

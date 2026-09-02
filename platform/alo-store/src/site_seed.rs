@@ -529,6 +529,7 @@ fn seed_booking(ctx: &SeedContext) -> SectionSeed {
             SectionSeed::ready(Section::Booking(BookingSection {
                 booking_id: SiteBookingId::new(binding.id.clone()),
                 heading: short(&binding.name),
+                layout: None,
                 presentation: None,
             }))
         })

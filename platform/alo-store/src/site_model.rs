@@ -987,12 +987,24 @@ pub struct CatalogSection {
 /// long it takes, when it is offered and what is asked when booking all live in
 /// the frozen snapshot, and the free times are read live against the bound
 /// Agenda calendar at the moment the visitor looks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BookingLayout {
+    Card,
+    Split,
+    Centered,
+    Panel,
+    Compact,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct BookingSection {
     pub booking_id: SiteBookingId,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub heading: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout: Option<BookingLayout>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub presentation: Option<SectionPresentation>,
 }
@@ -1875,6 +1887,7 @@ mod tests {
             Section::Booking(BookingSection {
                 booking_id: SiteBookingId::new("tasting-table"),
                 heading: Some("Book the tasting table".to_owned()),
+                layout: None,
                 presentation: None,
             }),
             Section::Tickets(TicketsSection {

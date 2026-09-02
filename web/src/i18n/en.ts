@@ -7143,6 +7143,13 @@ export const en = {
   sitesSectionBooking: "Booking",
   sitesSectionBookingDesc:
     "Let visitors book a time with you, straight into your calendar.",
+  sitesBookingLayout: "Booking layout",
+  sitesBookingLayoutHint: "Choose how the service details and date action work together.",
+  sitesBookingLayoutCard: "Booking card",
+  sitesBookingLayoutSplit: "Split",
+  sitesBookingLayoutCentered: "Centered",
+  sitesBookingLayoutPanel: "Feature panel",
+  sitesBookingLayoutCompact: "Compact",
   sitesBookingSectionHeading: "Heading above it",
   sitesBookingSectionChoose: "What can be booked here",
   sitesBookingSectionNoServices: "This site has nothing to book yet",
