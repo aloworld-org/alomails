@@ -5852,6 +5852,13 @@ export const nl: Partial<Catalog> = {
   sitesSectionCatalog: "Catalogus",
   sitesSectionCatalogDesc:
     "Wat u aanbiedt, met prijzen, uit uw eigen catalogus.",
+  sitesCatalogLayout: "Catalogusindeling",
+  sitesCatalogLayoutHint: "Kies hoe bezoekers items, details en prijzen vergelijken.",
+  sitesCatalogLayoutGrid: "Productraster",
+  sitesCatalogLayoutMenu: "Prijsmenu",
+  sitesCatalogLayoutList: "Gedetailleerde lijst",
+  sitesCatalogLayoutFeatured: "Uitgelicht item",
+  sitesCatalogLayoutCompact: "Compact raster",
   sitesCatalogSectionHeading: "Kop erboven",
   sitesCatalogSectionChoose: "Welke catalogus",
   sitesCatalogSectionGroup: "Welke groep",

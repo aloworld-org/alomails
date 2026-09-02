@@ -2796,6 +2796,14 @@ function CollectionFields({
  *  catalog's, frozen into the next publish — so this form asks two questions
  *  and says the two things that surprise people: an edit shows up at the next
  *  publish, and taking orders is a switch on the catalog, not on this page. */
+function CatalogLayoutVisual({ layout }: { layout: CatalogDraft["layout"] }) {
+  return (
+    <span className={cx("grid h-20 w-32 gap-1.5 overflow-hidden rounded-lg bg-raised p-2", layout === "grid" || layout === "compact" ? "grid-cols-3" : "grid-cols-1", layout === "featured" && "grid-cols-2")} aria-hidden="true">
+      {[0, 1, 2].map((item) => <span key={item} className={cx("grid content-center gap-1 rounded-md border border-default bg-surface p-1.5", layout === "menu" && "grid-cols-[1fr_auto] rounded-none border-x-0 border-t-0 bg-transparent", layout === "list" && "grid-cols-[2rem_1fr]", layout === "featured" && item === 0 && "col-span-2 grid-cols-[1fr_1fr]")}><span className="h-1.5 rounded-full bg-primary/70" /><span className="h-1 w-2/3 rounded-full bg-accent/60" /></span>)}
+    </span>
+  );
+}
+
 function CatalogFields({
   draft,
   onChange,
@@ -2876,6 +2884,11 @@ function CatalogFields({
 
   return (
     <>
+      <Card as="section" flat>
+        <HeroFormHeading icon={<PanelsTopLeft size={17} />}>{strings.sitesCatalogLayout}</HeroFormHeading>
+        <p className="mb-5 mt-2 text-sm text-secondary">{strings.sitesCatalogLayoutHint}</p>
+        <HeroOptionRow label={strings.sitesCatalogLayout} value={draft.layout} columns={5} visual={(layout) => <CatalogLayoutVisual layout={layout} />} options={[["grid", strings.sitesCatalogLayoutGrid], ["menu", strings.sitesCatalogLayoutMenu], ["list", strings.sitesCatalogLayoutList], ["featured", strings.sitesCatalogLayoutFeatured], ["compact", strings.sitesCatalogLayoutCompact]]} onChange={(layout) => onChange({ ...draft, layout })} />
+      </Card>
       <TextField
         label={strings.sitesCatalogSectionHeading}
         value={draft.heading}

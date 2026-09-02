@@ -5916,6 +5916,13 @@ export const fr: Partial<Catalog> = {
   sitesSectionCatalog: "Catalogue",
   sitesSectionCatalogDesc:
     "Ce que vous proposez, avec les prix, depuis votre catalogue.",
+  sitesCatalogLayout: "Disposition du catalogue",
+  sitesCatalogLayoutHint: "Choisissez comment comparer les articles, détails et prix.",
+  sitesCatalogLayoutGrid: "Grille de produits",
+  sitesCatalogLayoutMenu: "Menu de prix",
+  sitesCatalogLayoutList: "Liste détaillée",
+  sitesCatalogLayoutFeatured: "Article à la une",
+  sitesCatalogLayoutCompact: "Grille compacte",
   sitesCatalogSectionHeading: "Titre au-dessus",
   sitesCatalogSectionChoose: "Quel catalogue",
   sitesCatalogSectionGroup: "Quel groupe",

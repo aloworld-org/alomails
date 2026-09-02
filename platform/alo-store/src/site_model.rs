@@ -956,6 +956,16 @@ pub struct CollectionSection {
 /// time. The section stores only the stable catalog id, an optional heading,
 /// and an optional category handle to show one grouping instead of all of
 /// them; prices, names and availability live in the frozen snapshot.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CatalogLayout {
+    Grid,
+    Menu,
+    List,
+    Featured,
+    Compact,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CatalogSection {
@@ -965,6 +975,8 @@ pub struct CatalogSection {
     /// Handle of the single category to show; absent shows every category.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub category: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout: Option<CatalogLayout>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub presentation: Option<SectionPresentation>,
 }
@@ -1857,6 +1869,7 @@ mod tests {
                 catalog_id: SiteCatalogId::new("house-menu"),
                 heading: Some("On the counter".to_owned()),
                 category: Some("espresso".to_owned()),
+                layout: None,
                 presentation: None,
             }),
             Section::Booking(BookingSection {

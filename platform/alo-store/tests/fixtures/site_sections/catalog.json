@@ -5,7 +5,8 @@
       "type": "catalog",
       "catalog_id": "harbour-menu",
       "heading": "On the counter",
-      "category": "espresso"
+      "category": "espresso",
+      "layout": "menu"
     }
   ]
 }

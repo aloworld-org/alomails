@@ -314,7 +314,9 @@ export interface CatalogSection extends PresentableSection {
   catalog_id: string;
   heading?: string | undefined;
   category?: string | undefined;
+  layout?: CatalogLayout | undefined;
 }
+export type CatalogLayout = "grid" | "menu" | "list" | "featured" | "compact";
 
 /** Something a visitor may book — a consultation, a viewing, a test drive.
  *  `booking_id` names one of the site's own booking services (S2.13a); the

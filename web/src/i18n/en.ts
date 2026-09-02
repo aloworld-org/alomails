@@ -7022,6 +7022,13 @@ export const en = {
   // into the next publish.
   sitesSectionCatalog: "Catalog",
   sitesSectionCatalogDesc: "What you offer, with prices, from your catalog.",
+  sitesCatalogLayout: "Catalog layout",
+  sitesCatalogLayoutHint: "Choose how visitors compare items, details, and prices.",
+  sitesCatalogLayoutGrid: "Product grid",
+  sitesCatalogLayoutMenu: "Price menu",
+  sitesCatalogLayoutList: "Detailed list",
+  sitesCatalogLayoutFeatured: "Featured item",
+  sitesCatalogLayoutCompact: "Compact grid",
   sitesCatalogSectionHeading: "Heading above it",
   sitesCatalogSectionChoose: "Which catalog",
   sitesCatalogSectionGroup: "Which group",

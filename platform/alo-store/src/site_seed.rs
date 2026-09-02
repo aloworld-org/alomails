@@ -516,6 +516,7 @@ fn seed_catalog(ctx: &SeedContext) -> SectionSeed {
                 catalog_id: SiteCatalogId::new(binding.id.clone()),
                 heading: short(&binding.name),
                 category: None,
+                layout: None,
                 presentation: None,
             }))
         })

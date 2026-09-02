@@ -12,6 +12,7 @@ import type {
   CtaLayout,
   ContactFormLayout,
   CollectionLayout,
+  CatalogLayout,
   FaqItem,
   FaqLayout,
   FeatureItem,
@@ -206,6 +207,7 @@ export interface CatalogDraft extends PresentableDraft {
   /** A group's handle, or "" for every group. Cleared when the catalog
    *  changes — a handle only means anything inside its own catalog. */
   category: string;
+  layout: CatalogLayout;
 }
 
 /** Which of the site's booking services this section offers, and the heading
@@ -553,6 +555,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         catalog_id: s?.catalog_id ?? "",
         heading: s?.heading ?? "",
         category: s?.category ?? "",
+        layout: s?.layout ?? "grid",
         presentation: s?.presentation ?? DEFAULT_SECTION_PRESENTATION,
       };
     }
@@ -845,6 +848,7 @@ export function toSection(draft: SectionDraft): Section {
         catalog_id: req(draft.catalog_id),
         heading: opt(draft.heading),
         category: opt(draft.category),
+        layout: draft.layout,
         presentation: draft.presentation,
       };
     case "booking":
