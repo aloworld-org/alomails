@@ -8,7 +8,7 @@
 //      down", "Edit section" and "Delete section" — four names, repeated,
 //      with nothing in any of them to say WHICH section they act on. Tabbing
 //      through it, or listing the buttons in a screen-reader rotor, gives no
-//      way to tell the hero's delete from the footer's.
+//      way to tell the hero's delete from the call-to-action's.
 //   2. Pressing "move down" moved the section and then dropped focus on
 //      `<body>`: a move replaces the whole list with the server's answer, so
 //      React unmounts the row that had focus. Measured in the browser, moving
@@ -76,7 +76,11 @@ const FAQ: Section = {
   type: "faq",
   items: [{ question: "When?", answer: "Every day." }],
 };
-const FOOTER: Section = { type: "footer", links: [] };
+const CTA: Section = {
+  type: "cta",
+  heading: "Order today",
+  button: { label: "Order", href: "/order" },
+};
 
 function pageReply(sections: Section[]): Reply {
   return {
@@ -133,7 +137,7 @@ afterEach(cleanup);
 
 describe("the section stack names its controls", () => {
   test("every button says which section it acts on", async () => {
-    replies = [pageReply([HERO, FAQ, FOOTER])];
+    replies = [pageReply([HERO, FAQ, CTA])];
     ui();
     await screen.findByText(strings.sitesSectionHero);
 
@@ -149,20 +153,20 @@ describe("the section stack names its controls", () => {
       screen.getByLabelText(strings.sitesDeleteSection(kindLabel("hero"))),
     ).toBeTruthy();
     expect(
-      screen.getByLabelText(strings.sitesMoveDown(kindLabel("footer"))),
+      screen.getByLabelText(strings.sitesMoveDown(kindLabel("cta"))),
     ).toBeTruthy();
   });
 });
 
 describe("reordering from the keyboard", () => {
   test("focus follows the section that moved, not the row it left", async () => {
-    replies = [pageReply([HERO, FAQ, FOOTER])];
+    replies = [pageReply([HERO, FAQ, CTA])];
     ui();
     await screen.findByText(strings.sitesSectionHero);
 
     const pressed = controls("down")[0]!;
     pressed.focus();
-    replies = [moveReply(0, [FAQ, HERO, FOOTER])];
+    replies = [moveReply(0, [FAQ, HERO, CTA])];
     fireEvent.click(pressed);
 
     await waitFor(() =>
@@ -180,7 +184,7 @@ describe("reordering from the keyboard", () => {
   });
 
   test("the last row has no move-down, so focus falls to its sibling", async () => {
-    replies = [pageReply([HERO, FAQ, FOOTER])];
+    replies = [pageReply([HERO, FAQ, CTA])];
     ui();
     await screen.findByText(strings.sitesSectionHero);
 
@@ -188,7 +192,7 @@ describe("reordering from the keyboard", () => {
     // pressed is disabled.
     const pressed = controls("down")[1]!;
     pressed.focus();
-    replies = [moveReply(1, [HERO, FOOTER, FAQ])];
+    replies = [moveReply(1, [HERO, CTA, FAQ])];
     fireEvent.click(pressed);
 
     await waitFor(() =>
@@ -200,11 +204,11 @@ describe("reordering from the keyboard", () => {
   });
 
   test("the move is announced, with the section and where it landed", async () => {
-    replies = [pageReply([HERO, FAQ, FOOTER])];
+    replies = [pageReply([HERO, FAQ, CTA])];
     ui();
     await screen.findByText(strings.sitesSectionHero);
 
-    replies = [moveReply(0, [FAQ, HERO, FOOTER])];
+    replies = [moveReply(0, [FAQ, HERO, CTA])];
     fireEvent.click(controls("down")[0]!);
 
     const said = strings.sitesSectionMoved(kindLabel("hero"), 2, 3);
