@@ -407,6 +407,39 @@ services:
       retries: 3
       start_period: 10s
 
+  # The public, anonymous side of alo Sites (ADR: docs/design/sites.md). It
+  # serves customer sites on the wildcard and on custom domains, and answers
+  # Caddy's on-demand TLS question at /internal/tls/ask so a certificate is
+  # only ever issued for a host this deployment actually serves. It runs NO
+  # migrations — alo-jmap owns the single migrator — so it is safe to stop.
+  alo-sites:
+    build:
+      context: ../..
+      dockerfile: products/sites/alo-sites/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-alo}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-alo}?sslmode=disable
+      ALO_BLOB_DIR: /var/lib/alo/blobs
+      # The bare DNS name customer subdomains hang off.
+      SITES_DOMAIN: ${SITES_DOMAIN:?set the public sites domain in .env}
+      ALO_SITES_ADDR: 0.0.0.0:8082
+      # HMAC secret for the no-PII analytics visitor day-hash. At least 32 bytes.
+      ALO_SITES_ANALYTICS_SECRET: ${ALO_SITES_ANALYTICS_SECRET:?set a 32+ byte secret in .env}
+      # Left unset in production on purpose: the only provider this build knows
+      # is `fixture`, where no money moves and payments are lost on restart.
+      RUST_LOG: ${RUST_LOG:-info}
+    volumes:
+      - blobs:/var/lib/alo/blobs
+    networks: [alo]
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/alo-sites", "--healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
   caddy:
     image: caddy:2.8-alpine
     restart: unless-stopped

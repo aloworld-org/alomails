@@ -6,8 +6,25 @@
 # OIDC paths to the internal JMAP service. See docker-compose.yml and README.md.
 
 {
-	# We manage certificates with certbot, not Caddy's own ACME.
-	auto_https off
+	# We manage certificates with certbot, not Caddy's own ACME — every site
+	# below names its own fullchain.pem, and that keeps precedence. This is
+	# `disable_redirects` rather than `off` because on-demand TLS is part of
+	# Caddy's certificate machinery and `off` switches all of it away; the
+	# redirects stay ours, in the explicit http:// blocks that also serve
+	# certbot's renewal challenges.
+	auto_https disable_redirects
+
+	# alo Sites serves customer subdomains and customer domains, which cannot
+	# be enumerated in a file — they are rows in a database that change while
+	# this process is running. So their certificates are obtained on demand,
+	# during the first handshake for a host.
+	#
+	# `ask` is what stops that being an open door: anyone can point a DNS name
+	# at this address, and without it every one of them would make us request a
+	# certificate. alo-sites answers 200 only for a host it actually serves.
+	on_demand_tls {
+		ask http://alo-sites:8082/internal/tls/ask
+	}
 }
 
 # Plain HTTP (port 80): send every browser that types the bare domain on to
@@ -90,10 +107,30 @@ https://{$DOMAIN} {
 # MTA-STS policy host (RFC 8461). Senders fetch
 # https://mta-sts.<domain>/.well-known/mta-sts.txt. Covered by the same
 # certificate (issued with both names as SANs — see init-certs.sh).
-https://mta-sts.{$DOMAIN} {
-	tls /certs/live/{$DOMAIN}/fullchain.pem /certs/live/{$DOMAIN}/privkey.pem
-	reverse_proxy alo-smtp:8461
-}
+# DISABLED 2026-09-03, because it has never worked and now says so out loud.
+#
+# Two things are missing and both are required. The name
+# mta-sts.mail.alomails.com has no DNS record at all (NXDOMAIN), and the
+# certificate at /certs/live/mail.alomails.com carries exactly one SAN —
+# mail.alomails.com — not the two the comment above claims. So no sending
+# server has ever been able to fetch the policy, and MTA-STS is not in effect
+# for this domain however good the file behind it is.
+#
+# It stayed invisible while auto_https off meant Caddy never checked a name
+# against the certificate serving it. With certificate management enabled (for
+# the on-demand hosts alo Sites needs) Caddy checked, found this name uncovered,
+# and started asking Let us Encrypt for a certificate every sixty seconds for a
+# host that does not resolve.
+#
+# To turn it back on, both halves are needed: an A record for mta-sts.<domain>,
+# and that name added as a SAN in init-certs.sh so the certificate covers it.
+# Until then this block can only fail, and failing quietly was the worse of the
+# two options.
+#
+# https://mta-sts.{$DOMAIN} {
+# 	tls /certs/live/{$DOMAIN}/fullchain.pem /certs/live/{$DOMAIN}/privkey.pem
+# 	reverse_proxy alo-smtp:8461
+# }
 
 # ── Marketing landing site on the apex (alomails.com) ──────────────────────
 # A separate static site: the app itself stays on mail.alomails.com, untouched.
@@ -323,4 +360,44 @@ https://app.alodrives.com {
 			-Server
 		}
 	}
+}
+
+
+# ---------------------------------------------------------------------------
+# alo Sites: the public, anonymous side. The apex and every customer subdomain
+# on the wildcard; customer custom domains arrive here too, once their owner
+# has pointed DNS at this address and alo-sites recognises the host.
+# ---------------------------------------------------------------------------
+
+http://alosites.com, http://*.alosites.com {
+	handle /.well-known/acme-challenge/* {
+		root * /var/www/certbot
+		file_server
+	}
+	handle {
+		redir https://{host}{uri} permanent
+	}
+}
+
+# Deliberately a catch-all rather than `alosites.com, *.alosites.com`.
+#
+# Naming the wildcard makes Caddy try to obtain a *wildcard* certificate, and a
+# wildcard can only be issued over DNS-01 — which needs API credentials for the
+# nameservers that this deployment does not have. Every certificate here comes
+# from HTTP-01.
+#
+# So the address is left open and the decision is moved to `ask`: any host that
+# reaches this machine and is not claimed by a block above arrives here, and
+# alo-sites answers whether it is a site we actually serve. That is also what
+# makes customer custom domains work without an entry in this file — they are
+# rows in a database, and this file cannot know them.
+#
+# A host nobody configured gets a 404 from the ask endpoint, no certificate is
+# requested, and the handshake fails exactly as it did before any of this
+# existed.
+https:// {
+	tls {
+		on_demand
+	}
+	reverse_proxy alo-sites:8082
 }
