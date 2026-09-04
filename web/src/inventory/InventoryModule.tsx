@@ -18,7 +18,9 @@
 // button on the two screens that are about products — the catalog and the stock
 // list — and each says what to do with what was scanned.
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
+import { Boxes, ClipboardList, PackageSearch, ShoppingCart, Warehouse } from "lucide-react";
 
+import { ModuleNavigation, moduleNavigationItemClassName } from "../ds";
 import { strings } from "../i18n";
 import { CatalogView } from "./CatalogView";
 import { OrderBookView } from "./OrderBookView";
@@ -46,34 +48,41 @@ const INVENTORY_ROOT = "/inventory";
  *  how much of it there is, then the two documents that change that number —
  *  what we have asked for, and what we have promised — and last the book that
  *  reads across every one of the latter at once. */
-const TABS: { path: string; label: () => string }[] = [
-  { path: "catalog", label: () => strings.inventoryTabCatalog },
-  { path: "stock", label: () => strings.inventoryTabStock },
-  { path: "purchase-orders", label: () => strings.inventoryTabPurchasing },
-  { path: "sales-orders", label: () => strings.inventoryTabSales },
-  { path: "order-book", label: () => strings.inventoryTabOrderBook },
+const TABS = [
+  { path: "catalog", label: () => strings.inventoryTabCatalog, Icon: PackageSearch },
+  { path: "stock", label: () => strings.inventoryTabStock, Icon: Warehouse },
+  { path: "purchase-orders", label: () => strings.inventoryTabPurchasing, Icon: ShoppingCart },
+  { path: "sales-orders", label: () => strings.inventoryTabSales, Icon: ClipboardList },
+  { path: "order-book", label: () => strings.inventoryTabOrderBook, Icon: Boxes },
 ];
 
 export function InventoryModule() {
   return (
     <div className={styles.inventory}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>{strings.moduleInventory}</h1>
+      <header className="shrink-0 border-b border-subtle bg-header px-8 pb-3 pt-5 max-sm:px-4 max-sm:pt-4">
+        <div className="flex items-center gap-3">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-accent ring-1 ring-inset ring-accent/10" aria-hidden="true">
+            <Boxes className="size-5" />
+          </span>
+          <div className="min-w-0">
+            <h1 className="m-0 text-2xl font-bold tracking-tight text-primary">{strings.moduleInventory}</h1>
+            <p className="m-0 mt-1 text-sm text-secondary">{strings.inventoryWorkspacePurpose}</p>
+          </div>
+        </div>
         {/* Scrolls horizontally on a phone by design; the responsive e2e
             sweep exempts marked strips from its width invariant. */}
-        <nav className={styles.tabs} data-allow-overflow="">
+        <ModuleNavigation className="mt-4 gap-1" label={strings.moduleInventory} data-allow-overflow="">
           {TABS.map((tab) => (
             <NavLink
               key={tab.path}
               to={`${INVENTORY_ROOT}/${tab.path}`}
-              className={({ isActive }) =>
-                isActive ? `${styles.tab} ${styles.tabActive}` : styles.tab
-              }
+              className={({ isActive }) => moduleNavigationItemClassName(isActive)}
             >
+              <tab.Icon className="size-4" aria-hidden="true" />
               {tab.label()}
             </NavLink>
           ))}
-        </nav>
+        </ModuleNavigation>
       </header>
 
       <Routes>

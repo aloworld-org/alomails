@@ -93,18 +93,33 @@ export function CrmModule() {
 
   return (
     <div className="relative flex h-full min-h-0 w-full flex-col bg-app">
-      <header className="shrink-0 border-b border-subtle bg-surface px-8 pb-5 pt-6 max-sm:px-4">
+      <header className="shrink-0 border-b border-subtle bg-header px-8 pb-5 pt-6 max-sm:px-4">
         <div className="flex flex-wrap items-start gap-5">
-          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent" aria-hidden="true">
+          <span
+            className="grid size-11 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent"
+            aria-hidden="true"
+          >
             <Handshake size={21} />
           </span>
           <div className="min-w-0 flex-1">
-            <h1 className="m-0 text-2xl font-semibold tracking-tight text-primary">{strings.moduleCrm}</h1>
-            <p className="mb-0 mt-1 text-sm text-secondary">{strings.crmWorkspaceSubtitle}</p>
+            <h1 className="m-0 text-2xl font-semibold tracking-tight text-primary">
+              {strings.moduleCrm}
+            </h1>
+            <p className="mb-0 mt-1 text-sm text-secondary">
+              {strings.crmWorkspaceSubtitle}
+            </p>
           </div>
           {board.pipelines.length > 1 && (
-            <Select value={board.pipelineId ?? ""} onChange={(event) => board.selectPipeline(event.target.value)} aria-label={strings.crmPipeline}>
-              {board.pipelines.map((pipeline) => <option key={pipeline.id} value={pipeline.id}>{pipeline.name}</option>)}
+            <Select
+              value={board.pipelineId ?? ""}
+              onChange={(event) => board.selectPipeline(event.target.value)}
+              aria-label={strings.crmPipeline}
+            >
+              {board.pipelines.map((pipeline) => (
+                <option key={pipeline.id} value={pipeline.id}>
+                  {pipeline.name}
+                </option>
+              ))}
             </Select>
           )}
           <Button
@@ -119,8 +134,15 @@ export function CrmModule() {
         <div className="mt-5 flex items-center gap-3">
           <ModuleNavigation label={strings.moduleCrm} className="flex-1">
             {TABS.map(({ path, label, Icon }) => (
-              <NavLink key={path} to={path} className={({ isActive }) => moduleNavigationItemClassName(isActive)}>
-                <Icon aria-hidden="true" />{label()}
+              <NavLink
+                key={path}
+                to={path}
+                className={({ isActive }) =>
+                  moduleNavigationItemClassName(isActive)
+                }
+              >
+                <Icon aria-hidden="true" />
+                {label()}
               </NavLink>
             ))}
           </ModuleNavigation>

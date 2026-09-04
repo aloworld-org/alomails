@@ -73,6 +73,107 @@
   min-height: 0;
   overflow: auto;
 }
+.catalogPage {
+  flex: 1;
+  width: 100%;
+  max-width: 108rem;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-8);
+}
+.listPage {
+  flex: 1;
+  width: 100%;
+  max-width: 108rem;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-8);
+}
+.listWorkspace {
+  overflow: visible;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+}
+.catalogWorkspace {
+  overflow: visible;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+}
+.pageHeading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-5);
+  padding: var(--space-5);
+}
+.pageHeadingCopy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+.pageTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.02em;
+}
+.pageSubtitle {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.catalogFilters {
+  min-height: auto;
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  background: var(--bg-raised);
+}
+.listFilters {
+  min-height: auto;
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  background: var(--bg-raised);
+}
+.statusFilter {
+  display: flex;
+  min-width: 14rem;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}
+
+@media (max-width: 48rem) {
+  .catalogPage {
+    padding: var(--space-4);
+  }
+  .listPage {
+    padding: var(--space-4);
+  }
+  .pageHeading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .headerActions > * {
+    flex: 1;
+  }
+  .statusFilter {
+    width: 100%;
+    min-width: 0;
+  }
+}
 
 /* A toolbar filter with its word in front of it: the label and the select
    read as one control. */

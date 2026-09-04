@@ -21,7 +21,16 @@
 // the point — so the copy here says *client project* wherever the distinction
 // carries weight, and the Tasks module's own strings are left alone.
 import { useCallback, useEffect, useState } from "react";
-import { NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import {
+  NavLink,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 
 import { useCustomers } from "../billing";
 import { Spinner } from "../ds";
@@ -52,7 +61,12 @@ import {
 import { TemplateDialog } from "./TemplateDialog";
 import { announceTimerChanged, onTimerChanged } from "./timerBus";
 import { WeekView } from "./WeekView";
-import type { Project, ProjectDraft, ProjectTemplate, RunningTimer } from "./types";
+import type {
+  Project,
+  ProjectDraft,
+  ProjectTemplate,
+  RunningTimer,
+} from "./types";
 
 /** Today as `YYYY-MM-DD` in the reader's own zone — the day a new project
  *  starts on unless they say otherwise. Local, not UTC: "today" is a fact about
@@ -86,7 +100,10 @@ function ProjectWorkspaceRoute({
   );
   if (status === "loading") {
     return (
-      <div className="flex min-h-[28rem] items-center justify-center" role="status">
+      <div
+        className="flex min-h-[28rem] items-center justify-center"
+        role="status"
+      >
         <Spinner size={24} />
       </div>
     );
@@ -96,7 +113,12 @@ function ProjectWorkspaceRoute({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <ProjectSalesOrigin projectId={projectId} />
-      <ProjectResources projectId={projectId} projectName={projects.find((project) => project.id === projectId)?.name ?? ""} />
+      <ProjectResources
+        projectId={projectId}
+        projectName={
+          projects.find((project) => project.id === projectId)?.name ?? ""
+        }
+      />
       <div className="min-h-0 flex-1">
         {workspaceView === undefined ? (
           <TasksModule projectId={projectId} />
@@ -131,12 +153,22 @@ export function ProjectsModule() {
   const [editingDetails, setEditingDetails] = useState<Project | null>(null);
   const [creating, setCreating] = useState(false);
   const [startingFromTemplate, setStartingFromTemplate] = useState(false);
-  const [invoiceHandoff, setInvoiceHandoff] = useState<{ project: Project; cutoff: string } | null>(null);
+  const [invoiceHandoff, setInvoiceHandoff] = useState<{
+    project: Project;
+    cutoff: string;
+  } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [projectsLoadFailed, setProjectsLoadFailed] = useState(false);
-  const requestedContextProjectId = projectContextId(location.pathname, searchParams.get("project"));
-  const contextProjectId = resolveProjectScope(requestedContextProjectId, loading, projects);
+  const requestedContextProjectId = projectContextId(
+    location.pathname,
+    searchParams.get("project"),
+  );
+  const contextProjectId = resolveProjectScope(
+    requestedContextProjectId,
+    loading,
+    projects,
+  );
   const [revision, setRevision] = useState(0);
   const [runningTimer, setRunningTimer] = useState<RunningTimer | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -186,16 +218,26 @@ export function ProjectsModule() {
   // URL that still claims otherwise and carrying that stale id to every tab.
   useEffect(() => {
     if (!searchParams.has("project")) return;
-    if (!shouldRemoveProjectScope(
-      requestedContextProjectId,
-      loading,
-      projectsLoadFailed,
-      contextProjectId,
-    )) return;
+    if (
+      !shouldRemoveProjectScope(
+        requestedContextProjectId,
+        loading,
+        projectsLoadFailed,
+        contextProjectId,
+      )
+    )
+      return;
     const next = new URLSearchParams(searchParams);
     next.delete("project");
     setSearchParams(next, { replace: true });
-  }, [contextProjectId, loading, projectsLoadFailed, requestedContextProjectId, searchParams, setSearchParams]);
+  }, [
+    contextProjectId,
+    loading,
+    projectsLoadFailed,
+    requestedContextProjectId,
+    searchParams,
+    setSearchParams,
+  ]);
 
   // The templates ride the same revision counter, because marking one, copying
   // one, or archiving a board all change what this list says.
@@ -206,7 +248,8 @@ export function ProjectsModule() {
         const list = await api.templates();
         if (live) setTemplates(list);
       } catch (err) {
-        if (live) setError(projectsMessage(err, strings.projectsTemplatesLoadFailed));
+        if (live)
+          setError(projectsMessage(err, strings.projectsTemplatesLoadFailed));
       }
     })();
     return () => {
@@ -234,7 +277,8 @@ export function ProjectsModule() {
    *  the customer is not one this reader can see — the screen says "unknown"
    *  rather than printing a raw id at somebody. */
   const customerName = useCallback(
-    (customerId: string) => customers.find((c) => c.id === customerId)?.name ?? null,
+    (customerId: string) =>
+      customers.find((c) => c.id === customerId)?.name ?? null,
     [customers],
   );
 
@@ -315,22 +359,21 @@ export function ProjectsModule() {
 
   return (
     <div className="relative flex h-full min-h-0 flex-col bg-app">
-      <header className="shrink-0 border-b border-subtle bg-surface px-8 pt-6 max-sm:px-4 max-sm:pt-4">
+      <header className="shrink-0 border-b border-subtle bg-header px-8 pt-6 max-sm:px-4 max-sm:pt-4">
         <div className="flex items-center gap-3">
-          <h1 className="m-0 text-2xl font-bold text-primary">{strings.moduleProjects}</h1>
+          <h1 className="m-0 text-2xl font-bold text-primary">
+            {strings.moduleProjects}
+          </h1>
           {loading && <Spinner size={16} />}
         </div>
-        <nav className="mt-4 flex min-w-0 gap-2 overflow-x-auto pb-px" aria-label={strings.moduleProjects}>
-          <NavLink
-            to="/projects/list"
-            className={projectTabClass}
-          >
+        <nav
+          className="mt-4 flex min-w-0 gap-2 overflow-x-auto pb-px"
+          aria-label={strings.moduleProjects}
+        >
+          <NavLink to="/projects/list" className={projectTabClass}>
             {strings.projectsTabList}
           </NavLink>
-          <NavLink
-            to="/projects/my-work"
-            className={projectTabClass}
-          >
+          <NavLink to="/projects/my-work" className={projectTabClass}>
             {strings.projectsTabMyWork}
           </NavLink>
           <NavLink
@@ -352,10 +395,7 @@ export function ProjectsModule() {
             {strings.projectsTabReports}
           </NavLink>
           {isAdmin && (
-            <NavLink
-              to="/projects/approvals"
-              className={projectTabClass}
-            >
+            <NavLink to="/projects/approvals" className={projectTabClass}>
               {strings.projectsTabApprovals}
             </NavLink>
           )}
@@ -374,33 +414,51 @@ export function ProjectsModule() {
               loading={loading}
               runningTimer={runningTimer}
               customerName={customerName}
-              isTemplate={(projectId) => templates.some((t) => t.projectId === projectId)}
+              isTemplate={(projectId) =>
+                templates.some((t) => t.projectId === projectId)
+              }
               onEditClient={setEditing}
               onEditProject={setEditingDetails}
               onStartTimer={(project) => void startTimer(project)}
               onStopTimer={() => void stopTimer()}
               onToggleTemplate={(project) => void toggleTemplate(project)}
-              onOpenTasks={(project) => navigate(`/projects/${encodeURIComponent(project.id)}/overview`)}
+              onOpenTasks={(project) =>
+                navigate(`/projects/${encodeURIComponent(project.id)}/overview`)
+              }
               onNewProject={() => setCreating(true)}
               onNewFromTemplate={() => setStartingFromTemplate(true)}
             />
           }
         />
-        <Route
-          path="my-work"
-          element={<TasksModule projectsContext />}
-        />
+        <Route path="my-work" element={<TasksModule projectsContext />} />
         <Route
           path="week"
-          element={<WeekView projects={projects} projectsLoading={loading} revision={revision} onChanged={bump} />}
+          element={
+            <WeekView
+              projects={projects}
+              projectsLoading={loading}
+              revision={revision}
+              onChanged={bump}
+            />
+          }
         />
         {/* The plan is a rendering of the board Tasks already shows — the same
             rows, grouped by the dates somebody planned them against — so it is
             everybody's tab too, and it names no person at all. */}
-        <Route path="plan" element={<Navigate to="/projects/timeline" replace />} />
+        <Route
+          path="plan"
+          element={<Navigate to="/projects/timeline" replace />}
+        />
         <Route
           path="timeline"
-          element={<PlanView projects={projects} projectsLoading={loading} revision={revision} onChanged={bump} />}
+          element={
+            <PlanView
+              projects={projects}
+              projectsLoading={loading}
+              revision={revision}
+              onChanged={bump}
+            />
+          }
         />
         {/* Profitability is a PROJECT aggregate — engagements, minutes and
             money, and never who worked when — so it is everybody's tab, not
@@ -408,47 +466,53 @@ export function ProjectsModule() {
             personal data). */}
         <Route
           path="reports"
-          element={(
+          element={
             <ReportView
               projects={projects}
               customerName={customerName}
               revision={revision}
-              onCreateInvoice={(project, cutoff) => setInvoiceHandoff({ project, cutoff })}
-              onOpenProject={(project) => navigate(`/projects/${encodeURIComponent(project.id)}/overview`)}
+              onCreateInvoice={(project, cutoff) =>
+                setInvoiceHandoff({ project, cutoff })
+              }
+              onOpenProject={(project) =>
+                navigate(`/projects/${encodeURIComponent(project.id)}/overview`)
+              }
             />
-          )}
+          }
         />
         {/* The admin tab is a route too, so a manager's bookmark works — and a
             non-admin who follows one gets the server's own `403` on the read
             rather than a page that pretends the inbox is empty. */}
         <Route
           path="approvals"
-          element={(
+          element={
             <ApprovalsView
               onDecided={bump}
-              onOpenProject={(projectId) => navigate(`/projects/${encodeURIComponent(projectId)}/overview`)}
+              onOpenProject={(projectId) =>
+                navigate(`/projects/${encodeURIComponent(projectId)}/overview`)
+              }
             />
-          )}
+          }
         />
         <Route
           path=":projectId"
-          element={(
+          element={
             <ProjectWorkspaceRoute
               projects={projects}
               projectsLoading={loading}
               projectsLoadFailed={projectsLoadFailed}
             />
-          )}
+          }
         />
         <Route
           path=":projectId/:workspaceView"
-          element={(
+          element={
             <ProjectWorkspaceRoute
               projects={projects}
               projectsLoading={loading}
               projectsLoadFailed={projectsLoadFailed}
             />
-          )}
+          }
         />
         {/* An unknown Projects path is a stale link, not an error page. */}
         <Route path="*" element={<Navigate to="/projects/list" replace />} />
@@ -461,13 +525,19 @@ export function ProjectsModule() {
           onClose={() => setStartingFromTemplate(false)}
           onCreated={(copy) => {
             setStartingFromTemplate(false);
-            navigate(`/projects/${encodeURIComponent(copy.projectId)}/overview`);
+            navigate(
+              `/projects/${encodeURIComponent(copy.projectId)}/overview`,
+            );
           }}
         />
       )}
 
       {creating && (
-        <NewProjectDialog customers={customers.filter((customer) => !customer.archived)} onClose={() => setCreating(false)} onCreate={createProject} />
+        <NewProjectDialog
+          customers={customers.filter((customer) => !customer.archived)}
+          onClose={() => setCreating(false)}
+          onCreate={createProject}
+        />
       )}
 
       {editing !== null && (

@@ -4,7 +4,7 @@
 // SERVER rules on content (blank required text, bad hrefs, empty lists) and
 // its 422 sentence is shown here verbatim, so there is exactly one copy of
 // every rule.
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import {
   Blocks,
@@ -101,7 +101,7 @@ import { sitesMessage, useSitesApi } from "./api";
 import { CopyContext, useCopyContext } from "./copyContext";
 import type { CopyContextValue } from "./copyContext";
 import { CustomCodeFields } from "./CustomCodeFields";
-import { ImageFields } from "./ImageFields";
+import { ImageFields, ImageUploadActivityContext } from "./ImageFields";
 import { DialogFrame, Field } from "./parts";
 import styles from "./SitesModule.module.css";
 
@@ -276,20 +276,22 @@ function TextField({
   copyPointer?: string;
 }) {
   return (
-    <Field label={label} hint={hint}>
-      <input
-        className={mono ? `${styles.input} ${styles.mono}` : styles.input}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        autoFocus={autoFocus}
-        {...(mono
-          ? { autoCapitalize: "none", autoCorrect: "off", spellCheck: false }
-          : {})}
-      />
+    <div className={styles.copyField}>
+      <Field label={label} hint={hint}>
+        <input
+          className={mono ? `${styles.input} ${styles.mono}` : styles.input}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          autoFocus={autoFocus}
+          {...(mono
+            ? { autoCapitalize: "none", autoCorrect: "off", spellCheck: false }
+            : {})}
+        />
+      </Field>
       {copyPointer !== undefined && (
         <CopyTools pointer={copyPointer} value={value} />
       )}
-    </Field>
+    </div>
   );
 }
 
@@ -307,17 +309,19 @@ function LongTextField({
   copyPointer?: string;
 }) {
   return (
-    <Field label={label} hint={hint}>
-      <textarea
-        className={`${styles.input} ${styles.textarea}`}
-        value={value}
-        rows={4}
-        onChange={(e) => onChange(e.target.value)}
-      />
+    <div className={styles.copyField}>
+      <Field label={label} hint={hint}>
+        <textarea
+          className={`${styles.input} ${styles.textarea}`}
+          value={value}
+          rows={4}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      </Field>
       {copyPointer !== undefined && (
         <CopyTools pointer={copyPointer} value={value} />
       )}
-    </Field>
+    </div>
   );
 }
 
@@ -511,7 +515,11 @@ function HeroColorSwatches({
   return (
     <div className="grid gap-2">
       <span className="text-sm font-semibold text-primary">{label}</span>
-      <div className="flex min-h-11 flex-wrap items-center gap-2" role="radiogroup" aria-label={label}>
+      <div
+        className="flex min-h-11 flex-wrap items-center gap-2"
+        role="radiogroup"
+        aria-label={label}
+      >
         {choices.map((option) => {
           const selected = option.value === value;
           return (
@@ -736,13 +744,35 @@ function NavFields({
     })),
   ];
   const appearanceOptions = [
-    { value: "background", label: strings.sitesThemeBackgroundColor, swatch: brandColors?.background },
-    { value: "text", label: strings.sitesThemeTextColor, swatch: brandColors?.text },
-    { value: "border", label: strings.sitesThemeBorderColor, swatch: brandColors?.border },
-    { value: "accent_1", label: strings.sitesThemeAccentColor(1), swatch: brandColors?.accent_1 },
+    {
+      value: "background",
+      label: strings.sitesThemeBackgroundColor,
+      swatch: brandColors?.background,
+    },
+    {
+      value: "text",
+      label: strings.sitesThemeTextColor,
+      swatch: brandColors?.text,
+    },
+    {
+      value: "border",
+      label: strings.sitesThemeBorderColor,
+      swatch: brandColors?.border,
+    },
+    {
+      value: "accent_1",
+      label: strings.sitesThemeAccentColor(1),
+      swatch: brandColors?.accent_1,
+    },
     ...(workspaceBrand.secondary === null
       ? []
-      : [{ value: "accent_2", label: strings.sitesThemeAccentColor(2), swatch: brandColors?.accent_2 }]),
+      : [
+          {
+            value: "accent_2",
+            label: strings.sitesThemeAccentColor(2),
+            swatch: brandColors?.accent_2,
+          },
+        ]),
     ...workspaceBrand.supporting.map((color, index) => ({
       value: `accent_${index + 3}`,
       label: color.name,
@@ -1246,13 +1276,35 @@ function HeroFields({
 
   const visibleColors = brandColors ?? HERO_FALLBACK_COLORS;
   const colorOptions = [
-    { value: "background", label: strings.sitesThemeBackgroundColor, swatch: visibleColors.background },
-    { value: "text", label: strings.sitesThemeTextColor, swatch: visibleColors.text },
-    { value: "border", label: strings.sitesThemeBorderColor, swatch: visibleColors.border },
-    { value: "accent_1", label: strings.sitesThemeAccentColor(1), swatch: visibleColors.accent_1 },
+    {
+      value: "background",
+      label: strings.sitesThemeBackgroundColor,
+      swatch: visibleColors.background,
+    },
+    {
+      value: "text",
+      label: strings.sitesThemeTextColor,
+      swatch: visibleColors.text,
+    },
+    {
+      value: "border",
+      label: strings.sitesThemeBorderColor,
+      swatch: visibleColors.border,
+    },
+    {
+      value: "accent_1",
+      label: strings.sitesThemeAccentColor(1),
+      swatch: visibleColors.accent_1,
+    },
     ...(workspaceBrand.secondary === null
       ? []
-      : [{ value: "accent_2", label: strings.sitesThemeAccentColor(2), swatch: visibleColors.accent_2 }]),
+      : [
+          {
+            value: "accent_2",
+            label: strings.sitesThemeAccentColor(2),
+            swatch: visibleColors.accent_2,
+          },
+        ]),
     ...workspaceBrand.supporting.map((color, index) => ({
       value: `accent_${index + 3}`,
       label: color.name,
@@ -1269,18 +1321,23 @@ function HeroFields({
   ) => draft.appearance?.[property] ?? "auto";
   const readable =
     brandColors === null ||
-    ([
-      [selectedColors.primary_button, draft.appearance?.primary_button_text],
+    (
       [
-        selectedColors.primary_button_hover,
-        draft.appearance?.primary_button_hover_text,
-      ],
-      [selectedColors.secondary_button, draft.appearance?.secondary_button_text],
-      [
-        selectedColors.secondary_button_hover,
-        draft.appearance?.secondary_button_hover_text,
-      ],
-    ] as const).every(
+        [selectedColors.primary_button, draft.appearance?.primary_button_text],
+        [
+          selectedColors.primary_button_hover,
+          draft.appearance?.primary_button_hover_text,
+        ],
+        [
+          selectedColors.secondary_button,
+          draft.appearance?.secondary_button_text,
+        ],
+        [
+          selectedColors.secondary_button_hover,
+          draft.appearance?.secondary_button_hover_text,
+        ],
+      ] as const
+    ).every(
       ([background, text]) =>
         text === undefined ||
         (contrastRatio(
@@ -1301,55 +1358,64 @@ function HeroFields({
   ] as const;
 
   return (
-    <div className="grid gap-6">
-      <fieldset>
-        <legend className="text-base font-semibold text-primary">
-          {strings.sitesHeroLayout}
-        </legend>
-        <p className="mb-4 mt-1 text-sm text-secondary">
-          {strings.sitesHeroLayoutHint}
-        </p>
-        <div
-          className="grid grid-cols-2 gap-3 md:grid-cols-3"
-          role="radiogroup"
-          aria-label={strings.sitesHeroLayout}
-        >
-          {layouts.map((layout) => {
-            const selected = draft.layout === layout.value;
-            return (
-              <button
-                key={layout.value}
-                type="button"
-                role="radio"
-                aria-checked={selected}
-                className={cx(
-                  "group relative min-w-0 rounded-2xl !border-2 !p-5 text-left transition-[background-color,border-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
-                  selected
-                    ? "!border-accent bg-accent-soft/50 shadow-sm"
-                    : "!border-default bg-surface hover:!border-accent/40 hover:bg-accent-soft/20",
-                )}
-                onClick={() => onChange({ ...draft, layout: layout.value })}
-              >
-                <HeroLayoutVisual layout={layout.value} />
-                <span className="mt-3 block min-h-10 text-sm font-semibold leading-5 text-primary">
-                  {layout.label}
-                </span>
-                {selected && (
-                  <span className="absolute right-5 top-5 grid size-5 place-items-center rounded-full bg-accent text-on-accent shadow-sm ring-2 ring-surface">
-                    <Check className="size-3" aria-hidden="true" />
+    <div className="grid gap-5">
+      <Card as="section" flat>
+        <fieldset>
+          <legend className="sr-only">{strings.sitesHeroLayout}</legend>
+          <HeroFormHeading icon={<PanelsTopLeft size={17} />}>
+            {strings.sitesHeroLayout}
+          </HeroFormHeading>
+          <p className="mb-5 mt-2 text-sm leading-6 text-secondary">
+            {strings.sitesHeroLayoutHint}
+          </p>
+          <div
+            className="grid grid-cols-2 gap-3 md:grid-cols-3"
+            role="radiogroup"
+            aria-label={strings.sitesHeroLayout}
+          >
+            {layouts.map((layout) => {
+              const selected = draft.layout === layout.value;
+              return (
+                <button
+                  key={layout.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  className={cx(
+                    "group min-w-0 overflow-hidden rounded-2xl !border !p-2 text-left transition-[background-color,border-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
+                    selected
+                      ? "!border-accent bg-surface shadow-md ring-1 ring-accent/10"
+                      : "!border-subtle bg-surface hover:!border-default hover:shadow-sm",
+                  )}
+                  onClick={() => onChange({ ...draft, layout: layout.value })}
+                >
+                  <HeroLayoutVisual layout={layout.value} />
+                  <span className="flex min-h-11 items-center justify-between gap-3 px-2 pt-2 text-sm font-semibold leading-5 text-primary">
+                    <span>{layout.label}</span>
+                    <span
+                      className={cx(
+                        "grid size-5 shrink-0 place-items-center rounded-full border transition-[background-color,border-color,color]",
+                        selected
+                          ? "border-accent bg-accent text-on-accent"
+                          : "border-default bg-surface text-transparent group-hover:border-accent/50",
+                      )}
+                      aria-hidden="true"
+                    >
+                      <Check className="size-3" />
+                    </span>
                   </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </fieldset>
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+      </Card>
 
       <Card as="section" flat>
-        <h3 className="m-0 text-base font-semibold text-primary">
+        <HeroFormHeading icon={<Settings2 size={17} />}>
           {strings.sitesHeroDesign}
-        </h3>
-        <div className="mt-4 grid gap-4 lg:grid-cols-3">
+        </HeroFormHeading>
+        <div className="mt-5 grid gap-5 lg:grid-cols-3">
           <HeroOptionRow
             label={strings.sitesHeroHeight}
             value={draft.height}
@@ -1444,13 +1510,18 @@ function HeroFields({
                   )}
                   onClick={() => onChange({ ...draft, button_count: count })}
                 >
-                  <span className="flex h-4 items-center justify-center gap-1" aria-hidden="true">
+                  <span
+                    className="flex h-4 items-center justify-center gap-1"
+                    aria-hidden="true"
+                  >
                     {Array.from({ length: count }, (_, index) => (
                       <span
                         key={index}
                         className={cx(
                           "h-2.5 rounded-full",
-                          index === 0 ? "w-8 bg-accent" : "w-6 border border-accent",
+                          index === 0
+                            ? "w-8 bg-accent"
+                            : "w-6 border border-accent",
                         )}
                       />
                     ))}
@@ -1464,92 +1535,103 @@ function HeroFields({
         </div>
         {draft.button_count > 0 && (
           <div className="mt-5 grid gap-4 lg:grid-cols-2">
-          {(
-            [
+            {(
               [
-                strings.sitesHeroPrimaryButtonColor,
-                "primary_button",
-                "primary_button_text",
-                "primary_button_hover",
-                "primary_button_hover_text",
-                true,
-              ],
-              [
-                strings.sitesHeroSecondaryButtonColor,
-                "secondary_button",
-                "secondary_button_text",
-                "secondary_button_hover",
-                "secondary_button_hover_text",
-                draft.button_count === 2,
-              ],
-            ] as const
-          ).filter(([, , , , , visible]) => visible)
-          .map(([title, color, text, hover, hoverText]) => (
-            <section key={title} className="rounded-xl border border-subtle bg-surface p-4">
-              <h4 className="m-0 text-sm font-semibold text-primary">{title}</h4>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <HeroColorSwatches
-                    label={`${title}: ${strings.sitesNavBackground}`}
-                    value={selectedColors[color]}
-                    options={colorOptions}
-                    onChange={(value) =>
-                      onChange({
-                        ...draft,
-                        appearance: {
-                          ...(draft.appearance ?? HERO_DEFAULT_ROLES),
-                          [color]: value as ThemeColorRole,
-                        },
-                      })
-                    }
-                  />
-                <HeroColorSwatches
-                    label={`${title}: ${strings.sitesNavText}`}
-                    value={explicitTextRole(text)}
-                    options={colorOptions}
-                    automatic
-                    onChange={(value) =>
-                      onChange({
-                        ...draft,
-                        appearance: {
-                          ...(draft.appearance ?? HERO_DEFAULT_ROLES),
-                          [text]: value === "auto" ? undefined : (value as ThemeColorRole),
-                        },
-                      })
-                    }
-                  />
-                <HeroColorSwatches
-                    label={`${title}: ${strings.sitesHeroHoverBackground}`}
-                    value={selectedColors[hover]}
-                    options={colorOptions}
-                    onChange={(value) =>
-                      onChange({
-                        ...draft,
-                        appearance: {
-                          ...(draft.appearance ?? HERO_DEFAULT_ROLES),
-                          [hover]: value as ThemeColorRole,
-                        },
-                      })
-                    }
-                  />
-                <HeroColorSwatches
-                    label={`${title}: ${strings.sitesHeroHoverText}`}
-                    value={explicitTextRole(hoverText)}
-                    options={colorOptions}
-                    automatic
-                    onChange={(value) =>
-                      onChange({
-                        ...draft,
-                        appearance: {
-                          ...(draft.appearance ?? HERO_DEFAULT_ROLES),
-                          [hoverText]:
-                            value === "auto" ? undefined : (value as ThemeColorRole),
-                        },
-                      })
-                    }
-                  />
-              </div>
-            </section>
-          ))}
+                [
+                  strings.sitesHeroPrimaryButtonColor,
+                  "primary_button",
+                  "primary_button_text",
+                  "primary_button_hover",
+                  "primary_button_hover_text",
+                  true,
+                ],
+                [
+                  strings.sitesHeroSecondaryButtonColor,
+                  "secondary_button",
+                  "secondary_button_text",
+                  "secondary_button_hover",
+                  "secondary_button_hover_text",
+                  draft.button_count === 2,
+                ],
+              ] as const
+            )
+              .filter(([, , , , , visible]) => visible)
+              .map(([title, color, text, hover, hoverText]) => (
+                <section
+                  key={title}
+                  className="rounded-xl border border-subtle bg-surface p-4"
+                >
+                  <h4 className="m-0 text-sm font-semibold text-primary">
+                    {title}
+                  </h4>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                    <HeroColorSwatches
+                      label={`${title}: ${strings.sitesNavBackground}`}
+                      value={selectedColors[color]}
+                      options={colorOptions}
+                      onChange={(value) =>
+                        onChange({
+                          ...draft,
+                          appearance: {
+                            ...(draft.appearance ?? HERO_DEFAULT_ROLES),
+                            [color]: value as ThemeColorRole,
+                          },
+                        })
+                      }
+                    />
+                    <HeroColorSwatches
+                      label={`${title}: ${strings.sitesNavText}`}
+                      value={explicitTextRole(text)}
+                      options={colorOptions}
+                      automatic
+                      onChange={(value) =>
+                        onChange({
+                          ...draft,
+                          appearance: {
+                            ...(draft.appearance ?? HERO_DEFAULT_ROLES),
+                            [text]:
+                              value === "auto"
+                                ? undefined
+                                : (value as ThemeColorRole),
+                          },
+                        })
+                      }
+                    />
+                    <HeroColorSwatches
+                      label={`${title}: ${strings.sitesHeroHoverBackground}`}
+                      value={selectedColors[hover]}
+                      options={colorOptions}
+                      onChange={(value) =>
+                        onChange({
+                          ...draft,
+                          appearance: {
+                            ...(draft.appearance ?? HERO_DEFAULT_ROLES),
+                            [hover]: value as ThemeColorRole,
+                          },
+                        })
+                      }
+                    />
+                    <HeroColorSwatches
+                      label={`${title}: ${strings.sitesHeroHoverText}`}
+                      value={explicitTextRole(hoverText)}
+                      options={colorOptions}
+                      automatic
+                      onChange={(value) =>
+                        onChange({
+                          ...draft,
+                          appearance: {
+                            ...(draft.appearance ?? HERO_DEFAULT_ROLES),
+                            [hoverText]:
+                              value === "auto"
+                                ? undefined
+                                : (value as ThemeColorRole),
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                </section>
+              ))}
           </div>
         )}
         {draft.button_count > 0 && !readable && (
@@ -1571,10 +1653,10 @@ function HeroFields({
       </Card>
 
       <Card as="section" flat>
-        <h3 className="m-0 text-base font-semibold text-primary">
+        <HeroFormHeading icon={<Sparkles size={17} />}>
           {strings.sitesHeroAnimation}
-        </h3>
-        <p className="mb-5 mt-1 text-sm text-secondary">
+        </HeroFormHeading>
+        <p className="mb-5 mt-2 text-sm leading-6 text-secondary">
           {strings.sitesHeroAnimationHint}
         </p>
         <div className="grid gap-5">
@@ -1753,7 +1835,7 @@ function HeroLayoutVisual({ layout }: { layout: HeroDraft["layout"] }) {
   return (
     <span
       className={cx(
-        "block h-24 overflow-hidden rounded-xl bg-raised p-3",
+        "block h-24 overflow-hidden rounded-xl border border-subtle bg-raised p-3 shadow-inner",
         (layout === "background" || layout === "video_background") &&
           "grid content-center bg-accent-soft px-5 text-center",
         layout === "editorial" && "border-l-4 border-accent",
@@ -1833,7 +1915,7 @@ function HeroOptionRow<T extends string>({
       <div
         className={cx(
           "grid",
-          illustrated ? "gap-2" : "gap-1 rounded-xl bg-raised p-1",
+          illustrated ? "gap-3" : "gap-1 rounded-xl bg-raised p-1",
           columns === 5
             ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
             : columns === 4
@@ -1854,14 +1936,14 @@ function HeroOptionRow<T extends string>({
               className={cx(
                 "min-w-0 text-sm font-medium transition-[background-color,border-color,color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
                 illustrated
-                  ? "relative flex min-h-28 flex-col items-center justify-between rounded-xl !border !border-default !p-4"
+                  ? "relative flex min-h-32 flex-col items-center justify-center rounded-xl !border !p-5"
                   : "min-h-11 rounded-lg !px-2",
                 selected && illustrated
                   ? "!border-accent bg-accent-soft/50 text-primary shadow-sm"
                   : selected
                     ? "bg-surface text-accent shadow-sm"
                     : illustrated
-                      ? "bg-surface text-secondary hover:!border-accent/40 hover:bg-accent-soft/20"
+                      ? "!border-subtle bg-surface text-secondary hover:!border-default hover:text-primary hover:shadow-md"
                       : "text-secondary hover:bg-surface/60 hover:text-primary",
               )}
               onClick={() => onChange(option)}
@@ -1870,7 +1952,7 @@ function HeroOptionRow<T extends string>({
               <span
                 className={cx(
                   "block whitespace-normal leading-tight",
-                  illustrated && "mt-3 min-h-8 text-center",
+                  illustrated && "mt-3 text-center",
                 )}
               >
                 {optionLabel}
@@ -1904,7 +1986,7 @@ function HeroControlVisual({
         data-hero-control-visual={`${group}:${value}`}
         aria-hidden="true"
       >
-        <span className="flex h-11 w-16 items-end rounded-lg border border-default bg-raised p-1.5">
+        <span className="flex h-11 w-16 items-end rounded-lg border border-subtle bg-raised p-1.5 shadow-inner">
           <span
             className={cx(
               "block w-full rounded-md border border-accent/40 bg-accent-soft",
@@ -2029,14 +2111,24 @@ function HeroControlVisual({
 function FeaturesLayoutVisual({ layout }: { layout: FeaturesDraft["layout"] }) {
   const cards = layout === "list" || layout === "spotlight" ? 3 : 4;
   return (
-    <span className={cx("grid h-20 w-32 gap-1.5 rounded-lg bg-raised p-2", layout === "list" ? "grid-cols-1" : "grid-cols-2")} aria-hidden="true">
+    <span
+      className={cx(
+        "grid h-20 w-32 gap-1.5 rounded-lg bg-raised p-2",
+        layout === "list" ? "grid-cols-1" : "grid-cols-2",
+      )}
+      aria-hidden="true"
+    >
       {Array.from({ length: cards }, (_, index) => (
-        <span key={index} className={cx(
-          "relative rounded-md border border-accent/25 bg-accent-soft",
-          layout === "bento" && index === 1 && "row-span-2",
-          layout === "spotlight" && index === 0 && "col-span-2 h-8",
-          layout === "steps" && "before:absolute before:left-1 before:top-1 before:size-2 before:rounded-full before:bg-accent",
-        )} />
+        <span
+          key={index}
+          className={cx(
+            "relative rounded-md border border-accent/25 bg-accent-soft",
+            layout === "bento" && index === 1 && "row-span-2",
+            layout === "spotlight" && index === 0 && "col-span-2 h-8",
+            layout === "steps" &&
+              "before:absolute before:left-1 before:top-1 before:size-2 before:rounded-full before:bg-accent",
+          )}
+        />
       ))}
     </span>
   );
@@ -2052,8 +2144,12 @@ function FeaturesFields({
   return (
     <>
       <Card as="section" flat>
-        <HeroFormHeading icon={<PanelsTopLeft size={17} />}>{strings.sitesFeaturesLayout}</HeroFormHeading>
-        <p className="mb-5 mt-2 text-sm text-secondary">{strings.sitesFeaturesLayoutHint}</p>
+        <HeroFormHeading icon={<PanelsTopLeft size={17} />}>
+          {strings.sitesFeaturesLayout}
+        </HeroFormHeading>
+        <p className="mb-5 mt-2 text-sm text-secondary">
+          {strings.sitesFeaturesLayoutHint}
+        </p>
         <HeroOptionRow
           label={strings.sitesFeaturesLayout}
           value={draft.layout}
@@ -2108,17 +2204,40 @@ function FeaturesFields({
   );
 }
 
-function TextImageLayoutVisual({ layout }: { layout: TextImageDraft["layout"] }) {
+function TextImageLayoutVisual({
+  layout,
+}: {
+  layout: TextImageDraft["layout"];
+}) {
   return (
-    <span className={cx("grid h-20 w-32 grid-cols-2 items-center gap-1.5 overflow-hidden rounded-lg bg-raised p-2", layout === "full_bleed" && "p-0")} aria-hidden="true">
-      <span className={cx(
-        "h-14 rounded-md bg-accent-soft",
-        layout === "overlap" && "z-10 translate-x-2",
-        layout === "framed" && "border-4 border-surface ring-1 ring-default",
-        layout === "full_bleed" && "h-full rounded-none",
-      )} />
-      <span className={cx("grid gap-1.5", layout === "overlap" && "z-20 -translate-x-2 rounded-md bg-surface p-2 shadow-sm")}>
-        <span className={cx("h-2 rounded-full bg-primary/70", layout === "editorial" && "h-3")} />
+    <span
+      className={cx(
+        "grid h-20 w-32 grid-cols-2 items-center gap-1.5 overflow-hidden rounded-lg bg-raised p-2",
+        layout === "full_bleed" && "p-0",
+      )}
+      aria-hidden="true"
+    >
+      <span
+        className={cx(
+          "h-14 rounded-md bg-accent-soft",
+          layout === "overlap" && "z-10 translate-x-2",
+          layout === "framed" && "border-4 border-surface ring-1 ring-default",
+          layout === "full_bleed" && "h-full rounded-none",
+        )}
+      />
+      <span
+        className={cx(
+          "grid gap-1.5",
+          layout === "overlap" &&
+            "z-20 -translate-x-2 rounded-md bg-surface p-2 shadow-sm",
+        )}
+      >
+        <span
+          className={cx(
+            "h-2 rounded-full bg-primary/70",
+            layout === "editorial" && "h-3",
+          )}
+        />
         <span className="h-1.5 rounded-full bg-secondary/25" />
         <span className="h-1.5 w-2/3 rounded-full bg-accent/60" />
       </span>
@@ -2136,22 +2255,37 @@ function TextImageFields({
   return (
     <>
       <Card as="section" flat>
-        <HeroFormHeading icon={<PanelsTopLeft size={17} />}>{strings.sitesTextImageLayout}</HeroFormHeading>
-        <p className="mb-5 mt-2 text-sm text-secondary">{strings.sitesTextImageLayoutHint}</p>
+        <HeroFormHeading icon={<PanelsTopLeft size={17} />}>
+          {strings.sitesTextImageLayout}
+        </HeroFormHeading>
+        <p className="mb-5 mt-2 text-sm text-secondary">
+          {strings.sitesTextImageLayoutHint}
+        </p>
         <HeroOptionRow
           label={strings.sitesTextImageLayout}
           value={draft.layout}
           columns={5}
           visual={(layout) => <TextImageLayoutVisual layout={layout} />}
-          options={[["split", strings.sitesTextImageLayoutSplit], ["overlap", strings.sitesTextImageLayoutOverlap], ["framed", strings.sitesTextImageLayoutFramed], ["editorial", strings.sitesTextImageLayoutEditorial], ["full_bleed", strings.sitesTextImageLayoutFullBleed]]}
+          options={[
+            ["split", strings.sitesTextImageLayoutSplit],
+            ["overlap", strings.sitesTextImageLayoutOverlap],
+            ["framed", strings.sitesTextImageLayoutFramed],
+            ["editorial", strings.sitesTextImageLayoutEditorial],
+            ["full_bleed", strings.sitesTextImageLayoutFullBleed],
+          ]}
           onChange={(layout) => onChange({ ...draft, layout })}
         />
         <div className="mt-5 max-w-md">
           <HeroOptionRow
             label={strings.sitesFieldImageSide}
             value={draft.image_side}
-            visual={(side) => <HeroControlVisual group="alignment" value={side} />}
-            options={[["left", strings.sitesSideLeft], ["right", strings.sitesSideRight]]}
+            visual={(side) => (
+              <HeroControlVisual group="alignment" value={side} />
+            )}
+            options={[
+              ["left", strings.sitesSideLeft],
+              ["right", strings.sitesSideRight],
+            ]}
             onChange={(image_side) => onChange({ ...draft, image_side })}
           />
         </div>
@@ -2265,7 +2399,9 @@ function GalleryLayoutVisual({ layout }: { layout: GalleryDraft["layout"] }) {
             "rounded-md bg-accent-soft",
             layout === "masonry" && item % 2 === 0 && "row-span-2",
             layout === "collage" && item === 0 && "col-span-2 row-span-2",
-            layout === "collage" && (item === 3 || item === 4 || item === 5) && "hidden",
+            layout === "collage" &&
+              (item === 3 || item === 4 || item === 5) &&
+              "hidden",
             layout === "spotlight" && item === 0 && "col-span-3",
             layout === "spotlight" && (item === 4 || item === 5) && "hidden",
           )}
@@ -2397,9 +2533,12 @@ function PricingLayoutVisual({ layout }: { layout: PricingDraft["layout"] }) {
           className={cx(
             "grid content-center gap-1 rounded-md border border-default bg-surface p-1",
             layout === "comparison" && "rounded-none",
-            layout === "featured" && item === 1 && "my-[-3px] border-2 border-accent",
+            layout === "featured" &&
+              item === 1 &&
+              "my-[-3px] border-2 border-accent",
             layout === "compact" && "grid-cols-[1fr_.7fr] items-center px-2",
-            layout === "editorial" && "rounded-none border-x-0 border-b-0 bg-transparent",
+            layout === "editorial" &&
+              "rounded-none border-x-0 border-b-0 bg-transparent",
           )}
         >
           <span className="h-1.5 rounded-full bg-primary/70" />
@@ -2509,11 +2648,38 @@ function PricingFields({
 
 function TeamLayoutVisual({ layout }: { layout: TeamDraft["layout"] }) {
   return (
-    <span className={cx("grid h-20 w-32 gap-1.5 overflow-hidden rounded-lg bg-raised p-2", layout === "roster" || layout === "compact" ? "grid-cols-1" : "grid-cols-3")} aria-hidden="true">
+    <span
+      className={cx(
+        "grid h-20 w-32 gap-1.5 overflow-hidden rounded-lg bg-raised p-2",
+        layout === "roster" || layout === "compact"
+          ? "grid-cols-1"
+          : "grid-cols-3",
+      )}
+      aria-hidden="true"
+    >
       {[0, 1, 2].map((item) => (
-        <span key={item} className={cx("grid place-items-center gap-1 rounded-md", layout === "cards" && "border border-default bg-surface p-1", layout === "spotlight" && item === 0 && "col-span-3 grid-cols-[2rem_1fr] justify-items-start", (layout === "roster" || layout === "compact") && "grid-cols-[2rem_1fr] justify-items-start")}>
-          <span className={cx("size-6 rounded-md bg-accent-soft", layout === "compact" && "rounded-full")} />
-          <span className="grid w-full gap-1"><span className="h-1.5 rounded-full bg-primary/70" /><span className="h-1 w-2/3 rounded-full bg-accent/60" /></span>
+        <span
+          key={item}
+          className={cx(
+            "grid place-items-center gap-1 rounded-md",
+            layout === "cards" && "border border-default bg-surface p-1",
+            layout === "spotlight" &&
+              item === 0 &&
+              "col-span-3 grid-cols-[2rem_1fr] justify-items-start",
+            (layout === "roster" || layout === "compact") &&
+              "grid-cols-[2rem_1fr] justify-items-start",
+          )}
+        >
+          <span
+            className={cx(
+              "size-6 rounded-md bg-accent-soft",
+              layout === "compact" && "rounded-full",
+            )}
+          />
+          <span className="grid w-full gap-1">
+            <span className="h-1.5 rounded-full bg-primary/70" />
+            <span className="h-1 w-2/3 rounded-full bg-accent/60" />
+          </span>
         </span>
       ))}
     </span>
@@ -2530,14 +2696,24 @@ function TeamFields({
   return (
     <>
       <Card as="section" flat>
-        <HeroFormHeading icon={<PanelsTopLeft size={17} />}>{strings.sitesTeamLayout}</HeroFormHeading>
-        <p className="mb-5 mt-2 text-sm text-secondary">{strings.sitesTeamLayoutHint}</p>
+        <HeroFormHeading icon={<PanelsTopLeft size={17} />}>
+          {strings.sitesTeamLayout}
+        </HeroFormHeading>
+        <p className="mb-5 mt-2 text-sm text-secondary">
+          {strings.sitesTeamLayoutHint}
+        </p>
         <HeroOptionRow
           label={strings.sitesTeamLayout}
           value={draft.layout}
           columns={5}
           visual={(layout) => <TeamLayoutVisual layout={layout} />}
-          options={[["portraits", strings.sitesTeamLayoutPortraits], ["cards", strings.sitesTeamLayoutCards], ["roster", strings.sitesTeamLayoutRoster], ["spotlight", strings.sitesTeamLayoutSpotlight], ["compact", strings.sitesTeamLayoutCompact]]}
+          options={[
+            ["portraits", strings.sitesTeamLayoutPortraits],
+            ["cards", strings.sitesTeamLayoutCards],
+            ["roster", strings.sitesTeamLayoutRoster],
+            ["spotlight", strings.sitesTeamLayoutSpotlight],
+            ["compact", strings.sitesTeamLayoutCompact],
+          ]}
           onChange={(layout) => onChange({ ...draft, layout })}
         />
       </Card>
@@ -3392,13 +3568,12 @@ function FooterFields({
   );
 }
 
-function TransitionVisual({
-  effect,
-}: {
-  effect: TransitionDraft["effect"];
-}) {
+function TransitionVisual({ effect }: { effect: TransitionDraft["effect"] }) {
   return (
-    <span className="relative block h-14 w-24 overflow-hidden rounded-lg bg-raised" aria-hidden="true">
+    <span
+      className="relative block h-14 w-24 overflow-hidden rounded-lg bg-raised"
+      aria-hidden="true"
+    >
       <span className="absolute inset-x-2 top-2 h-3 rounded bg-secondary/15" />
       <span
         className={cx(
@@ -3414,24 +3589,45 @@ function TransitionVisual({
   );
 }
 
-function TransitionDirectionVisual({ direction }: { direction: TransitionDraft["direction"] }) {
+function TransitionDirectionVisual({
+  direction,
+}: {
+  direction: TransitionDraft["direction"];
+}) {
   const rotation =
-    direction === "down" ? "rotate-180" : direction === "left" ? "-rotate-90" : direction === "right" ? "rotate-90" : "";
+    direction === "down"
+      ? "rotate-180"
+      : direction === "left"
+        ? "-rotate-90"
+        : direction === "right"
+          ? "rotate-90"
+          : "";
   return (
-    <span className={cx("grid h-12 w-12 place-items-center text-accent", rotation)} aria-hidden="true">
+    <span
+      className={cx("grid h-12 w-12 place-items-center text-accent", rotation)}
+      aria-hidden="true"
+    >
       <span className="text-2xl leading-none">↑</span>
     </span>
   );
 }
 
-function TransitionFields({ draft, onChange }: { draft: TransitionDraft; onChange: Change }) {
+function TransitionFields({
+  draft,
+  onChange,
+}: {
+  draft: TransitionDraft;
+  onChange: Change;
+}) {
   return (
     <div className="grid gap-5">
       <Card as="section" flat>
         <HeroFormHeading icon={<Sparkles size={17} />}>
           {strings.sitesTransitionStyle}
         </HeroFormHeading>
-        <p className="mb-5 mt-2 text-sm text-secondary">{strings.sitesTransitionStyleHint}</p>
+        <p className="mb-5 mt-2 text-sm text-secondary">
+          {strings.sitesTransitionStyleHint}
+        </p>
         <HeroOptionRow
           label={strings.sitesTransitionStyle}
           value={draft.effect}
@@ -3448,14 +3644,18 @@ function TransitionFields({ draft, onChange }: { draft: TransitionDraft; onChang
       </Card>
 
       <Card as="section" flat>
-        <h3 className="m-0 text-base font-semibold text-primary">{strings.sitesTransitionTiming}</h3>
+        <h3 className="m-0 text-base font-semibold text-primary">
+          {strings.sitesTransitionTiming}
+        </h3>
         <div className="mt-5 grid gap-5 lg:grid-cols-2">
           {draft.effect === "slide" && (
             <HeroOptionRow
               label={strings.sitesTransitionDirection}
               value={draft.direction}
               columns={4}
-              visual={(direction) => <TransitionDirectionVisual direction={direction} />}
+              visual={(direction) => (
+                <TransitionDirectionVisual direction={direction} />
+              )}
               options={[
                 ["up", strings.sitesTransitionUp],
                 ["down", strings.sitesTransitionDown],
@@ -3493,37 +3693,70 @@ function TransitionFields({ draft, onChange }: { draft: TransitionDraft; onChang
             checked={draft.animate_out}
             onChange={(animate_out) => onChange({ ...draft, animate_out })}
           />
-          <p className="mb-0 mt-2 text-xs text-secondary">{strings.sitesTransitionAnimateOutHint}</p>
+          <p className="mb-0 mt-2 text-xs text-secondary">
+            {strings.sitesTransitionAnimateOutHint}
+          </p>
         </div>
       </Card>
     </div>
   );
 }
 
-function SectionStyleVisual({ style }: { style: SectionPresentation["layout"] }) {
+function SectionStyleVisual({
+  style,
+}: {
+  style: SectionPresentation["layout"];
+}) {
   return (
-    <span className={cx("grid h-16 w-28 gap-1.5 rounded-lg bg-raised p-2", style === "editorial" && "border-l-4 border-accent")} aria-hidden="true">
+    <span
+      className={cx(
+        "grid h-16 w-28 gap-1.5 rounded-lg bg-raised p-2",
+        style === "editorial" && "border-l-4 border-accent",
+      )}
+      aria-hidden="true"
+    >
       <span className="h-2 w-3/5 rounded-full bg-primary/70" />
-      <span className={cx("grid grid-cols-2 gap-1", style === "minimal" && "opacity-55")}>
+      <span
+        className={cx(
+          "grid grid-cols-2 gap-1",
+          style === "minimal" && "opacity-55",
+        )}
+      >
         {[0, 1].map((item) => (
-          <span key={item} className={cx("rounded-md bg-accent-soft", style === "cards" && "border border-accent/30 shadow-sm", style === "clean" ? "h-8" : "h-7")} />
+          <span
+            key={item}
+            className={cx(
+              "rounded-md bg-accent-soft",
+              style === "cards" && "border border-accent/30 shadow-sm",
+              style === "clean" ? "h-8" : "h-7",
+            )}
+          />
         ))}
       </span>
     </span>
   );
 }
 
-function SectionEntranceVisual({ entrance }: { entrance: SectionPresentation["entrance"] }) {
+function SectionEntranceVisual({
+  entrance,
+}: {
+  entrance: SectionPresentation["entrance"];
+}) {
   return (
-    <span className="relative block h-12 w-20 overflow-hidden" aria-hidden="true">
+    <span
+      className="relative block h-12 w-20 overflow-hidden"
+      aria-hidden="true"
+    >
       <span className="absolute inset-x-1 top-1 h-2 rounded-full bg-secondary/15" />
-      <span className={cx(
-        "absolute inset-x-1 bottom-1 h-6 rounded-md border border-accent/30 bg-accent-soft",
-        entrance === "fade_up" && "translate-y-1 opacity-60",
-        entrance === "slide_in" && "translate-x-2 opacity-70",
-        entrance === "scale_in" && "scale-90 opacity-70",
-        entrance === "reveal" && "[clip-path:inset(0_0_35%_0)]",
-      )} />
+      <span
+        className={cx(
+          "absolute inset-x-1 bottom-1 h-6 rounded-md border border-accent/30 bg-accent-soft",
+          entrance === "fade_up" && "translate-y-1 opacity-60",
+          entrance === "slide_in" && "translate-x-2 opacity-70",
+          entrance === "scale_in" && "scale-90 opacity-70",
+          entrance === "reveal" && "[clip-path:inset(0_0_35%_0)]",
+        )}
+      />
     </span>
   );
 }
@@ -3542,21 +3775,48 @@ function PresentationFields({
   useEffect(() => {
     if (siteId === "") return;
     let current = true;
-    void Promise.all([api.site(siteId), api.themePresets()]).then(([site, presets]) => {
-      if (!current) return;
-      const preset = presets.find((item) => item.id === (site.theme.preset ?? presets[0]?.id));
-      if (preset !== undefined) setBrandColors(themeColors(preset, site.theme.colors));
-    }).catch(() => undefined);
-    return () => { current = false; };
+    void Promise.all([api.site(siteId), api.themePresets()])
+      .then(([site, presets]) => {
+        if (!current) return;
+        const preset = presets.find(
+          (item) => item.id === (site.theme.preset ?? presets[0]?.id),
+        );
+        if (preset !== undefined)
+          setBrandColors(themeColors(preset, site.theme.colors));
+      })
+      .catch(() => undefined);
+    return () => {
+      current = false;
+    };
   }, [api, siteId]);
 
   const colors = brandColors ?? HERO_FALLBACK_COLORS;
   const colorOptions = [
-    { value: "background", label: strings.sitesThemeBackgroundColor, swatch: colors.background },
+    {
+      value: "background",
+      label: strings.sitesThemeBackgroundColor,
+      swatch: colors.background,
+    },
     { value: "text", label: strings.sitesThemeTextColor, swatch: colors.text },
-    { value: "border", label: strings.sitesThemeBorderColor, swatch: colors.border },
-    { value: "accent_1", label: strings.sitesThemeAccentColor(1), swatch: colors.accent_1 },
-    ...(workspaceBrand.secondary === null ? [] : [{ value: "accent_2", label: strings.sitesThemeAccentColor(2), swatch: colors.accent_2 }]),
+    {
+      value: "border",
+      label: strings.sitesThemeBorderColor,
+      swatch: colors.border,
+    },
+    {
+      value: "accent_1",
+      label: strings.sitesThemeAccentColor(1),
+      swatch: colors.accent_1,
+    },
+    ...(workspaceBrand.secondary === null
+      ? []
+      : [
+          {
+            value: "accent_2",
+            label: strings.sitesThemeAccentColor(2),
+            swatch: colors.accent_2,
+          },
+        ]),
     ...workspaceBrand.supporting.map((color, index) => ({
       value: `accent_${index + 3}`,
       label: color.name,
@@ -3566,7 +3826,15 @@ function PresentationFields({
   const p = draft.presentation;
   const update = (presentation: SectionPresentation) =>
     onChange({ ...draft, presentation } as SectionDraft);
-  const hasButtons = ["pricing", "cta", "contact_form", "catalog", "booking", "tickets", "shop"].includes(draft.type);
+  const hasButtons = [
+    "pricing",
+    "cta",
+    "contact_form",
+    "catalog",
+    "booking",
+    "tickets",
+    "shop",
+  ].includes(draft.type);
 
   return (
     <div className="mt-5 grid gap-5">
@@ -3574,7 +3842,9 @@ function PresentationFields({
         <HeroFormHeading icon={<PanelsTopLeft size={17} />}>
           {strings.sitesSectionDesign}
         </HeroFormHeading>
-        <p className="mb-5 mt-2 text-sm text-secondary">{strings.sitesSectionDesignHint}</p>
+        <p className="mb-5 mt-2 text-sm text-secondary">
+          {strings.sitesSectionDesignHint}
+        </p>
         <HeroOptionRow
           label={strings.sitesSectionLayoutStyle}
           value={p.layout}
@@ -3589,42 +3859,172 @@ function PresentationFields({
           onChange={(layout) => update({ ...p, layout })}
         />
         <div className="mt-5 grid gap-5 lg:grid-cols-3">
-          <HeroOptionRow label={strings.sitesSectionSpacing} value={p.spacing} visual={(value) => <HeroControlVisual group="height" value={value === "generous" ? "tall" : value} />} options={[["compact", strings.sitesHeroHeightCompact], ["standard", strings.sitesHeroHeightStandard], ["generous", strings.sitesSectionSpacingGenerous]]} onChange={(spacing) => update({ ...p, spacing })} />
-          <HeroOptionRow label={strings.sitesHeroContentWidth} value={p.width} visual={(value) => <HeroControlVisual group="width" value={value} />} options={[["narrow", strings.sitesHeroContentWidthNarrow], ["balanced", strings.sitesHeroContentWidthBalanced], ["wide", strings.sitesHeroContentWidthWide]]} onChange={(width) => update({ ...p, width })} />
-          <HeroOptionRow label={strings.sitesHeroAlignment} value={p.alignment} visual={(value) => <HeroControlVisual group="alignment" value={value} />} options={[["left", strings.sitesHeroAlignmentLeft], ["center", strings.sitesHeroAlignmentCenter]]} onChange={(alignment) => update({ ...p, alignment })} />
+          <HeroOptionRow
+            label={strings.sitesSectionSpacing}
+            value={p.spacing}
+            visual={(value) => (
+              <HeroControlVisual
+                group="height"
+                value={value === "generous" ? "tall" : value}
+              />
+            )}
+            options={[
+              ["compact", strings.sitesHeroHeightCompact],
+              ["standard", strings.sitesHeroHeightStandard],
+              ["generous", strings.sitesSectionSpacingGenerous],
+            ]}
+            onChange={(spacing) => update({ ...p, spacing })}
+          />
+          <HeroOptionRow
+            label={strings.sitesHeroContentWidth}
+            value={p.width}
+            visual={(value) => (
+              <HeroControlVisual group="width" value={value} />
+            )}
+            options={[
+              ["narrow", strings.sitesHeroContentWidthNarrow],
+              ["balanced", strings.sitesHeroContentWidthBalanced],
+              ["wide", strings.sitesHeroContentWidthWide],
+            ]}
+            onChange={(width) => update({ ...p, width })}
+          />
+          <HeroOptionRow
+            label={strings.sitesHeroAlignment}
+            value={p.alignment}
+            visual={(value) => (
+              <HeroControlVisual group="alignment" value={value} />
+            )}
+            options={[
+              ["left", strings.sitesHeroAlignmentLeft],
+              ["center", strings.sitesHeroAlignmentCenter],
+            ]}
+            onChange={(alignment) => update({ ...p, alignment })}
+          />
         </div>
       </Card>
 
       <Card as="section" flat>
-        <HeroFormHeading icon={<Palette size={17} />}>{strings.sitesHeroColors}</HeroFormHeading>
-        <p className="mb-5 mt-2 text-sm text-secondary">{strings.sitesSectionColorsHint}</p>
+        <HeroFormHeading icon={<Palette size={17} />}>
+          {strings.sitesHeroColors}
+        </HeroFormHeading>
+        <p className="mb-5 mt-2 text-sm text-secondary">
+          {strings.sitesSectionColorsHint}
+        </p>
         <div className="grid gap-5 sm:grid-cols-2">
-          <HeroColorSwatches label={strings.sitesSectionBackground} value={p.background} options={colorOptions} onChange={(background) => update({ ...p, background: background as ThemeColorRole })} />
-          <HeroColorSwatches label={strings.sitesSectionText} value={p.text} options={colorOptions} onChange={(text) => update({ ...p, text: text as ThemeColorRole })} />
+          <HeroColorSwatches
+            label={strings.sitesSectionBackground}
+            value={p.background}
+            options={colorOptions}
+            onChange={(background) =>
+              update({ ...p, background: background as ThemeColorRole })
+            }
+          />
+          <HeroColorSwatches
+            label={strings.sitesSectionText}
+            value={p.text}
+            options={colorOptions}
+            onChange={(text) => update({ ...p, text: text as ThemeColorRole })}
+          />
         </div>
         {hasButtons && (
           <div className="mt-5 grid gap-5 rounded-xl border border-subtle bg-raised p-4 sm:grid-cols-2 lg:grid-cols-4">
-            <HeroColorSwatches label={strings.sitesHeroPrimaryButtonColor} value={p.button} options={colorOptions} onChange={(button) => update({ ...p, button: button as ThemeColorRole })} />
-            <HeroColorSwatches label={strings.sitesHeroPrimaryButtonText} value={p.button_text ?? "auto"} options={colorOptions} automatic onChange={(button_text) => update({ ...p, button_text: button_text === "auto" ? undefined : button_text as ThemeColorRole })} />
-            <HeroColorSwatches label={strings.sitesHeroHoverBackground} value={p.button_hover} options={colorOptions} onChange={(button_hover) => update({ ...p, button_hover: button_hover as ThemeColorRole })} />
-            <HeroColorSwatches label={strings.sitesHeroHoverText} value={p.button_hover_text ?? "auto"} options={colorOptions} automatic onChange={(button_hover_text) => update({ ...p, button_hover_text: button_hover_text === "auto" ? undefined : button_hover_text as ThemeColorRole })} />
+            <HeroColorSwatches
+              label={strings.sitesHeroPrimaryButtonColor}
+              value={p.button}
+              options={colorOptions}
+              onChange={(button) =>
+                update({ ...p, button: button as ThemeColorRole })
+              }
+            />
+            <HeroColorSwatches
+              label={strings.sitesHeroPrimaryButtonText}
+              value={p.button_text ?? "auto"}
+              options={colorOptions}
+              automatic
+              onChange={(button_text) =>
+                update({
+                  ...p,
+                  button_text:
+                    button_text === "auto"
+                      ? undefined
+                      : (button_text as ThemeColorRole),
+                })
+              }
+            />
+            <HeroColorSwatches
+              label={strings.sitesHeroHoverBackground}
+              value={p.button_hover}
+              options={colorOptions}
+              onChange={(button_hover) =>
+                update({ ...p, button_hover: button_hover as ThemeColorRole })
+              }
+            />
+            <HeroColorSwatches
+              label={strings.sitesHeroHoverText}
+              value={p.button_hover_text ?? "auto"}
+              options={colorOptions}
+              automatic
+              onChange={(button_hover_text) =>
+                update({
+                  ...p,
+                  button_hover_text:
+                    button_hover_text === "auto"
+                      ? undefined
+                      : (button_hover_text as ThemeColorRole),
+                })
+              }
+            />
           </div>
         )}
       </Card>
 
       <Card as="section" flat>
-        <HeroFormHeading icon={<Sparkles size={17} />}>{strings.sitesHeroAnimation}</HeroFormHeading>
-        <p className="mb-5 mt-2 text-sm text-secondary">{strings.sitesSectionAnimationHint}</p>
+        <HeroFormHeading icon={<Sparkles size={17} />}>
+          {strings.sitesHeroAnimation}
+        </HeroFormHeading>
+        <p className="mb-5 mt-2 text-sm text-secondary">
+          {strings.sitesSectionAnimationHint}
+        </p>
         <HeroOptionRow
           label={strings.sitesSectionEntrance}
           value={p.entrance}
           columns={5}
           visual={(entrance) => <SectionEntranceVisual entrance={entrance} />}
-          options={[["none", strings.sitesHeroAnimationNone], ["fade_up", strings.sitesHeroTextFadeUp], ["slide_in", strings.sitesHeroTextSlideIn], ["scale_in", strings.sitesTransitionScale], ["reveal", strings.sitesTransitionReveal]]}
+          options={[
+            ["none", strings.sitesHeroAnimationNone],
+            ["fade_up", strings.sitesHeroTextFadeUp],
+            ["slide_in", strings.sitesHeroTextSlideIn],
+            ["scale_in", strings.sitesTransitionScale],
+            ["reveal", strings.sitesTransitionReveal],
+          ]}
           onChange={(entrance) => update({ ...p, entrance })}
         />
-        {p.entrance !== "none" && <div className="mt-5 max-w-xl"><HeroOptionRow label={strings.sitesHeroAnimationSpeed} value={p.speed} visual={(speed) => <HeroControlVisual group="pace" value={speed} />} options={[["quick", strings.sitesHeroAnimationQuick], ["smooth", strings.sitesHeroAnimationSmooth], ["relaxed", strings.sitesHeroAnimationRelaxed]]} onChange={(speed) => update({ ...p, speed })} /></div>}
-        <div className="mt-4 flex justify-end"><Button variant="ghost" size="sm" onClick={() => update(DEFAULT_SECTION_PRESENTATION)}>{strings.sitesSectionUseDefaults}</Button></div>
+        {p.entrance !== "none" && (
+          <div className="mt-5 max-w-xl">
+            <HeroOptionRow
+              label={strings.sitesHeroAnimationSpeed}
+              value={p.speed}
+              visual={(speed) => (
+                <HeroControlVisual group="pace" value={speed} />
+              )}
+              options={[
+                ["quick", strings.sitesHeroAnimationQuick],
+                ["smooth", strings.sitesHeroAnimationSmooth],
+                ["relaxed", strings.sitesHeroAnimationRelaxed],
+              ]}
+              onChange={(speed) => update({ ...p, speed })}
+            />
+          </div>
+        )}
+        <div className="mt-4 flex justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => update(DEFAULT_SECTION_PRESENTATION)}
+          >
+            {strings.sitesSectionUseDefaults}
+          </Button>
+        </div>
       </Card>
     </div>
   );
@@ -3704,7 +4104,10 @@ export function SectionFormFields(props: {
     <>
       <SectionSpecificFields {...props} />
       {"presentation" in draft && (
-        <PresentationFields draft={draft as SectionDraft & PresentableDraft} onChange={onChange} />
+        <PresentationFields
+          draft={draft as SectionDraft & PresentableDraft}
+          onChange={onChange}
+        />
       )}
     </>
   );
@@ -3712,12 +4115,60 @@ export function SectionFormFields(props: {
 
 // ---- the dialog -------------------------------------------------------------
 
-/** The three sections that name something else of the site cannot be saved
- *  until they name it: a section pointing at nothing would be a page that
- *  publishes an empty hole, or refuses the publish outright. Every other kind
- *  is ruled on by the server alone. */
+/** Keep Save aligned with the server's minimum content rules. A button that
+ *  looks available and then returns a predictable "required" refusal is a
+ *  broken step, not useful validation. The server remains authoritative for
+ *  lengths, URLs and concurrent changes. */
 function canSubmit(draft: SectionDraft): boolean {
   switch (draft.type) {
+    case "hero":
+      return draft.heading.trim() !== "";
+    case "features":
+      return (
+        draft.items.length > 0 &&
+        draft.items.every(
+          (item) => item.title.trim() !== "" && item.body.trim() !== "",
+        )
+      );
+    case "text_image":
+      return draft.body.trim() !== "" && draft.image.blob_id.trim() !== "";
+    case "gallery":
+      return (
+        draft.images.length > 0 &&
+        draft.images.every((image) => image.blob_id.trim() !== "")
+      );
+    case "testimonials":
+      return (
+        draft.items.length > 0 &&
+        draft.items.every(
+          (item) => item.quote.trim() !== "" && item.author.trim() !== "",
+        )
+      );
+    case "pricing":
+      return (
+        draft.tiers.length > 0 &&
+        draft.tiers.every(
+          (tier) => tier.name.trim() !== "" && tier.price.trim() !== "",
+        )
+      );
+    case "team":
+      return (
+        draft.members.length > 0 &&
+        draft.members.every((member) => member.name.trim() !== "")
+      );
+    case "faq":
+      return (
+        draft.items.length > 0 &&
+        draft.items.every(
+          (item) => item.question.trim() !== "" && item.answer.trim() !== "",
+        )
+      );
+    case "cta":
+      return (
+        draft.heading.trim() !== "" &&
+        draft.button.label.trim() !== "" &&
+        draft.button.href.trim() !== ""
+      );
     case "collection":
       return draft.collection_id !== "";
     case "catalog":
@@ -3762,6 +4213,12 @@ export function SectionFormDialog({
   const [draft, setDraft] = useState<SectionDraft>(() =>
     toDraft(kind, initial),
   );
+  const activeUploads = useRef(0);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const reportUploadActivity = useCallback((delta: 1 | -1) => {
+    activeUploads.current = Math.max(0, activeUploads.current + delta);
+    setUploadingImage(activeUploads.current > 0);
+  }, []);
   const label = kindLabel(kind);
   return (
     <DialogFrame
@@ -3774,20 +4231,22 @@ export function SectionFormDialog({
       subtitle={kindDescription(kind)}
       error={error}
       busy={busy}
-      canSubmit={canSubmit(draft)}
+      canSubmit={canSubmit(draft) && !uploadingImage}
       submitLabel={strings.sitesSaveSection}
       wide={kind === "nav" || kind === "hero" || kind === "transition"}
       onClose={onClose}
       onSubmit={() => onSave(toSection(draft))}
     >
-      <CopyContext.Provider value={copyContext ?? null}>
-        <SectionFormFields
-          draft={draft}
-          onChange={setDraft}
-          currentPage={currentPage}
-          currentSections={currentSections}
-        />
-      </CopyContext.Provider>
+      <ImageUploadActivityContext.Provider value={reportUploadActivity}>
+        <CopyContext.Provider value={copyContext ?? null}>
+          <SectionFormFields
+            draft={draft}
+            onChange={setDraft}
+            currentPage={currentPage}
+            currentSections={currentSections}
+          />
+        </CopyContext.Provider>
+      </ImageUploadActivityContext.Provider>
     </DialogFrame>
   );
 }

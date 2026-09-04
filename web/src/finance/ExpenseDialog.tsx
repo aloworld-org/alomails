@@ -197,7 +197,11 @@ export function ExpenseDialog({
       }
     >
       <div className={styles.row}>
-        <Field label={strings.financeSpentOn} hint={strings.financeSpentOnHint}>
+        <Field
+          label={strings.financeSpentOn}
+          hint={strings.financeSpentOnHint}
+          hintDisplay="tooltip"
+        >
           {(control) => (
             <DatePicker
               {...control}
@@ -206,7 +210,11 @@ export function ExpenseDialog({
             />
           )}
         </Field>
-        <Field label={strings.financeMethod} hint={strings.financeMethodHint}>
+        <Field
+          label={strings.financeMethod}
+          hint={strings.financeMethodHint}
+          hintDisplay="tooltip"
+        >
           {(control) => (
             <Select
               {...control}
@@ -224,7 +232,11 @@ export function ExpenseDialog({
         </Field>
       </div>
 
-      <Field label={strings.financeMerchant} hint={strings.financeMerchantHint}>
+      <Field
+        label={strings.financeMerchant}
+        hint={strings.financeMerchantHint}
+        hintDisplay="tooltip"
+      >
         {(control) => (
           <Input
             {...control}
@@ -250,7 +262,7 @@ export function ExpenseDialog({
         )}
       </Field>
 
-      <div className={styles.row}>
+      <div className={styles.moneyRow}>
         <Field label={strings.financeGross} error={grossError}>
           {(control) => (
             <Input
@@ -265,6 +277,7 @@ export function ExpenseDialog({
         <Field
           label={strings.financeVat}
           hint={strings.financeVatHint}
+          hintDisplay="tooltip"
           error={vatError}
         >
           {(control) => (
@@ -279,6 +292,7 @@ export function ExpenseDialog({
         <Field
           label={strings.financeVatRate}
           hint={strings.financeVatRateHint}
+          hintDisplay="tooltip"
           error={rateError}
         >
           {(control) => (
@@ -296,6 +310,7 @@ export function ExpenseDialog({
         <Field
           label={strings.financeCurrency}
           hint={strings.financeCurrencyHint}
+          hintDisplay="tooltip"
         >
           {(control) => (
             <Input
@@ -306,7 +321,11 @@ export function ExpenseDialog({
             />
           )}
         </Field>
-        <Field label={strings.financeProject} hint={strings.financeProjectHint}>
+        <Field
+          label={strings.financeProject}
+          hint={strings.financeProjectHint}
+          hintDisplay="tooltip"
+        >
           {(control) => (
             // "No engagement" is an answer, not a prompt: most claims have none.
             <Select

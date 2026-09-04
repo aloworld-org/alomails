@@ -332,80 +332,82 @@ export function TasksModule({
           onClose={closeSidebar}
           label={strings.taskProjects}
         >
-        <aside
-          className={
-            isMobile
-              ? "flex w-full flex-col gap-4 overflow-y-auto border-r border-default bg-sunken p-4"
-              : "flex w-60 shrink-0 flex-col gap-4 overflow-y-auto border-r border-default bg-sunken p-4 max-md:w-52 max-sm:hidden"
-          }
-        >
-          <button
-            type="button"
-            className={`flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-primary !no-underline transition-colors hover:bg-raised hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${mode.type === "plate" ? "bg-selected font-medium" : ""}`}
-            onClick={() => {
-              setMode({ type: "plate" });
-              setSidebarOpen(false);
-            }}
+          <aside
+            className={
+              isMobile
+                ? "flex w-full flex-col gap-4 overflow-y-auto border-r border-default bg-sunken p-4"
+                : "flex w-60 shrink-0 flex-col gap-4 overflow-y-auto border-r border-default bg-sunken p-4 max-md:w-52 max-sm:hidden"
+            }
           >
-            <Sun size={16} />{" "}
-            {projectsContext ? strings.projectsTabMyWork : strings.taskMyPlate}
-          </button>
-          <button
-            type="button"
-            className={`flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-primary !no-underline transition-colors hover:bg-raised hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${mode.type === "proposals" ? "bg-selected font-medium" : ""}`}
-            onClick={() => {
-              void loadProposals();
-              setMode({ type: "proposals" });
-              setSidebarOpen(false);
-            }}
-          >
-            <Sparkles size={16} /> {strings.taskProposals}
-            {proposals.length > 0 && (
-              <span className="ml-auto inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-semibold text-on-accent">
-                {proposals.length}
-              </span>
-            )}
-          </button>
+            <button
+              type="button"
+              className={`flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-primary !no-underline transition-colors hover:bg-raised hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${mode.type === "plate" ? "bg-selected font-medium" : ""}`}
+              onClick={() => {
+                setMode({ type: "plate" });
+                setSidebarOpen(false);
+              }}
+            >
+              <Sun size={16} />{" "}
+              {projectsContext
+                ? strings.projectsTabMyWork
+                : strings.taskMyPlate}
+            </button>
+            <button
+              type="button"
+              className={`flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-primary !no-underline transition-colors hover:bg-raised hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${mode.type === "proposals" ? "bg-selected font-medium" : ""}`}
+              onClick={() => {
+                void loadProposals();
+                setMode({ type: "proposals" });
+                setSidebarOpen(false);
+              }}
+            >
+              <Sparkles size={16} /> {strings.taskProposals}
+              {proposals.length > 0 && (
+                <span className="ml-auto inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-semibold text-on-accent">
+                  {proposals.length}
+                </span>
+              )}
+            </button>
 
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center justify-between px-1 text-xs font-semibold uppercase tracking-wide text-secondary">
-              <span>{strings.taskProjects}</span>
-              <button
-                type="button"
-                className="inline-flex size-8 items-center justify-center rounded-md text-secondary !no-underline transition-colors hover:bg-raised hover:text-accent hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                onClick={() => navigate("/projects/list?new=1")}
-                aria-label={strings.taskNewProject}
-                title={strings.taskNewProject}
-              >
-                <Plus size={15} />
-              </button>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between px-1 text-xs font-semibold uppercase tracking-wide text-secondary">
+                <span>{strings.taskProjects}</span>
+                <button
+                  type="button"
+                  className="inline-flex size-8 items-center justify-center rounded-md text-secondary !no-underline transition-colors hover:bg-raised hover:text-accent hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  onClick={() => navigate("/projects/list?new=1")}
+                  aria-label={strings.taskNewProject}
+                  title={strings.taskNewProject}
+                >
+                  <Plus size={15} />
+                </button>
+              </div>
+              {projects.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={`flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-primary !no-underline transition-colors hover:bg-raised hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                    mode.type === "project" && mode.id === p.id
+                      ? "bg-selected font-medium"
+                      : ""
+                  }`}
+                  onClick={() => openProject(p.id)}
+                >
+                  <span
+                    className="size-2.5 shrink-0 rounded-[3px]"
+                    style={{ background: p.color ?? "var(--accent)" }}
+                    aria-hidden="true"
+                  />
+                  <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                </button>
+              ))}
             </div>
-            {projects.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                className={`flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-primary !no-underline transition-colors hover:bg-raised hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                  mode.type === "project" && mode.id === p.id
-                    ? "bg-selected font-medium"
-                    : ""
-                }`}
-                onClick={() => openProject(p.id)}
-              >
-                <span
-                  className="size-2.5 shrink-0 rounded-[3px]"
-                  style={{ background: p.color ?? "var(--accent)" }}
-                  aria-hidden="true"
-                />
-                <span className="min-w-0 flex-1 truncate">{p.name}</span>
-              </button>
-            ))}
-          </div>
-        </aside>
+          </aside>
         </ModuleSidebar>
       )}
 
       <section className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-6 border-b border-subtle bg-surface px-7 py-6 max-lg:flex-wrap max-sm:px-4 max-sm:py-5">
+        <header className="flex items-center gap-6 border-b border-subtle bg-header px-7 py-6 max-lg:flex-wrap max-sm:px-4 max-sm:py-5">
           <div className="flex min-w-0 flex-1 items-center gap-4">
             {projectId === undefined && isMobile && (
               <IconButton

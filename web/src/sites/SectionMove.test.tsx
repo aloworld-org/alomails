@@ -11,7 +11,13 @@
 // network and the message the preview frame posts, and proves the three
 // properties the item is for: the gesture stores one move, it is the same
 // request the stack's own buttons make, and one ⌘Z takes it back.
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -21,6 +27,8 @@ import { SECTIONS_SCHEMA_VERSION } from "./sections";
 import type { Section, SectionsEnvelope } from "./sections";
 import {
   moveDestination,
+  readSectionEditMessage,
+  readSectionQuickEditMessage,
   readSectionMoveMessage,
   withSectionMoved,
 } from "./sectionMove";
@@ -101,11 +109,52 @@ describe("the neighbour a section was dropped above becomes a destination", () =
 });
 
 describe("only this editor's own preview frame is listened to", () => {
+  test("a section edit request accepts only a non-negative integer from this preview", () => {
+    expect(
+      readSectionEditMessage({ alo: "site-section-edit", index: 1 }, true),
+    ).toBe(1);
+    expect(
+      readSectionEditMessage({ alo: "site-section-edit", index: 1 }, false),
+    ).toBeNull();
+    for (const junk of [
+      null,
+      { alo: "site-section-edit", index: -1 },
+      { alo: "site-section-edit", index: "1" },
+      { alo: "site-section-edit", index: 1.5 },
+      { alo: "site-section-move", index: 1 },
+    ]) {
+      expect(readSectionEditMessage(junk, true)).toBeNull();
+    }
+  });
+
+  test("a quick edit identifies the canvas target only for this preview", () => {
+    const message = {
+      alo: "site-section-quick-edit",
+      index: 1,
+      target: "media",
+    };
+    expect(readSectionQuickEditMessage(message, true)).toEqual({
+      index: 1,
+      target: "media",
+    });
+    expect(readSectionQuickEditMessage(message, false)).toBeNull();
+    expect(
+      readSectionQuickEditMessage({ ...message, target: "unknown" }, true),
+    ).toBeNull();
+  });
+
   test("a move message is read, and anything else is not", () => {
     const message = { alo: "site-section-move", from: 0, before: 2 };
-    expect(readSectionMoveMessage(message, true)).toEqual({ from: 0, before: 2 });
-    expect(readSectionMoveMessage({ alo: "site-section-move", from: 1, before: null }, true))
-      .toEqual({ from: 1, before: null });
+    expect(readSectionMoveMessage(message, true)).toEqual({
+      from: 0,
+      before: 2,
+    });
+    expect(
+      readSectionMoveMessage(
+        { alo: "site-section-move", from: 1, before: null },
+        true,
+      ),
+    ).toEqual({ from: 1, before: null });
     // The same message from any other window is nothing at all.
     expect(readSectionMoveMessage(message, false)).toBeNull();
     for (const junk of [
@@ -123,7 +172,11 @@ describe("only this editor's own preview frame is listened to", () => {
 
 describe("a move is a step in the same history typing uses", () => {
   test("its inverse is the move back", () => {
-    const history = recordEdit(emptyEditHistory, { kind: "move", from: 0, to: 2 });
+    const history = recordEdit(emptyEditHistory, {
+      kind: "move",
+      from: 0,
+      to: 2,
+    });
     const undone = undoEdit(history);
     expect(undone?.step).toEqual({ kind: "move", from: 0, to: 2 });
     expect(invertEdit((undone as NonNullable<typeof undone>).step)).toEqual({
@@ -148,7 +201,9 @@ let sections: Section[] = SECTIONS;
 const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
   const method = init?.method ?? "GET";
   const body =
-    typeof init?.body === "string" ? (JSON.parse(init.body) as unknown) : undefined;
+    typeof init?.body === "string"
+      ? (JSON.parse(init.body) as unknown)
+      : undefined;
   calls.push({ url, method, body });
   if (url.endsWith("/preview")) {
     return new Response("<!doctype html><html><body></body></html>", {
@@ -162,6 +217,12 @@ const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
     const from = Number(move[1]);
     const to = (body as { to: number }).to;
     sections = withSectionMoved(sections, from, to) ?? sections;
+    return json({ sections: env(sections) });
+  }
+  const update = /\/pages\/page-1\/sections\/(\d+)$/.exec(url);
+  if (method === "PUT" && update !== null) {
+    sections = [...sections];
+    sections[Number(update[1])] = (body as { section: Section }).section;
     return json({ sections: env(sections) });
   }
   if (method === "GET" && url.endsWith("/sites/site-1/pages/page-1")) {
@@ -204,6 +265,26 @@ function dropFromPreview(from: number, before: number | null, own = true) {
   window.dispatchEvent(event);
 }
 
+function editFromPreview(index: number, own = true) {
+  const frame = document.querySelector("iframe");
+  const event = new MessageEvent("message", {
+    data: { alo: "site-section-edit", index },
+  });
+  Object.defineProperty(event, "source", {
+    value: own ? frame?.contentWindow : window,
+  });
+  window.dispatchEvent(event);
+}
+
+function canvasAction(index: number, action: string) {
+  const frame = document.querySelector("iframe");
+  const event = new MessageEvent("message", {
+    data: { alo: "site-hero-canvas-edit", index, action },
+  });
+  Object.defineProperty(event, "source", { value: frame?.contentWindow });
+  window.dispatchEvent(event);
+}
+
 async function stackLoaded() {
   await waitFor(() =>
     expect(
@@ -220,7 +301,9 @@ async function openPreview() {
 }
 
 function moves(): Call[] {
-  return calls.filter((call) => call.method === "POST" && call.url.includes("/move"));
+  return calls.filter(
+    (call) => call.method === "POST" && call.url.includes("/move"),
+  );
 }
 
 beforeEach(() => {
@@ -281,6 +364,84 @@ describe("the page editor applies what the preview reports", () => {
     expect(moves()[1]?.body).toEqual({ to: 0 });
   });
 
+  test("dragging a stack card stores its new position", async () => {
+    ui();
+    await stackLoaded();
+    const hero = screen.getByText(strings.sitesSectionHero).closest("li");
+    const cta = screen.getByText(strings.sitesSectionCta).closest("li");
+    expect(hero).not.toBeNull();
+    expect(cta).not.toBeNull();
+    const values = new Map<string, string>();
+    const dataTransfer = {
+      effectAllowed: "none",
+      dropEffect: "none",
+      setData: (type: string, value: string) => values.set(type, value),
+      getData: (type: string) => values.get(type) ?? "",
+    };
+
+    fireEvent.dragStart(hero as HTMLLIElement, { dataTransfer });
+    fireEvent.dragOver(cta as HTMLLIElement, { dataTransfer });
+    fireEvent.drop(cta as HTMLLIElement, { dataTransfer });
+
+    await waitFor(() => expect(moves()).toHaveLength(1));
+    expect(moves()[0]?.url).toContain("/pages/page-1/sections/0/move");
+    expect(moves()[0]?.body).toEqual({ to: 2 });
+    await waitFor(() => {
+      const cards = document.querySelectorAll('[data-section-control="edit"]');
+      expect(cards[2]?.getAttribute("aria-label")).toContain(
+        strings.sitesSectionHero,
+      );
+    });
+  });
+
+  test("a legacy Hero selection never opens another editing screen", async () => {
+    ui();
+    await stackLoaded();
+    await openPreview();
+
+    editFromPreview(0);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(
+      screen.queryByRole("dialog", {
+        name: strings.sitesEditSectionTitle(strings.sitesSectionHero),
+      }),
+    ).toBeNull();
+  });
+
+  test("a canvas zoom command persists a visible Hero crop", async () => {
+    sections = [
+      { ...HERO, image: { blob_id: "image-1", alt: "A fan" } },
+      FAQ,
+      CTA,
+    ];
+    ui();
+    await stackLoaded();
+    await openPreview();
+
+    canvasAction(0, "zoom_in");
+    await waitFor(() =>
+      expect(
+        calls.some(
+          (call) =>
+            call.method === "PUT" &&
+            call.url.endsWith("/pages/page-1/sections/0"),
+        ),
+      ).toBe(true),
+    );
+    const write = calls.find(
+      (call) =>
+        call.method === "PUT" && call.url.endsWith("/pages/page-1/sections/0"),
+    );
+    expect(write?.body).toMatchObject({
+      section: {
+        type: "hero",
+        image: {
+          crop: { x_bp: 500, y_bp: 500, width_bp: 9000, height_bp: 9000 },
+        },
+      },
+    });
+  });
+
   test("a message from another window changes nothing", async () => {
     ui();
     await stackLoaded();
@@ -327,7 +488,7 @@ describe("the page editor applies what the preview reports", () => {
     fireEvent.load(frame as HTMLIFrameElement);
 
     expect(post).toHaveBeenCalledTimes(1);
-    expect(post.mock.calls[0]?.[0]).toEqual({
+    expect(post.mock.calls[0]?.[0]).toMatchObject({
       alo: "site-edit-chrome",
       labels: [
         strings.sitesSectionOnPage(strings.sitesSectionHero, 1, 3),

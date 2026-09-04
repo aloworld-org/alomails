@@ -15,7 +15,7 @@
  */
 :root {
   /* ---- brand ---- */
-  --cream: #f8f6f2;
+  --cream: #f7f5f1;
   --navy: #102a43;
   --terracotta: #e76f51;
   --ink: #102a43; /* primary text is navy */
@@ -26,7 +26,7 @@
   --copper: #cf5e40;
 
   /* ---- terracotta scale (primary accent; historical name: verdigris) ---- */
-  --verdigris-50: #fceee9;
+  --verdigris-50: #fce9e3;
   --verdigris-100: #f8d6cc; /* soft terracotta */
   --verdigris-200: #f1bdad;
   --verdigris-400: #ea8368;
@@ -52,10 +52,10 @@
 
   /* ---- neutrals: cream ground → cool grays (historical name: warm) ---- */
   --warm-0: #ffffff;
-  --warm-50: #f8f6f2; /* warm porcelain */
-  --warm-100: #f3f0ea;
-  --warm-150: #ece8e1;
-  --warm-200: #e3ddd4;
+  --warm-50: #f7f5f1; /* warm porcelain */
+  --warm-100: #f1eee8;
+  --warm-150: #e8e3dc;
+  --warm-200: #e8e3dc;
   --warm-300: #d4ccbe; /* scrollbar / spinner track */
   --warm-400: #b3a48f;
   --warm-500: #7a6f62; /* metadata / tertiary text */
@@ -65,10 +65,11 @@
   --warm-900: #102a43;
 
   /* ---- semantic: backgrounds ---- */
-  --bg-app: #f4f1ec; /* warm porcelain workspace canvas */
-  --bg-surface: #fffefc; /* soft ivory panels and reading panes */
-  --bg-raised: #e9e4dc; /* controls and hover fills */
-  --bg-sunken: #f0ece6; /* warm-stone sidebars and lists */
+  --bg-app: #f7f5f1; /* calm warm workspace canvas */
+  --bg-surface: #fffdfc; /* cards, panels and reading panes */
+  --bg-header: #fffefd; /* module and sticky workspace headers */
+  --bg-raised: #f1eee8; /* controls and hover fills */
+  --bg-sunken: #f1eee8; /* warm-stone sidebars and lists */
   --bg-rail: #1f2529; /* premium warm charcoal */
   --bg-rail-hover: #2a3237; /* graphite hover */
   --bg-rail-active: #343d42; /* lifted active surface */
@@ -85,8 +86,8 @@
   --text-link: var(--verdigris-600); /* links are terracotta */
 
   /* ---- semantic: borders ---- */
-  --border-subtle: #e8e2d9;
-  --border-default: #ded7cd;
+  --border-subtle: #e8e3dc;
+  --border-default: #e8e3dc;
   --border-strong: #b3a48f; /* warm stone; never browser-blue */
   /* The unfilled part of a ring: the spinner's track, and the scrollbar's.
      `Spinner` reached straight into the raw scale for this (`--warm-300`) —
@@ -100,7 +101,7 @@
   --accent-hover: var(--verdigris-600);
   --accent-active: var(--verdigris-700);
   --accent-tint: var(--verdigris-100);
-  --accent-soft: #fceae3; /* quiet terracotta ground (AI summary) */
+  --accent-soft: #fce9e3; /* quiet coral ground (AI summary) */
   --accent-secondary: var(--copper-500);
   --accent-secondary-hover: var(--copper-600);
   --accent-secondary-tint: var(--copper-100);

@@ -2311,16 +2311,20 @@ const PREVIEW_INLINE_IMAGE_MAX_BYTES: usize = 4 * 1024 * 1024;
 /// CPU-bound and the source is untrusted, so it uses the same bounded blocking
 /// derivative pipeline as public Sites rather than decoding on the async
 /// request worker.
-async fn preview_image_uri(image: alo_store::SiteImageData) -> Option<String> {
+async fn preview_image_uri(
+    image: alo_store::SiteImageData,
+    crop: alo_store::site_model::ImageCrop,
+) -> Option<String> {
     use base64::Engine;
 
-    let (content_type, bytes) = if image.bytes.len() <= PREVIEW_INLINE_IMAGE_MAX_BYTES {
+    let full = crop == alo_store::site_model::ImageCrop::full();
+    let (content_type, bytes) = if full && image.bytes.len() <= PREVIEW_INLINE_IMAGE_MAX_BYTES {
         (image.content_type.to_owned(), image.bytes)
     } else {
         let task = tokio::task::spawn_blocking(move || {
             let derivative = alo_sites::serve::derivative::derive(
                 &image,
-                alo_store::site_model::ImageCrop::full(),
+                crop,
                 *alo_sites::images::DERIVATIVE_WIDTHS.last().unwrap_or(&1440),
             );
             (image, derivative)
@@ -2386,11 +2390,13 @@ pub(crate) async fn preview_image_map<'a>(
     ids.dedup();
 
     let mut map = std::collections::HashMap::with_capacity(ids.len());
-    for id in ids {
+    for id in &ids {
         match account.acc.site_image(&BlobId::new(id.clone())).await {
             Ok(Some(image)) => {
-                if let Some(uri) = preview_image_uri(image).await {
-                    map.insert(id, uri);
+                if let Some(uri) =
+                    preview_image_uri(image, alo_store::site_model::ImageCrop::full()).await
+                {
+                    map.insert(id.clone(), uri);
                 }
             }
             Ok(None) => {} // absent or non-image: public-path fallback
@@ -2399,7 +2405,48 @@ pub(crate) async fn preview_image_map<'a>(
             }
         }
     }
+    let mut framed = Vec::new();
+    collect_preview_frames(sections, &mut framed);
+    framed.sort_by(|left, right| {
+        alo_sites::images::preview_key(left).cmp(&alo_sites::images::preview_key(right))
+    });
+    framed.dedup_by(|left, right| {
+        alo_sites::images::preview_key(left) == alo_sites::images::preview_key(right)
+    });
+    for image in framed {
+        let Some(crop) = image.crop else { continue };
+        match account.acc.site_image(&image.blob_id).await {
+            Ok(Some(source)) => {
+                if let Some(uri) = preview_image_uri(source, crop).await {
+                    map.insert(alo_sites::images::preview_key(&image), uri);
+                }
+            }
+            Ok(None) => {}
+            Err(error) => tracing::warn!(%error, "cropped preview image read failed"),
+        }
+    }
     map
+}
+
+fn collect_preview_frames(value: &Value, images: &mut Vec<alo_store::site_model::SiteImage>) {
+    match value {
+        Value::Array(values) => values
+            .iter()
+            .for_each(|value| collect_preview_frames(value, images)),
+        Value::Object(object) => {
+            if object.contains_key("blob_id")
+                && let Ok(image) =
+                    serde_json::from_value::<alo_store::site_model::SiteImage>(value.clone())
+                && image.crop.is_some()
+            {
+                images.push(image);
+            }
+            object
+                .values()
+                .for_each(|value| collect_preview_frames(value, images));
+        }
+        _ => {}
+    }
 }
 
 /// `GET /sites/:id/images/:blob` → one of the tenant's own image blobs, so
@@ -2489,6 +2536,64 @@ async fn site_drive_folder(
         .map_err(crate::drive::map_err)
 }
 
+/// `POST /sites/:id/identity/images` registers a logo or favicon upload in
+/// the caller's Drive as `Website / Identity / file`. Both folders are
+/// source-linked, so repeated uploads reuse one tree and a later website
+/// rename updates the visible parent instead of orphaning brand assets.
+pub async fn attach_identity_image(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: PageImageBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let filename = req.filename.trim();
+    if filename.is_empty() || req.blob_id.trim().is_empty() {
+        return Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "filename and blobId are required",
+        ));
+    }
+
+    let sid = SiteId::new(id);
+    let site = require_site(&account, &sid).await?;
+    let blob_id = BlobId::new(req.blob_id.trim().to_owned());
+    let image = account
+        .acc
+        .site_image(&blob_id)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such image"))?;
+
+    let website_folder =
+        site_drive_folder(&account, None, site.name.trim(), "site", sid.as_str()).await?;
+    let identity_folder = site_drive_folder(
+        &account,
+        Some(&website_folder),
+        "Identity",
+        "site_identity",
+        sid.as_str(),
+    )
+    .await?;
+    let size = i64::try_from(image.bytes.len()).map_err(|_| Problem::server_error())?;
+    let file = NewDriveFile {
+        name: filename.to_owned(),
+        blob_id: blob_id.as_str().to_owned(),
+        size,
+        content_type: Some(image.content_type.to_owned()),
+        kind: Some("file".to_owned()),
+        source_kind: Some("site_identity_image".to_owned()),
+        source_id: Some(blob_id.as_str().to_owned()),
+    };
+    let drive_id = account
+        .acc
+        .drive_create_file(&DriveLocation::Personal, Some(&identity_folder), &file)
+        .await
+        .map_err(crate::drive::map_err)?;
+    Ok(Json(json!({ "id": drive_id.as_str() })))
+}
+
 /// `POST /sites/:id/pages/:pid/images` registers an uploaded image in the
 /// caller's Drive as `Website / Page / file`. The folders are source-linked,
 /// so later uploads reuse them and site/page renames do not split the tree.
@@ -2566,16 +2671,28 @@ pub async fn attach_page_image(
 /// `rewrite_copy` operation names, so the editor can turn a click on the page
 /// into the same change a model would propose. It writes nothing — the text
 /// comes back through `PUT …/ai-edits` like every other reviewed change.
+#[derive(Default, Deserialize)]
+pub struct PagePreviewQuery {
+    #[serde(default)]
+    browser: bool,
+}
+
 pub async fn preview_page(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path((id, pid)): Path<(String, String)>,
+    Query(query): Query<PagePreviewQuery>,
 ) -> Result<Response, Problem> {
     let account = authenticate(&state, &headers).await?;
     let sid = SiteId::new(id);
     let site = require_site(&account, &sid).await?;
     let page = page_record(&account, &sid, &SitePageId::new(pid)).await?;
-    let html = render_preview(&account, &site, &page, &page.sections, Editable::Yes).await?;
+    let editable = if query.browser {
+        Editable::No
+    } else {
+        Editable::Yes
+    };
+    let html = render_preview(&account, &site, &page, &page.sections, editable).await?;
     Ok((
         [
             (header::CONTENT_TYPE, "text/html; charset=utf-8"),
@@ -3312,15 +3429,49 @@ mod preview_image_tests {
         assert!(png.len() > PREVIEW_INLINE_IMAGE_MAX_BYTES);
 
         let original_len = png.len();
-        let uri = preview_image_uri(alo_store::SiteImageData {
-            content_type: "image/png",
-            bytes: Bytes::from(png),
-        })
+        let uri = preview_image_uri(
+            alo_store::SiteImageData {
+                content_type: "image/png",
+                bytes: Bytes::from(png),
+            },
+            alo_store::site_model::ImageCrop::full(),
+        )
         .await
         .unwrap();
 
         assert!(uri.starts_with("data:image/jpeg;base64,"));
         assert!(uri.len() < original_len, "preview was not made smaller");
         assert!(!uri.contains("/assets/img/"));
+    }
+
+    #[tokio::test]
+    async fn a_draft_preview_inlines_the_selected_crop_not_the_whole_source() {
+        use base64::Engine;
+
+        let pixels = vec![180u8; 100 * 80 * 3];
+        let mut png = Vec::new();
+        image::codecs::png::PngEncoder::new(&mut png)
+            .write_image(&pixels, 100, 80, image::ExtendedColorType::Rgb8)
+            .unwrap();
+        let uri = preview_image_uri(
+            alo_store::SiteImageData {
+                content_type: "image/png",
+                bytes: Bytes::from(png),
+            },
+            alo_store::site_model::ImageCrop {
+                x_bp: 0,
+                y_bp: 0,
+                width_bp: 5_000,
+                height_bp: 10_000,
+            },
+        )
+        .await
+        .unwrap();
+        let encoded = uri.split_once(',').unwrap().1;
+        let bytes = base64::engine::general_purpose::STANDARD
+            .decode(encoded)
+            .unwrap();
+        let framed = image::load_from_memory(&bytes).unwrap();
+        assert_eq!((framed.width(), framed.height()), (50, 80));
     }
 }

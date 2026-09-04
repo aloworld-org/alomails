@@ -3714,7 +3714,7 @@ export const fr: Partial<Catalog> = {
   sitesUploadingPostCover: "Téléversement…",
   sitesPostCoverUploadFailed:
     "L’image de couverture n’a pas pu être téléversée. Réessayez.",
-  sitesSeoAction: "Recherche et partage",
+  sitesSeoAction: "Paramètres de la page",
   sitesSeoTitle: "Recherche et partage",
   sitesSeoSubtitle:
     "Choisissez comment cette page apparaît dans les résultats et les liens partagés.",
@@ -3790,7 +3790,7 @@ export const fr: Partial<Catalog> = {
     "Comparez la page avant et après, puis choisissez la suite.",
   sitesAiPreviewCompare: "Comparer les modifications proposées",
   sitesInlineTextHint:
-    "Cliquez sur n’importe quel texte de l’aperçu pour le modifier sur place. Entrée enregistre, Échap rétablit.",
+    "Cliquez sur le texte pour le modifier directement, ou sur une section pour ajuster son image, ses couleurs et sa mise en page.",
   sitesInlineTextSaved: "Texte mis à jour.",
   sitesInlineTextUndone: "Modification du texte annulée.",
   sitesInlineTextRedone: "Modification du texte rétablie.",
@@ -4122,6 +4122,9 @@ export const fr: Partial<Catalog> = {
   sitesPreviewTitle: "Aperçu du brouillon",
   sitesPreviewDesktop: "Largeur d’ordinateur",
   sitesPreviewMobile: "Largeur de téléphone",
+  sitesPreviewInBrowser: "Ouvrir dans le navigateur",
+  sitesPreviewBrowserBlocked:
+    "Le navigateur a bloqué l’onglet d’aperçu. Autorisez les fenêtres contextuelles et réessayez.",
   sitesPreviewFailed: "L’aperçu n’a pas pu être chargé.",
   sitesSectionNav: "Barre de navigation",
   sitesNavigation: "Navigation",
@@ -4132,7 +4135,8 @@ export const fr: Partial<Catalog> = {
   sitesSectionTransitionDesc: "Mouvement entre cette section et la suivante.",
   sitesTransitionSummary: "Anime la section suivante au défilement",
   sitesTransitionStyle: "Style de transition",
-  sitesTransitionStyleHint: "Choisissez comment la section suivante entre dans la page.",
+  sitesTransitionStyleHint:
+    "Choisissez comment la section suivante entre dans la page.",
   sitesTransitionFade: "Fondu doux",
   sitesTransitionSlide: "Glissement",
   sitesTransitionScale: "Agrandissement",
@@ -4148,11 +4152,13 @@ export const fr: Partial<Catalog> = {
   sitesTransitionBalanced: "Partiellement visible",
   sitesTransitionLate: "Presque visible",
   sitesTransitionAnimateOut: "Animer à la sortie",
-  sitesTransitionAnimateOutHint: "Activez ceci pour les pages narratives; laissez-le désactivé pour une lecture rapide.",
+  sitesTransitionAnimateOutHint:
+    "Activez ceci pour les pages narratives; laissez-le désactivé pour une lecture rapide.",
   sitesSectionFeatures: "Points forts",
   sitesSectionFeaturesDesc: "Une grille de ce que vous proposez.",
   sitesFeaturesLayout: "Disposition des avantages",
-  sitesFeaturesLayoutHint: "Choisissez comment les visiteurs parcourent et comparent ces avantages.",
+  sitesFeaturesLayoutHint:
+    "Choisissez comment les visiteurs parcourent et comparent ces avantages.",
   sitesFeaturesLayoutGrid: "Grille équilibrée",
   sitesFeaturesLayoutBento: "Bento",
   sitesFeaturesLayoutList: "Liste détaillée",
@@ -4161,7 +4167,8 @@ export const fr: Partial<Catalog> = {
   sitesSectionTextImage: "Texte et image",
   sitesSectionTextImageDesc: "Un paragraphe à côté d’une image.",
   sitesTextImageLayout: "Disposition texte et image",
-  sitesTextImageLayoutHint: "Choisissez la relation entre le récit et son image.",
+  sitesTextImageLayoutHint:
+    "Choisissez la relation entre le récit et son image.",
   sitesTextImageLayoutSplit: "Partage équilibré",
   sitesTextImageLayoutOverlap: "Superposé",
   sitesTextImageLayoutFramed: "Image encadrée",
@@ -4170,7 +4177,8 @@ export const fr: Partial<Catalog> = {
   sitesSectionGallery: "Galerie",
   sitesSectionGalleryDesc: "Une mosaïque d’images.",
   sitesGalleryLayout: "Disposition de la galerie",
-  sitesGalleryLayoutHint: "Choisissez comment les visiteurs parcourent et découvrent vos images.",
+  sitesGalleryLayoutHint:
+    "Choisissez comment les visiteurs parcourent et découvrent vos images.",
   sitesGalleryLayoutGrid: "Grille équilibrée",
   sitesGalleryLayoutMasonry: "Mosaïque",
   sitesGalleryLayoutCollage: "Collage",
@@ -4179,7 +4187,8 @@ export const fr: Partial<Catalog> = {
   sitesSectionTestimonials: "Témoignages",
   sitesSectionTestimonialsDesc: "Les mots de clients satisfaits.",
   sitesTestimonialsLayout: "Disposition des témoignages",
-  sitesTestimonialsLayoutHint: "Choisissez comment les témoignages renforcent la confiance sur la page.",
+  sitesTestimonialsLayoutHint:
+    "Choisissez comment les témoignages renforcent la confiance sur la page.",
   sitesTestimonialsLayoutCards: "Cartes de citations",
   sitesTestimonialsLayoutFeatured: "Citation à la une",
   sitesTestimonialsLayoutEditorial: "Mur éditorial",
@@ -4188,7 +4197,8 @@ export const fr: Partial<Catalog> = {
   sitesSectionPricing: "Tarifs",
   sitesSectionPricingDesc: "Vos offres et leurs prix.",
   sitesPricingLayout: "Disposition des tarifs",
-  sitesPricingLayoutHint: "Choisissez comment les visiteurs comparent les offres.",
+  sitesPricingLayoutHint:
+    "Choisissez comment les visiteurs comparent les offres.",
   sitesPricingLayoutCards: "Cartes d’offres",
   sitesPricingLayoutComparison: "Côte à côte",
   sitesPricingLayoutFeatured: "Offre à la une",
@@ -4197,7 +4207,8 @@ export const fr: Partial<Catalog> = {
   sitesSectionTeam: "Équipe",
   sitesSectionTeamDesc: "Les personnes derrière l’entreprise.",
   sitesTeamLayout: "Disposition de l’équipe",
-  sitesTeamLayoutHint: "Choisissez comment présenter les personnes et leurs parcours.",
+  sitesTeamLayoutHint:
+    "Choisissez comment présenter les personnes et leurs parcours.",
   sitesTeamLayoutPortraits: "Grille de portraits",
   sitesTeamLayoutCards: "Fiches profils",
   sitesTeamLayoutRoster: "Liste d’équipe",
@@ -4368,7 +4379,8 @@ export const fr: Partial<Catalog> = {
   sitesHeroAnimationSmooth: "Fluide",
   sitesHeroAnimationRelaxed: "Détendu",
   sitesSectionDesign: "Design de la section",
-  sitesSectionDesignHint: "Façonnez cette section avec des choix réactifs et réutilisables.",
+  sitesSectionDesignHint:
+    "Façonnez cette section avec des choix réactifs et réutilisables.",
   sitesSectionLayoutStyle: "Style visuel",
   sitesSectionLayoutClean: "Épuré",
   sitesSectionLayoutCards: "Cartes",
@@ -4376,10 +4388,12 @@ export const fr: Partial<Catalog> = {
   sitesSectionLayoutEditorial: "Éditorial",
   sitesSectionSpacing: "Espacement",
   sitesSectionSpacingGenerous: "Généreux",
-  sitesSectionColorsHint: "Choisissez des rôles réutilisables du thème du site.",
+  sitesSectionColorsHint:
+    "Choisissez des rôles réutilisables du thème du site.",
   sitesSectionBackground: "Arrière-plan de la section",
   sitesSectionText: "Texte de la section",
-  sitesSectionAnimationHint: "Choisissez une entrée calme. Le mode mouvement réduit reste fixe.",
+  sitesSectionAnimationHint:
+    "Choisissez une entrée calme. Le mode mouvement réduit reste fixe.",
   sitesSectionEntrance: "Entrée",
   sitesSectionUseDefaults: "Utiliser les valeurs par défaut",
   sitesHeroHeight: "Hauteur",
@@ -4387,6 +4401,8 @@ export const fr: Partial<Catalog> = {
   sitesHeroHeightStandard: "Standard",
   sitesHeroHeightTall: "Haute",
   sitesHeroAlignment: "Alignement du contenu",
+  sitesCanvasImageSize: "Taille de l’image",
+  sitesCanvasImagePosition: "Position de l’image",
   sitesHeroAlignmentLeft: "Gauche",
   sitesHeroAlignmentCenter: "Centre",
   sitesHeroAlignmentRight: "Droite",
@@ -4428,6 +4444,8 @@ export const fr: Partial<Catalog> = {
   sitesImageFraming: "Recadrage et point focal",
   sitesImageFrameHint:
     "Faites glisser sur l’image pour choisir ce qui reste visible. Au clavier : les flèches déplacent le cadre, majuscule et flèches le redimensionnent.",
+  sitesImageFrameDirectHint:
+    "Faites glisser le cadre pour le déplacer. Faites glisser un coin pour le redimensionner.",
   sitesImageFocalHint:
     "Placez le repère rond sur ce qui doit rester visible lorsqu’une mise en page recadre encore l’image.",
   sitesImageFrameAt: (
@@ -4509,6 +4527,9 @@ export const fr: Partial<Catalog> = {
   sitesThemeFaviconHint:
     "La petite icône affichée dans l’onglet du navigateur.",
   sitesThemeUpload: "Téléverser une image",
+  sitesThemeDropTitle: "Glissez-déposez une image ici",
+  sitesThemeDropNow: "Déposez l’image pour la téléverser",
+  sitesThemeDropBrowse: "ou cliquez pour choisir une image sur votre appareil",
   sitesThemeReplace: "Remplacer l’image",
   sitesThemeRemove: "Supprimer l’image",
   sitesThemeSet: "Image téléversée",
@@ -4979,6 +5000,8 @@ export const fr: Partial<Catalog> = {
 
   // Ce qu’un employé voit du module en premier.
   financeExpensesEmptyTitle: "Aucune note de frais sur cette période",
+  financeExpensesPurpose:
+    "Consultez, soumettez et suivez vos dépenses professionnelles.",
   financeExpensesEmptyBody:
     "Enregistrez ce que vous avez dépensé pour le travail — la date, le total du reçu et l’argent qui a payé. Elle reste la vôtre jusqu’à ce que vous la transmettiez.",
 
@@ -4986,6 +5009,7 @@ export const fr: Partial<Catalog> = {
   financeTabBank: "Banque",
   financeTabReconcile: "Rapprochement",
   financeBankLoadFailed: "Les relevés bancaires n’ont pas pu être chargés.",
+  financeBankPurpose: "Importer et vérifier les relevés bancaires mensuels.",
 
   // Importer un relevé.
   financeBankImportStatement: "Importer un relevé",
@@ -5428,6 +5452,10 @@ export const fr: Partial<Catalog> = {
   // appartient au serveur — un refus est affiché dans la phrase du serveur.
   moduleInventory: "Inventaire",
   inventoryTabCatalog: "Catalogue",
+  inventoryWorkspacePurpose: "Produits, stocks et commandes dans un même espace.",
+  inventoryCatalogPurpose: "Gérez les produits et services achetés et vendus par votre entreprise.",
+  inventoryPurchasingPurpose: "Créez et suivez les commandes passées auprès de vos fournisseurs.",
+  inventorySalesPurpose: "Gérez les commandes clients, de la confirmation à la livraison.",
   inventoryTabStock: "Stock",
   inventoryLoadFailed: "Votre catalogue n’a pas pu être chargé.",
   inventorySaveFailed: "La modification n’a pas pu être enregistrée.",

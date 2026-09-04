@@ -31,7 +31,6 @@ function sectionControls(control: string): HTMLElement[] {
   ];
 }
 
-
 interface Call {
   url: string;
   method: string;
@@ -81,15 +80,18 @@ vi.mock("../auth", () => ({
   useAuth: () => ({ authorizedFetch: fakeFetch }),
 }));
 
-// The Drive upload seam: the dialog needs a blob id back, nothing more.
-const driveUploadBlob = vi.fn(async () => ({
-  id: "node-1",
+// The blob upload seam: Sites then registers it in the source-linked Identity
+// folder through its real HTTP client.
+const uploadFile = vi.fn(async () => ({
   blobId: "blob-9",
   size: 3,
+  type: "image/png",
 }));
-const uploadFile = vi.fn(async () => ({ blobId: "blob-9" }));
+const downloadAttachment = vi.fn(
+  async () => new Blob(["preview"], { type: "image/png" }),
+);
 vi.mock("../jmap", () => ({
-  useJmapClient: () => ({ driveUploadBlob, uploadFile }),
+  useJmapClient: () => ({ uploadFile, downloadAttachment }),
 }));
 
 const PRESETS: ThemePreset[] = [
@@ -213,13 +215,13 @@ function pageReply(): Reply {
 
 function ui(path: string) {
   return render(
-    <DialogProvider>
-      <MemoryRouter initialEntries={[path]}>
+    <MemoryRouter initialEntries={[path]}>
+      <DialogProvider>
         <Routes>
           <Route path="/sites/*" element={<SitesModule />} />
         </Routes>
-      </MemoryRouter>
-    </DialogProvider>,
+      </DialogProvider>
+    </MemoryRouter>,
   );
 }
 
@@ -244,22 +246,40 @@ beforeEach(() => {
   // wholesale keep them by spreading this in.
   replies = [readinessReply(), presetsReply()];
   fakeFetch.mockClear();
-  driveUploadBlob.mockClear();
   uploadFile.mockClear();
+  downloadAttachment.mockClear();
+  Object.defineProperty(URL, "createObjectURL", {
+    configurable: true,
+    value: vi.fn(() => "blob:theme-preview"),
+  });
+  Object.defineProperty(URL, "revokeObjectURL", {
+    configurable: true,
+    value: vi.fn(),
+  });
 });
 
 afterEach(cleanup);
 
 const northWithWorkspaceBrand = {
-  background: "#FFFFFF", text: "#17212B", border: "#DDE3E9",
-  accent_1: "#E76F51", accent_2: "#102A43", accent_3: "#F2F5F8",
-  accent_4: "#17212B", accent_5: "#FFFFFF",
+  background: "#FFFFFF",
+  text: "#17212B",
+  border: "#DDE3E9",
+  accent_1: "#E76F51",
+  accent_2: "#102A43",
+  accent_3: "#F2F5F8",
+  accent_4: "#17212B",
+  accent_5: "#FFFFFF",
 };
 
 const terraWithWorkspaceBrand = {
-  background: "#FAF6EF", text: "#38291D", border: "#E4D8C6",
-  accent_1: "#E76F51", accent_2: "#102A43", accent_3: "#F2EADD",
-  accent_4: "#38291D", accent_5: "#FAF6EF",
+  background: "#FAF6EF",
+  text: "#38291D",
+  border: "#E4D8C6",
+  accent_1: "#E76F51",
+  accent_2: "#102A43",
+  accent_3: "#F2EADD",
+  accent_4: "#38291D",
+  accent_5: "#FAF6EF",
 };
 
 describe("the theme dialog", () => {
@@ -267,14 +287,25 @@ describe("the theme dialog", () => {
     await openThemeDialogFromSiteView({});
     expect(screen.queryByRole("radio", { name: "North" })).toBeNull();
     expect(screen.queryByRole("radio", { name: "Terra" })).toBeNull();
+    expect(screen.queryByText(strings.sitesThemeLogoHint)).toBeNull();
+    fireEvent.click(
+      screen.getByLabelText(strings.brandingMoreInfo(strings.sitesThemeLogo)),
+    );
+    expect(screen.getByText(strings.sitesThemeLogoHint)).toBeTruthy();
     expect(
-      screen.queryByLabelText(strings.sitesThemeHexValue(strings.sitesThemeBackgroundColor)),
+      screen.queryByLabelText(
+        strings.sitesThemeHexValue(strings.sitesThemeBackgroundColor),
+      ),
     ).toBeNull();
     expect(
-      screen.queryByLabelText(strings.sitesThemeHexValue(strings.sitesThemeTextColor)),
+      screen.queryByLabelText(
+        strings.sitesThemeHexValue(strings.sitesThemeTextColor),
+      ),
     ).toBeNull();
     expect(
-      screen.queryByLabelText(strings.sitesThemeHexValue(strings.sitesThemeBorderColor)),
+      screen.queryByLabelText(
+        strings.sitesThemeHexValue(strings.sitesThemeBorderColor),
+      ),
     ).toBeNull();
     fireEvent.click(screen.getByText(strings.sitesThemeApply));
     await waitFor(() => {
@@ -293,16 +324,28 @@ describe("the theme dialog", () => {
 
   test("an uploaded logo goes through Drive and lands in the envelope", async () => {
     await openThemeDialogFromSiteView({});
-    fireEvent.click(
-      screen.getAllByText(strings.sitesThemeUpload)[0] as HTMLElement,
-    );
+    expect(screen.getAllByText(strings.sitesThemeDropTitle)).toHaveLength(2);
     const file = new File(["png"], "logo.png", { type: "image/png" });
     const pickers = document.querySelectorAll('input[type="file"]');
     fireEvent.change(pickers[0] as HTMLInputElement, {
       target: { files: [file] },
     });
     expect(await screen.findByText(strings.sitesThemeSet)).toBeTruthy();
-    expect(driveUploadBlob).toHaveBeenCalledWith(null, null, file);
+    expect(
+      await screen.findByRole("img", { name: strings.sitesThemeLogo }),
+    ).toBeTruthy();
+    expect(URL.createObjectURL).toHaveBeenCalledWith(file);
+    expect(downloadAttachment).not.toHaveBeenCalledWith("blob-9", "site-logo");
+    expect(uploadFile).toHaveBeenCalledWith(file);
+    expect(
+      calls.some(
+        (call) =>
+          call.method === "POST" &&
+          call.url.endsWith("/sites/site-1/identity/images") &&
+          JSON.stringify(call.body) ===
+            JSON.stringify({ blobId: "blob-9", filename: "logo.png" }),
+      ),
+    ).toBe(true);
     fireEvent.click(screen.getByText(strings.sitesThemeApply));
     await waitFor(() => {
       expect(lastWrite()).toBeTruthy();
@@ -315,6 +358,19 @@ describe("the theme dialog", () => {
     });
   });
 
+  test("a favicon can be dropped onto its asset card", async () => {
+    await openThemeDialogFromSiteView({});
+    const file = new File(["ico"], "mark.png", { type: "image/png" });
+    fireEvent.drop(
+      screen.getByRole("group", { name: strings.sitesThemeFavicon }),
+      { dataTransfer: { files: [file] } },
+    );
+    expect(
+      await screen.findByRole("img", { name: strings.sitesThemeFavicon }),
+    ).toBeTruthy();
+    expect(uploadFile).toHaveBeenCalledWith(file);
+  });
+
   test("imports the full reusable workspace brand palette", async () => {
     await openThemeDialogFromSiteView({});
     fireEvent.click(screen.getByText(strings.sitesThemeApply));
@@ -323,9 +379,14 @@ describe("the theme dialog", () => {
       schema_version: 1,
       preset: "north",
       colors: {
-        background: "#FFFFFF", text: "#17212B", border: "#DDE3E9",
-        accent_1: "#E76F51", accent_2: "#102A43", accent_3: "#F2F5F8",
-        accent_4: "#17212B", accent_5: "#FFFFFF",
+        background: "#FFFFFF",
+        text: "#17212B",
+        border: "#DDE3E9",
+        accent_1: "#E76F51",
+        accent_2: "#102A43",
+        accent_3: "#F2F5F8",
+        accent_4: "#17212B",
+        accent_5: "#FFFFFF",
       },
     });
   });
@@ -394,17 +455,52 @@ describe("the editor's preview after a theme change", () => {
 });
 
 describe("section image upload", () => {
+  test("Save waits for Drive to return the uploaded image id", async () => {
+    let finishUpload!: (value: {
+      blobId: string;
+      size: number;
+      type: string;
+    }) => void;
+    uploadFile.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishUpload = resolve;
+        }),
+    );
+    replies.push(pageReply(), siteReply({}));
+    ui("/sites/site-1/pages/page-1");
+    expect(await screen.findByText("Fresh bread daily")).toBeTruthy();
+    fireEvent.click(sectionControls("edit")[0]!);
+    const save = await screen.findByRole("button", {
+      name: strings.sitesSaveSection,
+    });
+    const file = new File(["png"], "still-uploading.png", {
+      type: "image/png",
+    });
+    const dropButton = screen.getByRole("button", {
+      name: new RegExp(strings.sitesThemeDropTitle),
+    });
+    fireEvent.drop(dropButton.parentElement!, {
+      dataTransfer: { files: [file] },
+    });
+    await waitFor(() => expect(uploadFile).toHaveBeenCalledWith(file));
+    expect(save).toHaveProperty("disabled", true);
+    finishUpload({ blobId: "blob-9", size: 3, type: "image/png" });
+    await waitFor(() => expect(save).toHaveProperty("disabled", false));
+  });
+
   test("uploading in the hero form fills the blob id the section then saves", async () => {
     replies.push(pageReply(), siteReply({}));
     ui("/sites/site-1/pages/page-1");
     expect(await screen.findByText("Fresh bread daily")).toBeTruthy();
     fireEvent.click(sectionControls("edit")[0]!);
     expect(await screen.findByText(strings.sitesSaveSection)).toBeTruthy();
-    fireEvent.click(screen.getByText(strings.sitesUploadImage));
     const file = new File(["png"], "drum.png", { type: "image/png" });
-    const pickers = document.querySelectorAll('input[type="file"]');
-    fireEvent.change(pickers[0] as HTMLInputElement, {
-      target: { files: [file] },
+    const dropButton = screen.getByRole("button", {
+      name: new RegExp(strings.sitesThemeDropTitle),
+    });
+    fireEvent.drop(dropButton.parentElement!, {
+      dataTransfer: { files: [file] },
     });
     await waitFor(() => {
       expect(uploadFile).toHaveBeenCalledWith(file);

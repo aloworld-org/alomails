@@ -82,6 +82,95 @@
   overflow: auto;
 }
 
+/* Expenses is an everyday workspace: its action and filters form a clear
+   hierarchy before the records begin, rather than reading as one long toolbar. */
+.expensePage {
+  flex: 1;
+  max-width: 96rem;
+}
+.expenseWorkspace {
+  /* Filter popovers must be able to leave the card. Clipping this surface also
+     clipped the status list at the lower edge of the filter bar. */
+  overflow: visible;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+}
+.bankPage {
+  flex: 1;
+  max-width: 96rem;
+}
+.bankWorkspace {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+}
+.pageHeading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-5);
+  padding: var(--space-5);
+}
+.pageHeadingCopy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+.pageTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.02em;
+}
+.pageSubtitle {
+  max-width: 64ch;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.expenseFilters {
+  min-height: auto;
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  background: var(--bg-raised);
+}
+.statusFilter {
+  display: flex;
+  min-width: 14rem;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}
+.statusFilter > :last-child {
+  width: 100%;
+}
+
+@media (max-width: 48rem) {
+  .pageHeading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .pageHeading > :last-child {
+    width: 100%;
+  }
+  .statusFilter {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
 @media (max-width: 48rem) {
   .page {
     padding: var(--space-4);
@@ -107,6 +196,41 @@
   font-size: var(--text-xs);
   color: var(--text-tertiary);
   max-width: 70ch;
+}
+.approvalGrid {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+.approvalPage {
+  flex: 1;
+  max-width: 96rem;
+}
+.queueCard {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+}
+.queueHeader {
+  display: flex;
+  min-height: 5rem;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+@media (max-width: 72rem) {
+  .approvalGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ---- what a row of a table still carries ------------------------------ */
@@ -151,13 +275,14 @@
 }
 
 .empty {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-3);
-  min-height: 15rem;
+  min-height: 18rem;
   justify-content: center;
-  padding: var(--space-8) var(--space-5);
+  padding: var(--space-6) var(--space-5);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
   background: var(--bg-surface);
@@ -173,6 +298,12 @@
   border-radius: var(--radius-lg);
   background: var(--accent-tint);
   color: var(--accent);
+}
+.emptyEmbedded {
+  min-height: 16rem;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 .emptyTitle {
   font-size: var(--text-lg);
@@ -226,6 +357,17 @@
 }
 .row > * {
   flex: 1 1 160px;
+}
+.moneyRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+@media (max-width: 36rem) {
+  .moneyRow {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* A control named beside itself rather than above itself: "From [ 1 Jan ]" in a

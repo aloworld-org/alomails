@@ -40,7 +40,7 @@ export function SitesListView() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-app">
-      <header className="shrink-0 border-b border-subtle bg-surface px-8 py-6 max-sm:px-4 max-sm:py-4">
+      <header className="shrink-0 border-b border-subtle bg-header px-8 py-6 max-sm:px-4 max-sm:py-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3.5">
             <span
@@ -108,10 +108,10 @@ export function SitesListView() {
                 <button
                   key={site.id}
                   type="button"
-                  className="group flex min-h-20 w-full items-center gap-4 px-6 py-5 text-left transition-colors hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent sm:px-7"
+                  className="group flex min-h-20 w-full items-center gap-4 px-5 py-5 text-left transition-colors hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent sm:px-8 lg:px-9"
                   onClick={() => void navigate(site.id)}
                 >
-                  <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent ring-1 ring-inset ring-accent/10">
+                  <span className="ml-3 inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent ring-1 ring-inset ring-accent/10 sm:ml-4">
                     <Globe2 className="size-5" aria-hidden="true" />
                   </span>
                   <span className="min-w-0 flex-1">
@@ -124,10 +124,7 @@ export function SitesListView() {
                   </span>
                   <SiteStatusChip status={site.status} />
                   <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-tertiary transition-colors group-hover:bg-surface group-hover:text-primary">
-                    <ArrowRight
-                      className="size-4"
-                      aria-hidden="true"
-                    />
+                    <ArrowRight className="size-4" aria-hidden="true" />
                   </span>
                 </button>
               ))}

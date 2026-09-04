@@ -232,6 +232,9 @@ describe("getting to a report", () => {
   // module is absolute for that reason, and this test is what says so.
   test("a tab lands where it says it lands, from any depth", async () => {
     ui("/finance/expenses");
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.moreActions }),
+    );
     fireEvent.click(await screen.findByText(strings.financeTabReports));
     // The reports' own first tab, reached through the index redirect.
     expect(await screen.findByText(strings.financeReportIncome)).toBeTruthy();

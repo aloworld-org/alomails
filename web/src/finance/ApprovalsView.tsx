@@ -132,24 +132,21 @@ export function ApprovalsView({ onDecided }: { onDecided: () => void }) {
   }
 
   return (
-    <div className={styles.page}>
+    <div className={`${styles.page} ${styles.approvalPage}`}>
       {error !== null && <ErrorBanner message={error} />}
       {notice !== null && <p className={styles.notice}>{notice}</p>}
 
-      <div
-        className={
-          waiting.length === 0 && owed.length === 0
-            ? "grid gap-5 xl:grid-cols-2"
-            : "contents"
-        }
-      >
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>{strings.financeWaitingTitle}</h2>
+      <div className={styles.approvalGrid}>
+        <section className={styles.queueCard}>
+          <div className={styles.queueHeader}>
+            <h2 className={styles.sectionTitle}>{strings.financeWaitingTitle}</h2>
+          </div>
           {waiting.length === 0 ? (
             <EmptyState
               Icon={Inbox}
               title={strings.financeWaitingEmptyTitle}
               body={strings.financeWaitingEmptyBody}
+              embedded
             />
           ) : (
             <Table label={strings.financePendingClaimsTable}>
@@ -271,14 +268,17 @@ export function ApprovalsView({ onDecided }: { onDecided: () => void }) {
             ))}
         </section>
 
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>{strings.financeOwedTitle}</h2>
-          <p className={styles.sectionNote}>{strings.financeOwedNote}</p>
+        <section className={styles.queueCard}>
+          <div className={styles.queueHeader}>
+            <h2 className={styles.sectionTitle}>{strings.financeOwedTitle}</h2>
+            <p className={styles.sectionNote}>{strings.financeOwedNote}</p>
+          </div>
           {owed.length === 0 ? (
             <EmptyState
               Icon={Banknote}
               title={strings.financeOwedEmptyTitle}
               body={strings.financeOwedEmptyBody}
+              embedded
             />
           ) : (
             <Table label={strings.financeOwedClaimsTable}>

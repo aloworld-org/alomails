@@ -353,12 +353,11 @@ describe("the purchasing list", () => {
   test("the state filter asks the server rather than narrowing a loaded page", async () => {
     reply("/inventory/purchase-orders", "GET", { purchaseOrders: [PO_DRAFT] });
     ui("/inventory/purchase-orders");
-    await screen.findByText(strings.inventoryDraftOrder);
+    await screen.findByRole("button", { name: strings.inventoryDraftOrder });
 
     reply("/inventory/purchase-orders", "GET", { purchaseOrders: [PO_PLACED] });
-    fireEvent.change(screen.getByLabelText(strings.inventoryFilterStatus, { exact: false }), {
-      target: { value: "sent" },
-    });
+    fireEvent.click(screen.getByRole("combobox", { name: strings.inventoryFilterStatus }));
+    fireEvent.click(screen.getByRole("option", { name: strings.inventoryPoStatusSent }));
 
     await waitFor(() =>
       expect(

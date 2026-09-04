@@ -25,11 +25,6 @@ import {
   useRef,
   useState,
 } from "react";
-import type {
-  CSSProperties,
-  KeyboardEvent as ReactKeyboardEvent,
-  PointerEvent as ReactPointerEvent,
-} from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -38,11 +33,11 @@ import {
   ChevronUp,
   GripVertical,
   Eye,
+  ExternalLink,
   Layers,
   LayoutGrid,
   Lock,
   Monitor,
-  Palette,
   Pencil,
   Plus,
   Redo2,
@@ -56,6 +51,7 @@ import {
 import { strings } from "../i18n";
 import {
   Button,
+  cx,
   IconButton,
   Modal,
   Spinner,
@@ -66,7 +62,6 @@ import { kindLabel, layoutValueLabel, sectionSummary } from "./sectionInfo";
 import { SectionFormDialog } from "./SectionForm";
 import { SectionPalette } from "./SectionPalette";
 import { SectionInsertControl } from "./SectionInsertControl";
-import { ThemeDialog } from "./ThemeDialog";
 import { PageSeoDialog } from "./PageSeoDialog";
 import { PageAiEditPanel } from "./PageAiEditPanel";
 import { PagePassword } from "./PagePassword";
@@ -87,9 +82,13 @@ import {
 } from "./editHistory";
 import {
   moveDestination,
+  readHeroCanvasActionMessage,
+  readSectionEditMessage,
+  readSectionQuickEditMessage,
   readSectionMoveMessage,
   withSectionMoved,
 } from "./sectionMove";
+import type { HeroCanvasAction } from "./sectionMove";
 import {
   controlsFor,
   currentValue,
@@ -99,9 +98,9 @@ import {
   steppedValue,
   type SectionLayouts,
 } from "./sectionLayout";
-import { SectionLayoutControls } from "./SectionLayoutControls";
 import { ErrorBanner } from "./parts";
 import { insertionIndex, type PaletteTile } from "./palette";
+import { heroAfterCanvasAction } from "./heroCanvas";
 import type { Section, SectionKind, SectionsEnvelope } from "./sections";
 import type { SitePageDetail } from "./types";
 import styles from "./SitesModule.module.css";
@@ -178,16 +177,16 @@ export function PageEditorView() {
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewMobile, setPreviewMobile] = useState(false);
-  const [sectionsPanelWidth, setSectionsPanelWidth] = useState(34);
-  const [resizingWorkspace, setResizingWorkspace] = useState(false);
-  const workspaceRef = useRef<HTMLDivElement | null>(null);
+  const [canvasSelection, setCanvasSelection] = useState<{
+    index: number;
+    target: "media" | "section" | "heading" | "description";
+  } | null>(null);
   const [proposedPreviewHtml, setProposedPreviewHtml] = useState<string | null>(
     null,
   );
   const [previewVersion, setPreviewVersion] = useState<"before" | "after">(
     "before",
   );
-  const [themeOpen, setThemeOpen] = useState(false);
   const [seoOpen, setSeoOpen] = useState(false);
   // Whether visitors meet an unlock screen before this page (S2.06b). Owned
   // by the password panel and mirrored here for one reason: a preview that
@@ -506,6 +505,16 @@ export function PageEditorView() {
     const frame = previewFrame.current?.contentWindow ?? null;
     if (frame === null || locale !== null) return;
     const current = sectionsRef.current;
+    const selectedSection =
+      canvasSelection === null ? undefined : current[canvasSelection.index];
+    const canvasState =
+      selectedSection?.type === "hero"
+        ? {
+            alignment: selectedSection.alignment ?? "center",
+            width: selectedSection.content_width ?? "balanced",
+            background: selectedSection.appearance?.background ?? "background",
+          }
+        : {};
     frame.postMessage(
       {
         alo: "site-edit-chrome",
@@ -517,10 +526,85 @@ export function PageEditorView() {
           ),
         ),
         focus: focusInPreview.current,
+        canvas: {
+          size: strings.sitesCanvasImageSize,
+          position: strings.sitesCanvasImagePosition,
+          alignment: strings.sitesHeroAlignment,
+          colors: strings.sitesHeroBackgroundColor,
+          heading: strings.sitesFieldHeading,
+          description: strings.sitesFieldSubheading,
+          formatting: strings.formatting,
+          bold: strings.bold,
+          italic: strings.italic,
+          underline: strings.underline,
+          textColor: strings.textColor,
+          customColor: strings.colorPickerHexColour,
+          textWidth: strings.sitesHeroContentWidth,
+          narrow: strings.sitesHeroContentWidthNarrow,
+          balanced: strings.sitesHeroContentWidthBalanced,
+          wide: strings.sitesHeroContentWidthWide,
+          zoomOut: strings.docZoomOut,
+          zoomIn: strings.docZoomIn,
+          moveLeft: strings.sitesImageFrameLeft,
+          moveRight: strings.sitesImageFrameWidth,
+          moveUp: strings.sitesImageFrameTop,
+          moveDown: strings.sitesImageFrameHeight,
+          alignLeft: strings.sitesHeroAlignmentLeft,
+          alignCenter: strings.sitesHeroAlignmentCenter,
+          alignRight: strings.sitesHeroAlignmentRight,
+          background: strings.sitesThemeBackgroundColor,
+          surface: strings.sitesThemeBorderColor,
+          accent: strings.sitesThemeAccentColor(1),
+          dark: strings.sitesThemeTextColor,
+          done: strings.close,
+        },
+        canvasState,
+        canvasSelection,
       },
       "*",
     );
     focusInPreview.current = null;
+  }
+
+  async function openPreviewInBrowser() {
+    const target = window.open("about:blank", "_blank");
+    if (target === null) {
+      setPreviewError(strings.sitesPreviewBrowserBlocked);
+      return;
+    }
+    target.opener = null;
+    try {
+      const html = await api.pageBrowserPreview(
+        siteId,
+        pageId,
+        locale ?? undefined,
+      );
+      target.document.open();
+      target.document.write(html);
+      target.document.close();
+      setPreviewError(null);
+    } catch (err) {
+      target.close();
+      setPreviewError(sitesMessage(err, strings.sitesPreviewFailed));
+    }
+  }
+
+  async function applyHeroCanvasAction(
+    index: number,
+    action: HeroCanvasAction,
+  ) {
+    const current = sectionsRef.current;
+    const section = current[index];
+    if (section?.type !== "hero") return;
+    const next = heroAfterCanvasAction(section, action);
+    if (next === null) return;
+    if (locale !== null) {
+      const localized = [...current];
+      localized[index] = next;
+      await saveLocalized(localized);
+    } else {
+      await run(api.updateSection(siteId, pageId, index, next));
+    }
   }
 
   function remove(index: number) {
@@ -694,6 +778,15 @@ export function PageEditorView() {
     function onMessage(event: MessageEvent) {
       const frame = previewFrame.current;
       const own = frame !== null && event.source === frame.contentWindow;
+      if (
+        own &&
+        typeof event.data === "object" &&
+        event.data !== null &&
+        (event.data as Record<string, unknown>)["alo"] === "site-canvas-close"
+      ) {
+        setCanvasSelection(null);
+        return;
+      }
       const edit = readTextEditMessage(event.data, own);
       if (edit !== null) {
         void applyInlineText(edit.key, edit.text);
@@ -702,6 +795,38 @@ export function PageEditorView() {
       const resized = readLayoutStepMessage(event.data, own);
       if (resized !== null) {
         stepLayout(resized.index, resized.step);
+        return;
+      }
+      const selected = readSectionEditMessage(event.data, own);
+      if (selected !== null) {
+        const section = sectionsRef.current[selected];
+        if (section === undefined) {
+          setError(strings.sitesInlineTextStale);
+          setPreviewEpoch((epoch) => epoch + 1);
+          return;
+        }
+        if (section.type === "hero") {
+          setForm(null);
+          return;
+        }
+        openForm({ kind: section.type, index: selected });
+        return;
+      }
+      const quick = readSectionQuickEditMessage(event.data, own);
+      if (quick !== null) {
+        const section = sectionsRef.current[quick.index];
+        if (section?.type !== "hero") {
+          if (section !== undefined)
+            openForm({ kind: section.type, index: quick.index });
+          return;
+        }
+        setForm(null);
+        setCanvasSelection(quick);
+        return;
+      }
+      const canvasAction = readHeroCanvasActionMessage(event.data, own);
+      if (canvasAction !== null) {
+        void applyHeroCanvasAction(canvasAction.index, canvasAction.action);
         return;
       }
       const moved = readSectionMoveMessage(event.data, own);
@@ -892,49 +1017,6 @@ export function PageEditorView() {
   const empty = pageSections.length === 0;
   const requestedLanguage = locale === null ? defaultLocale : locale;
 
-  function setWorkspaceWidthFromPointer(clientX: number) {
-    const bounds = workspaceRef.current?.getBoundingClientRect();
-    if (bounds === undefined || bounds.width === 0) return;
-    const next = ((clientX - bounds.left) / bounds.width) * 100;
-    setSectionsPanelWidth(Math.min(65, Math.max(25, next)));
-  }
-
-  function startWorkspaceResize(event: ReactPointerEvent<HTMLButtonElement>) {
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setResizingWorkspace(true);
-    setWorkspaceWidthFromPointer(event.clientX);
-  }
-
-  function moveWorkspaceResize(event: ReactPointerEvent<HTMLButtonElement>) {
-    if (!resizingWorkspace) return;
-    setWorkspaceWidthFromPointer(event.clientX);
-  }
-
-  function finishWorkspaceResize(event: ReactPointerEvent<HTMLButtonElement>) {
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-    setResizingWorkspace(false);
-  }
-
-  function resizeWorkspaceWithKeyboard(
-    event: ReactKeyboardEvent<HTMLButtonElement>,
-  ) {
-    if (event.key === "ArrowLeft") {
-      event.preventDefault();
-      setSectionsPanelWidth((width) => Math.max(25, width - 4));
-    } else if (event.key === "ArrowRight") {
-      event.preventDefault();
-      setSectionsPanelWidth((width) => Math.min(65, width + 4));
-    } else if (event.key === "Home") {
-      event.preventDefault();
-      setSectionsPanelWidth(25);
-    } else if (event.key === "End") {
-      event.preventDefault();
-      setSectionsPanelWidth(65);
-    }
-  }
-
   async function copyFallback() {
     if (page === null || locale === null) return;
     await saveLocalized(sections);
@@ -942,31 +1024,25 @@ export function PageEditorView() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-y-auto bg-app px-4 pb-4 text-text-primary sm:px-6 lg:px-8">
-      <header className="sticky top-0 z-[1] -mx-4 mb-4 border-b border-subtle bg-surface px-4 shadow-sm sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-        <div className="mx-auto flex w-full max-w-[var(--workspace-content-max)] flex-wrap items-center gap-3 py-3">
+      <header className="sticky top-0 z-[1] -mx-4 mb-4 border-b border-subtle bg-header px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+        <div className="mx-auto flex min-h-16 w-full max-w-[var(--workspace-content-max)] items-center gap-3">
           <Link
             to={`/sites/${siteId}?section=pages`}
-            className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 font-semibold text-accent no-underline transition-colors hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
+            className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-secondary no-underline transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
           >
             <ArrowLeft size={16} aria-hidden="true" />
             {strings.sitesBackToSite}
           </Link>
           {page !== null && (
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl">
-                  {page.title}
-                </h1>
-                <span className="font-mono text-sm text-text-secondary">
-                  /{page.slug}
-                </span>
-                {page.home && (
-                  <span className="rounded-full bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent">
-                    {strings.sitesHomeBadge}
-                  </span>
-                )}
-              </div>
-            </div>
+            <>
+              <span
+                className="h-6 w-px shrink-0 bg-border-subtle"
+                aria-hidden="true"
+              />
+              <h1 className="min-w-0 flex-1 truncate text-xl font-bold tracking-tight sm:text-2xl">
+                {page.title}
+              </h1>
+            </>
           )}
           {loading && <Spinner size={16} />}
         </div>
@@ -978,7 +1054,8 @@ export function PageEditorView() {
         <>
           <section className="mx-auto w-full max-w-[var(--workspace-content-max)] overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm">
             <div className="flex flex-wrap items-center gap-2 px-4 py-3 sm:px-5">
-              {locale === null && (
+              {locale === null &&
+                (history.past.length > 0 || history.future.length > 0) && (
                 <>
                   <IconButton
                     size="sm"
@@ -996,10 +1073,6 @@ export function PageEditorView() {
                   />
                 </>
               )}
-              <span
-                className="mx-1 hidden h-6 w-px bg-border-subtle sm:block"
-                aria-hidden="true"
-              />
               {locale === null && (
                 <Button
                   variant="ghost"
@@ -1010,14 +1083,6 @@ export function PageEditorView() {
                   {strings.sitesSeoAction}
                 </Button>
               )}
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={<Palette size={14} />}
-                onClick={() => setThemeOpen(true)}
-              >
-                {strings.sitesTheme}
-              </Button>
               {locale === null && (
                 <PageAiEditPanel
                   navigation
@@ -1040,26 +1105,7 @@ export function PageEditorView() {
                 multilingual={enabledLocales.length > 1}
                 onChange={setPageProtected}
               />
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={<Eye size={14} />}
-                className={
-                  previewOpen
-                    ? "!border-accent/20 !bg-accent-soft !text-accent"
-                    : undefined
-                }
-                aria-label={
-                  previewOpen
-                    ? strings.sitesHidePreview
-                    : strings.sitesShowPreview
-                }
-                aria-pressed={previewOpen}
-                onClick={() => setPreviewOpen((open) => !open)}
-              >
-                {strings.sitesPreview}
-              </Button>
-              <nav
+              {enabledLocales.length > 1 && <nav
                 className="ml-auto flex items-center gap-2"
                 aria-label={strings.sitesLanguagesLabel}
               >
@@ -1086,7 +1132,7 @@ export function PageEditorView() {
                     </button>
                   ))}
                 </div>
-              </nav>
+              </nav>}
             </div>
           </section>
 
@@ -1223,15 +1269,9 @@ export function PageEditorView() {
           )}
 
           <div
-            ref={workspaceRef}
-            style={
-              {
-                "--sections-panel-width": `${sectionsPanelWidth}%`,
-              } as CSSProperties
-            }
             className={
               previewOpen
-                ? "mx-auto mt-4 grid w-full max-w-[var(--workspace-content-max)] min-w-0 flex-1 gap-4 xl:grid-cols-[minmax(320px,var(--sections-panel-width))_12px_minmax(0,1fr)] xl:gap-0"
+                ? "mx-auto mt-4 grid w-full max-w-[var(--workspace-content-max)] min-w-0 flex-1 gap-4 xl:grid-cols-[minmax(320px,0.72fr)_minmax(0,1.5fr)]"
                 : "mx-auto mt-4 grid w-full max-w-[var(--workspace-content-max)] min-w-0 flex-1"
             }
           >
@@ -1252,6 +1292,39 @@ export function PageEditorView() {
                   <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-raised px-2 py-0.5 text-xs font-semibold tabular-nums text-tertiary">
                     {pageSections.length}
                   </span>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon={<Eye size={15} />}
+                    className={
+                      previewOpen
+                        ? "!border-accent/20 !bg-accent-soft !text-accent"
+                        : "!border-border-subtle !bg-raised"
+                    }
+                    aria-label={
+                      previewOpen
+                        ? strings.sitesHidePreview
+                        : strings.sitesShowPreview
+                    }
+                    aria-pressed={previewOpen}
+                    onClick={() => setPreviewOpen((open) => !open)}
+                  >
+                    {strings.sitesPreview}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon={<ExternalLink size={15} />}
+                    className="!border-border-subtle !bg-raised"
+                    aria-label={strings.sitesPreviewInBrowser}
+                    onClick={() => void openPreviewInBrowser()}
+                  >
+                    <span className="hidden sm:inline">
+                      {strings.sitesPreviewInBrowser}
+                    </span>
+                  </Button>
                 </div>
               </div>
 
@@ -1306,14 +1379,33 @@ export function PageEditorView() {
                         <li
                           className={cardClass}
                           draggable
-                          onDragStart={() => setDragFrom(i)}
+                          onDragStart={(event) => {
+                            setDragFrom(i);
+                            event.dataTransfer.effectAllowed = "move";
+                            // Native drag-and-drop requires payload data in
+                            // Firefox, and reading it again on drop avoids
+                            // depending on a React state update winning the
+                            // race with a quick gesture.
+                            event.dataTransfer.setData(
+                              "text/plain",
+                              String(i),
+                            );
+                          }}
                           onDragOver={(e) => {
                             e.preventDefault();
+                            e.dataTransfer.dropEffect = "move";
                             setDragOver(i);
                           }}
                           onDrop={(e) => {
                             e.preventDefault();
-                            if (dragFrom !== null) void move(dragFrom, i);
+                            const transferred = Number.parseInt(
+                              e.dataTransfer.getData("text/plain"),
+                              10,
+                            );
+                            const source = Number.isInteger(transferred)
+                              ? transferred
+                              : dragFrom;
+                            if (source !== null) void move(source, i);
                             setDragFrom(null);
                             setDragOver(null);
                           }}
@@ -1338,17 +1430,6 @@ export function PageEditorView() {
                               <span className={styles.cardSummary}>
                                 {summary}
                               </span>
-                            )}
-                            {locale === null && (
-                              <SectionLayoutControls
-                                section={section}
-                                index={i}
-                                layouts={layouts}
-                                disabled={working || translationBusy}
-                                onChoose={(at, key, value) => {
-                                  void applyLayout(at, key, value);
-                                }}
-                              />
                             )}
                           </div>
                           <div className={styles.cardActions}>
@@ -1459,47 +1540,14 @@ export function PageEditorView() {
             </section>
 
             {previewOpen && (
-              <div
-                className="relative z-10 hidden items-start justify-center xl:flex"
-                aria-hidden="false"
-              >
-                <button
-                  type="button"
-                  role="separator"
-                  aria-label={strings.sitesResizeWorkspace}
-                  aria-orientation="vertical"
-                  aria-valuemin={25}
-                  aria-valuemax={65}
-                  aria-valuenow={Math.round(sectionsPanelWidth)}
-                  className="group flex h-full min-h-16 w-10 shrink-0 touch-none cursor-col-resize items-start justify-center rounded-lg pt-4 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15"
-                  onPointerDown={startWorkspaceResize}
-                  onPointerMove={moveWorkspaceResize}
-                  onPointerUp={finishWorkspaceResize}
-                  onPointerCancel={finishWorkspaceResize}
-                  onKeyDown={resizeWorkspaceWithKeyboard}
-                  onDoubleClick={() => setSectionsPanelWidth(34)}
-                >
-                  <span className="sticky top-20 inline-flex h-12 w-6 items-center justify-center rounded-full border border-subtle bg-surface text-tertiary shadow-sm transition-colors group-hover:border-accent/30 group-hover:text-accent group-focus-visible:border-accent/30 group-focus-visible:text-accent">
-                    <GripVertical size={15} aria-hidden="true" />
-                  </span>
-                </button>
-              </div>
-            )}
-
-            {previewOpen && (
               <aside
-                className="min-w-0 self-start overflow-hidden rounded-2xl border border-subtle bg-raised/60 shadow-sm xl:sticky xl:top-4"
+                className="min-w-0 self-start overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm xl:sticky xl:top-4"
                 aria-label={strings.sitesPreview}
               >
                 <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 border-b border-subtle bg-surface px-4 py-3 sm:px-5">
-                  <div>
-                    <h2 className="font-semibold text-text-primary">
-                      {strings.sitesPreview}
-                    </h2>
-                    <p className="mt-0.5 text-xs text-text-secondary">
-                      /{page.slug}
-                    </p>
-                  </div>
+                  <h2 className="font-semibold text-text-primary">
+                    {strings.sitesPreview}
+                  </h2>
                   <div className="flex flex-wrap items-center gap-2">
                     {proposedPreviewHtml !== null && (
                       <div
@@ -1551,16 +1599,6 @@ export function PageEditorView() {
                     </div>
                   </div>
                 </div>
-                {locale === null && !empty && (
-                  <p className="flex items-center gap-2 border-b border-subtle bg-surface px-4 py-2 text-xs leading-5 text-secondary sm:px-5">
-                    <Pencil
-                      size={13}
-                      className="shrink-0 text-accent"
-                      aria-hidden="true"
-                    />
-                    {strings.sitesInlineTextHint}
-                  </p>
-                )}
                 {pageProtected && (
                   <p className="flex items-center gap-2 border-b border-subtle bg-surface px-4 py-2 text-xs text-secondary sm:px-5">
                     <Lock size={13} aria-hidden="true" />
@@ -1570,7 +1608,7 @@ export function PageEditorView() {
                 {previewError !== null && (
                   <ErrorBanner message={previewError} />
                 )}
-                <div className="p-3 sm:p-5">
+                <div className="p-3">
                   {empty && !loading ? (
                     <div className="flex min-h-[32rem] flex-col overflow-hidden rounded-xl border border-default bg-surface shadow-sm">
                       <div
@@ -1599,18 +1637,17 @@ export function PageEditorView() {
                     </div>
                   ) : (
                     <div
-                      className={
-                        previewMobile
-                          ? "mx-auto max-w-[391px] rounded-xl bg-sunken p-2"
-                          : "rounded-xl bg-sunken p-2"
-                      }
+                      className={cx(
+                        "overflow-hidden rounded-xl border border-subtle bg-surface",
+                        previewMobile && "mx-auto max-w-[391px]",
+                      )}
                     >
                       {/* Sandboxed: scripts may run (the menu toggle), but the draft
                       document never touches this origin or navigates the app. */}
                       <iframe
                         ref={previewFrame}
                         onLoad={postPreviewChrome}
-                        className="block h-[min(70vh,48rem)] w-full rounded-lg border-0 bg-surface"
+                        className="block h-[min(70vh,48rem)] w-full border-0 bg-surface"
                         title={strings.sitesPreviewTitle}
                         sandbox="allow-scripts"
                         srcDoc={
@@ -1629,16 +1666,6 @@ export function PageEditorView() {
         </>
       )}
 
-      {themeOpen && (
-        <ThemeDialog
-          siteId={siteId}
-          onClose={() => setThemeOpen(false)}
-          onApplied={() => {
-            setThemeOpen(false);
-            setPreviewEpoch((epoch) => epoch + 1);
-          }}
-        />
-      )}
 
       {seoOpen && page !== null && (
         <PageSeoDialog

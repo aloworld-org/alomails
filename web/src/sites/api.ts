@@ -112,7 +112,11 @@ export class SitesError extends Error {
   readonly detail: string | null;
   readonly reason: string | null;
 
-  constructor(status: number, detail: string | null, reason: string | null = null) {
+  constructor(
+    status: number,
+    detail: string | null,
+    reason: string | null = null,
+  ) {
     super(detail ?? `sites request failed (${status})`);
     this.name = "SitesError";
     this.status = status;
@@ -125,7 +129,9 @@ export class SitesError extends Error {
  *  it sent one, and `fallback` otherwise (a dropped connection, or a failure
  *  whose reason is not the user's business). */
 export function sitesMessage(error: unknown, fallback: string): string {
-  return error instanceof SitesError && error.detail !== null ? error.detail : fallback;
+  return error instanceof SitesError && error.detail !== null
+    ? error.detail
+    : fallback;
 }
 
 /** The protection answer as the server shapes it: `{"protected": false}`
@@ -174,7 +180,9 @@ export class SitesApi {
   /** Turns a plain-language business description into one complete private
    *  site draft. Publishing remains a separate, explicit owner action. */
   generateSite(description: string): Promise<GeneratedSiteDraft> {
-    return this.#write<GeneratedSiteDraft>("POST", "/sites/generate", { description });
+    return this.#write<GeneratedSiteDraft>("POST", "/sites/generate", {
+      description,
+    });
   }
 
   /** The templates this build ships, in gallery order. The catalog is the
@@ -203,7 +211,10 @@ export class SitesApi {
   /** Creates a draft site holding the template's pages, theme and contact
    *  form, in one server transaction. Nothing is published: making a template
    *  live stays an explicit act, exactly as for a generated site. */
-  createSiteFromTemplate(templateId: string, draft: SiteDraft): Promise<TemplateSiteDraft> {
+  createSiteFromTemplate(
+    templateId: string,
+    draft: SiteDraft,
+  ): Promise<TemplateSiteDraft> {
     return this.#write<TemplateSiteDraft>(
       "POST",
       `/sites/templates/${encodeURIComponent(templateId)}`,
@@ -224,7 +235,10 @@ export class SitesApi {
     ).then((response) => response.collaborators ?? []);
   }
 
-  inviteCollaborator(siteId: string, email: string): Promise<SiteCollaboratorInvite> {
+  inviteCollaborator(
+    siteId: string,
+    email: string,
+  ): Promise<SiteCollaboratorInvite> {
     return this.#write<SiteCollaboratorInvite>(
       "POST",
       `/sites/${encodeURIComponent(siteId)}/collaborators`,
@@ -300,11 +314,14 @@ export class SitesApi {
     siteId: string,
     appearance: SiteChatAppearance,
   ): Promise<string> {
-    const response = await this.#send(`${this.#appearancePath(siteId)}/preview`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(appearance),
-    });
+    const response = await this.#send(
+      `${this.#appearancePath(siteId)}/preview`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(appearance),
+      },
+    );
     await SitesApi.#rejectFailed(response);
     return response.text();
   }
@@ -324,7 +341,10 @@ export class SitesApi {
   /** Publishes one Drive document to the assistant — and therefore to anyone
    *  on the internet, which is the sentence the screen shows above the
    *  button. The server rules on readability, duplicates and the cap. */
-  addChatKnowledge(siteId: string, docNodeId: string): Promise<SiteKnowledgeSource> {
+  addChatKnowledge(
+    siteId: string,
+    docNodeId: string,
+  ): Promise<SiteKnowledgeSource> {
     return this.#write<SiteKnowledgeSource>(
       "POST",
       `/sites/${encodeURIComponent(siteId)}/chat-knowledge`,
@@ -347,10 +367,14 @@ export class SitesApi {
     defaultLocale: string,
     enabledLocales: string[],
   ): Promise<void> {
-    await this.#write<{ status?: string }>("PUT", `/sites/${encodeURIComponent(siteId)}`, {
-      defaultLocale,
-      enabledLocales,
-    });
+    await this.#write<{ status?: string }>(
+      "PUT",
+      `/sites/${encodeURIComponent(siteId)}`,
+      {
+        defaultLocale,
+        enabledLocales,
+      },
+    );
   }
 
   /** Exact per-language page coverage used beside the Publish action. */
@@ -425,9 +449,13 @@ export class SitesApi {
     publishes: SitePublishVersion[];
     current: string | null;
   }> {
-    return this.#read<{ publishes?: SitePublishVersion[]; current?: string | null }>(
-      `/sites/${encodeURIComponent(siteId)}/publishes`,
-    ).then((r) => ({ publishes: r.publishes ?? [], current: r.current ?? null }));
+    return this.#read<{
+      publishes?: SitePublishVersion[];
+      current?: string | null;
+    }>(`/sites/${encodeURIComponent(siteId)}/publishes`).then((r) => ({
+      publishes: r.publishes ?? [],
+      current: r.current ?? null,
+    }));
   }
 
   /** The pages one version froze — one entry per page and language. */
@@ -459,7 +487,9 @@ export class SitesApi {
   ): Promise<string> {
     const path = `${this.#publishPath(siteId, publishId)}/pages/${encodeURIComponent(pageId)}/preview`;
     const res = await this.#send(
-      locale === undefined ? path : `${path}?locale=${encodeURIComponent(locale)}`,
+      locale === undefined
+        ? path
+        : `${path}?locale=${encodeURIComponent(locale)}`,
       { method: "GET" },
     );
     await SitesApi.#rejectFailed(res);
@@ -468,7 +498,10 @@ export class SitesApi {
 
   /** Puts an earlier version back on the internet as a NEW version holding a
    *  copy of it. History is never rewritten, and the draft is never touched. */
-  restorePublish(siteId: string, publishId: string): Promise<SitePublishRestore> {
+  restorePublish(
+    siteId: string,
+    publishId: string,
+  ): Promise<SitePublishRestore> {
     return this.#write<SitePublishRestore>(
       "POST",
       `${this.#publishPath(siteId, publishId)}/restore`,
@@ -494,15 +527,25 @@ export class SitesApi {
   /** Chooses the moment this website goes live, or moves the moment already
    *  chosen (the schedule keeps its id). `publishAt` is an RFC 3339 instant —
    *  the caller sends a real moment, never a wall-clock string. */
-  scheduleSitePublish(siteId: string, publishAt: string): Promise<SitePublishSchedule> {
-    return this.#write<SitePublishSchedule>("POST", this.#schedulePath(siteId), {
-      publishAt,
-    });
+  scheduleSitePublish(
+    siteId: string,
+    publishAt: string,
+  ): Promise<SitePublishSchedule> {
+    return this.#write<SitePublishSchedule>(
+      "POST",
+      this.#schedulePath(siteId),
+      {
+        publishAt,
+      },
+    );
   }
 
   /** Calls off a scheduled publish. The site is not touched; the row survives
    *  as `cancelled` so the screen can say what happened to it. */
-  cancelSitePublish(siteId: string, scheduleId: string): Promise<SitePublishSchedule> {
+  cancelSitePublish(
+    siteId: string,
+    scheduleId: string,
+  ): Promise<SitePublishSchedule> {
     return this.#write<SitePublishSchedule>(
       "DELETE",
       `${this.#schedulePath(siteId)}/${encodeURIComponent(scheduleId)}`,
@@ -616,14 +659,18 @@ export class SitesApi {
   crmBoards(): Promise<SiteCrmBoard[]> {
     return this.#read<{ pipelines?: SiteCrmBoard[] }>(
       `/crm/pipelines?lang=${encodeURIComponent(getLocale())}`,
-    ).then((response) => (response.pipelines ?? []).filter((board) => !board.archived));
+    ).then((response) =>
+      (response.pipelines ?? []).filter((board) => !board.archived),
+    );
   }
 
   /** The columns of one sales board, left to right. */
   crmColumns(boardId: string): Promise<SiteCrmColumn[]> {
     return this.#read<{ stages?: SiteCrmColumn[] }>(
       `/crm/pipelines/${encodeURIComponent(boardId)}/stages`,
-    ).then((response) => (response.stages ?? []).filter((column) => !column.archived));
+    ).then((response) =>
+      (response.stages ?? []).filter((column) => !column.archived),
+    );
   }
 
   /** The shipped theme presets, in picker order (the first is the default). */
@@ -656,7 +703,10 @@ export class SitesApi {
     ).then((response) => response.collections ?? []);
   }
 
-  createCollection(siteId: string, draft: SiteCollectionDraft): Promise<SiteCollection> {
+  createCollection(
+    siteId: string,
+    draft: SiteCollectionDraft,
+  ): Promise<SiteCollection> {
     return this.#write<SiteCollection>(
       "POST",
       `/sites/${encodeURIComponent(siteId)}/collections`,
@@ -676,7 +726,10 @@ export class SitesApi {
     );
   }
 
-  async disconnectCollection(siteId: string, collectionId: string): Promise<void> {
+  async disconnectCollection(
+    siteId: string,
+    collectionId: string,
+  ): Promise<void> {
     await this.#write<{ status?: string }>(
       "DELETE",
       `/sites/${encodeURIComponent(siteId)}/collections/${encodeURIComponent(collectionId)}`,
@@ -711,7 +764,11 @@ export class SitesApi {
     catalogId: string,
     draft: SiteCatalogDraft,
   ): Promise<SiteCatalog> {
-    return this.#write<SiteCatalog>("PUT", this.#catalogPath(siteId, catalogId), draft);
+    return this.#write<SiteCatalog>(
+      "PUT",
+      this.#catalogPath(siteId, catalogId),
+      draft,
+    );
   }
 
   deleteCatalog(siteId: string, catalogId: string): Promise<void> {
@@ -782,7 +839,11 @@ export class SitesApi {
     );
   }
 
-  deleteCatalogItem(siteId: string, catalogId: string, itemId: string): Promise<void> {
+  deleteCatalogItem(
+    siteId: string,
+    catalogId: string,
+    itemId: string,
+  ): Promise<void> {
     return this.#discard(
       "DELETE",
       `${this.#catalogPath(siteId, catalogId)}/items/${encodeURIComponent(itemId)}`,
@@ -852,11 +913,13 @@ export class SitesApi {
       currency?: string;
       currencyExponent?: number;
       products?: SiteShopProduct[];
-    }>(`/sites/${encodeURIComponent(siteId)}/shop-products`).then((response) => ({
-      currency: response.currency ?? "EUR",
-      currencyExponent: response.currencyExponent ?? 2,
-      products: response.products ?? [],
-    }));
+    }>(`/sites/${encodeURIComponent(siteId)}/shop-products`).then(
+      (response) => ({
+        currency: response.currency ?? "EUR",
+        currencyExponent: response.currencyExponent ?? 2,
+        products: response.products ?? [],
+      }),
+    );
   }
 
   /** The site's shop shelf in listing order, each row resolved at this
@@ -878,9 +941,13 @@ export class SitesApi {
    *  price list, not stocked, or already listed is a 422 in its own words —
    *  and the refusal sentence travels verbatim. */
   addShopItem(siteId: string, productId: string): Promise<SiteShopItemRow> {
-    return this.#write<{ item: SiteShopItemRow }>("POST", this.#shopItemsPath(siteId), {
-      productId,
-    }).then((response) => response.item);
+    return this.#write<{ item: SiteShopItemRow }>(
+      "POST",
+      this.#shopItemsPath(siteId),
+      {
+        productId,
+      },
+    ).then((response) => response.item);
   }
 
   /** Takes a listing off the shop window. Orders already placed keep their
@@ -914,9 +981,9 @@ export class SitesApi {
    *  has never set a rate answers `0` — what the public checkout would
    *  actually charge. */
   shopShipping(siteId: string): Promise<number> {
-    return this.#read<{ shippingCents?: number }>(this.#shopSettingsPath(siteId)).then(
-      (response) => response.shippingCents ?? 0,
-    );
+    return this.#read<{ shippingCents?: number }>(
+      this.#shopSettingsPath(siteId),
+    ).then((response) => response.shippingCents ?? 0);
   }
 
   /** Sets the site's flat delivery price. Bounds are the server's; a refusal
@@ -985,7 +1052,11 @@ export class SitesApi {
     bookingId: string,
     draft: SiteBookingDraft,
   ): Promise<SiteBooking> {
-    return this.#write<SiteBooking>("PUT", this.#bookingPath(siteId, bookingId), draft);
+    return this.#write<SiteBooking>(
+      "PUT",
+      this.#bookingPath(siteId, bookingId),
+      draft,
+    );
   }
 
   /** Removes the service. Appointments already in the calendar are
@@ -1015,7 +1086,9 @@ export class SitesApi {
     orderId: string,
     status: SiteOrderStatus,
   ): Promise<SiteOrder> {
-    return this.#write<SiteOrder>("PUT", this.#orderPath(siteId, orderId), { status });
+    return this.#write<SiteOrder>("PUT", this.#orderPath(siteId, orderId), {
+      status,
+    });
   }
 
   /** Deletes an order and its lines — spam, a duplicate, or a customer asking
@@ -1043,7 +1116,10 @@ export class SitesApi {
     return `/sites/${encodeURIComponent(siteId)}/catalogs/${encodeURIComponent(catalogId)}`;
   }
 
-  collectionPreview(siteId: string, collectionId: string): Promise<SiteCollectionPreview> {
+  collectionPreview(
+    siteId: string,
+    collectionId: string,
+  ): Promise<SiteCollectionPreview> {
     return this.#read<SiteCollectionPreview>(
       `/sites/${encodeURIComponent(siteId)}/collections/${encodeURIComponent(collectionId)}/preview`,
     );
@@ -1082,7 +1158,9 @@ export class SitesApi {
             name: table.name,
             recordCount: table.records?.length ?? 0,
             fields: (table.fields ?? []).flatMap((field) =>
-              field.type === "text" || field.type === "date" || field.type === "attachment"
+              field.type === "text" ||
+              field.type === "date" ||
+              field.type === "attachment"
                 ? [{ id: field.id, name: field.name, type: field.type }]
                 : [],
             ),
@@ -1096,7 +1174,11 @@ export class SitesApi {
   /** Creates a page at the end of the navigation order, with an empty section
    *  stack; answers the stored page. */
   createPage(siteId: string, draft: PageDraft): Promise<SitePage> {
-    return this.#write<SitePage>("POST", `/sites/${encodeURIComponent(siteId)}/pages`, draft);
+    return this.#write<SitePage>(
+      "POST",
+      `/sites/${encodeURIComponent(siteId)}/pages`,
+      draft,
+    );
   }
 
   /** Keeps an uploaded page image in the website's page folder in Drive. */
@@ -1108,6 +1190,18 @@ export class SitesApi {
     return this.#write<{ id: string }>(
       "POST",
       `${this.#pagePath(siteId, pageId)}/images`,
+      image,
+    );
+  }
+
+  /** Keeps a logo or favicon in the website's Identity folder in Drive. */
+  attachIdentityImage(
+    siteId: string,
+    image: { blobId: string; filename: string },
+  ): Promise<{ id: string }> {
+    return this.#write<{ id: string }>(
+      "POST",
+      `/sites/${encodeURIComponent(siteId)}/identity/images`,
       image,
     );
   }
@@ -1147,7 +1241,9 @@ export class SitesApi {
     proposal: SiteEditEnvelope,
   ): Promise<SectionsEnvelope> {
     return this.#sections(
-      this.#write("PUT", `${this.#pagePath(siteId, pageId)}/ai-edits`, { proposal }),
+      this.#write("PUT", `${this.#pagePath(siteId, pageId)}/ai-edits`, {
+        proposal,
+      }),
     );
   }
 
@@ -1160,11 +1256,19 @@ export class SitesApi {
 
   /** Binds an alo Doc to a new draft post and answers the stored metadata. */
   createPost(siteId: string, draft: PostDraft): Promise<SitePost> {
-    return this.#write<SitePost>("POST", `/sites/${encodeURIComponent(siteId)}/posts`, draft);
+    return this.#write<SitePost>(
+      "POST",
+      `/sites/${encodeURIComponent(siteId)}/posts`,
+      draft,
+    );
   }
 
   /** Replaces the public title, path, excerpt, and optional cover. */
-  async updatePost(siteId: string, postId: string, update: PostUpdate): Promise<void> {
+  async updatePost(
+    siteId: string,
+    postId: string,
+    update: PostUpdate,
+  ): Promise<void> {
     await this.#write<{ status?: string }>(
       "PUT",
       this.#postPath(siteId, postId),
@@ -1200,14 +1304,19 @@ export class SitesApi {
     pageId: string,
     locale: string,
   ): Promise<LocalizedSitePageDetail> {
-    return this.#read<LocalizedSitePageDetail>(this.#localizedPagePath(siteId, pageId, locale));
+    return this.#read<LocalizedSitePageDetail>(
+      this.#localizedPagePath(siteId, pageId, locale),
+    );
   }
 
   setLocalizedPage(
     siteId: string,
     pageId: string,
     locale: string,
-    page: Pick<SitePageDetail, "title" | "slug" | "sections" | "seoTitle" | "seoDescription">,
+    page: Pick<
+      SitePageDetail,
+      "title" | "slug" | "sections" | "seoTitle" | "seoDescription"
+    >,
   ): Promise<LocalizedSitePageDetail> {
     return this.#write<LocalizedSitePageDetail>(
       "PUT",
@@ -1217,19 +1326,36 @@ export class SitesApi {
   }
 
   /** Updates the visible page name/path while preserving its section stack. */
-  async setPageIdentity(siteId: string, pageId: string, title: string, slug: string): Promise<void> {
-    await this.#write<{ status?: string }>("PUT", this.#pagePath(siteId, pageId), {
-      title,
-      slug,
-    });
+  async setPageIdentity(
+    siteId: string,
+    pageId: string,
+    title: string,
+    slug: string,
+  ): Promise<void> {
+    await this.#write<{ status?: string }>(
+      "PUT",
+      this.#pagePath(siteId, pageId),
+      {
+        title,
+        slug,
+      },
+    );
   }
 
   async deletePage(siteId: string, pageId: string): Promise<void> {
-    await this.#write<{ status?: string }>("DELETE", this.#pagePath(siteId, pageId), {});
+    await this.#write<{ status?: string }>(
+      "DELETE",
+      this.#pagePath(siteId, pageId),
+      {},
+    );
   }
 
   async setHomePage(siteId: string, pageId: string): Promise<void> {
-    await this.#write<{ status?: string }>("POST", `${this.#pagePath(siteId, pageId)}/home`, {});
+    await this.#write<{ status?: string }>(
+      "POST",
+      `${this.#pagePath(siteId, pageId)}/home`,
+      {},
+    );
   }
 
   async reorderPages(siteId: string, order: string[]): Promise<void> {
@@ -1256,10 +1382,14 @@ export class SitesApi {
     seoTitle: string,
     seoDescription: string,
   ): Promise<void> {
-    await this.#write<{ status?: string }>("PUT", this.#pagePath(siteId, pageId), {
-      seoTitle,
-      seoDescription,
-    });
+    await this.#write<{ status?: string }>(
+      "PUT",
+      this.#pagePath(siteId, pageId),
+      {
+        seoTitle,
+        seoDescription,
+      },
+    );
   }
 
   /** Whether this page asks its visitors for a password, and when that was
@@ -1296,7 +1426,10 @@ export class SitesApi {
   }
 
   /** Puts the page back in front of everyone. Idempotent. */
-  removePagePassword(siteId: string, pageId: string): Promise<SitePageProtection> {
+  removePagePassword(
+    siteId: string,
+    pageId: string,
+  ): Promise<SitePageProtection> {
     return this.#write<RawPageProtection>(
       "DELETE",
       `${this.#pagePath(siteId, pageId)}/password`,
@@ -1318,7 +1451,9 @@ export class SitesApi {
    *  claim together with the exact record to publish. Syntax and ownership
    *  rules are the server's — a refusal comes back as a `422` naming one. */
   addSiteDomain(siteId: string, domain: string): Promise<SiteDomain> {
-    return this.#write<SiteDomain>("POST", this.#domainsPath(siteId), { domain });
+    return this.#write<SiteDomain>("POST", this.#domainsPath(siteId), {
+      domain,
+    });
   }
 
   /** Looks for the TXT proof now. A record that is not there yet is a normal
@@ -1355,7 +1490,9 @@ export class SitesApi {
   searchDomains(query: string, tlds: string[]): Promise<DomainSearchResult> {
     const params = new URLSearchParams({ q: query });
     if (tlds.length > 0) params.set("tlds", tlds.join(","));
-    return this.#read<DomainSearchResult>(`/sites/domain-search?${params.toString()}`);
+    return this.#read<DomainSearchResult>(
+      `/sites/domain-search?${params.toString()}`,
+    );
   }
 
   /** This website's domain purchases, newest first. Carries no registrant. */
@@ -1372,7 +1509,11 @@ export class SitesApi {
     siteId: string,
     draft: SiteDomainPurchaseDraft,
   ): Promise<SiteDomainPurchase> {
-    return this.#write<SiteDomainPurchase>("POST", this.#purchasesPath(siteId), draft);
+    return this.#write<SiteDomainPurchase>(
+      "POST",
+      this.#purchasesPath(siteId),
+      draft,
+    );
   }
 
   /** Records that this person agreed to **these exact numbers**. The body is
@@ -1393,7 +1534,10 @@ export class SitesApi {
 
   /** Calls a purchase off. Only before money moved — after that it is a refund
    *  conversation, and the server says so in those words. */
-  cancelDomainPurchase(siteId: string, purchaseId: string): Promise<SiteDomainPurchase> {
+  cancelDomainPurchase(
+    siteId: string,
+    purchaseId: string,
+  ): Promise<SiteDomainPurchase> {
     return this.#write<SiteDomainPurchase>(
       "POST",
       `${this.#purchasesPath(siteId)}/${encodeURIComponent(purchaseId)}/cancel`,
@@ -1404,10 +1548,30 @@ export class SitesApi {
   /** The draft page rendered by the server as one complete, self-contained
    *  HTML document — the editor's preview. Answers text, not JSON; the
    *  caller puts it in a sandboxed iframe via `srcdoc`. */
-  async pagePreview(siteId: string, pageId: string, locale?: string): Promise<string> {
-    const path = locale === undefined
-      ? `${this.#pagePath(siteId, pageId)}/preview`
-      : `${this.#localizedPagePath(siteId, pageId, locale)}/preview`;
+  async pagePreview(
+    siteId: string,
+    pageId: string,
+    locale?: string,
+  ): Promise<string> {
+    const path =
+      locale === undefined
+        ? `${this.#pagePath(siteId, pageId)}/preview`
+        : `${this.#localizedPagePath(siteId, pageId, locale)}/preview`;
+    const res = await this.#send(path, { method: "GET" });
+    await SitesApi.#rejectFailed(res);
+    return res.text();
+  }
+
+  /** The current draft without editor annotations, for a clean browser tab. */
+  async pageBrowserPreview(
+    siteId: string,
+    pageId: string,
+    locale?: string,
+  ): Promise<string> {
+    const path =
+      locale === undefined
+        ? `${this.#pagePath(siteId, pageId)}/preview?browser=true`
+        : `${this.#localizedPagePath(siteId, pageId, locale)}/preview?browser=true`;
     const res = await this.#send(path, { method: "GET" });
     await SitesApi.#rejectFailed(res);
     return res.text();
@@ -1456,7 +1620,10 @@ export class SitesApi {
     index?: number,
   ): Promise<SectionsEnvelope> {
     return this.#sections(
-      this.#write("POST", `${this.#pagePath(siteId, pageId)}/sections`, { section, index }),
+      this.#write("POST", `${this.#pagePath(siteId, pageId)}/sections`, {
+        section,
+        index,
+      }),
     );
   }
 
@@ -1468,7 +1635,11 @@ export class SitesApi {
     section: Section,
   ): Promise<SectionsEnvelope> {
     return this.#sections(
-      this.#write("PUT", `${this.#pagePath(siteId, pageId)}/sections/${index}`, { section }),
+      this.#write(
+        "PUT",
+        `${this.#pagePath(siteId, pageId)}/sections/${index}`,
+        { section },
+      ),
     );
   }
 
@@ -1481,14 +1652,26 @@ export class SitesApi {
     to: number,
   ): Promise<SectionsEnvelope> {
     return this.#sections(
-      this.#write("POST", `${this.#pagePath(siteId, pageId)}/sections/${index}/move`, { to }),
+      this.#write(
+        "POST",
+        `${this.#pagePath(siteId, pageId)}/sections/${index}/move`,
+        { to },
+      ),
     );
   }
 
   /** Removes the section at `index`; answers the stored envelope. */
-  removeSection(siteId: string, pageId: string, index: number): Promise<SectionsEnvelope> {
+  removeSection(
+    siteId: string,
+    pageId: string,
+    index: number,
+  ): Promise<SectionsEnvelope> {
     return this.#sections(
-      this.#write("DELETE", `${this.#pagePath(siteId, pageId)}/sections/${index}`, undefined),
+      this.#write(
+        "DELETE",
+        `${this.#pagePath(siteId, pageId)}/sections/${index}`,
+        undefined,
+      ),
     );
   }
 
@@ -1521,7 +1704,9 @@ export class SitesApi {
   }
 
   /** Every section op answers `{"sections": <envelope>}` — unwraps it. */
-  async #sections(answer: Promise<{ sections: SectionsEnvelope }>): Promise<SectionsEnvelope> {
+  async #sections(
+    answer: Promise<{ sections: SectionsEnvelope }>,
+  ): Promise<SectionsEnvelope> {
     return (await answer).sections;
   }
 
@@ -1534,7 +1719,9 @@ export class SitesApi {
     if (parent !== null) query.set("parent", parent);
     const nodes = await this.#read<{
       nodes?: Array<{ id: string; kind: string; name: string }>;
-    }>(`/drive/list?${query.toString()}`).then((response) => response.nodes ?? []);
+    }>(`/drive/list?${query.toString()}`).then(
+      (response) => response.nodes ?? [],
+    );
     const nested = await Promise.all(
       nodes
         .filter((node) => node.kind === "folder")
@@ -1614,9 +1801,9 @@ async function publicInvitationResponse<T>(response: Response): Promise<T> {
 /** Public token-gated invitation facts. The token is the authority; no user
  * directory or tenant metadata is returned. */
 export function siteInvitation(token: string): Promise<SiteInvitation> {
-  return fetch(`${API_BASE}/api/sites/invitations/${encodeURIComponent(token)}`).then(
-    publicInvitationResponse<SiteInvitation>,
-  );
+  return fetch(
+    `${API_BASE}/api/sites/invitations/${encodeURIComponent(token)}`,
+  ).then(publicInvitationResponse<SiteInvitation>);
 }
 
 /** Sets the invited collaborator's first password and spends the token. */
@@ -1624,11 +1811,14 @@ export function acceptSiteInvitation(
   token: string,
   password: string,
 ): Promise<SiteInvitation & { status: "accepted" }> {
-  return fetch(`${API_BASE}/api/sites/invitations/${encodeURIComponent(token)}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ password }),
-  }).then(publicInvitationResponse<SiteInvitation & { status: "accepted" }>);
+  return fetch(
+    `${API_BASE}/api/sites/invitations/${encodeURIComponent(token)}`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ password }),
+    },
+  ).then(publicInvitationResponse<SiteInvitation & { status: "accepted" }>);
 }
 
 /** The sites client bound to the current session. Memoized per auth context,

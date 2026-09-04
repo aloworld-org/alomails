@@ -21,7 +21,7 @@
 // filled in later: the move ledger refuses to move a service, so a number there
 // would describe something that cannot exist.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Package, Plus, ScanLine } from "lucide-react";
+import { Archive, ArchiveRestore, Package, Pencil, Plus, ScanLine } from "lucide-react";
 
 import {
   ProductDialog,
@@ -34,6 +34,7 @@ import {
 import {
   Button,
   Checkbox,
+  IconButton,
   Input,
   Spinner,
   Table,
@@ -166,8 +167,25 @@ export function CatalogView() {
   }
 
   return (
-    <div className={styles.page}>
-      <Toolbar label={strings.inventoryTabCatalog}>
+    <div className={`${styles.page} ${styles.catalogPage}`}>
+      <section className={styles.catalogWorkspace}>
+        <div className={styles.pageHeading}>
+          <div className={styles.pageHeadingCopy}>
+            <h2 className={styles.pageTitle}>{strings.inventoryTabCatalog}</h2>
+            <p className={styles.pageSubtitle}>{strings.inventoryCatalogPurpose}</p>
+          </div>
+          <div className={styles.headerActions}>
+            <Button variant="ghost" icon={<ScanLine size={16} />} onClick={() => setScanning(true)}>
+              {strings.inventoryScan}
+            </Button>
+            {products.length > 0 && (
+              <Button icon={<Plus size={16} />} onClick={() => setEditing({ product: null })}>
+                {strings.inventoryNewProduct}
+              </Button>
+            )}
+          </div>
+        </div>
+      <Toolbar label={strings.inventoryTabCatalog} surface="plain" className={styles.catalogFilters}>
         {/* The stylesheet's `flex: 0 1 260px`, taking the whole row on a
             phone so the action buttons can share the next one. */}
         <Input
@@ -190,20 +208,8 @@ export function CatalogView() {
         />
         <ToolbarSpacer />
         {loading && <Spinner size={16} />}
-        <Button
-          variant="ghost"
-          className="max-[48rem]:flex-auto"
-          onClick={() => setScanning(true)}
-        >
-          <ScanLine size={16} /> {strings.inventoryScan}
-        </Button>
-        <Button
-          className="max-[48rem]:flex-auto"
-          onClick={() => setEditing({ product: null })}
-        >
-          <Plus size={16} /> {strings.inventoryNewProduct}
-        </Button>
       </Toolbar>
+      </section>
 
       {error !== null && <ErrorBanner message={error} />}
 
@@ -263,20 +269,16 @@ export function CatalogView() {
                 <Td numeric>{formatAmount(product.unitPriceCents, locale)}</Td>
                 <Td numeric>{formatRate(product.vatRateBp, locale)}</Td>
                 <td className={styles.rowActions}>
-                  <button
-                    type="button"
-                    className={styles.linkAction}
+                  <IconButton
+                    label={strings.inventoryEdit}
+                    icon={<Pencil />}
                     onClick={() => setEditing({ product })}
-                  >
-                    {strings.inventoryEdit}
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.linkAction}
+                  />
+                  <IconButton
+                    label={product.archived ? strings.inventoryRestore : strings.inventoryArchive}
+                    icon={product.archived ? <ArchiveRestore /> : <Archive />}
                     onClick={() => void toggleArchived(product)}
-                  >
-                    {product.archived ? strings.inventoryRestore : strings.inventoryArchive}
-                  </button>
+                  />
                 </td>
               </tr>
             ))}

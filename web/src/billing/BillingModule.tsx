@@ -21,10 +21,7 @@ import {
   WalletCards,
 } from "lucide-react";
 
-import {
-  ModuleNavigation,
-  moduleNavigationItemClassName,
-} from "../ds";
+import { ModuleNavigation, moduleNavigationItemClassName } from "../ds";
 import { strings } from "../i18n";
 import { CustomersView } from "./CustomersView";
 import { InvoiceEditor } from "./InvoiceEditor";
@@ -75,7 +72,7 @@ export const BILLING_DEFAULT_PATH = "/billing/invoices";
 export function BillingModule() {
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-app">
-      <header className="shrink-0 border-b border-subtle bg-surface px-8 pb-4 pt-6 max-sm:px-4 max-sm:pt-4">
+      <header className="shrink-0 border-b border-subtle bg-header px-8 pb-4 pt-6 max-sm:px-4 max-sm:pt-4">
         <div className="flex items-center gap-3.5">
           <span
             className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--accent-soft)] text-accent shadow-sm ring-1 ring-inset ring-accent/10"

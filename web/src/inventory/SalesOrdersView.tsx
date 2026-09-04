@@ -13,8 +13,8 @@ import { ClipboardList, Plus } from "lucide-react";
 import { formatAmount } from "../billing";
 import {
   Button,
+  ChoicePicker,
   Input,
-  Select,
   Spinner,
   Table,
   Td,
@@ -80,8 +80,20 @@ export function SalesOrdersView() {
   }, [orders, search]);
 
   return (
-    <div className={styles.page}>
-      <Toolbar label={strings.inventoryTabSales}>
+    <div className={`${styles.page} ${styles.listPage}`}>
+      <section className={styles.listWorkspace}>
+        <div className={styles.pageHeading}>
+          <div className={styles.pageHeadingCopy}>
+            <h2 className={styles.pageTitle}>{strings.inventoryTabSales}</h2>
+            <p className={styles.pageSubtitle}>{strings.inventorySalesPurpose}</p>
+          </div>
+          {orders.length > 0 && (
+            <Button icon={<Plus size={16} />} onClick={() => void navigate("/inventory/sales-orders/new")}>
+              {strings.inventoryNewSalesOrder}
+            </Button>
+          )}
+        </div>
+      <Toolbar label={strings.inventoryTabSales} surface="plain" className={styles.listFilters}>
         <Input
           className="basis-[260px] max-[48rem]:basis-full"
           type="search"
@@ -90,29 +102,20 @@ export function SalesOrdersView() {
           placeholder={strings.inventorySearchSalesOrders}
           aria-label={strings.inventorySearchSalesOrders}
         />
-        <label className={styles.filterField}>
-          {strings.inventoryFilterStatus}
-          <Select
+        <div className={styles.statusFilter}>
+          <span>{strings.inventoryFilterStatus}</span>
+          <ChoicePicker
             value={status}
-            onChange={(e) => setStatus(e.target.value as SalesOrderStatus | "")}
-          >
-            <option value="">{strings.inventoryAllStatuses}</option>
-            {STATUSES.map((value) => (
-              <option key={value} value={value}>
-                {soStatusLabel(value)}
-              </option>
-            ))}
-          </Select>
-        </label>
+            label={strings.inventoryFilterStatus}
+            placeholder={strings.inventoryAllStatuses}
+            options={[{ value: "", label: strings.inventoryAllStatuses }, ...STATUSES.map((value) => ({ value, label: soStatusLabel(value) }))]}
+            onChange={(value) => setStatus(value as SalesOrderStatus | "")}
+          />
+        </div>
         <ToolbarSpacer />
         {loading && <Spinner size={16} />}
-        <Button
-          className="max-[48rem]:flex-auto"
-          onClick={() => void navigate("/inventory/sales-orders/new")}
-        >
-          <Plus size={16} /> {strings.inventoryNewSalesOrder}
-        </Button>
       </Toolbar>
+      </section>
 
       {error !== null && <ErrorBanner message={error} />}
 

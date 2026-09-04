@@ -16,10 +16,10 @@ import { useCallback, useEffect, useState } from "react";
 import { Plus, ReceiptText } from "lucide-react";
 
 import { quarterOf } from "../billing";
+import { ReportPeriodPicker } from "../crm/ReportPeriodPicker";
 import {
   Button,
-  DatePicker,
-  Select,
+  ChoicePicker,
   Spinner,
   Table,
   Td,
@@ -61,7 +61,6 @@ export function ExpensesView({
   // and it is the period Billing's VAT summary already opens on — read from
   // there rather than given a second definition that disagrees at a boundary.
   const [period, setPeriod] = useState(() => quarterOf(new Date()));
-  const [form, setForm] = useState(period);
   const [status, setStatus] = useState<ExpenseStatus | "">("");
   const [claims, setClaims] = useState<Expense[]>([]);
   const [editing, setEditing] = useState<Expense | null>(null);
@@ -138,57 +137,49 @@ export function ExpensesView({
   }
 
   return (
-    <div className={styles.page}>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          setPeriod(form);
-        }}
-      >
-        <Toolbar label={strings.financeClaimFilters} surface="card" align="end">
-          <label className={styles.periodField}>
-            {strings.financeFrom}
-            <DatePicker
-              value={form.from}
-              onChange={(from) => setForm({ ...form, from })}
-            />
-          </label>
-          <label className={styles.periodField}>
-            {strings.financeTo}
-            <DatePicker
-              value={form.to}
-              onChange={(to) => setForm({ ...form, to })}
-            />
-          </label>
-          <Button type="submit" variant="ghost" size="sm">
-            {strings.financeShow}
-          </Button>
-          <label className={styles.periodField}>
-            {strings.financeStatus}
-            {/* "Any state" is an answer somebody must be able to return to,
-                not a prompt, so it stays choosable — which is the whole of
-                `Select`'s `placeholder` distinction. */}
-            <Select
-              value={status}
-              placeholder={strings.financeAnyStatus}
-              onChange={(e) => setStatus(e.target.value as ExpenseStatus | "")}
-            >
-              {STATUSES.map((state) => (
-                <option key={state} value={state}>
-                  {statusLabel(state)}
-                </option>
-              ))}
-            </Select>
-          </label>
-          <ToolbarSpacer />
-          {loading && <Spinner size={16} />}
+    <div className={`${styles.page} ${styles.expensePage}`}>
+      <section className={styles.expenseWorkspace}>
+        <div className={styles.pageHeading}>
+          <div className={styles.pageHeadingCopy}>
+            <h2 className={styles.pageTitle}>{strings.financeTabExpenses}</h2>
+            <p className={styles.pageSubtitle}>
+              {strings.financeExpensesPurpose}
+            </p>
+          </div>
           {claims.length > 0 && (
-            <Button onClick={() => setCreating(true)}>
-              <Plus size={16} /> {strings.financeNewClaim}
+            <Button
+              icon={<Plus size={16} />}
+              onClick={() => setCreating(true)}
+            >
+              {strings.financeNewClaim}
             </Button>
           )}
+        </div>
+
+        <Toolbar
+          label={strings.financeClaimFilters}
+          surface="plain"
+          align="end"
+          className={styles.expenseFilters}
+        >
+          <ReportPeriodPicker value={period} onApply={setPeriod} />
+          <div className={styles.statusFilter}>
+            <span>{strings.financeStatus}</span>
+            <ChoicePicker
+              value={status}
+              placeholder={strings.financeAnyStatus}
+              label={strings.financeStatus}
+              options={[
+                { value: "", label: strings.financeAnyStatus },
+                ...STATUSES.map((state) => ({ value: state, label: statusLabel(state) })),
+              ]}
+              onChange={(value) => setStatus(value as ExpenseStatus | "")}
+            />
+          </div>
+          <ToolbarSpacer />
+          {loading && <Spinner size={16} />}
         </Toolbar>
-      </form>
+      </section>
 
       {error !== null && <ErrorBanner message={error} />}
 

@@ -11,11 +11,11 @@ import { Link } from "react-router-dom";
 
 import {
   formatAmount,
-  previousQuarterOf,
   quarterOf,
   type Period,
 } from "../billing";
-import { Button, Card, DatePicker, Spinner } from "../ds";
+import { ReportPeriodPicker } from "../crm/ReportPeriodPicker";
+import { Card, Spinner } from "../ds";
 import { getLocale, strings } from "../i18n";
 import { projectsMessage, useProjectsApi } from "../projects/api";
 import type {
@@ -29,7 +29,6 @@ import { ErrorBanner } from "./parts";
 export function ProjectProfitabilityView() {
   const api = useProjectsApi();
   const [period, setPeriod] = useState<Period>(() => quarterOf(new Date()));
-  const [form, setForm] = useState(period);
   const [report, setReport] = useState<ProfitabilityReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,60 +80,13 @@ export function ProjectProfitabilityView() {
             <ArrowRight className="size-4" />
           </Link>
         </section>
-        <Card
-          as="form"
-          pad="sm"
-          className="flex flex-wrap items-end gap-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            setPeriod(form);
-          }}
-        >
-          <label className="grid min-w-56 gap-1.5 text-xs font-semibold text-secondary">
-            {strings.financeFrom}
-            <DatePicker
-              value={form.from}
-              onChange={(from) => setForm({ ...form, from })}
-            />
-          </label>
-          <label className="grid min-w-56 gap-1.5 text-xs font-semibold text-secondary">
-            {strings.financeTo}
-            <DatePicker
-              value={form.to}
-              onChange={(to) => setForm({ ...form, to })}
-            />
-          </label>
-          <Button type="submit">{strings.financeShow}</Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              const next = quarterOf(new Date());
-              setForm(next);
-              setPeriod(next);
-            }}
-          >
-            {strings.financeThisQuarter}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              const next = previousQuarterOf(new Date());
-              setForm(next);
-              setPeriod(next);
-            }}
-          >
-            {strings.financeLastQuarter}
-          </Button>
-          {loading && <Spinner size={16} />}
-        </Card>
-        {error !== null && <ErrorBanner message={error} />}
-        {report !== null && (
-          <>
-            <section className="grid gap-3 md:grid-cols-3">
+        <Card pad="none" className="overflow-visible">
+          <div className="flex min-h-20 flex-wrap items-center gap-3 p-4">
+            <ReportPeriodPicker value={period} onApply={setPeriod} />
+            {loading && <span className="ml-auto inline-flex"><Spinner size={16} /></span>}
+          </div>
+          {report !== null && (
+            <section className="grid border-t border-subtle md:grid-cols-3 md:[&>*+*]:border-l md:[&>*+*]:border-t-0 [&>*+*]:border-t [&>*+*]:border-subtle">
               <Summary
                 Icon={BriefcaseBusiness}
                 label={strings.financeActiveEngagements}
@@ -157,6 +109,11 @@ export function ProjectProfitabilityView() {
                 }
               />
             </section>
+          )}
+        </Card>
+        {error !== null && <ErrorBanner message={error} />}
+        {report !== null && (
+          <>
             {report.projects.length === 0 ? (
               <Card pad="lg" className="text-center">
                 <BriefcaseBusiness className="mx-auto size-8 text-tertiary" />
@@ -309,8 +266,7 @@ function Summary({
   danger?: boolean;
 }) {
   return (
-    <Card pad="sm">
-      <div className="flex items-center gap-3">
+    <div className="flex min-w-0 items-center gap-3 p-4">
         <span
           className={`grid size-10 place-items-center rounded-xl ${danger ? "bg-danger-soft text-danger" : "bg-[var(--accent-soft)] text-accent"}`}
         >
@@ -324,7 +280,6 @@ function Summary({
             {value}
           </div>
         </div>
-      </div>
-    </Card>
+    </div>
   );
 }

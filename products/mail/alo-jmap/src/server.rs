@@ -781,6 +781,10 @@ pub fn app_with_site_boundaries(
                 .delete(site_protection::remove_page_password),
         )
         .route("/sites/{id}/images/{blob}", get(sites::get_site_image))
+        .route(
+            "/sites/{id}/identity/images",
+            post(sites::attach_identity_image),
+        )
         .route("/sites/{id}/pages/{pid}/preview", get(sites::preview_page))
         .route(
             "/sites/{id}/pages/{pid}/ai-edits",

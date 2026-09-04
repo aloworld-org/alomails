@@ -50,7 +50,7 @@ const REPORTS = [
 export function ReportsView() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="shrink-0 border-b border-subtle bg-surface px-8 py-3 max-sm:px-4">
+      <div className="shrink-0 border-b border-subtle bg-header px-8 py-3 max-sm:px-4">
         <div className="mx-auto w-full max-w-[108rem]">
           <ModuleNavigation label={strings.financeTabReports}>
             {REPORTS.map((report) => (

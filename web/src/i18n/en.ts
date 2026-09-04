@@ -3648,7 +3648,7 @@ export const en = {
     "Compare the page before and after, then choose what happens.",
   sitesAiPreviewCompare: "Compare proposed page changes",
   sitesInlineTextHint:
-    "Click any text in the preview to edit it there. Enter saves it, Escape puts it back.",
+    "Click text to edit it in place, or click a section to edit its image, colors, and layout.",
   sitesInlineTextSaved: "Text updated.",
   sitesInlineTextUndone: "Text change undone.",
   sitesInlineTextRedone: "Text change redone.",
@@ -4033,8 +4033,11 @@ export const en = {
   sitesPreviewTitle: "Draft preview",
   sitesPreviewDesktop: "Desktop width",
   sitesPreviewMobile: "Phone width",
+  sitesPreviewInBrowser: "Open in browser",
+  sitesPreviewBrowserBlocked:
+    "The browser blocked the preview tab. Allow pop-ups and try again.",
   sitesPreviewFailed: "The preview could not be loaded.",
-  sitesSeoAction: "Search & sharing",
+  sitesSeoAction: "Page settings",
   sitesSeoTitle: "Search & sharing",
   sitesSeoSubtitle:
     "Choose how this page appears in search results and shared links.",
@@ -4081,7 +4084,8 @@ export const en = {
   sitesSectionFeatures: "Features",
   sitesSectionFeaturesDesc: "A grid of what you offer.",
   sitesFeaturesLayout: "Features layout",
-  sitesFeaturesLayoutHint: "Choose how visitors scan and compare these benefits.",
+  sitesFeaturesLayoutHint:
+    "Choose how visitors scan and compare these benefits.",
   sitesFeaturesLayoutGrid: "Balanced grid",
   sitesFeaturesLayoutBento: "Bento",
   sitesFeaturesLayoutList: "Detailed list",
@@ -4090,7 +4094,8 @@ export const en = {
   sitesSectionTextImage: "Text & image",
   sitesSectionTextImageDesc: "A paragraph beside a picture.",
   sitesTextImageLayout: "Text and image layout",
-  sitesTextImageLayoutHint: "Choose the relationship between the story and its image.",
+  sitesTextImageLayoutHint:
+    "Choose the relationship between the story and its image.",
   sitesTextImageLayoutSplit: "Balanced split",
   sitesTextImageLayoutOverlap: "Layered",
   sitesTextImageLayoutFramed: "Framed image",
@@ -4099,7 +4104,8 @@ export const en = {
   sitesSectionGallery: "Gallery",
   sitesSectionGalleryDesc: "A wall of pictures.",
   sitesGalleryLayout: "Gallery layout",
-  sitesGalleryLayoutHint: "Choose how visitors browse and focus on your images.",
+  sitesGalleryLayoutHint:
+    "Choose how visitors browse and focus on your images.",
   sitesGalleryLayoutGrid: "Balanced grid",
   sitesGalleryLayoutMasonry: "Masonry",
   sitesGalleryLayoutCollage: "Collage",
@@ -4108,7 +4114,8 @@ export const en = {
   sitesSectionTestimonials: "Testimonials",
   sitesSectionTestimonialsDesc: "Words from happy customers.",
   sitesTestimonialsLayout: "Testimonials layout",
-  sitesTestimonialsLayoutHint: "Choose how customer stories build trust on the page.",
+  sitesTestimonialsLayoutHint:
+    "Choose how customer stories build trust on the page.",
   sitesTestimonialsLayoutCards: "Quote cards",
   sitesTestimonialsLayoutFeatured: "Featured quote",
   sitesTestimonialsLayoutEditorial: "Editorial wall",
@@ -4117,7 +4124,8 @@ export const en = {
   sitesSectionPricing: "Pricing",
   sitesSectionPricingDesc: "Your plans and their prices.",
   sitesPricingLayout: "Pricing layout",
-  sitesPricingLayoutHint: "Choose how visitors compare plans and find the right offer.",
+  sitesPricingLayoutHint:
+    "Choose how visitors compare plans and find the right offer.",
   sitesPricingLayoutCards: "Plan cards",
   sitesPricingLayoutComparison: "Side by side",
   sitesPricingLayoutFeatured: "Featured plan",
@@ -4297,7 +4305,8 @@ export const en = {
   sitesHeroAnimationSmooth: "Smooth",
   sitesHeroAnimationRelaxed: "Relaxed",
   sitesSectionDesign: "Section design",
-  sitesSectionDesignHint: "Shape this section with responsive, reusable design choices.",
+  sitesSectionDesignHint:
+    "Shape this section with responsive, reusable design choices.",
   sitesSectionLayoutStyle: "Visual style",
   sitesSectionLayoutClean: "Clean",
   sitesSectionLayoutCards: "Cards",
@@ -4305,10 +4314,12 @@ export const en = {
   sitesSectionLayoutEditorial: "Editorial",
   sitesSectionSpacing: "Spacing",
   sitesSectionSpacingGenerous: "Generous",
-  sitesSectionColorsHint: "Choose reusable roles from the Site theme so brand updates stay connected.",
+  sitesSectionColorsHint:
+    "Choose reusable roles from the Site theme so brand updates stay connected.",
   sitesSectionBackground: "Section background",
   sitesSectionText: "Section text",
-  sitesSectionAnimationHint: "Choose a calm entrance. Reduced-motion visitors always see a still section.",
+  sitesSectionAnimationHint:
+    "Choose a calm entrance. Reduced-motion visitors always see a still section.",
   sitesSectionEntrance: "Entrance",
   sitesSectionUseDefaults: "Use section defaults",
   sitesHeroHeight: "Height",
@@ -4316,6 +4327,8 @@ export const en = {
   sitesHeroHeightStandard: "Standard",
   sitesHeroHeightTall: "Tall",
   sitesHeroAlignment: "Content alignment",
+  sitesCanvasImageSize: "Image size",
+  sitesCanvasImagePosition: "Image position",
   sitesHeroAlignmentLeft: "Left",
   sitesHeroAlignmentCenter: "Center",
   sitesHeroAlignmentRight: "Right",
@@ -4358,6 +4371,8 @@ export const en = {
   sitesImageFraming: "Crop and focal point",
   sitesImageFrameHint:
     "Drag on the picture to choose what stays visible. With the keyboard: arrow keys move the frame, shift with the arrow keys resizes it.",
+  sitesImageFrameDirectHint:
+    "Drag the frame to move it. Drag a corner to resize it.",
   sitesImageFocalHint:
     "Drag the round marker onto whatever must stay in view when a layout has to crop the picture further.",
   sitesImageFrameAt: (
@@ -4439,6 +4454,9 @@ export const en = {
   sitesThemeFavicon: "Favicon",
   sitesThemeFaviconHint: "The little icon browsers show on the tab.",
   sitesThemeUpload: "Upload image",
+  sitesThemeDropTitle: "Drag and drop an image here",
+  sitesThemeDropNow: "Drop the image to upload",
+  sitesThemeDropBrowse: "or click to choose from your device",
   sitesThemeReplace: "Replace image",
   sitesThemeRemove: "Remove image",
   sitesThemeSet: "Image uploaded",
@@ -5870,7 +5888,8 @@ export const en = {
   financeTabClose: "Close",
   financeCloseEyebrow: "Accounting controls",
   financeCloseTitle: "Period close",
-  financeCloseSubtitle: "Resolve exceptions, close reporting periods and preserve a clear audit trail.",
+  financeCloseSubtitle:
+    "Resolve exceptions, close reporting periods and preserve a clear audit trail.",
   financeCloseLoadFailed: "Close readiness could not be loaded.",
   financeCloseCreateFailed: "The reporting period could not be created.",
   financeCloseActionFailed: "The period could not be updated.",
@@ -5879,8 +5898,10 @@ export const en = {
   financeReadyToClose: "Ready to close",
   financeCloseNeedsAttention: "Resolve blockers before closing",
   financeCloseAsOf: (date: string) => `Server checks through ${date}`,
-  financeBlockers: (count: number) => `${count} ${count === 1 ? "blocker" : "blockers"}`,
-  financeWarnings: (count: number) => `${count} ${count === 1 ? "warning" : "warnings"}`,
+  financeBlockers: (count: number) =>
+    `${count} ${count === 1 ? "blocker" : "blockers"}`,
+  financeWarnings: (count: number) =>
+    `${count} ${count === 1 ? "warning" : "warnings"}`,
   financeCloseBank: "Bank reconciliation",
   financeCloseExpenses: "Expense approvals",
   financeCloseBalance: "Balance sheet",
@@ -5889,7 +5910,8 @@ export const en = {
   financeCheckPassed: "Check passed",
   financeItems: (count: number) => `${count} ${count === 1 ? "item" : "items"}`,
   financePeriods: "Reporting periods",
-  financePeriodsHint: "Closing a period locks all accounting entries through its end date.",
+  financePeriodsHint:
+    "Closing a period locks all accounting entries through its end date.",
   financeAddPeriod: "Add period",
   financeNoPeriods: "No reporting periods have been defined yet.",
   financeClosed: "Closed",
@@ -5898,32 +5920,49 @@ export const en = {
   financeClosePeriod: "Close period",
   financeReopenPeriod: "Reopen",
   financeCloseConfirmTitle: "Close this period?",
-  financeCloseConfirmMessage: (date: string) => `Entries dated on or before ${date} will be locked. This action is recorded in the audit trail.`,
-  financeReopenReason: "Why must this period be reopened? This reason is recorded in the audit trail.",
+  financeCloseConfirmMessage: (date: string) =>
+    `Entries dated on or before ${date} will be locked. This action is recorded in the audit trail.`,
+  financeReopenReason:
+    "Why must this period be reopened? This reason is recorded in the audit trail.",
   financeReportAutomation: "Automated exports",
   financeReportSchedules: "Scheduled reports",
-  financeReportSchedulesHint: "Deliver consistent CSV reports on a controlled cadence.",
+  financeReportSchedulesHint:
+    "Deliver consistent CSV reports on a controlled cadence.",
   financeReportSchedulesLoadFailed: "Scheduled reports could not be loaded.",
-  financeReportSchedulesCreateFailed: "The report schedule could not be created.",
-  financeReportScheduleDeleteFailed: "The report schedule could not be deleted.",
+  financeReportSchedulesCreateFailed:
+    "The report schedule could not be created.",
+  financeReportScheduleDeleteFailed:
+    "The report schedule could not be deleted.",
   financeReportScheduleDeleteTitle: "Delete this schedule?",
-  financeReportScheduleDeleteMessage: "Future report deliveries from this schedule will stop.",
+  financeReportScheduleDeleteMessage:
+    "Future report deliveries from this schedule will stop.",
   financeReport: "Report",
   financeCadence: "Cadence",
   financeRecipient: "Recipient",
   financeNextDelivery: "First delivery",
   financeAddSchedule: "Add schedule",
   financeNoSchedules: "No scheduled reports",
-  financeNoSchedulesHint: "Create a recurring export for the people who review the books.",
-  financeReportKind: (value: string) => ({pl:"Profit and loss",balance:"Balance sheet",aged_receivable:"Aged receivables",aged_payable:"Aged payables",vat:"VAT return"}[value] ?? value),
-  financeCadenceKind: (value: string) => ({weekly:"Weekly",monthly:"Monthly",quarterly:"Quarterly"}[value] ?? value),
+  financeNoSchedulesHint:
+    "Create a recurring export for the people who review the books.",
+  financeReportKind: (value: string) =>
+    ({
+      pl: "Profit and loss",
+      balance: "Balance sheet",
+      aged_receivable: "Aged receivables",
+      aged_payable: "Aged payables",
+      vat: "VAT return",
+    })[value] ?? value,
+  financeCadenceKind: (value: string) =>
+    ({ weekly: "Weekly", monthly: "Monthly", quarterly: "Quarterly" })[value] ??
+    value,
   financeNextRun: (date: string) => `Next delivery ${date}`,
   financeLedgerTitle: (name: string) => `${name} ledger`,
   financeLedgerLoadFailed: "The account ledger could not be loaded.",
   financeDate: "Date",
   financeRunningBalance: "Running balance",
   financeOpeningBalance: "Opening balance",
-  financeLedgerTruncated: "Only the first 2,000 postings are shown. Narrow the reporting period to see the complete running balance.",
+  financeLedgerTruncated:
+    "Only the first 2,000 postings are shown. Narrow the reporting period to see the complete running balance.",
   financeTabExpenses: "Expenses",
   financeTabApprovals: "Approvals",
   // The names `ds/Table` and `ds/Toolbar` require: a table is announced as
@@ -6039,8 +6078,9 @@ export const en = {
 
   // The first thing an employee sees of the module.
   financeExpensesEmptyTitle: "No claims in this period",
+  financeExpensesPurpose: "Review, submit and track your work expenses.",
   financeExpensesEmptyBody:
-    "Record what you spent for work — the date, the total on the receipt and whose money paid. It stays yours until you hand it in.",
+    "New expense claims will appear here for review and submission.",
 
   // ---- the bank, and the pile it leaves (B4.13b) -------------------------
   //
@@ -6054,6 +6094,7 @@ export const en = {
   financeTabBank: "Bank",
   financeTabReconcile: "Match",
   financeBankLoadFailed: "The bank statements could not be loaded.",
+  financeBankPurpose: "Import and review monthly bank statements.",
 
   // Importing a statement.
   financeBankImportStatement: "Import a statement",
@@ -6408,6 +6449,10 @@ export const en = {
   // ledger.
   moduleInventory: "Inventory",
   inventoryTabCatalog: "Catalog",
+  inventoryWorkspacePurpose: "Products, stock and orders in one inventory workspace.",
+  inventoryCatalogPurpose: "Manage the products and services your business buys and sells.",
+  inventoryPurchasingPurpose: "Create and track the orders placed with your suppliers.",
+  inventorySalesPurpose: "Manage customer orders from confirmation through delivery.",
   inventoryTabStock: "Stock",
   inventoryLoadFailed: "Your catalog could not be loaded.",
   inventorySaveFailed: "The change could not be saved.",

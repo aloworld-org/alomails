@@ -11,7 +11,7 @@
 // and it never touches anything but `crop` and `focal`.
 import { useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
-import { Crosshair, Maximize2 } from "lucide-react";
+import { Crop, Crosshair, Maximize2, SlidersHorizontal } from "lucide-react";
 
 import { strings } from "../i18n";
 import { Button } from "../ds";
@@ -54,9 +54,14 @@ const HANDLE_STYLE = {
   se: styles.framingHandleSe,
 };
 
-const oppositeCorner = (crop: ImageCrop, corner: Corner): { x_bp: number; y_bp: number } => ({
-  x_bp: corner === "nw" || corner === "sw" ? crop.x_bp + crop.width_bp : crop.x_bp,
-  y_bp: corner === "nw" || corner === "ne" ? crop.y_bp + crop.height_bp : crop.y_bp,
+const oppositeCorner = (
+  crop: ImageCrop,
+  corner: Corner,
+): { x_bp: number; y_bp: number } => ({
+  x_bp:
+    corner === "nw" || corner === "sw" ? crop.x_bp + crop.width_bp : crop.x_bp,
+  y_bp:
+    corner === "nw" || corner === "ne" ? crop.y_bp + crop.height_bp : crop.y_bp,
 });
 
 /**
@@ -91,7 +96,10 @@ export function ImageFraming({
     if (box === undefined || box.width === 0 || box.height === 0) {
       return { x_bp: 0, y_bp: 0 };
     }
-    return fromFraction((event.clientX - box.left) / box.width, (event.clientY - box.top) / box.height);
+    return fromFraction(
+      (event.clientX - box.left) / box.width,
+      (event.clientY - box.top) / box.height,
+    );
   }
 
   function start(event: ReactPointerEvent, next: Drag) {
@@ -109,7 +117,13 @@ export function ImageFraming({
         apply(cropBetween(drag.from, at));
         break;
       case "move":
-        apply(moveCrop(drag.start, at.x_bp - drag.grab.x_bp, at.y_bp - drag.grab.y_bp));
+        apply(
+          moveCrop(
+            drag.start,
+            at.x_bp - drag.grab.x_bp,
+            at.y_bp - drag.grab.y_bp,
+          ),
+        );
         break;
       case "corner":
         apply(cropBetween(drag.anchor, at));
@@ -142,8 +156,14 @@ export function ImageFraming({
     if (event.shiftKey) {
       apply({
         ...crop,
-        width_bp: Math.min(FULL_BP - crop.x_bp, Math.max(0, crop.width_bp + dx)),
-        height_bp: Math.min(FULL_BP - crop.y_bp, Math.max(0, crop.height_bp + dy)),
+        width_bp: Math.min(
+          FULL_BP - crop.x_bp,
+          Math.max(0, crop.width_bp + dx),
+        ),
+        height_bp: Math.min(
+          FULL_BP - crop.y_bp,
+          Math.max(0, crop.height_bp + dy),
+        ),
       });
     } else {
       apply(moveCrop(crop, dx, dy));
@@ -161,7 +181,11 @@ export function ImageFraming({
     if (nudge === undefined) return;
     event.preventDefault();
     const [dx, dy] = nudge;
-    apply(crop, clampFocal({ x_bp: focal.x_bp + dx, y_bp: focal.y_bp + dy }, crop), true);
+    apply(
+      crop,
+      clampFocal({ x_bp: focal.x_bp + dx, y_bp: focal.y_bp + dy }, crop),
+      true,
+    );
   }
 
   const frameLabel = strings.sitesImageFrameAt(
@@ -170,17 +194,29 @@ export function ImageFraming({
     toPercent(crop.x_bp),
     toPercent(crop.y_bp),
   );
-  const focalLabel = strings.sitesImageFocalAt(toPercent(focal.x_bp), toPercent(focal.y_bp));
+  const focalLabel = strings.sitesImageFocalAt(
+    toPercent(focal.x_bp),
+    toPercent(focal.y_bp),
+  );
   const stateLabel = `${isFullFrame(crop) ? strings.sitesImageWholePictureState : frameLabel}${
     focalSet ? ` · ${focalLabel}` : ""
   }`;
 
   return (
-    <div className={styles.framing}>
-      <div className={styles.framingHeader}>
-        <div>
-          <h4>{strings.sitesImageFraming}</h4>
-          <p aria-live="polite">{stateLabel}</p>
+    <div className="grid gap-5">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+            <Crop size={18} aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <h4 className="text-sm font-semibold text-primary">
+              {strings.sitesImageFraming}
+            </h4>
+            <p className="mt-1 text-sm leading-5 text-secondary">
+              {strings.sitesImageFrameDirectHint}
+            </p>
+          </div>
         </div>
         <InformationTip
           label={strings.sitesImageFraming}
@@ -195,12 +231,19 @@ export function ImageFraming({
         <div
           ref={surface}
           className={styles.framingSurface}
-          onPointerDown={(event) => start(event, { kind: "new", from: pointAt(event) })}
+          onPointerDown={(event) =>
+            start(event, { kind: "new", from: pointAt(event) })
+          }
           onPointerMove={onPointerMove}
           onPointerUp={end}
           onPointerCancel={end}
         >
-          <img className={styles.framingImage} src={url} alt="" draggable={false} />
+          <img
+            className={styles.framingImage}
+            src={url}
+            alt=""
+            draggable={false}
+          />
           <div
             className={styles.framingFrame}
             style={{
@@ -225,7 +268,10 @@ export function ImageFraming({
                 key={corner}
                 className={`${styles.framingHandle} ${HANDLE_STYLE[corner]}`}
                 onPointerDown={(event) =>
-                  start(event, { kind: "corner", anchor: oppositeCorner(crop, corner) })
+                  start(event, {
+                    kind: "corner",
+                    anchor: oppositeCorner(crop, corner),
+                  })
                 }
                 onPointerMove={onPointerMove}
                 onPointerUp={end}
@@ -244,36 +290,59 @@ export function ImageFraming({
             onPointerMove={onPointerMove}
             onPointerUp={end}
             onPointerCancel={end}
-          />
+          >
+            <Crosshair size={13} aria-hidden="true" />
+          </div>
         </div>
       )}
-      <div className={styles.framingNumbers}>
-        {(
-          [
-            ["width_bp", strings.sitesImageFrameWidth],
-            ["height_bp", strings.sitesImageFrameHeight],
-            ["x_bp", strings.sitesImageFrameLeft],
-            ["y_bp", strings.sitesImageFrameTop],
-          ] as [CropEdge, string][]
-        ).map(([edge, label]) => (
-          <label key={edge} className={styles.framingNumber}>
-            <span>{label}</span>
-            <span className={styles.framingNumberControl}>
-              <input
-                className={styles.input}
-                type="number"
-                min={0}
-                max={100}
-                aria-label={label}
-                value={toPercent(crop[edge])}
-                onChange={(event) => apply(setCropEdge(crop, edge, event.target.valueAsNumber))}
-              />
-              <span aria-hidden="true">%</span>
-            </span>
-          </label>
-        ))}
-      </div>
-      <div className={styles.framingActions}>
+      <p
+        className="rounded-xl bg-raised px-4 py-3 text-sm leading-5 text-secondary"
+        aria-live="polite"
+      >
+        {stateLabel}
+      </p>
+      <details className="rounded-xl border border-subtle bg-surface">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 text-sm font-semibold text-primary focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2">
+          <SlidersHorizontal
+            size={16}
+            className="text-accent"
+            aria-hidden="true"
+          />
+          {strings.sitesPaletteCategoryAdvanced}
+        </summary>
+        <div className="grid grid-cols-2 gap-3 border-t border-subtle p-4 sm:grid-cols-4">
+          {(
+            [
+              ["width_bp", strings.sitesImageFrameWidth],
+              ["height_bp", strings.sitesImageFrameHeight],
+              ["x_bp", strings.sitesImageFrameLeft],
+              ["y_bp", strings.sitesImageFrameTop],
+            ] as [CropEdge, string][]
+          ).map(([edge, label]) => (
+            <label
+              key={edge}
+              className="grid min-w-0 gap-1.5 text-xs font-medium text-secondary"
+            >
+              <span>{label}</span>
+              <span className="flex items-center gap-2">
+                <input
+                  className={`${styles.input} min-w-0 text-center`}
+                  type="number"
+                  min={0}
+                  max={100}
+                  aria-label={label}
+                  value={toPercent(crop[edge])}
+                  onChange={(event) =>
+                    apply(setCropEdge(crop, edge, event.target.valueAsNumber))
+                  }
+                />
+                <span aria-hidden="true">%</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </details>
+      <div className="flex flex-wrap gap-2">
         <Button
           variant="ghost"
           size="sm"

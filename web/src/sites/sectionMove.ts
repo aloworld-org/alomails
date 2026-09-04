@@ -25,6 +25,102 @@ export interface SectionMove {
   before: number | null;
 }
 
+/** Reads a request to open one section's full editor from the preview. */
+export function readSectionEditMessage(
+  data: unknown,
+  fromPreview: boolean,
+): number | null {
+  if (!fromPreview || typeof data !== "object" || data === null) return null;
+  const message = data as Record<string, unknown>;
+  if (message["alo"] !== "site-section-edit") return null;
+  const index = message["index"];
+  return Number.isInteger(index) && (index as number) >= 0
+    ? (index as number)
+    : null;
+}
+
+export interface SectionQuickEdit {
+  index: number;
+  target: "media" | "section" | "heading" | "description";
+}
+
+export type HeroCanvasAction =
+  | "zoom_in"
+  | "zoom_out"
+  | "move_left"
+  | "move_right"
+  | "move_up"
+  | "move_down"
+  | "align_left"
+  | "align_center"
+  | "align_right"
+  | "width_narrow"
+  | "width_balanced"
+  | "width_wide"
+  | "background_background"
+  | "background_accent_1"
+  | "background_accent_3"
+  | "background_text";
+
+const HERO_CANVAS_ACTIONS = new Set<HeroCanvasAction>([
+  "zoom_in",
+  "zoom_out",
+  "move_left",
+  "move_right",
+  "move_up",
+  "move_down",
+  "align_left",
+  "align_center",
+  "align_right",
+  "width_narrow",
+  "width_balanced",
+  "width_wide",
+  "background_background",
+  "background_accent_1",
+  "background_accent_3",
+  "background_text",
+]);
+
+/** Reads one bounded direct-manipulation command from the editable canvas. */
+export function readHeroCanvasActionMessage(
+  data: unknown,
+  fromPreview: boolean,
+): { index: number; action: HeroCanvasAction } | null {
+  if (!fromPreview || typeof data !== "object" || data === null) return null;
+  const message = data as Record<string, unknown>;
+  const index = message["index"];
+  const action = message["action"];
+  if (message["alo"] !== "site-hero-canvas-edit") return null;
+  if (!Number.isInteger(index) || (index as number) < 0) return null;
+  if (
+    typeof action !== "string" ||
+    !HERO_CANVAS_ACTIONS.has(action as HeroCanvasAction)
+  )
+    return null;
+  return { index: index as number, action: action as HeroCanvasAction };
+}
+
+/** Reads a direct-manipulation request made by double-clicking the canvas. */
+export function readSectionQuickEditMessage(
+  data: unknown,
+  fromPreview: boolean,
+): SectionQuickEdit | null {
+  if (!fromPreview || typeof data !== "object" || data === null) return null;
+  const message = data as Record<string, unknown>;
+  if (message["alo"] !== "site-section-quick-edit") return null;
+  const index = message["index"];
+  const target = message["target"];
+  if (!Number.isInteger(index) || (index as number) < 0) return null;
+  if (
+    target !== "media" &&
+    target !== "section" &&
+    target !== "heading" &&
+    target !== "description"
+  )
+    return null;
+  return { index: index as number, target };
+}
+
 /** Reads the message the preview frame posted, or `null` for anything else.
  *
  *  `event.origin` is `"null"` for a sandboxed `srcdoc` document and therefore

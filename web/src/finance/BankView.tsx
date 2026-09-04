@@ -14,7 +14,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Landmark, Upload } from "lucide-react";
 
 import { RecordAgentPanel } from "../agents";
-import { Button, Spinner, Table, Td, Th, Toolbar, ToolbarSpacer } from "../ds";
+import { Button, Spinner, Table, Td, Th } from "../ds";
 import { strings } from "../i18n";
 import { financeMessage, useFinanceApi } from "./api";
 import { BankImportDialog } from "./BankImportDialog";
@@ -58,25 +58,27 @@ export function BankView({ onImported }: { onImported: () => void }) {
   }, [api, revision]);
 
   return (
-    <div className={styles.page}>
-      {(statements.length > 0 || loading) && (
-        <Toolbar label={strings.financeTabBank} className="min-h-10">
-          <ToolbarSpacer />
-          {loading && <Spinner size={16} />}
+    <div className={`${styles.page} ${styles.bankPage}`}>
+      <section className={styles.bankWorkspace}>
+        <div className={styles.pageHeading}>
+          <div className={styles.pageHeadingCopy}>
+            <h2 className={styles.pageTitle}>{strings.financeTabBank}</h2>
+            <p className={styles.pageSubtitle}>{strings.financeBankPurpose}</p>
+          </div>
           {statements.length > 0 && (
-            <Button onClick={() => setImporting(true)}>
-              <Upload size={16} /> {strings.financeBankImportStatement}
+            <Button icon={<Upload size={16} />} onClick={() => setImporting(true)}>
+              {strings.financeBankImportStatement}
             </Button>
           )}
-        </Toolbar>
-      )}
+          {loading && <Spinner size={16} />}
+        </div>
 
-      {error !== null && <ErrorBanner message={error} />}
+        {error !== null && <ErrorBanner message={error} />}
       {/* What the commit actually did, in the server's own counts. The
           duplicates a second upload of an overlapping month skipped are the
           number a person is looking for, and a bare "imported" would hide
           them. */}
-      {staged !== null && <p className={styles.notice}>{staged}</p>}
+        {staged !== null && <p className={styles.notice}>{staged}</p>}
 
       {statements.length === 0 && !loading ? (
         <EmptyState
@@ -85,6 +87,7 @@ export function BankView({ onImported }: { onImported: () => void }) {
           body={strings.financeBankEmptyBody}
           cta={strings.financeBankImportStatement}
           onCta={() => setImporting(true)}
+          embedded
         />
       ) : (
         <Table label={strings.financeStatementsTable}>
@@ -148,7 +151,8 @@ export function BankView({ onImported }: { onImported: () => void }) {
             ))}
           </tbody>
         </Table>
-      )}
+        )}
+      </section>
 
       {statements
         .filter((statement) => statement.id === focused)

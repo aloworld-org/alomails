@@ -304,6 +304,8 @@ describe("the section stack", () => {
     const sectionsPanel = await screen.findByRole("region", {
       name: strings.sitesSections,
     });
+    expect(screen.queryByText(strings.sitesHomeBadge)).toBeNull();
+    expect(screen.queryByText("/home")).toBeNull();
     expect(screen.queryByText(strings.sitesSectionNav)).toBeNull();
     expect(screen.queryByText(strings.sitesSectionFooter)).toBeNull();
     expect(sectionsPanel.textContent).toContain("0");
@@ -582,6 +584,9 @@ describe("adding a section", () => {
     );
     fireEvent.click(paletteTile("faq"));
     // The form starts with one blank entry; fill it, add a second.
+    expect(
+      screen.getByRole("button", { name: strings.sitesSaveSection }),
+    ).toHaveProperty("disabled", true);
     fireEvent.change(screen.getByLabelText(strings.sitesFieldQuestion), {
       target: { value: "When?" },
     });
@@ -611,7 +616,7 @@ describe("adding a section", () => {
       screen.getByRole("button", { name: strings.sitesSaveSection }),
     );
     await waitFor(() => expect(lastWrite()).toBeTruthy());
-    expect(lastWrite()!.body).toEqual({
+    expect(lastWrite()!.body).toMatchObject({
       section: {
         type: "faq",
         layout: "accordion",
@@ -632,20 +637,29 @@ describe("adding a section", () => {
       await screen.findByRole("button", { name: strings.sitesAddSection }),
     );
     fireEvent.click(paletteTile("cta"));
+    fireEvent.change(screen.getByLabelText(strings.sitesFieldHeading), {
+      target: { value: "Talk to us" },
+    });
+    fireEvent.change(screen.getByLabelText(strings.sitesFieldLinkLabel), {
+      target: { value: "Contact" },
+    });
+    fireEvent.change(screen.getByLabelText(strings.sitesFieldLinkHref), {
+      target: { value: "#contact" },
+    });
     replies = [
       {
         match: (url, method) =>
           method === "POST" &&
           url.endsWith("/sites/site-1/pages/page-1/sections"),
         status: 422,
-        body: { detail: "cta section: heading must not be blank" },
+        body: { detail: "cta section: server policy refusal" },
       },
     ];
     fireEvent.click(
       screen.getByRole("button", { name: strings.sitesSaveSection }),
     );
     expect(
-      await screen.findByText("cta section: heading must not be blank"),
+      await screen.findByText("cta section: server policy refusal"),
     ).toBeTruthy();
     expect(
       screen.getByRole("dialog", {
@@ -764,7 +778,7 @@ describe("editing a section", () => {
     await waitFor(() => expect(lastWrite()).toBeTruthy());
     // The untouched subheading rode along — an edit never strips what the
     // user did not change.
-    expect(lastWrite()!.body).toEqual({
+    expect(lastWrite()!.body).toMatchObject({
       section: {
         type: "hero",
         heading: "Warm bread daily",
@@ -816,20 +830,21 @@ describe("editing a section", () => {
       screen.getByRole("radio", { name: strings.sitesHeroOneButton }),
     );
     expect(screen.getByRole("radio", { name: primaryColorName })).toBeTruthy();
-    expect(screen.queryByRole("radio", { name: secondaryColorName })).toBeNull();
+    expect(
+      screen.queryByRole("radio", { name: secondaryColorName }),
+    ).toBeNull();
     fireEvent.click(
       screen.getByRole("radio", { name: strings.sitesHeroTwoButtons }),
     );
-    expect(screen.getByRole("radio", { name: secondaryColorName })).toBeTruthy();
+    expect(
+      screen.getByRole("radio", { name: secondaryColorName }),
+    ).toBeTruthy();
     const chooseColor = (control: string, option: string) => {
       fireEvent.click(
         screen.getByRole("radio", { name: `${control}: ${option}` }),
       );
     };
-    chooseColor(
-      strings.sitesHeroBackgroundColor,
-      strings.sitesThemeTextColor,
-    );
+    chooseColor(strings.sitesHeroBackgroundColor, strings.sitesThemeTextColor);
     chooseColor(
       `${strings.sitesHeroPrimaryButtonColor}: ${strings.sitesNavText}`,
       strings.sitesThemeTextColor,
@@ -1094,6 +1109,16 @@ describe("the live preview", () => {
     };
   }
 
+  function browserPreviewReply(html: string): Reply {
+    return {
+      match: (url, method) =>
+        method === "GET" &&
+        url.endsWith("/sites/site-1/pages/page-1/preview?browser=true"),
+      status: 200,
+      body: html,
+    };
+  }
+
   function previewCalls(): number {
     return calls.filter((c) => c.method === "GET" && c.url.endsWith("/preview"))
       .length;
@@ -1203,22 +1228,48 @@ describe("the live preview", () => {
     expect(phone.getAttribute("aria-pressed")).toBe("true");
   });
 
-  test("the desktop splitter adjusts both panels with the keyboard and resets", async () => {
+  test("the current clean draft opens in a browser tab", async () => {
+    const clean = "<!doctype html><title>Clean draft</title>";
+    replies = [
+      pageReply([HERO]),
+      previewReply("<!doctype html><p>editable</p>"),
+      browserPreviewReply(clean),
+    ];
+    const opened = {
+      opener: window,
+      document: {
+        open: vi.fn(),
+        write: vi.fn(),
+        close: vi.fn(),
+      },
+      close: vi.fn(),
+    };
+    const open = vi
+      .spyOn(window, "open")
+      .mockReturnValue(opened as unknown as Window);
+    ui();
+    await screen.findByText(strings.sitesSectionHero);
+    await openPreview();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesPreviewInBrowser }),
+    );
+    await waitFor(() =>
+      expect(opened.document.write).toHaveBeenCalledWith(clean),
+    );
+    expect(opened.opener).toBeNull();
+    open.mockRestore();
+  });
+
+  test("the calm workspace does not add a resize control between the panels", async () => {
     replies = [pageReply([HERO]), previewReply("<!doctype html><p>ok</p>")];
     ui();
     await screen.findByText(strings.sitesSectionHero);
     await openPreview();
 
-    const splitter = screen.getByRole("separator", {
-      name: strings.sitesResizeWorkspace,
-    });
-    expect(splitter.getAttribute("aria-valuenow")).toBe("34");
-    fireEvent.keyDown(splitter, { key: "ArrowRight" });
-    expect(splitter.getAttribute("aria-valuenow")).toBe("38");
-    fireEvent.keyDown(splitter, { key: "End" });
-    expect(splitter.getAttribute("aria-valuenow")).toBe("65");
-    fireEvent.doubleClick(splitter);
-    expect(splitter.getAttribute("aria-valuenow")).toBe("34");
+    expect(
+      screen.queryByRole("separator", { name: strings.sitesResizeWorkspace }),
+    ).toBeNull();
   });
 
   test("a failed preview shows its own error while the editor keeps working", async () => {

@@ -10,13 +10,19 @@
 // The description gets more room here than the upload does, on purpose: an
 // undescribed picture is invisible to somebody using a screen reader, and the
 // form says so rather than leaving a blank field to be scrolled past.
-import { useRef, useState } from "react";
-import { Sparkles, Upload } from "lucide-react";
+import {
+  createContext,
+  useContext,
+  useRef,
+  useState,
+  type DragEvent,
+} from "react";
+import { Image as ImageIcon, Sparkles, Upload } from "lucide-react";
 import { useParams } from "react-router-dom";
 
 import { strings } from "../i18n";
 import { useJmapClient } from "../jmap";
-import { Button } from "../ds";
+import { Button, cx } from "../ds";
 import { sitesMessage, useSitesApi } from "./api";
 import { useCopyContext } from "./copyContext";
 import { useImageSource } from "./imageSource";
@@ -25,6 +31,13 @@ import { Field, InformationTip } from "./parts";
 import type { SectionImage } from "./sections";
 import type { SiteEditEnvelope } from "./types";
 import styles from "./SitesModule.module.css";
+
+/** Lets the owning form prevent a save while Drive is still returning the
+ * blob id. Without this handshake a quick Save can persist the section before
+ * the uploaded image reaches its draft. */
+export const ImageUploadActivityContext = createContext<
+  ((delta: 1 | -1) => void) | null
+>(null);
 
 /**
  * "Suggest a description" — a proposal, never a write.
@@ -50,13 +63,18 @@ function AltTextTool({ pointer, value }: { pointer: string; value: string }) {
     setBusy(true);
     setError(null);
     try {
-      const prepared = await api.proposePageCopyEdit(context.siteId, context.pageId, {
-        target: context.target,
-        pointer: `${pointer}/alt`,
-        action: "alt_text",
-      });
+      const prepared = await api.proposePageCopyEdit(
+        context.siteId,
+        context.pageId,
+        {
+          target: context.target,
+          pointer: `${pointer}/alt`,
+          action: "alt_text",
+        },
+      );
       const operation = prepared.proposal.operations[0];
-      if (operation?.op !== "rewrite_copy") throw new Error(strings.sitesAiAltFailed);
+      if (operation?.op !== "rewrite_copy")
+        throw new Error(strings.sitesAiAltFailed);
       setProposal(prepared.proposal);
       setProposed(operation.text);
     } catch (reason) {
@@ -71,7 +89,9 @@ function AltTextTool({ pointer, value }: { pointer: string; value: string }) {
     setBusy(true);
     setError(null);
     try {
-      context.onApplied(await api.applyPageEdit(context.siteId, context.pageId, proposal));
+      context.onApplied(
+        await api.applyPageEdit(context.siteId, context.pageId, proposal),
+      );
     } catch (reason) {
       setError(sitesMessage(reason, strings.sitesAiApplyFailed));
       setBusy(false);
@@ -87,7 +107,9 @@ function AltTextTool({ pointer, value }: { pointer: string; value: string }) {
         disabled={busy}
         onClick={() => void propose()}
       >
-        {value.trim() === "" ? strings.sitesAiAltWrite : strings.sitesAiAltImprove}
+        {value.trim() === ""
+          ? strings.sitesAiAltWrite
+          : strings.sitesAiAltImprove}
       </Button>
       {proposed !== null && (
         <div className={styles.copyProposal} aria-live="polite">
@@ -150,17 +172,27 @@ export function ImageFields({
   const { siteId = "", pageId = "" } = useParams();
   const fileInput = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const reportUploadActivity = useContext(ImageUploadActivityContext);
   const source = useImageSource(siteId, value.blob_id);
   const chosen = value.blob_id.trim() !== "";
   const decorative = value.decorative === true;
 
   async function upload(file: File) {
+    if (!file.type.startsWith("image/")) {
+      setUploadError(strings.sitesUploadFailed);
+      return;
+    }
     setUploading(true);
+    reportUploadActivity?.(1);
     setUploadError(null);
     try {
       const { blobId } = await jmap.uploadFile(file);
-      await api.attachPageImage(siteId, pageId, { blobId, filename: file.name });
+      await api.attachPageImage(siteId, pageId, {
+        blobId,
+        filename: file.name,
+      });
       // A new picture is not the old one: its frame would be a rectangle of
       // a different photograph, so framing starts over.
       onChange({ blob_id: blobId, crop: undefined, focal: undefined });
@@ -168,58 +200,121 @@ export function ImageFields({
       setUploadError(strings.sitesUploadFailed);
     } finally {
       setUploading(false);
+      reportUploadActivity?.(-1);
     }
   }
 
+  function dragOver(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    if (!uploading) setDragging(true);
+  }
+
+  function drop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    setDragging(false);
+    if (uploading) return;
+    const file = event.dataTransfer.files[0];
+    if (file !== undefined) void upload(file);
+  }
+
   return (
-    <fieldset className={bare ? "m-0 grid min-w-0 gap-4 border-0 p-0" : styles.subGroup}>
+    <fieldset
+      className={bare ? "m-0 grid min-w-0 gap-4 border-0 p-0" : styles.subGroup}
+    >
       {legend !== undefined && (
-        <legend className={bare ? "mb-3 text-sm font-semibold text-primary" : styles.subLegend}>
+        <legend
+          className={
+            bare ? "mb-3 text-sm font-semibold text-primary" : styles.subLegend
+          }
+        >
           {legend}
         </legend>
       )}
+      <div
+        className={cx(
+          "overflow-hidden rounded-2xl border border-dashed bg-raised transition-[background-color,border-color,box-shadow]",
+          dragging
+            ? "border-accent bg-accent-soft shadow-[inset_0_0_0_1px_var(--accent)]"
+            : "border-default",
+        )}
+        onDragEnter={dragOver}
+        onDragOver={dragOver}
+        onDragLeave={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+            setDragging(false);
+        }}
+        onDrop={drop}
+      >
+        {chosen && source !== null && (
+          <img
+            src={source}
+            alt=""
+            className="h-32 w-full border-b border-subtle bg-surface object-contain"
+          />
+        )}
+        <button
+          type="button"
+          className={cx(
+            "flex w-full flex-col items-center justify-center gap-3 !p-5 text-center text-primary transition-colors hover:bg-surface/60 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[-2px] disabled:cursor-not-allowed disabled:opacity-50",
+            chosen ? "min-h-24" : "min-h-36",
+          )}
+          disabled={uploading}
+          onClick={() => fileInput.current?.click()}
+        >
+          <span className="grid size-11 place-items-center rounded-xl border border-subtle bg-surface text-accent shadow-sm">
+            {chosen ? <ImageIcon size={20} /> : <Upload size={20} />}
+          </span>
+          <span className="grid gap-1">
+            <strong className="text-sm font-semibold">
+              {dragging
+                ? strings.sitesThemeDropNow
+                : strings.sitesThemeDropTitle}
+            </strong>
+            <span className="text-sm text-secondary">
+              {strings.sitesThemeDropBrowse}
+            </span>
+          </span>
+        </button>
+        <input
+          ref={fileInput}
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file !== undefined) void upload(file);
+          }}
+        />
+      </div>
       <Field
         label={strings.sitesFieldImageId}
         hint={strings.sitesImageIdHint}
         hintDisplay="tooltip"
       >
-        <div className={styles.uploadRow}>
-          <input
-            className={`${styles.input} ${styles.mono}`}
-            value={value.blob_id}
-            onChange={(e) => onChange({ blob_id: e.target.value, crop: undefined, focal: undefined })}
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-          />
-          <input
-            ref={fileInput}
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              e.target.value = "";
-              if (file !== undefined) void upload(file);
-            }}
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<Upload size={14} />}
-            disabled={uploading}
-            onClick={() => fileInput.current?.click()}
-          >
-            {strings.sitesUploadImage}
-          </Button>
-        </div>
+        <input
+          className={`${styles.input} ${styles.mono}`}
+          value={value.blob_id}
+          onChange={(event) =>
+            onChange({
+              blob_id: event.target.value,
+              crop: undefined,
+              focal: undefined,
+            })
+          }
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+        />
       </Field>
       {uploadError !== null && (
         <p className={styles.hint} role="alert">
           {uploadError}
         </p>
       )}
-      {chosen && <ImageFraming value={value} url={source} onChange={onChange} />}
+      {chosen && (
+        <ImageFraming value={value} url={source} onChange={onChange} />
+      )}
       <Field
         label={strings.sitesFieldImageAlt}
         hint={strings.sitesImageAltHint}
@@ -249,7 +344,11 @@ export function ImageFields({
               // A decorative picture has nothing to describe, and the schema
               // refuses one that still carries a description — so the two move
               // together rather than saving into a refusal.
-              onChange(e.target.checked ? { decorative: true, alt: "" } : { decorative: false })
+              onChange(
+                e.target.checked
+                  ? { decorative: true, alt: "" }
+                  : { decorative: false },
+              )
             }
           />
           {strings.sitesImageDecorative}

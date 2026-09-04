@@ -37,15 +37,18 @@ export function EmptyState({
   body,
   cta,
   onCta,
+  embedded = false,
 }: {
   Icon: LucideIcon;
   title: string;
   body: string;
   cta?: string;
   onCta?: () => void;
+  /** Removes the second card edge when the state already lives in a card. */
+  embedded?: boolean;
 }) {
   return (
-    <div className={styles.empty}>
+    <div className={`${styles.empty} ${embedded ? styles.emptyEmbedded : ""}`}>
       <span className={styles.emptyArt} aria-hidden="true">
         <Icon size={38} />
       </span>

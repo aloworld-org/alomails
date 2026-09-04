@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { DialogProvider } from "../ds";
 import { strings } from "../i18n";
 import { FinanceModule } from "./FinanceModule";
+import { statusLabel } from "./format";
 import type { Expense, PendingExpense } from "./types";
 
 interface Call {
@@ -168,7 +169,11 @@ afterEach(cleanup);
 describe("my claims", () => {
   test("an empty period onboards instead of showing an empty table", async () => {
     ui("/finance/expenses");
-    expect(await screen.findByText(strings.financeExpensesEmptyTitle)).toBeTruthy();
+    const emptyTitle = await screen.findByText(strings.financeExpensesEmptyTitle);
+    expect(emptyTitle).toBeTruthy();
+    const actions = screen.getAllByRole("button", { name: strings.financeNewClaim });
+    expect(actions).toHaveLength(1);
+    expect(emptyTitle.parentElement?.contains(actions[0] ?? null)).toBe(true);
     // …and the period asked for is a real one, at both ends.
     const read = calls.find((c) => c.url.includes("/finance/expenses?"));
     expect(read).toBeTruthy();
@@ -256,9 +261,8 @@ describe("my claims", () => {
     claims = [DRAFT];
     ui("/finance/expenses");
     await screen.findByText("Bahn");
-    fireEvent.change(screen.getByLabelText(strings.financeStatus), {
-      target: { value: "approved" },
-    });
+    fireEvent.click(screen.getByRole("combobox", { name: strings.financeStatus }));
+    fireEvent.click(screen.getByRole("option", { name: statusLabel("approved") }));
     await waitFor(() => {
       const last = calls.filter((c) => c.url.includes("/finance/expenses?")).at(-1);
       expect(new URL(last?.url ?? "", "http://x").searchParams.get("status")).toBe("approved");

@@ -4341,6 +4341,8 @@ export const de: Partial<Catalog> = {
 
   // Das Erste, was Mitarbeitende vom Modul sehen.
   financeExpensesEmptyTitle: "Keine Ausgaben in diesem Zeitraum",
+  financeExpensesPurpose:
+    "Prüfen, übermitteln und verfolgen Sie Ihre Arbeitsausgaben.",
   financeExpensesEmptyBody:
     "Erfassen Sie, was Sie für die Arbeit ausgegeben haben — das Datum, den Gesamtbetrag auf dem Beleg und wessen Geld bezahlt hat. Sie bleibt bei Ihnen, bis Sie sie einreichen.",
 
@@ -4348,6 +4350,7 @@ export const de: Partial<Catalog> = {
   financeTabBank: "Bank",
   financeTabReconcile: "Abgleich",
   financeBankLoadFailed: "Die Kontoauszüge konnten nicht geladen werden.",
+  financeBankPurpose: "Monatliche Kontoauszüge importieren und prüfen.",
 
   // Einen Auszug importieren.
   financeBankImportStatement: "Kontoauszug importieren",
@@ -4859,6 +4862,10 @@ export const de: Partial<Catalog> = {
   // Bewegungsgründe tragen die Wörter des Lagers selbst (Wareneingang,
   // Umlagerung, Inventur, Schwund), nicht Übersetzungen unserer englischen.
   inventoryTabCatalog: "Katalog",
+  inventoryWorkspacePurpose: "Produkte, Bestände und Aufträge in einem Arbeitsbereich.",
+  inventoryCatalogPurpose: "Produkte und Leistungen verwalten, die Ihr Unternehmen kauft und verkauft.",
+  inventoryPurchasingPurpose: "Bestellungen bei Ihren Lieferanten erstellen und verfolgen.",
+  inventorySalesPurpose: "Kundenaufträge von der Bestätigung bis zur Lieferung verwalten.",
   inventoryTabStock: "Bestand",
   inventoryLoadFailed: "Ihr Katalog konnte nicht geladen werden.",
   inventorySaveFailed: "Die Änderung konnte nicht gespeichert werden.",
@@ -5658,7 +5665,7 @@ export const de: Partial<Catalog> = {
     "Vergleichen Sie die Seite vorher und nachher, und entscheiden Sie dann, was geschieht.",
   sitesAiPreviewCompare: "Vorgeschlagene Seitenänderungen vergleichen",
   sitesInlineTextHint:
-    "Klicken Sie in der Vorschau auf einen Text, um ihn dort zu bearbeiten. Eingabe speichert, Escape stellt ihn zurück.",
+    "Klicken Sie auf Text, um ihn direkt zu bearbeiten, oder auf einen Abschnitt, um Bild, Farben und Layout anzupassen.",
   sitesInlineTextSaved: "Text aktualisiert.",
   sitesInlineTextUndone: "Textänderung rückgängig gemacht.",
   sitesInlineTextRedone: "Textänderung wiederhergestellt.",
@@ -6048,8 +6055,11 @@ export const de: Partial<Catalog> = {
   sitesPreviewTitle: "Entwurfsvorschau",
   sitesPreviewDesktop: "Bildschirmbreite",
   sitesPreviewMobile: "Telefonbreite",
+  sitesPreviewInBrowser: "Im Browser öffnen",
+  sitesPreviewBrowserBlocked:
+    "Der Browser hat den Vorschau-Tab blockiert. Erlauben Sie Pop-ups und versuchen Sie es erneut.",
   sitesPreviewFailed: "Die Vorschau konnte nicht geladen werden.",
-  sitesSeoAction: "Suche & Teilen",
+  sitesSeoAction: "Seiteneinstellungen",
   sitesSeoTitle: "Suche & Teilen",
   sitesSeoSubtitle:
     "Legen Sie fest, wie diese Seite in Suchergebnissen und geteilten Links erscheint.",
@@ -6073,10 +6083,12 @@ export const de: Partial<Catalog> = {
   sitesSectionHero: "Aufmacher",
   sitesSectionHeroDesc: "Die große Schlagzeile am Anfang.",
   sitesSectionTransition: "Übergang",
-  sitesSectionTransitionDesc: "Bewegung zwischen diesem und dem nächsten Abschnitt.",
+  sitesSectionTransitionDesc:
+    "Bewegung zwischen diesem und dem nächsten Abschnitt.",
   sitesTransitionSummary: "Animiert den nächsten Abschnitt beim Scrollen",
   sitesTransitionStyle: "Übergangsstil",
-  sitesTransitionStyleHint: "Wählen Sie, wie der nächste Abschnitt auf der Seite erscheint.",
+  sitesTransitionStyleHint:
+    "Wählen Sie, wie der nächste Abschnitt auf der Seite erscheint.",
   sitesTransitionFade: "Sanft einblenden",
   sitesTransitionSlide: "Gleiten",
   sitesTransitionScale: "Vergrößern",
@@ -6092,11 +6104,13 @@ export const de: Partial<Catalog> = {
   sitesTransitionBalanced: "Teilweise sichtbar",
   sitesTransitionLate: "Fast sichtbar",
   sitesTransitionAnimateOut: "Beim Verlassen animieren",
-  sitesTransitionAnimateOutHint: "Für erzählerische Seiten aktivieren; für schnelles Lesen deaktiviert lassen.",
+  sitesTransitionAnimateOutHint:
+    "Für erzählerische Seiten aktivieren; für schnelles Lesen deaktiviert lassen.",
   sitesSectionFeatures: "Leistungen",
   sitesSectionFeaturesDesc: "Ein Raster mit dem, was Sie anbieten.",
   sitesFeaturesLayout: "Vorteils-Layout",
-  sitesFeaturesLayoutHint: "Wählen Sie, wie Besucher diese Vorteile erfassen und vergleichen.",
+  sitesFeaturesLayoutHint:
+    "Wählen Sie, wie Besucher diese Vorteile erfassen und vergleichen.",
   sitesFeaturesLayoutGrid: "Ausgewogenes Raster",
   sitesFeaturesLayoutBento: "Bento",
   sitesFeaturesLayoutList: "Detaillierte Liste",
@@ -6105,7 +6119,8 @@ export const de: Partial<Catalog> = {
   sitesSectionTextImage: "Text & Bild",
   sitesSectionTextImageDesc: "Ein Absatz neben einem Bild.",
   sitesTextImageLayout: "Text-und-Bild-Layout",
-  sitesTextImageLayoutHint: "Wählen Sie das Verhältnis zwischen Geschichte und Bild.",
+  sitesTextImageLayoutHint:
+    "Wählen Sie das Verhältnis zwischen Geschichte und Bild.",
   sitesTextImageLayoutSplit: "Ausgewogene Teilung",
   sitesTextImageLayoutOverlap: "Überlagert",
   sitesTextImageLayoutFramed: "Gerahmtes Bild",
@@ -6114,7 +6129,8 @@ export const de: Partial<Catalog> = {
   sitesSectionGallery: "Galerie",
   sitesSectionGalleryDesc: "Eine Wand voller Bilder.",
   sitesGalleryLayout: "Galerie-Layout",
-  sitesGalleryLayoutHint: "Wähle, wie Besucher deine Bilder betrachten und entdecken.",
+  sitesGalleryLayoutHint:
+    "Wähle, wie Besucher deine Bilder betrachten und entdecken.",
   sitesGalleryLayoutGrid: "Ausgewogenes Raster",
   sitesGalleryLayoutMasonry: "Masonry",
   sitesGalleryLayoutCollage: "Collage",
@@ -6123,7 +6139,8 @@ export const de: Partial<Catalog> = {
   sitesSectionTestimonials: "Kundenstimmen",
   sitesSectionTestimonialsDesc: "Worte zufriedener Kundschaft.",
   sitesTestimonialsLayout: "Layout der Kundenstimmen",
-  sitesTestimonialsLayoutHint: "Wähle, wie Kundengeschichten Vertrauen auf der Seite aufbauen.",
+  sitesTestimonialsLayoutHint:
+    "Wähle, wie Kundengeschichten Vertrauen auf der Seite aufbauen.",
   sitesTestimonialsLayoutCards: "Zitatkarten",
   sitesTestimonialsLayoutFeatured: "Hervorgehobenes Zitat",
   sitesTestimonialsLayoutEditorial: "Editorial-Wand",
@@ -6132,7 +6149,8 @@ export const de: Partial<Catalog> = {
   sitesSectionPricing: "Preise",
   sitesSectionPricingDesc: "Ihre Pakete und ihre Preise.",
   sitesPricingLayout: "Preis-Layout",
-  sitesPricingLayoutHint: "Wähle, wie Besucher Pakete vergleichen und das passende Angebot finden.",
+  sitesPricingLayoutHint:
+    "Wähle, wie Besucher Pakete vergleichen und das passende Angebot finden.",
   sitesPricingLayoutCards: "Paketkarten",
   sitesPricingLayoutComparison: "Nebeneinander",
   sitesPricingLayoutFeatured: "Hervorgehobenes Paket",
@@ -6141,7 +6159,8 @@ export const de: Partial<Catalog> = {
   sitesSectionTeam: "Team",
   sitesSectionTeamDesc: "Die Menschen hinter dem Geschäft.",
   sitesTeamLayout: "Team-Layout",
-  sitesTeamLayoutHint: "Wähle, wie Personen und ihre Geschichten zusammen erscheinen.",
+  sitesTeamLayoutHint:
+    "Wähle, wie Personen und ihre Geschichten zusammen erscheinen.",
   sitesTeamLayoutPortraits: "Porträtraster",
   sitesTeamLayoutCards: "Profilkarten",
   sitesTeamLayoutRoster: "Teamübersicht",
@@ -6314,7 +6333,8 @@ export const de: Partial<Catalog> = {
   sitesHeroAnimationSmooth: "Sanft",
   sitesHeroAnimationRelaxed: "Ruhig",
   sitesSectionDesign: "Abschnittsdesign",
-  sitesSectionDesignHint: "Gestalten Sie diesen Abschnitt mit responsiven, wiederverwendbaren Optionen.",
+  sitesSectionDesignHint:
+    "Gestalten Sie diesen Abschnitt mit responsiven, wiederverwendbaren Optionen.",
   sitesSectionLayoutStyle: "Visueller Stil",
   sitesSectionLayoutClean: "Klar",
   sitesSectionLayoutCards: "Karten",
@@ -6322,10 +6342,12 @@ export const de: Partial<Catalog> = {
   sitesSectionLayoutEditorial: "Redaktionell",
   sitesSectionSpacing: "Abstand",
   sitesSectionSpacingGenerous: "Großzügig",
-  sitesSectionColorsHint: "Wählen Sie wiederverwendbare Rollen aus dem Website-Theme.",
+  sitesSectionColorsHint:
+    "Wählen Sie wiederverwendbare Rollen aus dem Website-Theme.",
   sitesSectionBackground: "Abschnittshintergrund",
   sitesSectionText: "Abschnittstext",
-  sitesSectionAnimationHint: "Wählen Sie einen ruhigen Einstieg. Reduzierte Bewegung bleibt still.",
+  sitesSectionAnimationHint:
+    "Wählen Sie einen ruhigen Einstieg. Reduzierte Bewegung bleibt still.",
   sitesSectionEntrance: "Einstieg",
   sitesSectionUseDefaults: "Abschnittsstandards verwenden",
   sitesHeroHeight: "Höhe",
@@ -6333,6 +6355,8 @@ export const de: Partial<Catalog> = {
   sitesHeroHeightStandard: "Standard",
   sitesHeroHeightTall: "Hoch",
   sitesHeroAlignment: "Inhaltsausrichtung",
+  sitesCanvasImageSize: "Bildgröße",
+  sitesCanvasImagePosition: "Bildposition",
   sitesHeroAlignmentLeft: "Links",
   sitesHeroAlignmentCenter: "Mittig",
   sitesHeroAlignmentRight: "Rechts",
@@ -6374,6 +6398,8 @@ export const de: Partial<Catalog> = {
   sitesImageFraming: "Zuschnitt und Fokuspunkt",
   sitesImageFrameHint:
     "Ziehen Sie auf dem Bild, um zu wählen, was sichtbar bleibt. Mit der Tastatur: Pfeiltasten verschieben den Rahmen, Umschalt mit den Pfeiltasten ändert seine Größe.",
+  sitesImageFrameDirectHint:
+    "Ziehen Sie den Rahmen, um ihn zu verschieben. Ziehen Sie eine Ecke, um die Größe zu ändern.",
   sitesImageFocalHint:
     "Ziehen Sie die runde Markierung auf das, was im Blick bleiben muss, wenn ein Layout das Bild weiter beschneiden muss.",
   sitesImageFrameAt: (
@@ -6454,6 +6480,9 @@ export const de: Partial<Catalog> = {
   sitesThemeFavicon: "Favicon",
   sitesThemeFaviconHint: "Das kleine Symbol, das Browser am Tab zeigen.",
   sitesThemeUpload: "Bild hochladen",
+  sitesThemeDropTitle: "Bild hierher ziehen und ablegen",
+  sitesThemeDropNow: "Bild zum Hochladen ablegen",
+  sitesThemeDropBrowse: "oder klicken, um ein Bild vom Gerät auszuwählen",
   sitesThemeReplace: "Bild ersetzen",
   sitesThemeRemove: "Bild entfernen",
   sitesThemeSet: "Bild hochgeladen",

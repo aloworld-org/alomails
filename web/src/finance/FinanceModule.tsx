@@ -26,7 +26,7 @@
 // read rather than a page pretending the queue is empty. The client is never
 // the access decision — every one of those routes gates itself.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { NavLink, Navigate, Route, Routes } from "react-router-dom";
+import { NavLink, Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import {
   BadgeEuro,
   ChartNoAxesCombined,
@@ -40,9 +40,10 @@ import {
   WalletCards,
   TrendingUp,
   LockKeyhole,
+  MoreHorizontal,
 } from "lucide-react";
 
-import { ModuleNavigation, moduleNavigationItemClassName } from "../ds";
+import { Menu, ModuleNavigation, moduleNavigationItemClassName } from "../ds";
 import { strings } from "../i18n";
 import { useJmapClient } from "../jmap";
 import { useProjects } from "../projects";
@@ -146,7 +147,17 @@ const TABS = [
   },
 ];
 
+const PRIMARY_PATHS = new Set([
+  "overview",
+  "expenses",
+  "approvals",
+  "bank",
+  "cash-flow",
+  "profitability",
+]);
+
 export function FinanceModule() {
+  const navigate = useNavigate();
   const client = useJmapClient();
   const { projects } = useProjects();
   const [approver, setApprover] = useState(false);
@@ -182,7 +193,7 @@ export function FinanceModule() {
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-app">
-      <header className="shrink-0 border-b border-subtle bg-surface px-8 pb-3 pt-5 max-sm:px-4 max-sm:pt-4">
+      <header className="shrink-0 border-b border-subtle bg-header px-8 pb-3 pt-5 max-sm:px-4 max-sm:pt-4">
         <div className="flex items-center gap-3">
           <span
             className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-accent ring-1 ring-inset ring-accent/10"
@@ -201,20 +212,40 @@ export function FinanceModule() {
         </div>
         {/* Scrolls horizontally on a phone by design; the responsive e2e
             sweep exempts marked strips from its width invariant. */}
-        <ModuleNavigation className="mt-4 gap-1" label={strings.moduleFinance}>
-          {TABS.filter((tab) => approver || !tab.bookkeeper).map((tab) => (
-            <NavLink
-              key={tab.path}
-              to={`${FINANCE_ROOT}/${tab.path}`}
-              className={({ isActive }) =>
-                moduleNavigationItemClassName(isActive)
-              }
-            >
-              <tab.Icon className="size-4" aria-hidden="true" />
-              {tab.label()}
-            </NavLink>
-          ))}
-        </ModuleNavigation>
+        <div className="mt-4 flex min-w-0 items-center gap-1">
+          <ModuleNavigation className="min-w-0 flex-1 gap-1" label={strings.moduleFinance}>
+            {TABS.filter(
+              (tab) =>
+                PRIMARY_PATHS.has(tab.path) && (approver || !tab.bookkeeper),
+            ).map((tab) => (
+              <NavLink
+                key={tab.path}
+                to={`${FINANCE_ROOT}/${tab.path}`}
+                className={({ isActive }) =>
+                  moduleNavigationItemClassName(isActive)
+                }
+              >
+                <tab.Icon className="size-4" aria-hidden="true" />
+                {tab.label()}
+              </NavLink>
+            ))}
+          </ModuleNavigation>
+          {approver && (
+            <Menu
+              label={strings.moreActions}
+              triggerLabel={strings.moreActions}
+              icon={<MoreHorizontal className="size-4" aria-hidden="true" />}
+              items={TABS.filter((tab) => !PRIMARY_PATHS.has(tab.path)).map(
+                (tab) => ({
+                  key: tab.path,
+                  label: tab.label(),
+                  icon: <tab.Icon className="size-4" aria-hidden="true" />,
+                  onClick: () => navigate(`${FINANCE_ROOT}/${tab.path}`),
+                }),
+              )}
+            />
+          )}
+        </div>
       </header>
 
       <Routes>

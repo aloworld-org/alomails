@@ -114,14 +114,16 @@ export function SitePagesPanel({
 
   return (
     <Card as="section" pad="none">
-      <div className="px-5 pb-3 pt-5 sm:px-6">
+      <div className="px-5 pb-4 pt-5 sm:px-6 sm:pt-6">
         <div>
-          <h2 className="m-0 text-lg font-semibold tracking-tight text-text-primary">
-            {strings.sitesPages}
-          </h2>
-          <p className="mt-1 text-sm text-text-secondary">
-            {strings.sitesPageCount(pages.length)}
-          </p>
+          <div className="min-w-0">
+            <h2 className="m-0 text-lg font-semibold tracking-tight text-text-primary">
+              {strings.sitesPages}
+            </h2>
+            <p className="mb-0 mt-1 text-sm text-text-secondary">
+              {strings.sitesPageCount(pages.length)}
+            </p>
+          </div>
         </div>
         {pages.length > 1 && (
           <div className="mt-5 flex flex-col gap-3 border-t border-subtle pt-5 lg:flex-row lg:items-center">
@@ -175,69 +177,56 @@ export function SitePagesPanel({
       </div>
 
       {pages.length === 0 && !loading ? (
-        <>
-          <EmptyState
-            Icon={FileText}
-            title={strings.sitesNoPagesTitle}
-            body={strings.sitesNoPagesBody}
-          />
-          <div className="flex justify-center py-4">
-            <CircularCreateButton
-              label={strings.sitesNewPage}
-              onClick={onCreate}
-            />
-          </div>
-        </>
+        <EmptyState
+          Icon={FileText}
+          title={strings.sitesNoPagesTitle}
+          body={strings.sitesNoPagesBody}
+        />
       ) : (
-        <>
-          <Table
-            label={strings.sitesPages}
-            density="compact"
-            flat
-            interactiveRows
-            scrollable={false}
-          >
-            <thead className="bg-raised">
-              <tr>
-                <Th>{strings.sitesColPage}</Th>
-                <Th>{strings.sitesColStatus}</Th>
-                <Th>{strings.sitesColUpdated}</Th>
-                <Th align="end" hideLabel>
-                  {strings.sitesColActions}
-                </Th>
-              </tr>
-            </thead>
-            <tbody>
-              {treeRows.map(({ page, depth, hasChildren }) => (
-                <SitePageRow
-                  key={page.id}
-                  page={page}
-                  depth={depth}
-                  hasChildren={hasChildren}
-                  expanded={!collapsed.has(page.id)}
-                  protectedPage={protectedPages.has(page.id)}
-                  siteStatus={siteStatus}
-                  onToggle={() => togglePage(page.id)}
-                  onOpen={(pageId) => navigate(`pages/${pageId}`)}
-                  onRename={onRename}
-                  onDuplicate={onDuplicate}
-                  onSetHome={onSetHome}
-                  onDelete={onDelete}
-                />
-              ))}
-              {visiblePages.length === 0 && (
-                <TableEmpty cols={4}>{strings.sitesNoMatchingPages}</TableEmpty>
-              )}
-            </tbody>
-          </Table>
-          <div className="flex justify-center py-4">
-            <CircularCreateButton
-              label={strings.sitesNewPage}
-              onClick={onCreate}
-            />
-          </div>
-        </>
+        <Table
+          label={strings.sitesPages}
+          density="compact"
+          flat
+          interactiveRows
+          scrollable={false}
+        >
+          <thead>
+            <tr>
+              <Th>{strings.sitesColPage}</Th>
+              <Th>{strings.sitesColStatus}</Th>
+              <Th>{strings.sitesColUpdated}</Th>
+              <Th align="end" hideLabel>
+                {strings.sitesColActions}
+              </Th>
+            </tr>
+          </thead>
+          <tbody>
+            {treeRows.map(({ page, depth, hasChildren }) => (
+              <SitePageRow
+                key={page.id}
+                page={page}
+                depth={depth}
+                hasChildren={hasChildren}
+                expanded={!collapsed.has(page.id)}
+                protectedPage={protectedPages.has(page.id)}
+                siteStatus={siteStatus}
+                onToggle={() => togglePage(page.id)}
+                onOpen={(pageId) => navigate(`pages/${pageId}`)}
+                onRename={onRename}
+                onDuplicate={onDuplicate}
+                onSetHome={onSetHome}
+                onDelete={onDelete}
+              />
+            ))}
+            {visiblePages.length === 0 && (
+              <TableEmpty cols={4}>{strings.sitesNoMatchingPages}</TableEmpty>
+            )}
+          </tbody>
+        </Table>
       )}
+      <div className="flex justify-center py-4">
+        <CircularCreateButton label={strings.sitesNewPage} onClick={onCreate} />
+      </div>
     </Card>
   );
 }

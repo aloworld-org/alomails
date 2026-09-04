@@ -2589,6 +2589,80 @@ async fn page_image_uploads_are_kept_in_source_linked_drive_folders() {
     assert_eq!(files.len(), 2);
 }
 
+#[tokio::test]
+async fn identity_images_are_kept_in_one_tenant_scoped_drive_folder() {
+    let owner = harness("sites-identity-drive").await;
+    let outsider = harness_on(Arc::clone(&owner.store), "sites-identity-other").await;
+    let site = created_id(
+        "site",
+        post(
+            &owner.app,
+            &owner.token,
+            "/sites",
+            json!({ "name": "Nordlicht Studio", "subdomain": sub("identity", &owner) }),
+        )
+        .await,
+    );
+    let first_blob = upload(&owner, "image/png", vec![1, 2, 3]).await;
+    let attach = format!("/sites/{site}/identity/images");
+    assert_eq!(
+        post(
+            &owner.app,
+            &owner.token,
+            &attach,
+            json!({ "blobId": first_blob, "filename": "logo.png" }),
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+
+    let root = owner
+        .acc
+        .drive_list(&DriveLocation::Personal, None)
+        .await
+        .unwrap();
+    let website = root
+        .iter()
+        .find(|node| {
+            node.source_kind.as_deref() == Some("site")
+                && node.source_id.as_deref() == Some(site.as_str())
+        })
+        .expect("website folder");
+    let children = owner
+        .acc
+        .drive_list(&DriveLocation::Personal, Some(&website.id))
+        .await
+        .unwrap();
+    let identity = children
+        .iter()
+        .find(|node| node.source_kind.as_deref() == Some("site_identity"))
+        .expect("identity folder");
+    assert_eq!(identity.name, "Identity");
+    assert_eq!(identity.source_id.as_deref(), Some(site.as_str()));
+    let files = owner
+        .acc
+        .drive_list(&DriveLocation::Personal, Some(&identity.id))
+        .await
+        .unwrap();
+    assert_eq!(files.len(), 1);
+    assert_eq!(files[0].name, "logo.png");
+    assert_eq!(files[0].blob_id.as_deref(), Some(first_blob.as_str()));
+
+    let foreign_blob = upload(&outsider, "image/png", vec![9]).await;
+    assert_eq!(
+        post(
+            &outsider.app,
+            &outsider.token,
+            &attach,
+            json!({ "blobId": foreign_blob, "filename": "stolen.png" }),
+        )
+        .await
+        .0,
+        StatusCode::NOT_FOUND
+    );
+}
+
 /// The framing control needs the SOURCE pixels, not the rendered preview's
 /// `data:` URIs — so the edit surface serves one image blob at a time, and
 /// serves it only to the tenant that owns it. Everything that does not
@@ -2882,6 +2956,12 @@ async fn a_coordinate_from_the_preview_edits_the_page_through_the_reviewed_door(
     assert!(html.contains("data-alo-text=\"0/heading\""), "{html}");
     assert!(html.contains("data-alo-text=\"1/items/0/answer\""));
     assert!(html.contains("site-text-edit"));
+
+    let browser_preview = format!("/sites/{site}/pages/{page}/preview?browser=true");
+    let (status, _, browser_html) = get_text(&owner.app, &owner.token, &browser_preview).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(!browser_html.contains("data-alo-text="), "{browser_html}");
+    assert!(!browser_html.contains("site-text-edit"));
 
     // What the browser reports for "1/items/0/answer" after someone types.
     let edit = json!({ "proposal": { "schema_version": 1, "operations": [{

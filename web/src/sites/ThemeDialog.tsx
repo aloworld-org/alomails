@@ -3,31 +3,38 @@
 // but the person does not have to choose between decorative preset cards.
 // Applying PUTs the full envelope through
 // the server's theme gate — the dialog re-states no rules, and a 422 shows
-// the server's own sentence. Uploads go through Drive (`driveUploadBlob`), so
-// the image lands as a referenced, user-visible Drive file whose blob id the
-// theme points at.
+// the server's own sentence. Uploads are registered through Sites in the
+// website's source-linked Drive Identity folder, while the theme points at the
+// underlying blob id.
 import { useEffect, useRef, useState } from "react";
+import type { DragEvent } from "react";
 import { Palette, Trash2, Upload } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { strings } from "../i18n";
 import { useJmapClient } from "../jmap";
-import { Button, IconButton, Spinner } from "../ds";
+import { Badge, Button, IconButton, Spinner } from "../ds";
+import { FieldHelp } from "../branding/FieldHelp";
 import { readBrandKit } from "../branding/repository";
 import { sitesMessage, useSitesApi } from "./api";
 import { DialogFrame, ErrorBanner } from "./parts";
 import type { BrandColors, ThemeEnvelope, ThemePreset } from "./types";
 
 const styles = {
-  themeSlot:
-    "mt-4 flex flex-col gap-4 rounded-2xl border border-subtle bg-surface-muted p-4 sm:flex-row sm:items-center sm:justify-between",
-  themeSlotText: "min-w-0",
-  label: "block font-semibold text-primary",
-  hint: "mt-1 block max-w-xl text-sm leading-5 text-secondary",
-  themeSlotActions: "flex flex-wrap items-center gap-2",
-  themeSlotState:
-    "mr-1 inline-flex min-h-8 items-center rounded-full bg-surface px-3 text-xs font-semibold text-secondary",
-  brandSource: "flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-subtle bg-surface-muted p-4",
+  themeSlot: "mt-4 rounded-2xl border border-subtle bg-surface p-5 shadow-xs",
+  themeSlotHeader: "flex min-w-0 items-center justify-between gap-3",
+  themeSlotTitle: "flex min-w-0 items-center gap-1",
+  label: "truncate font-semibold text-primary",
+  themeSlotBody: "mt-4 flex min-w-0 items-center gap-4",
+  themeSlotActions: "ml-auto flex shrink-0 items-center gap-1",
+  themeDropzone:
+    "mt-4 flex min-h-36 w-full flex-col items-center justify-center rounded-2xl border border-dashed border-default bg-surface-muted/45 px-6 py-5 text-center transition-[border-color,background-color,box-shadow] hover:border-accent/45 hover:bg-accent-soft/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 disabled:cursor-wait disabled:opacity-60",
+  themeDropIcon:
+    "mb-3 grid size-11 place-items-center rounded-xl bg-surface text-accent shadow-sm ring-1 ring-border-subtle",
+  themeDropTitle: "text-sm font-semibold text-primary",
+  themeDropHint: "mt-1 text-xs leading-5 text-secondary",
+  brandSource:
+    "flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-subtle bg-surface-muted p-4",
   brandSourceText: "min-w-0 flex-1",
   brandSourceTitle: "font-semibold text-primary",
   brandSourceHint: "mt-1 text-sm leading-5 text-secondary",
@@ -38,6 +45,51 @@ const styles = {
 
 /** The version this form writes; the server refuses anything else. */
 const THEME_SCHEMA_VERSION = 1;
+
+/** Resolve a stored Drive blob into a browser-safe preview URL. The URL is
+ * temporary and must be revoked whenever the asset changes or the dialog
+ * closes, otherwise repeatedly replacing a logo leaks the downloaded bytes. */
+function useImagePreview(
+  jmap: ReturnType<typeof useJmapClient>,
+  blobId: string | null,
+  name: string,
+  localFile: File | null,
+): string | null {
+  const client = useRef(jmap);
+  client.current = jmap;
+  const [preview, setPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    let stale = false;
+    let objectUrl: string | null = null;
+    setPreview(null);
+    if (blobId === null) return undefined;
+    if (localFile !== null) {
+      objectUrl = URL.createObjectURL(localFile);
+      setPreview(objectUrl);
+      return () => {
+        if (objectUrl !== null) URL.revokeObjectURL(objectUrl);
+      };
+    }
+    void (async () => {
+      try {
+        const blob = await client.current.downloadAttachment(blobId, name);
+        if (stale) return;
+        objectUrl = URL.createObjectURL(blob);
+        setPreview(objectUrl);
+      } catch {
+        // The stored image remains valid even if this one preview cannot be
+        // downloaded; upload/replace/remove must remain available.
+      }
+    })();
+    return () => {
+      stale = true;
+      if (objectUrl !== null) URL.revokeObjectURL(objectUrl);
+    };
+  }, [blobId, localFile, name]);
+
+  return preview;
+}
 
 function presetColors(preset: ThemePreset): BrandColors {
   return {
@@ -58,6 +110,8 @@ function ImageSlot({
   label,
   hint,
   blobId,
+  preview,
+  compactPreview,
   busy,
   onUpload,
   onRemove,
@@ -65,54 +119,123 @@ function ImageSlot({
   label: string;
   hint: string;
   blobId: string | null;
+  preview: string | null;
+  compactPreview?: boolean;
   busy: boolean;
   onUpload: (file: File) => void;
   onRemove: () => void;
 }) {
   const fileInput = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+
+  function keepFile(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    setDragging(false);
+    const file = event.dataTransfer.files[0];
+    if (file !== undefined) onUpload(file);
+  }
+
   return (
-    <div className={styles.themeSlot}>
-      <div className={styles.themeSlotText}>
-        <span className={styles.label}>{label}</span>
-        <span className={styles.hint}>{hint}</span>
-      </div>
-      <div className={styles.themeSlotActions}>
-        <span className={styles.themeSlotState}>
+    <div
+      role="group"
+      aria-label={label}
+      className={`${styles.themeSlot} ${dragging ? "border-accent bg-accent-soft/35 ring-2 ring-accent/15" : ""}`}
+      onDragEnter={(event) => {
+        event.preventDefault();
+        if (!busy) setDragging(true);
+      }}
+      onDragOver={(event) => event.preventDefault()}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setDragging(false);
+        }
+      }}
+      onDrop={(event) => {
+        if (busy) {
+          event.preventDefault();
+          return;
+        }
+        keepFile(event);
+      }}
+    >
+      <div className={styles.themeSlotHeader}>
+        <div className={styles.themeSlotTitle}>
+          <span className={styles.label}>{label}</span>
+          <FieldHelp title={label}>{hint}</FieldHelp>
+        </div>
+        <Badge tone={blobId !== null ? "success" : "neutral"}>
           {blobId !== null ? strings.sitesThemeSet : strings.sitesThemeNotSet}
-        </span>
-        <input
-          ref={fileInput}
-          type="file"
-          accept="image/*"
-          hidden
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            // Allow re-picking the same file after a remove.
-            e.target.value = "";
-            if (file !== undefined) onUpload(file);
-          }}
-        />
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={<Upload size={14} />}
+        </Badge>
+      </div>
+      <input
+        ref={fileInput}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          // Allow re-picking the same file after a remove.
+          e.target.value = "";
+          if (file !== undefined) onUpload(file);
+        }}
+      />
+      {blobId === null ? (
+        <button
+          type="button"
+          className={styles.themeDropzone}
           disabled={busy}
           onClick={() => fileInput.current?.click()}
         >
-          {blobId !== null
-            ? strings.sitesThemeReplace
-            : strings.sitesThemeUpload}
-        </Button>
-        {blobId !== null && (
-          <IconButton
-            size="sm"
-            label={strings.sitesThemeRemove}
-            icon={<Trash2 size={14} />}
-            disabled={busy}
-            onClick={onRemove}
-          />
-        )}
-      </div>
+          <span className={styles.themeDropIcon}>
+            <Upload size={19} aria-hidden="true" />
+          </span>
+          <span className={styles.themeDropTitle}>
+            {dragging ? strings.sitesThemeDropNow : strings.sitesThemeDropTitle}
+          </span>
+          <span className={styles.themeDropHint}>
+            {strings.sitesThemeDropBrowse}
+          </span>
+        </button>
+      ) : (
+        <div className={styles.themeSlotBody}>
+          <span
+            className={
+              compactPreview
+                ? "grid size-16 shrink-0 place-items-center overflow-hidden rounded-2xl border border-subtle bg-surface-muted p-3"
+                : "grid h-16 w-24 shrink-0 place-items-center overflow-hidden rounded-2xl border border-subtle bg-surface-muted p-3"
+            }
+          >
+            {preview !== null ? (
+              <img
+                src={preview}
+                alt={label}
+                className="max-h-full max-w-full object-contain"
+              />
+            ) : (
+              <Spinner size={18} />
+            )}
+          </span>
+          <div className={styles.themeSlotActions}>
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<Upload size={14} />}
+              disabled={busy}
+              onClick={() => fileInput.current?.click()}
+            >
+              {strings.sitesThemeReplace}
+            </Button>
+            <IconButton
+              size="sm"
+              tone="danger"
+              label={strings.sitesThemeRemove}
+              icon={<Trash2 size={14} />}
+              disabled={busy}
+              onClick={onRemove}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -137,10 +260,19 @@ export function ThemeDialog({
   const [preset, setPreset] = useState<string | null>(null);
   const [logo, setLogo] = useState<string | null>(null);
   const [favicon, setFavicon] = useState<string | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [faviconFile, setFaviconFile] = useState<File | null>(null);
   const [colors, setColors] = useState<BrandColors | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const logoPreview = useImagePreview(jmap, logo, "site-logo", logoFile);
+  const faviconPreview = useImagePreview(
+    jmap,
+    favicon,
+    "site-favicon",
+    faviconFile,
+  );
 
   useEffect(() => {
     let stale = false;
@@ -152,8 +284,14 @@ export function ThemeDialog({
         setPreset(site.theme.preset ?? shipped[0]?.id ?? null);
         setLogo(site.theme.logo ?? null);
         setFavicon(site.theme.favicon ?? null);
-        const selected = shipped.find((item) => item.id === (site.theme.preset ?? shipped[0]?.id));
-        const base = site.theme.colors ?? (selected === undefined ? null : presetColors(selected));
+        setLogoFile(null);
+        setFaviconFile(null);
+        const selected = shipped.find(
+          (item) => item.id === (site.theme.preset ?? shipped[0]?.id),
+        );
+        const base =
+          site.theme.colors ??
+          (selected === undefined ? null : presetColors(selected));
         if (base !== null) {
           const brand = readBrandKit();
           setColors({
@@ -176,20 +314,32 @@ export function ThemeDialog({
     };
   }, [api, siteId]);
 
-  function upload(set: (blobId: string) => void) {
+  function upload(
+    setBlobId: (blobId: string) => void,
+    setLocalFile: (file: File | null) => void,
+  ) {
     return (file: File) => {
+      if (!file.type.startsWith("image/")) {
+        setError(strings.sitesUploadFailed);
+        return;
+      }
       setBusy(true);
       setError(null);
-      jmap.driveUploadBlob(null, null, file).then(
-        ({ blobId }) => {
-          set(blobId);
-          setBusy(false);
-        },
-        () => {
+      void (async () => {
+        try {
+          const { blobId } = await jmap.uploadFile(file);
+          await api.attachIdentityImage(siteId, {
+            blobId,
+            filename: file.name,
+          });
+          setLocalFile(file);
+          setBlobId(blobId);
+        } catch {
           setError(strings.sitesUploadFailed);
+        } finally {
           setBusy(false);
-        },
-      );
+        }
+      })();
     };
   }
 
@@ -214,8 +364,9 @@ export function ThemeDialog({
   }
 
   const loading = presets === null && loadError === null;
-  const colorsValid = colors !== null
-    && Object.values(colors).every((value) => /^#[0-9A-F]{6}$/i.test(value));
+  const colorsValid =
+    colors !== null &&
+    Object.values(colors).every((value) => /^#[0-9A-F]{6}$/i.test(value));
 
   return (
     <DialogFrame
@@ -237,14 +388,27 @@ export function ThemeDialog({
           {colors !== null && (
             <section className={styles.brandSource}>
               <div className={styles.brandSourceText}>
-                <h3 className={styles.brandSourceTitle}>{strings.brandingAccentsTitle}</h3>
-                <p className={styles.brandSourceHint}>{strings.sitesThemeBrandManaged}</p>
+                <h3 className={styles.brandSourceTitle}>
+                  {strings.brandingAccentsTitle}
+                </h3>
+                <p className={styles.brandSourceHint}>
+                  {strings.sitesThemeBrandManaged}
+                </p>
               </div>
               <div className={styles.brandSwatches} aria-hidden="true">
-                {[colors.accent_1, colors.accent_2, colors.accent_3, colors.accent_4, colors.accent_5]
-                  .map((value, index) => (
-                    <span key={index} className={styles.brandSwatch} style={{ background: value }} />
-                  ))}
+                {[
+                  colors.accent_1,
+                  colors.accent_2,
+                  colors.accent_3,
+                  colors.accent_4,
+                  colors.accent_5,
+                ].map((value, index) => (
+                  <span
+                    key={index}
+                    className={styles.brandSwatch}
+                    style={{ background: value }}
+                  />
+                ))}
               </div>
               <Button
                 variant="secondary"
@@ -263,17 +427,26 @@ export function ThemeDialog({
               label={strings.sitesThemeLogo}
               hint={strings.sitesThemeLogoHint}
               blobId={logo}
+              preview={logoPreview}
               busy={busy}
-              onUpload={upload(setLogo)}
-              onRemove={() => setLogo(null)}
+              onUpload={upload(setLogo, setLogoFile)}
+              onRemove={() => {
+                setLogo(null);
+                setLogoFile(null);
+              }}
             />
             <ImageSlot
               label={strings.sitesThemeFavicon}
               hint={strings.sitesThemeFaviconHint}
               blobId={favicon}
+              preview={faviconPreview}
+              compactPreview
               busy={busy}
-              onUpload={upload(setFavicon)}
-              onRemove={() => setFavicon(null)}
+              onUpload={upload(setFavicon, setFaviconFile)}
+              onRemove={() => {
+                setFavicon(null);
+                setFaviconFile(null);
+              }}
             />
           </div>
         </>

@@ -3,6 +3,7 @@ import {
   ChevronRight,
   Copy,
   Edit3,
+  FileText,
   Home,
   Lock,
   MoreHorizontal,
@@ -118,29 +119,43 @@ export function SitePageRow({
               )}
             </button>
           )}
-          <div className="flex min-w-0 items-center gap-1.5">
-            <Link
-              to={`pages/${page.id}`}
-              className="block truncate font-medium text-accent no-underline hover:text-accent-hover focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              onClick={(event) => event.stopPropagation()}
-            >
-              {page.title}
-            </Link>
-            {protectedPage && (
-              <span
-                className="shrink-0 text-tertiary"
-                title={strings.sitesPagePasswordBadge}
-              >
-                <Lock size={12} aria-hidden="true" />
-                <span className="sr-only">{strings.sitesPagePasswordBadge}</span>
-              </span>
+          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent ring-1 ring-inset ring-accent/10">
+            {page.home ? (
+              <Home className="size-4" aria-hidden="true" />
+            ) : (
+              <FileText className="size-4" aria-hidden="true" />
             )}
+          </span>
+          <div className="flex min-w-0 flex-col">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <Link
+                to={`pages/${page.id}`}
+                className="block truncate font-semibold text-primary no-underline hover:text-accent focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                onClick={(event) => event.stopPropagation()}
+              >
+                {page.title}
+              </Link>
+              {protectedPage && (
+                <span
+                  className="shrink-0 text-tertiary"
+                  title={strings.sitesPagePasswordBadge}
+                >
+                  <Lock size={12} aria-hidden="true" />
+                  <span className="sr-only">
+                    {strings.sitesPagePasswordBadge}
+                  </span>
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </td>
       <td className="w-36">
         <Badge tone={siteStatus === "live" ? "success" : "neutral"}>
-          <span className="mr-1.5 size-1.5 rounded-full bg-current" aria-hidden="true" />
+          <span
+            className="mr-1.5 size-1.5 rounded-full bg-current"
+            aria-hidden="true"
+          />
           {siteStatus === "live"
             ? strings.sitesStatusPublished
             : strings.sitesStatusDraft}

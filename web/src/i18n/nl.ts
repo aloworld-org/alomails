@@ -3669,7 +3669,7 @@ export const nl: Partial<Catalog> = {
   sitesUploadingPostCover: "Uploaden…",
   sitesPostCoverUploadFailed:
     "De omslagafbeelding kon niet worden geüpload. Probeer het opnieuw.",
-  sitesSeoAction: "Zoeken en delen",
+  sitesSeoAction: "Pagina-instellingen",
   sitesSeoTitle: "Zoeken en delen",
   sitesSeoSubtitle:
     "Kies hoe deze pagina in zoekresultaten en gedeelde links verschijnt.",
@@ -3743,7 +3743,7 @@ export const nl: Partial<Catalog> = {
     "Vergelijk de pagina voor en na en kies daarna wat er gebeurt.",
   sitesAiPreviewCompare: "Voorgestelde paginawijzigingen vergelijken",
   sitesInlineTextHint:
-    "Klik op een tekst in het voorbeeld om die daar te bewerken. Enter bewaart, Escape zet terug.",
+    "Klik op tekst om die direct te bewerken, of op een sectie om de afbeelding, kleuren en indeling aan te passen.",
   sitesInlineTextSaved: "Tekst bijgewerkt.",
   sitesInlineTextUndone: "Tekstwijziging ongedaan gemaakt.",
   sitesInlineTextRedone: "Tekstwijziging opnieuw uitgevoerd.",
@@ -4077,6 +4077,9 @@ export const nl: Partial<Catalog> = {
   sitesPreviewTitle: "Conceptvoorbeeld",
   sitesPreviewDesktop: "Desktopbreedte",
   sitesPreviewMobile: "Telefoonbreedte",
+  sitesPreviewInBrowser: "Openen in browser",
+  sitesPreviewBrowserBlocked:
+    "De browser heeft het voorbeeldtabblad geblokkeerd. Sta pop-ups toe en probeer opnieuw.",
   sitesPreviewFailed: "Het voorbeeld kon niet worden geladen.",
   sitesSectionNav: "Navigatiebalk",
   sitesNavigation: "Navigatie",
@@ -4103,11 +4106,13 @@ export const nl: Partial<Catalog> = {
   sitesTransitionBalanced: "Deels zichtbaar",
   sitesTransitionLate: "Grotendeels zichtbaar",
   sitesTransitionAnimateOut: "Animeer bij verlaten",
-  sitesTransitionAnimateOutHint: "Gebruik dit voor verhalende pagina’s; laat het uit voor snel scannen.",
+  sitesTransitionAnimateOutHint:
+    "Gebruik dit voor verhalende pagina’s; laat het uit voor snel scannen.",
   sitesSectionFeatures: "Voordelen",
   sitesSectionFeaturesDesc: "Een raster van wat u aanbiedt.",
   sitesFeaturesLayout: "Functie-indeling",
-  sitesFeaturesLayoutHint: "Kies hoe bezoekers deze voordelen bekijken en vergelijken.",
+  sitesFeaturesLayoutHint:
+    "Kies hoe bezoekers deze voordelen bekijken en vergelijken.",
   sitesFeaturesLayoutGrid: "Evenwichtig raster",
   sitesFeaturesLayoutBento: "Bento",
   sitesFeaturesLayoutList: "Gedetailleerde lijst",
@@ -4116,7 +4121,8 @@ export const nl: Partial<Catalog> = {
   sitesSectionTextImage: "Tekst en afbeelding",
   sitesSectionTextImageDesc: "Een alinea naast een afbeelding.",
   sitesTextImageLayout: "Tekst- en beeldindeling",
-  sitesTextImageLayoutHint: "Kies de verhouding tussen het verhaal en de afbeelding.",
+  sitesTextImageLayoutHint:
+    "Kies de verhouding tussen het verhaal en de afbeelding.",
   sitesTextImageLayoutSplit: "Evenwichtige splitsing",
   sitesTextImageLayoutOverlap: "Gelaagd",
   sitesTextImageLayoutFramed: "Ingelijste afbeelding",
@@ -4125,7 +4131,8 @@ export const nl: Partial<Catalog> = {
   sitesSectionGallery: "Galerij",
   sitesSectionGalleryDesc: "Een wand met afbeeldingen.",
   sitesGalleryLayout: "Galerij-indeling",
-  sitesGalleryLayoutHint: "Kies hoe bezoekers je afbeeldingen bekijken en ontdekken.",
+  sitesGalleryLayoutHint:
+    "Kies hoe bezoekers je afbeeldingen bekijken en ontdekken.",
   sitesGalleryLayoutGrid: "Evenwichtig raster",
   sitesGalleryLayoutMasonry: "Masonry",
   sitesGalleryLayoutCollage: "Collage",
@@ -4134,7 +4141,8 @@ export const nl: Partial<Catalog> = {
   sitesSectionTestimonials: "Ervaringen",
   sitesSectionTestimonialsDesc: "Woorden van tevreden klanten.",
   sitesTestimonialsLayout: "Indeling ervaringen",
-  sitesTestimonialsLayoutHint: "Kies hoe klantverhalen vertrouwen opbouwen op de pagina.",
+  sitesTestimonialsLayoutHint:
+    "Kies hoe klantverhalen vertrouwen opbouwen op de pagina.",
   sitesTestimonialsLayoutCards: "Citaatkaarten",
   sitesTestimonialsLayoutFeatured: "Uitgelicht citaat",
   sitesTestimonialsLayoutEditorial: "Redactionele wand",
@@ -4143,7 +4151,8 @@ export const nl: Partial<Catalog> = {
   sitesSectionPricing: "Prijzen",
   sitesSectionPricingDesc: "Uw pakketten en hun prijzen.",
   sitesPricingLayout: "Prijsindeling",
-  sitesPricingLayoutHint: "Kies hoe bezoekers pakketten vergelijken en het juiste aanbod vinden.",
+  sitesPricingLayoutHint:
+    "Kies hoe bezoekers pakketten vergelijken en het juiste aanbod vinden.",
   sitesPricingLayoutCards: "Pakkettenkaarten",
   sitesPricingLayoutComparison: "Naast elkaar",
   sitesPricingLayoutFeatured: "Uitgelicht pakket",
@@ -4325,7 +4334,8 @@ export const nl: Partial<Catalog> = {
   sitesHeroAnimationSmooth: "Vloeiend",
   sitesHeroAnimationRelaxed: "Rustig",
   sitesSectionDesign: "Sectieontwerp",
-  sitesSectionDesignHint: "Vorm deze sectie met responsieve, herbruikbare ontwerpkeuzes.",
+  sitesSectionDesignHint:
+    "Vorm deze sectie met responsieve, herbruikbare ontwerpkeuzes.",
   sitesSectionLayoutStyle: "Visuele stijl",
   sitesSectionLayoutClean: "Helder",
   sitesSectionLayoutCards: "Kaarten",
@@ -4336,7 +4346,8 @@ export const nl: Partial<Catalog> = {
   sitesSectionColorsHint: "Kies herbruikbare rollen uit het sitethema.",
   sitesSectionBackground: "Sectieachtergrond",
   sitesSectionText: "Sectietekst",
-  sitesSectionAnimationHint: "Kies een rustige intro. Minder beweging blijft altijd stil.",
+  sitesSectionAnimationHint:
+    "Kies een rustige intro. Minder beweging blijft altijd stil.",
   sitesSectionEntrance: "Intro",
   sitesSectionUseDefaults: "Sectiestandaarden gebruiken",
   sitesHeroHeight: "Hoogte",
@@ -4344,6 +4355,8 @@ export const nl: Partial<Catalog> = {
   sitesHeroHeightStandard: "Standaard",
   sitesHeroHeightTall: "Hoog",
   sitesHeroAlignment: "Uitlijning van inhoud",
+  sitesCanvasImageSize: "Afbeeldingsgrootte",
+  sitesCanvasImagePosition: "Afbeeldingspositie",
   sitesHeroAlignmentLeft: "Links",
   sitesHeroAlignmentCenter: "Midden",
   sitesHeroAlignmentRight: "Rechts",
@@ -4385,6 +4398,8 @@ export const nl: Partial<Catalog> = {
   sitesImageFraming: "Uitsnede en focuspunt",
   sitesImageFrameHint:
     "Sleep over de afbeelding om te kiezen wat zichtbaar blijft. Met het toetsenbord: pijltoetsen verplaatsen het kader, shift met de pijltoetsen maakt het groter of kleiner.",
+  sitesImageFrameDirectHint:
+    "Sleep het kader om het te verplaatsen. Sleep een hoek om het formaat te wijzigen.",
   sitesImageFocalHint:
     "Sleep het ronde punt naar wat in beeld moet blijven wanneer een lay-out de afbeelding verder bijsnijdt.",
   sitesImageFrameAt: (
@@ -4466,6 +4481,9 @@ export const nl: Partial<Catalog> = {
   sitesThemeFaviconHint:
     "Het kleine pictogram dat browsers op het tabblad tonen.",
   sitesThemeUpload: "Afbeelding uploaden",
+  sitesThemeDropTitle: "Sleep een afbeelding hierheen",
+  sitesThemeDropNow: "Laat de afbeelding los om te uploaden",
+  sitesThemeDropBrowse: "of klik om een afbeelding van uw apparaat te kiezen",
   sitesThemeReplace: "Afbeelding vervangen",
   sitesThemeRemove: "Afbeelding verwijderen",
   sitesThemeSet: "Afbeelding geüpload",
@@ -4928,6 +4946,8 @@ export const nl: Partial<Catalog> = {
 
   // Het eerste wat een medewerker van de module ziet.
   financeExpensesEmptyTitle: "Geen declaraties in deze periode",
+  financeExpensesPurpose:
+    "Bekijk, dien uw werkuitgaven in en volg de afhandeling.",
   financeExpensesEmptyBody:
     "Leg vast wat u voor het werk hebt uitgegeven — de datum, het totaal op de bon en wiens geld betaalde. Ze blijft van u tot u ze indient.",
 
@@ -4935,6 +4955,7 @@ export const nl: Partial<Catalog> = {
   financeTabBank: "Bank",
   financeTabReconcile: "Afletteren",
   financeBankLoadFailed: "De rekeningafschriften konden niet worden geladen.",
+  financeBankPurpose: "Maandelijkse bankafschriften importeren en controleren.",
 
   // Een afschrift importeren.
   financeBankImportStatement: "Afschrift importeren",
@@ -5371,6 +5392,10 @@ export const nl: Partial<Catalog> = {
   // zelf getoond.
   moduleInventory: "Voorraad",
   inventoryTabCatalog: "Catalogus",
+  inventoryWorkspacePurpose: "Producten, voorraad en orders in één werkruimte.",
+  inventoryCatalogPurpose: "Beheer de producten en diensten die uw bedrijf koopt en verkoopt.",
+  inventoryPurchasingPurpose: "Maak en volg bestellingen bij uw leveranciers.",
+  inventorySalesPurpose: "Beheer klantorders van bevestiging tot levering.",
   inventoryTabStock: "Voorraadstand",
   inventoryLoadFailed: "Uw catalogus kon niet worden geladen.",
   inventorySaveFailed: "De wijziging kon niet worden opgeslagen.",
