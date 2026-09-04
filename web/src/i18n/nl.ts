@@ -553,6 +553,7 @@ export const nl: Partial<Catalog> = {
   mailTo: "Aan",
   mailNoSubject: "(geen onderwerp)",
   mailUnknownSender: "Onbekende afzender",
+  mailNoRecipient: "Geen ontvanger",
 
   // mail — sidebar
   compose: "Opstellen",

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { strings } from "../i18n";
 import type { EmailFull, EmailHeaders } from "../jmap";
-import { formatDate, isUnread, mailErrorReason, senderName, subjectOr } from "./format";
+import { formatDate, isUnread, mailErrorReason, recipientName, senderName, subjectOr } from "./format";
 import { sandboxedHtml, textContent } from "./body";
 
 function headers(partial: Partial<EmailHeaders>): EmailHeaders {
@@ -26,6 +26,35 @@ function headers(partial: Partial<EmailHeaders>): EmailHeaders {
     ...partial,
   };
 }
+
+describe("recipientName", () => {
+  // The bug this function exists for: a Sent list rendered with
+  // senderName is a column of the account owner's own name, so a message
+  // that was sent, delivered and stored looks like it never happened.
+  it("shows who the message went to, not who sent it", () => {
+    const row = headers({
+      from: [{ name: "disan", email: "disan@alomails.com" }],
+      to: [{ name: "Kevin", email: "kevin.impens@axongroup.com" }],
+    });
+    expect(recipientName(row)).toBe("Kevin");
+    expect(recipientName(row)).not.toBe(senderName(row));
+  });
+
+  it("falls back to the address when the recipient has no display name", () => {
+    const row = headers({ to: [{ name: null, email: "kevin.impens@axongroup.com" }] });
+    expect(recipientName(row)).toBe("kevin.impens@axongroup.com");
+  });
+
+  it("uses cc when a message was addressed only by carbon copy", () => {
+    const row = headers({ to: [], cc: [{ name: "Copied", email: "cc@example.test" }] });
+    expect(recipientName(row)).toBe("Copied");
+  });
+
+  // A draft with nobody in the To field is an ordinary state, not an error.
+  it("names the empty case rather than rendering nothing", () => {
+    expect(recipientName(headers({}))).toBe(strings.mailNoRecipient);
+  });
+});
 
 describe("senderName", () => {
   it("prefers the display name", () => {

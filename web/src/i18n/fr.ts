@@ -563,6 +563,7 @@ export const fr: Partial<Catalog> = {
   mailTo: "À",
   mailNoSubject: "(sans objet)",
   mailUnknownSender: "Expéditeur inconnu",
+  mailNoRecipient: "Aucun destinataire",
 
   // mail — sidebar
   compose: "Écrire",

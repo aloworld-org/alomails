@@ -12,6 +12,30 @@ export function senderName(headers: Pick<EmailHeaders, "from">): string {
   return first.email;
 }
 
+/**
+ * Display name for a message's **recipient** — the name a Sent, Drafts
+ * or Scheduled row shows.
+ *
+ * In those folders the sender is always the account owner, so showing it
+ * tells the reader nothing and hides the one name they came to find: a
+ * Sent list rendered with [`senderName`] is a column of your own name,
+ * and a message you just sent looks missing.
+ *
+ * Falls back to the first `cc` when there is no `to` (a message addressed
+ * only by carbon copy is unusual but real), and to a placeholder when
+ * there is neither — a draft with no recipient yet is an ordinary state,
+ * not an error.
+ *
+ * Only the first recipient is shown, matching [`senderName`]'s shape. A
+ * message to several people shows the first of them.
+ */
+export function recipientName(headers: Pick<EmailHeaders, "to" | "cc">): string {
+  const first = headers.to?.[0] ?? headers.cc?.[0];
+  if (first === undefined) return strings.mailNoRecipient;
+  if (first.name !== null && first.name.trim().length > 0) return first.name;
+  return first.email;
+}
+
 /** Subject with a placeholder for empty subjects. */
 export function subjectOr(headers: Pick<EmailHeaders, "subject">): string {
   const s = headers.subject;

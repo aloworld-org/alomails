@@ -608,6 +608,7 @@ export const en = {
   mailTo: "To",
   mailNoSubject: "(no subject)",
   mailUnknownSender: "Unknown sender",
+  mailNoRecipient: "No recipient",
 
   // mail — sidebar
   compose: "Compose",

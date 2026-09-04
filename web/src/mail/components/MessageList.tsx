@@ -27,7 +27,7 @@ import { IconButton, cx } from "../../ds";
 import { useJmapClient } from "../../jmap";
 import type { Category, EmailHeaders } from "../../jmap";
 import type { Async } from "../state/useAsync";
-import { formatDate, senderName, subjectOr } from "../format";
+import { formatDate, recipientName, senderName, subjectOr } from "../format";
 import { groupThreads, flatRows, type ThreadRow } from "../threads";
 import { rowCategories } from "../categories";
 import { DRAG_EMAIL_MIME } from "../dnd";
@@ -37,6 +37,15 @@ import styles from "./MessageList.module.css";
 
 interface MessageListProps {
   folderName: string;
+  /**
+   * Show the recipient rather than the sender in each row.
+   *
+   * True for Sent, Drafts and Scheduled, where every message is from the
+   * account owner and a sender column is a list of your own name. Passed
+   * as a flag rather than derived from `folderName`, which is translated
+   * and would break the moment somebody reads their mail in Dutch.
+   */
+  showsRecipient?: boolean;
   emails: Async<EmailHeaders[]>;
   /** A search term seeded from outside (Home search bar); pre-fills the box. */
   initialQuery?: string;
@@ -89,6 +98,7 @@ function CheckBox({ on }: { on: boolean }) {
 
 export function MessageList({
   folderName,
+  showsRecipient = false,
   initialQuery = "",
   flat,
   onToggleView,
@@ -323,7 +333,7 @@ export function MessageList({
                 >
                   <span className={styles.line1}>
                     <span className={styles.sender}>
-                      {senderName(email)}
+                      {showsRecipient ? recipientName(email) : senderName(email)}
                       {thread.count > 1 && <span className={styles.count}> ({thread.count})</span>}
                     </span>
                   </span>

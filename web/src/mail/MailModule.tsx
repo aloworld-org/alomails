@@ -912,6 +912,16 @@ export function MailModule() {
       {showList && (
       <MessageList
         folderName={folderName}
+        // Sent, Drafts and Scheduled hold only our own messages, so the
+        // useful name in a row is who it went to. Keyed on the mailbox
+        // role rather than its name, which is translated. The Flagged
+        // view spans folders and keeps senders.
+        showsRecipient={
+          !flaggedView &&
+          ["sent", "drafts", "scheduled"].includes(
+            boxes.find((b) => b.id === mailboxId)?.role ?? "",
+          )
+        }
         emails={emails}
         initialQuery={searchSeed}
         selectedThreadId={threadId}

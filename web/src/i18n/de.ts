@@ -827,6 +827,7 @@ export const de: Partial<Catalog> = {
   mailTo: "An",
   mailNoSubject: "(kein Betreff)",
   mailUnknownSender: "Unbekannter Absender",
+  mailNoRecipient: "Kein Empfänger",
 
   // mail — sidebar
   compose: "Schreiben",
