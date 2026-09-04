@@ -101,7 +101,7 @@ pub const EXPENSE_DESCRIPTION_MAX: usize = 500;
 /// because the column is this table's.
 pub const EXPENSE_DECISION_NOTE_MAX: usize = 500;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct SpendPolicy {
     pub receipt_required_above_cents: Option<i64>,
     pub project_required_above_cents: Option<i64>,
@@ -110,17 +110,6 @@ pub struct SpendPolicy {
     pub updated_at: Option<OffsetDateTime>,
 }
 
-impl Default for SpendPolicy {
-    fn default() -> Self {
-        Self {
-            receipt_required_above_cents: None,
-            project_required_above_cents: None,
-            second_approval_above_cents: None,
-            updated_by: None,
-            updated_at: None,
-        }
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct ExpenseApprovalOutcome {

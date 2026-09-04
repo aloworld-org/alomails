@@ -246,6 +246,11 @@ services:
       # Outbound sending: ON in production. Requires LOCAL_DOMAINS (set
       # above) or startup is refused (anti-open-relay).
       ALO_SMTP_OUTBOUND_ENABLED: ${ALO_SMTP_OUTBOUND_ENABLED:-true}
+      # DANE (RFC 7672) on outbound delivery. On by default. The code
+      # has read this since it was written; it was never listed here, so
+      # setting it in .env did nothing and the switch could not be
+      # reached from outside the image at all.
+      ALO_SMTP_DANE: ${ALO_SMTP_DANE:-true}
       ALO_SMTP_SMARTHOST: ${ALO_SMTP_SMARTHOST:-}
       # The shared Let's Encrypt certificate (one stable path for every
       # service). allow_self_signed stays false so the server refuses to

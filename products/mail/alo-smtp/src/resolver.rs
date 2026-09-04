@@ -13,9 +13,17 @@
 //! set makes TLS mandatory + authenticated for that host; a `Secure`
 //! but unusable set makes TLS mandatory (RFC 7672 §2.2); an insecure
 //! or absent set leaves delivery opportunistic; and a lookup *failure*
-//! (SERVFAIL — which is also how a bogus, possibly attacker-stripped
-//! chain presents) skips the host entirely rather than risk an
-//! unauthenticated session that policy forbids.
+//! skips the host **only when its zone is DNSSEC-signed**, where the
+//! failure is how a bogus, possibly attacker-stripped chain presents.
+//!
+//! That last clause used to have no condition on it, and the omission
+//! made mail to every Microsoft 365 domain undeliverable: some
+//! authoritative servers answer a TLSA query for a name in an
+//! **unsigned** zone with SERVFAIL rather than NXDOMAIN, so the only MX
+//! was skipped and the queue deferred forever on `no MX target`
+//! (`docs/interop.md`). Skipping an unsigned zone protects nothing —
+//! there is no DANE there to strip, and an attacker who can forge its
+//! answers gets opportunistic TLS by forging the MX instead.
 //!
 //! Deviation (recorded): RFC 7672 §2.2.1 only applies DANE when the MX
 //! RRset itself was DNSSEC-secure; we enforce whenever the TLSA RRset
@@ -178,13 +186,72 @@ impl DnsResolver {
             Err(error) if error.is_nx_domain() || error.is_no_records_found() => {
                 Ok(TlsRequirement::Opportunistic)
             }
-            // SERVFAIL/timeout — indistinguishable from an attacker
-            // suppressing a bogus chain; skip the host (RFC 7672 §2.1.1).
+            // SERVFAIL/timeout. Ambiguous on its own, so ask the one
+            // question that separates the two meanings: is this zone
+            // signed at all? (See `classify_tlsa_failure`.)
             Err(error) => {
-                tracing::warn!(%host, %error, "TLSA lookup failed; skipping this MX host");
-                Err(())
+                let signed = self.zone_is_signed(host).await;
+                if signed {
+                    tracing::warn!(%host, %error, "TLSA lookup failed in a signed zone; skipping this MX host");
+                } else {
+                    tracing::info!(%host, %error, "TLSA lookup failed in an unsigned zone; no DANE to strip, delivering opportunistically");
+                }
+                classify_tlsa_failure(signed)
             }
         }
+    }
+
+    /// Whether `host` sits in a DNSSEC-signed zone, as the validating
+    /// resolver sees it.
+    ///
+    /// The answer is itself DNSSEC-validated, so an on-path attacker
+    /// cannot forge a "no, unsigned" and talk us out of DANE — which is
+    /// what makes it safe to branch on.
+    ///
+    /// Unreachable or bogus counts as **signed**: that keeps the
+    /// conservative skip rather than inventing permission to send. A
+    /// host we cannot resolve at all is one we could not have delivered
+    /// to anyway.
+    async fn zone_is_signed(&self, host: &str) -> bool {
+        let Some(dane) = &self.dane else {
+            return false;
+        };
+        match dane.lookup(host, RecordType::A).await {
+            Ok(lookup) => lookup
+                .answers()
+                .iter()
+                .any(|record| matches!(record.proof, Proof::Secure)),
+            Err(_) => true,
+        }
+    }
+}
+
+/// What a **failed** TLSA lookup means, given whether the host's zone
+/// is DNSSEC-signed.
+///
+/// A lookup failure has two quite different causes and only one of them
+/// is an attack:
+///
+/// - **Signed zone.** The failure is how a bogus — possibly
+///   attacker-stripped — chain presents. Skip the host rather than risk
+///   the unauthenticated session DANE exists to prevent
+///   (RFC 7672 §2.1.1).
+/// - **Unsigned zone.** There is no DANE to strip. Some authoritative
+///   servers answer a TLSA query for a name in an unsigned zone with
+///   SERVFAIL instead of NXDOMAIN, and Microsoft 365's
+///   `mail.protection.outlook.com` is one of them (`docs/interop.md`).
+///   Skipping here refuses to deliver and buys nothing: an attacker who
+///   can forge answers for an unsigned zone already gets opportunistic
+///   TLS by forging the MX itself.
+///
+/// Treating both as *skip* is what made mail to every Microsoft 365
+/// domain undeliverable — the queue deferred forever with
+/// `no MX target`, because the only MX had been skipped.
+fn classify_tlsa_failure(zone_signed: bool) -> Result<TlsRequirement, ()> {
+    if zone_signed {
+        Err(())
+    } else {
+        Ok(TlsRequirement::Opportunistic)
     }
 }
 
@@ -342,6 +409,30 @@ mod tests {
     #[test]
     fn no_secure_records_is_opportunistic() {
         assert_eq!(classify_tlsa(Vec::new()), TlsRequirement::Opportunistic);
+    }
+
+    /// A failed TLSA lookup in a **signed** zone is how a stripped
+    /// chain presents, so the host is skipped and the message waits.
+    #[test]
+    fn a_failed_lookup_in_a_signed_zone_skips_the_host() {
+        assert_eq!(
+            classify_tlsa_failure(true),
+            Err(()),
+            "a signed zone that will not answer is the case DANE exists for"
+        );
+    }
+
+    /// The regression this function was extracted for. An **unsigned**
+    /// zone has no DANE to strip, so a failed lookup must not stop
+    /// delivery — treating it as a skip made mail to every Microsoft
+    /// 365 domain undeliverable, deferring forever on `no MX target`.
+    #[test]
+    fn a_failed_lookup_in_an_unsigned_zone_still_delivers() {
+        assert_eq!(
+            classify_tlsa_failure(false),
+            Ok(TlsRequirement::Opportunistic),
+            "an unsigned zone cannot be DANE-stripped, so refusing to send protects nothing"
+        );
     }
 
     #[test]
