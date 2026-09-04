@@ -127,17 +127,27 @@ https://{$DOMAIN} {
 # Until then this block can only fail, and failing quietly was the worse of the
 # two options.
 #
-# https://mta-sts.{$DOMAIN} {
-# 	tls /certs/live/{$DOMAIN}/fullchain.pem /certs/live/{$DOMAIN}/privkey.pem
-# 	reverse_proxy alo-smtp:8461
-# }
+# Enabled 2026-09-04. Both halves the comment above asked for are now in
+# place: mta-sts.alomails.com resolves to this host, and the apex certificate
+# lineage was expanded to cover it (alomails.com, www.alomails.com,
+# mta-sts.alomails.com). The mail certificate was deliberately not touched --
+# alo-smtp and alo-imap read that one.
+#
+# The name is the APEX one. MTA-STS wants the policy at
+# mta-sts.<domain in the address>, and {$DOMAIN} is the mail host, which is
+# why the commented version named mta-sts.mail.alomails.com -- a host that
+# has never existed and never could have worked.
+https://mta-sts.alomails.com {
+	tls /certs/live/alomails.com/fullchain.pem /certs/live/alomails.com/privkey.pem
+	reverse_proxy alo-smtp:8461
+}
 
 # ── Marketing landing site on the apex (alomails.com) ──────────────────────
 # A separate static site: the app itself stays on mail.alomails.com, untouched.
 # The apex has its OWN certbot certificate (init-landing.sh issues it into
 # /certs/live/alomails.com/). These blocks must not be loaded until that cert
 # exists, or Caddy fails to start the site — see the landing runbook in README.
-http://alomails.com, http://www.alomails.com {
+http://alomails.com, http://www.alomails.com, http://mta-sts.alomails.com {
 	handle /.well-known/acme-challenge/* {
 		root * /var/www/certbot
 		file_server
